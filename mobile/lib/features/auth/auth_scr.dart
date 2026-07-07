@@ -271,12 +271,24 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
   }
 
   Future<void> _login() async {
+    final usuario = usuarioCtl.text.trim();
+    final password = passCtl.text.trim();
+
+    if (usuario.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ingrese correo institucional y contraseña'),
+        ),
+      );
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
       final user = await api.login(
-        usuario: usuarioCtl.text.trim(),
-        password: passCtl.text.trim(),
+        usuario: usuario,
+        password: password,
       );
 
       if (!mounted) return;
