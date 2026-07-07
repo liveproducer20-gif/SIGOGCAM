@@ -986,6 +986,7 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
     );
 
     if (data == null) return;
+    if (!mounted) return;
     await _safeRun(context, () async {
       await widget.api.createMantenimiento(widget.movilId, data);
       setState(() => _mantenimientos = widget.api.getMantenimientos(widget.movilId));
@@ -1241,6 +1242,7 @@ class _MovilDialogState extends State<_MovilDialog> {
   late final km = TextEditingController(text: _s('kilometraje_actual', fallback: '0'));
   late final kmMant = TextEditingController(text: _s('kilometraje_ultimo_mantenimiento', fallback: '0'));
   late final obs = TextEditingController(text: _s('observacion'));
+  late final obsEstado = TextEditingController(text: _s('observacion_estado'));
   int? tipoId;
   int? estadoId;
   @override
@@ -1260,7 +1262,8 @@ class _MovilDialogState extends State<_MovilDialog> {
           _field(km, 'Kilometraje actual', number: true),
           _field(kmMant, 'Kilometraje ultimo mantenimiento', number: true),
           _drop('Estado', widget.catalogs['ESTADOS_MOVIL'], estadoId, (v) => setState(() => estadoId = v)),
-          _field(obs, 'Observacion'),
+          _field(obsEstado, 'Observacion del estado'),
+          _field(obs, 'Observacion general'),
         ],
         onSave: () => Navigator.pop(context, {
           'numeroMovil': numero.text.trim(),
@@ -1270,6 +1273,7 @@ class _MovilDialogState extends State<_MovilDialog> {
           'kilometrajeUltimoMantenimiento': int.tryParse(kmMant.text) ?? 0,
           'estadoMovilId': estadoId,
           'observacion': obs.text.trim(),
+          'observacionEstado': obsEstado.text.trim(),
         }),
       );
   String _s(String key, {String fallback = ''}) => widget.item?[key]?.toString() ?? fallback;

@@ -213,7 +213,8 @@ function validarMovil(data) {
         kilometrajeActual,
         kilometrajeUltimoMantenimiento,
         estadoMovilId: validarId(data.estadoMovilId, 'estado de movil'),
-        observacion: textoOpcional(data.observacion)
+        observacion: textoOpcional(data.observacion),
+        observacionEstado: textoOpcional(data.observacionEstado)
     };
 }
 

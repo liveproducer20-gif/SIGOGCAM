@@ -260,6 +260,7 @@ async function listarMoviles() {
                m.estado_movil_id,
                estado.nombre AS estado,
                m.observacion,
+               m.observacion_estado,
                m.activo
         FROM dbo.moviles m
         INNER JOIN dbo.catalogo_detalles tipo ON tipo.id = m.tipo_movil_id
@@ -276,7 +277,8 @@ async function crearMovil(data) {
         ['kilometraje_actual', data.kilometrajeActual],
         ['kilometraje_ultimo_mantenimiento', data.kilometrajeUltimoMantenimiento],
         ['estado_movil_id', data.estadoMovilId],
-        ['observacion', data.observacion]
+        ['observacion', data.observacion],
+        ['observacion_estado', data.observacionEstado]
     ]);
 }
 
@@ -290,6 +292,7 @@ async function actualizarMovil(id, data) {
             kilometraje_ultimo_mantenimiento = ?,
             estado_movil_id = ?,
             observacion = ?,
+            observacion_estado = ?,
             fecha_actualizacion = SYSDATETIME()
         WHERE id = ?
     `, [
@@ -300,6 +303,7 @@ async function actualizarMovil(id, data) {
         data.kilometrajeUltimoMantenimiento,
         data.estadoMovilId,
         data.observacion,
+        data.observacionEstado,
         id
     ]));
 }
