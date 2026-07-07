@@ -16,9 +16,8 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^7.5.0",
     "jsonwebtoken": "^9.0.3",
-    "msnodesqlv8": "^5.2.0",
-    "mssql": "^12.6.0",
     "odbc": "^2.5.0"
   }
 }

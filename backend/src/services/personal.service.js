@@ -18,11 +18,18 @@ async function obtenerDisponiblesSinEvento() {
 }
 
 async function buscar(texto) {
-    if (!texto || texto.trim() === '') {
+    const limpio = (texto || '').toString().trim();
+    if (!limpio) {
         throw new Error('El texto de búsqueda es obligatorio');
     }
+    if (limpio.length < 2) {
+        throw new Error('El texto de búsqueda debe tener al menos 2 caracteres');
+    }
+    if (limpio.length > 50) {
+        throw new Error('El texto de búsqueda no puede exceder 50 caracteres');
+    }
 
-    return await repository.buscar(texto.trim());
+    return await repository.buscar(limpio);
 }
 
 async function obtenerPerfil(id) {
@@ -36,13 +43,29 @@ async function obtenerPerfil(id) {
 }
 
 async function actualizarPerfil(id, data) {
-    const requeridos = ['cedula', 'correoInstitucional'];
+    const { cedula, correoInstitucional } = validarCedulaYCorreo(data, ['cedula', 'correoInstitucional']);
 
-    for (const campo of requeridos) {
+    const perfil = await repository.actualizarPerfil(Number(id), {
+        cedula,
+        correoInstitucional,
+        telefono: data.telefono ? data.telefono.toString().trim() : null,
+        fechaNacimiento: data.fechaNacimiento || null,
+        fotoPerfilUrl: data.fotoPerfilUrl || null
+    });
+
+    return mapPerfil(perfil);
+}
+
+function validarCamposRequeridos(data, campos) {
+    for (const campo of campos) {
         if (data[campo] === undefined || data[campo] === null || data[campo] === '') {
             throw new Error(`El campo ${campo} es obligatorio`);
         }
     }
+}
+
+function validarCedulaYCorreo(data, camposRequeridos) {
+    if (camposRequeridos) validarCamposRequeridos(data, camposRequeridos);
 
     const cedula = data.cedula.toString().trim();
     if (!/^\d{10}$/.test(cedula)) {
@@ -54,15 +77,7 @@ async function actualizarPerfil(id, data) {
         throw new Error('El correo institucional no es valido');
     }
 
-    const perfil = await repository.actualizarPerfil(Number(id), {
-        cedula,
-        correoInstitucional,
-        telefono: data.telefono ? data.telefono.toString().trim() : null,
-        fechaNacimiento: data.fechaNacimiento || null,
-        fotoPerfilUrl: data.fotoPerfilUrl || null
-    });
-
-    return mapPerfil(perfil);
+    return { cedula, correoInstitucional };
 }
 
 function mapPerfil(row) {
@@ -83,39 +98,14 @@ function mapPerfil(row) {
 }
 
 async function crear(data) {
-    const requeridos = [
-        'cedula',
-        'nombres',
-        'apellidos',
-        'correoInstitucional',
-        'fechaNacimiento',
-        'areaId',
-        'jornadaId',
-        'grupoId',
-        'rolId',
-        'estadoPersonalId'
-    ];
+    validarCamposRequeridos(data, [
+        'cedula', 'nombres', 'apellidos', 'correoInstitucional',
+        'fechaNacimiento', 'areaId', 'jornadaId', 'grupoId', 'rolId', 'estadoPersonalId'
+    ]);
 
-    for (const campo of requeridos) {
-        if (data[campo] === undefined || data[campo] === null || data[campo] === '') {
-            throw new Error(`El campo ${campo} es obligatorio`);
-        }
-    }
+    const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
 
-    const cedula = data.cedula.toString().trim();
-    if (!/^\d{10}$/.test(cedula)) {
-        throw new Error('La cedula debe tener 10 digitos');
-    }
-
-    const correoInstitucional = data.correoInstitucional.toString().trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoInstitucional)) {
-        throw new Error('El correo institucional no es valido');
-    }
-
-    const payload = normalizarPayload(data, {
-        cedula,
-        correoInstitucional
-    });
+    const payload = normalizarPayload(data, { cedula, correoInstitucional });
     payload.passwordHash = await bcrypt.hash(passwordInicial(payload.fechaNacimiento), 10);
 
     return await repository.crear(payload);
@@ -127,39 +117,14 @@ async function actualizar(id, data) {
         throw new Error('El id de personal no es valido');
     }
 
-    const requeridos = [
-        'cedula',
-        'nombres',
-        'apellidos',
-        'correoInstitucional',
-        'fechaNacimiento',
-        'areaId',
-        'jornadaId',
-        'grupoId',
-        'rolId',
-        'estadoPersonalId'
-    ];
+    validarCamposRequeridos(data, [
+        'cedula', 'nombres', 'apellidos', 'correoInstitucional',
+        'fechaNacimiento', 'areaId', 'jornadaId', 'grupoId', 'rolId', 'estadoPersonalId'
+    ]);
 
-    for (const campo of requeridos) {
-        if (data[campo] === undefined || data[campo] === null || data[campo] === '') {
-            throw new Error(`El campo ${campo} es obligatorio`);
-        }
-    }
+    const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
 
-    const cedula = data.cedula.toString().trim();
-    if (!/^\d{10}$/.test(cedula)) {
-        throw new Error('La cedula debe tener 10 digitos');
-    }
-
-    const correoInstitucional = data.correoInstitucional.toString().trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoInstitucional)) {
-        throw new Error('El correo institucional no es valido');
-    }
-
-    return await repository.actualizar(personalId, normalizarPayload(data, {
-        cedula,
-        correoInstitucional
-    }));
+    return await repository.actualizar(personalId, normalizarPayload(data, { cedula, correoInstitucional }));
 }
 
 async function cambiarEstado(id, activo) {

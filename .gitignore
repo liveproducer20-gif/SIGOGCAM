@@ -1,0 +1,26 @@
+
+patch/
+
+# Environment
+.env
+backend/.env
+*.local
+
+# Node
+node_modules/
+backend/node_modules/
+
+# Build
+build/
+backend/build/
+mobile/build/
+mobile/.dart_tool/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

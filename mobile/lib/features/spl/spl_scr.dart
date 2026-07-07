@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../../core/auth/auth_session.dart';
 import '../../core/cnst/app_cnst.dart';
 import '../../core/thm/app_thm.dart';
 import '../../core/wdg/logo/app_logo_wdg.dart';
+import '../../features/profile/profile_api.dart';
 import '../auth/auth_scr.dart';
+import '../dash/dash_scr.dart';
 
 
 class SplScr extends StatefulWidget {
@@ -19,16 +22,32 @@ class _SplScrState extends State<SplScr> {
   void initState() {
     super.initState();
 
-    Timer(const Duration(seconds: 3), () {
-      if (!mounted) return;
+    Timer(const Duration(seconds: 2), _checkSession);
+  }
 
-Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (_) => const AuthScr(),
-  ),
-);
-    });
+  Future<void> _checkSession() async {
+    if (!mounted) return;
+
+    final token = AuthSession.token;
+    if (token != null) {
+      try {
+        final user = await ProfileApi().getMe();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => DashScr(user: user)),
+        );
+        return;
+      } catch (_) {
+        AuthSession.clear();
+      }
+    }
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AuthScr()),
+    );
   }
 
   @override

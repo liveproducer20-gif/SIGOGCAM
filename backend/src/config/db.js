@@ -12,8 +12,16 @@ const {
   DB_CONNECTION_TIMEOUT = '15',
 } = process.env;
 
-if (!DB_SERVER || !DB_DATABASE) {
-  throw new Error('Faltan variables de entorno DB_SERVER o DB_DATABASE');
+const errores = [];
+if (!DB_SERVER) errores.push('DB_SERVER');
+if (!DB_DATABASE) errores.push('DB_DATABASE');
+if (!DB_DRIVER) errores.push('DB_DRIVER');
+const timeout = parseInt(DB_CONNECTION_TIMEOUT, 10);
+if (isNaN(timeout) || timeout < 1 || timeout > 120) {
+  errores.push('DB_CONNECTION_TIMEOUT (debe ser 1-120)');
+}
+if (errores.length > 0) {
+  throw new Error('Variables de entorno inválidas: ' + errores.join(', '));
 }
 
 const connectionString =
@@ -22,16 +30,64 @@ const connectionString =
   `Database=${DB_DATABASE};` +
   `Encrypt=${normalizarEncrypt(DB_ENCRYPT)};` +
   `TrustServerCertificate=${DB_TRUST_SERVER_CERTIFICATE};` +
-  `Connection Timeout=${DB_CONNECTION_TIMEOUT};` +
+  `Connection Timeout=${timeout};` +
   (
     DB_USER
       ? `UID=${DB_USER};PWD=${DB_PASSWORD || ''};`
       : `Trusted_Connection=${DB_TRUSTED_CONNECTION};`
   );
 
+let poolInstance = null;
+
+async function getPool() {
+  if (!poolInstance) {
+    poolInstance = await odbc.pool(connectionString, {
+      initialSize: 2,
+      maxSize: 10,
+      connectionTimeout: timeout * 1000,
+    });
+
+    process.on('exit', async () => {
+      if (poolInstance) {
+        try { await poolInstance.close(); } catch (_) {}
+      }
+    });
+  }
+  return poolInstance;
+}
+
+async function query(sql, params) {
+  const pool = await getPool();
+  const conexion = await pool.connect();
+  try {
+    return await conexion.query(sql, params);
+  } finally {
+    await conexion.close();
+  }
+}
+
+async function transaction(callback) {
+  const pool = await getPool();
+  const conexion = await pool.connect();
+  try {
+    await conexion.beginTransaction();
+    const result = await callback(conexion);
+    await conexion.commit();
+    return result;
+  } catch (error) {
+    try { await conexion.rollback(); } catch (_) {}
+    throw error;
+  } finally {
+    await conexion.close();
+  }
+}
+
 module.exports = {
   odbc,
   connectionString,
+  getPool,
+  query,
+  transaction,
 };
 
 function normalizarEncrypt(value) {

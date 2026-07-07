@@ -1,128 +1,47 @@
+const { asyncHandler } = require('../middleware/async-handler');
 const service = require('../services/eventos.service');
 
-async function obtenerTodos(req, res) {
-    try {
-        const permisos = Array.isArray(req.user?.permisos)
-            ? req.user.permisos
-            : [];
-        const filtros = { ...req.query };
+const obtenerTodos = asyncHandler(async (req, res) => {
+    const permisos = Array.isArray(req.user?.permisos) ? req.user.permisos : [];
+    const filtros = { ...req.query };
 
-        if (!permisos.includes('eventos.ver') &&
-            permisos.includes('eventos.ver_convocado')) {
-            filtros.personalId = req.user.id;
-        }
-        filtros.marcarVisto = req.query.marcarVisto === '1';
-
-        const datos = await service.obtenerTodos(filtros);
-
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
+    if (!permisos.includes('eventos.ver') && permisos.includes('eventos.ver_convocado')) {
+        filtros.personalId = req.user.id;
     }
-}
+    filtros.marcarVisto = req.query.marcarVisto === '1';
 
-async function obtenerPorId(req, res) {
-    try {
-        const { id } = req.params;
-        const datos = await service.obtenerPorId(id);
+    res.json({ ok: true, datos: await service.obtenerTodos(filtros) });
+});
 
-        if (!datos.evento) {
-            return res.status(404).json({
-                ok: false,
-                mensaje: 'Evento no encontrado'
-            });
-        }
+const obtenerPorId = asyncHandler(async (req, res) => {
+    const datos = await service.obtenerPorId(req.params.id);
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
+    if (!datos.evento) {
+        return res.status(404).json({ ok: false, mensaje: 'Evento no encontrado' });
     }
-}
 
-async function crearEvento(req, res) {
-    try {
-        const eventoId = await service.crearEvento(req.body);
+    res.json({ ok: true, datos });
+});
 
-        res.status(201).json({
-            ok: true,
-            mensaje: 'Evento creado correctamente',
-            eventoId
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message,
-            detalle: error.odbcErrors || error
-        });
-    }
-}
+const crearEvento = asyncHandler(async (req, res) => {
+    const eventoId = await service.crearEvento(req.body);
+    res.status(201).json({ ok: true, mensaje: 'Evento creado correctamente', eventoId });
+});
 
-async function cambiarEstado(req, res) {
-    try {
-        const { id } = req.params;
-        const { estado } = req.body;
+const cambiarEstado = asyncHandler(async (req, res) => {
+    await service.cambiarEstado(req.params.id, req.body.estado);
+    res.json({ ok: true, mensaje: 'Estado del evento actualizado correctamente' });
+});
 
-        await service.cambiarEstado(id, estado);
+const actualizarEvento = asyncHandler(async (req, res) => {
+    await service.actualizarEvento(req.params.id, req.body);
+    res.json({ ok: true, mensaje: 'Evento actualizado correctamente' });
+});
 
-        res.json({
-            ok: true,
-            mensaje: 'Estado del evento actualizado correctamente'
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function actualizarEvento(req, res) {
-    try {
-        const { id } = req.params;
-
-        await service.actualizarEvento(id, req.body);
-
-        res.json({
-            ok: true,
-            mensaje: 'Evento actualizado correctamente'
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function eliminarEvento(req, res) {
-    try {
-        const { id } = req.params;
-
-        await service.eliminarEvento(id);
-
-        res.json({
-            ok: true,
-            mensaje: 'Evento eliminado exitosamente'
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const eliminarEvento = asyncHandler(async (req, res) => {
+    await service.eliminarEvento(req.params.id);
+    res.json({ ok: true, mensaje: 'Evento eliminado exitosamente' });
+});
 
 module.exports = {
     obtenerTodos,

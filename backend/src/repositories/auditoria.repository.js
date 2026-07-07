@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function registrar(data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const sql = `

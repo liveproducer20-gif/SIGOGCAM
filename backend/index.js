@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-const { odbc, connectionString } = require('./src/config/db');
+const { getPool } = require('./src/config/db');
 const authRoutes = require('./src/routes/auth.routes');
 const personalRoutes = require('./src/routes/personal.routes');
 const eventosRoutes = require('./src/routes/eventos.routes');
@@ -53,7 +53,8 @@ app.get('/', (req, res) => {
 
 async function probarDb(req, res) {
   try {
-    const connection = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const connection = await pool.connect();
     const result = await connection.query('SELECT DB_NAME() AS baseDatos');
     await connection.close();
 
@@ -72,7 +73,6 @@ async function probarDb(req, res) {
   }
 }
 
-app.get('/probar-db', probarDb);
 app.get('/api/probar-db', probarDb);
 
 app.use((req, res) => {
@@ -104,6 +104,11 @@ app.use((error, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
+  console.error('ERROR: JWT_SECRET no configurado o muy corto. Defina una clave segura en .env');
+  process.exit(1);
+}
 
 app.listen(PORT, () => {
   console.log(`Servidor BITSAC corriendo en puerto ${PORT}`);

@@ -6,6 +6,13 @@ import 'package:http/http.dart' as http;
 import '../auth/auth_session.dart';
 import 'api_response.dart';
 
+class UnauthorizedException implements Exception {
+  final String message;
+  const UnauthorizedException([this.message = 'Su sesión ha expirado']);
+  @override
+  String toString() => message;
+}
+
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'SIGO_API_BASE_URL',
@@ -158,6 +165,14 @@ class ApiClient {
 
     final decoded = raw;
     final ok = decoded['ok'] == true;
+
+    if (response.statusCode == 401) {
+      AuthSession.clear();
+      AuthSession.onSessionExpired?.call();
+      throw UnauthorizedException(
+        decoded['mensaje']?.toString() ?? 'Su sesión ha expirado. Por favor inicie sesión nuevamente.',
+      );
+    }
 
     if (response.statusCode >= 400 || !ok) {
       throw Exception(

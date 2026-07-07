@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function obtenerTodo() {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const sql = `
@@ -27,7 +28,8 @@ async function obtenerTodo() {
 }
 
 async function obtenerOperativos() {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const sql = `
@@ -43,7 +45,8 @@ async function obtenerOperativos() {
 }
 
 async function obtenerDisponibles() {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const sql = `
@@ -59,7 +62,8 @@ async function obtenerDisponibles() {
 }
 
 async function obtenerDisponiblesSinEvento() {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const sql = `
@@ -75,7 +79,8 @@ async function obtenerDisponiblesSinEvento() {
 }
 
 async function buscar(texto) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const filtro = `%${texto}%`;
@@ -97,7 +102,8 @@ async function buscar(texto) {
 }
 
 async function obtenerPerfil(id) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const tieneFoto = await tieneColumnaFoto(conexion);
@@ -129,7 +135,8 @@ async function obtenerPerfil(id) {
 }
 
 async function actualizarPerfil(id, data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const existeCedulaSql = `
@@ -202,7 +209,8 @@ async function tieneColumnaFoto(conexion) {
 }
 
 async function crear(data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const existeSql = `
@@ -240,7 +248,8 @@ async function crear(data) {
 }
 
 async function actualizar(id, data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const existeSql = `
@@ -290,7 +299,8 @@ async function actualizar(id, data) {
 }
 
 async function cambiarEstado(id, activo) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const columnas = await columnasPersonal(conexion);
@@ -334,7 +344,8 @@ async function cambiarEstado(id, activo) {
 }
 
 async function obtenerBasico(id) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const result = await conexion.query(`
@@ -349,7 +360,8 @@ async function obtenerBasico(id) {
 }
 
 async function actualizarPassword(id, passwordHash) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const columnas = await columnasPersonal(conexion);

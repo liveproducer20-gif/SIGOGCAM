@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function obtenerTodos(filtros = {}) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const params = [];
@@ -52,7 +53,8 @@ async function obtenerTodos(filtros = {}) {
 }
 
 async function crear(data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.beginTransaction();
@@ -99,7 +101,8 @@ async function crear(data) {
 }
 
 async function actualizar(id, data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.beginTransaction();
@@ -142,7 +145,8 @@ async function actualizar(id, data) {
 }
 
 async function cambiarPublicado(id, publicado) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.query(`
@@ -158,7 +162,8 @@ async function cambiarPublicado(id, publicado) {
 }
 
 async function eliminar(id) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.query('DELETE FROM anuncios WHERE id = ?', [id]);

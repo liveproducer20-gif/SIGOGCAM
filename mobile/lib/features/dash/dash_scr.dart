@@ -59,6 +59,15 @@ class _DashScrState extends State<DashScr> {
   void initState() {
     super.initState();
     user = widget.user;
+    AuthSession.onSessionExpired = _logout;
+  }
+
+  @override
+  void dispose() {
+    if (AuthSession.onSessionExpired == _logout) {
+      AuthSession.onSessionExpired = null;
+    }
+    super.dispose();
   }
 
   @override
@@ -88,6 +97,7 @@ class _DashScrState extends State<DashScr> {
 
   void _logout() {
     AuthSession.clear();
+    if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthScr()),
       (_) => false,

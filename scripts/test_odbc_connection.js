@@ -1,4 +1,6 @@
-const odbc = require('../backend/node_modules/odbc');
+const path = require('path');
+const backendNodeModules = path.join(__dirname, '..', 'backend', 'node_modules');
+const odbc = require(path.join(backendNodeModules, 'odbc'));
 
 const variants = [
   {

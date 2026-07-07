@@ -1,9 +1,21 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 const { requireAuth } = require('../middleware/auth.middleware');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    ok: false,
+    mensaje: 'Demasiados intentos de inicio de sesión. Intente nuevamente en 15 minutos.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.get('/registro', (req, res) => {
   res.json({
@@ -12,7 +24,7 @@ router.get('/registro', (req, res) => {
   });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   let connection;
 
   try {
@@ -27,7 +39,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    connection = await odbc.connect(connectionString);
+    const pool = await getPool();
+    connection = await pool.connect();
 
     const tieneFoto = await tieneColumnaFoto(connection);
     const tienePassword = await tieneColumnaPassword(connection);
@@ -70,9 +83,15 @@ router.post('/login', async (req, res) => {
     const persona = result[0];
     const rolCodigo = normalizarRol(persona.rol);
     const permisos = await obtenerPermisos(connection, rolCodigo);
-    const claveValida = await validarClaveExtendida(persona, clave);
-
-    if (!claveValida) {
+    if (!persona.password_hash) {
+      if (clave !== persona.cedula) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: 'Debe restablecer su contraseña antes de iniciar sesión. Contacte a su administrador.',
+          requiereReset: true
+        });
+      }
+    } else if (!(await bcrypt.compare(clave, persona.password_hash))) {
       return res.status(401).json({
         ok: false,
         mensaje: 'Contraseña incorrecta'
@@ -94,7 +113,7 @@ router.post('/login', async (req, res) => {
 
     const token = jwt.sign(
       usuarioSesion,
-      process.env.JWT_SECRET || 'sigo_gcam_secret',
+      process.env.JWT_SECRET,
       { expiresIn: '8h' }
     );
 
@@ -114,6 +133,38 @@ router.post('/login', async (req, res) => {
     if (connection) {
       await connection.close();
     }
+  }
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 30,
+  message: {
+    ok: false,
+    mensaje: 'Demasiadas solicitudes de renovación. Intente nuevamente en 1 hora.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/refresh', refreshLimiter, requireAuth, async (req, res) => {
+  try {
+    const token = jwt.sign(
+      req.user,
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+
+    res.json({
+      ok: true,
+      mensaje: 'Token renovado correctamente',
+      token
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      mensaje: 'Error al renovar el token'
+    });
   }
 });
 
@@ -147,7 +198,8 @@ router.post('/change-password', requireAuth, async (req, res) => {
       });
     }
 
-    connection = await odbc.connect(connectionString);
+    const pool = await getPool();
+    connection = await pool.connect();
 
     const tienePassword = await tieneColumnaPassword(connection);
     if (!tienePassword) {
@@ -175,13 +227,14 @@ router.post('/change-password', requireAuth, async (req, res) => {
     }
 
     const persona = result[0];
-    const claveValida = await validarClaveExtendida(persona, oldValue);
 
-    if (!claveValida) {
-      return res.status(401).json({
-        ok: false,
-        mensaje: 'La contraseña anterior no es correcta'
-      });
+    if (persona.password_hash) {
+      if (!(await bcrypt.compare(oldValue, persona.password_hash))) {
+        return res.status(401).json({
+          ok: false,
+          mensaje: 'La contraseña anterior no es correcta'
+        });
+      }
     }
 
     const hash = await bcrypt.hash(nextValue, 10);
@@ -272,24 +325,12 @@ async function obtenerPermisos(connection, rolCodigo) {
   }
 }
 
-async function validarClave(persona, clave) {
-  if (clave === persona.cedula) {
-    return true;
-  }
-
-  if (persona.fecha_nacimiento) {
-    return clave === passwordDesdeFecha(persona.fecha_nacimiento);
-  }
-
-  return clave === persona.cedula;
-}
-
 async function validarClaveExtendida(persona, clave) {
   if (persona.password_hash) {
     return await bcrypt.compare(clave, persona.password_hash);
   }
 
-  return validarClave(persona, clave);
+  return false;
 }
 
 function permisosPorDefecto(rolCodigo) {
@@ -445,17 +486,6 @@ function permisosPorDefecto(rolCodigo) {
     'insignias.ver',
     'perfil.ver'
   ];
-}
-
-function passwordDesdeFecha(fechaNacimiento) {
-  const value = fechaNacimiento instanceof Date
-    ? fechaNacimiento.toISOString().substring(0, 10)
-    : fechaNacimiento.toString().substring(0, 10);
-  const parts = value.includes('-') ? value.split('-') : value.split('/');
-
-  if (parts.length !== 3) return '';
-  if (value.includes('-')) return `${parts[2]}${parts[1]}${parts[0]}`;
-  return `${parts[0].padStart(2, '0')}${parts[1].padStart(2, '0')}${parts[2]}`;
 }
 
 async function tieneColumnaFoto(connection) {

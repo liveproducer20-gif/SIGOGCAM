@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function obtenerTodos(filtros = {}) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const mediaCols = await obtenerColumnasMedia(conexion);
@@ -85,7 +86,8 @@ async function obtenerTodos(filtros = {}) {
 }
 
 async function obtenerPorId(id) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const mediaCols = await obtenerColumnasMedia(conexion);
@@ -187,7 +189,8 @@ async function obtenerDetalleCatalogo(catalogoCodigo, detalleCodigo, conexion) {
 }
 
 async function crearEvento(data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.beginTransaction();
@@ -336,7 +339,8 @@ async function obtenerColumnasMedia(conexion) {
 }
 
 async function cambiarEstado(id, estadoCodigo) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const estadoEventoId = await obtenerDetalleCatalogo(
@@ -367,7 +371,8 @@ async function cambiarEstado(id, estadoCodigo) {
 }
 
 async function actualizarEvento(id, data) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.beginTransaction();
@@ -450,7 +455,8 @@ async function actualizarEvento(id, data) {
 }
 
 async function eliminarEvento(id) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         await conexion.beginTransaction();

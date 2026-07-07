@@ -1,185 +1,58 @@
+const { asyncHandler } = require('../middleware/async-handler');
 const service = require('../services/personal.service');
 
-async function obtenerTodo(req, res) {
-    try {
-        const datos = await service.obtenerTodo();
+const responder = (res, datos, status = 200) => {
+    res.status(status).json({ ok: true, datos });
+};
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const obtenerTodo = asyncHandler(async (req, res) => {
+    responder(res, await service.obtenerTodo());
+});
 
-async function obtenerOperativos(req, res) {
-    try {
-        const datos = await service.obtenerOperativos();
+const obtenerOperativos = asyncHandler(async (req, res) => {
+    responder(res, await service.obtenerOperativos());
+});
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const obtenerDisponibles = asyncHandler(async (req, res) => {
+    responder(res, await service.obtenerDisponibles());
+});
 
-async function obtenerDisponibles(req, res) {
-    try {
-        const datos = await service.obtenerDisponibles();
+const obtenerDisponiblesSinEvento = asyncHandler(async (req, res) => {
+    responder(res, await service.obtenerDisponiblesSinEvento());
+});
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const buscar = asyncHandler(async (req, res) => {
+    responder(res, await service.buscar(req.query.texto));
+});
 
-async function obtenerDisponiblesSinEvento(req, res) {
-    try {
-        const datos = await service.obtenerDisponiblesSinEvento();
+const obtenerMiPerfil = asyncHandler(async (req, res) => {
+    responder(res, await service.obtenerPerfil(req.user.id));
+});
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(500).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const actualizarMiPerfil = asyncHandler(async (req, res) => {
+    const datos = await service.actualizarPerfil(req.user.id, req.body);
+    res.json({ ok: true, mensaje: 'Perfil actualizado correctamente', datos });
+});
 
-async function buscar(req, res) {
-    try {
-        const { texto } = req.query;
-        const datos = await service.buscar(texto);
+const crear = asyncHandler(async (req, res) => {
+    const personalId = await service.crear(req.body);
+    res.status(201).json({ ok: true, mensaje: 'Personal registrado correctamente', personalId });
+});
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const actualizar = asyncHandler(async (req, res) => {
+    const datos = await service.actualizar(req.params.id, req.body);
+    res.json({ ok: true, mensaje: 'Personal actualizado correctamente', datos });
+});
 
-async function obtenerMiPerfil(req, res) {
-    try {
-        const datos = await service.obtenerPerfil(req.user.id);
+const cambiarEstado = asyncHandler(async (req, res) => {
+    const datos = await service.cambiarEstado(req.params.id, req.body.activo);
+    res.json({ ok: true, mensaje: 'Estado actualizado correctamente', datos });
+});
 
-        res.json({
-            ok: true,
-            datos
-        });
-    } catch (error) {
-        res.status(404).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function actualizarMiPerfil(req, res) {
-    try {
-        const datos = await service.actualizarPerfil(req.user.id, req.body);
-
-        res.json({
-            ok: true,
-            mensaje: 'Perfil actualizado correctamente',
-            datos
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function crear(req, res) {
-    try {
-        const personalId = await service.crear(req.body);
-
-        res.status(201).json({
-            ok: true,
-            mensaje: 'Personal registrado correctamente',
-            personalId
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function actualizar(req, res) {
-    try {
-        const datos = await service.actualizar(req.params.id, req.body);
-
-        res.json({
-            ok: true,
-            mensaje: 'Personal actualizado correctamente',
-            datos
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function cambiarEstado(req, res) {
-    try {
-        const datos = await service.cambiarEstado(req.params.id, req.body.activo);
-
-        res.json({
-            ok: true,
-            mensaje: 'Estado actualizado correctamente',
-            datos
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
-
-async function restablecerPassword(req, res) {
-    try {
-        await service.restablecerPassword(req.params.id);
-
-        res.json({
-            ok: true,
-            mensaje: 'Contrasena restablecida correctamente'
-        });
-    } catch (error) {
-        res.status(400).json({
-            ok: false,
-            mensaje: error.message
-        });
-    }
-}
+const restablecerPassword = asyncHandler(async (req, res) => {
+    await service.restablecerPassword(req.params.id);
+    res.json({ ok: true, mensaje: 'Contrasena restablecida correctamente' });
+});
 
 module.exports = {
     obtenerTodo,

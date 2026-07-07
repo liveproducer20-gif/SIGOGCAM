@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function withConnection(callback) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
     try {
         return await callback(conexion);
     } finally {
@@ -456,7 +457,21 @@ async function guardarPermisosRol(conexion, rolId, permisos) {
     }
 }
 
+const TABLAS_PERMITIDAS = new Set([
+    'dbo.lugares_servicio',
+    'dbo.eas_estaciones',
+    'dbo.moviles',
+]);
+
+function validarTabla(tabla) {
+    if (!TABLAS_PERMITIDAS.has(tabla)) {
+        throw new Error(`Tabla no permitida: ${tabla}`);
+    }
+    return tabla;
+}
+
 async function insertarBasico(tabla, campos) {
+    validarTabla(tabla);
     return withConnection(async (conexion) => {
         const columns = campos.map(([name]) => name);
         const values = campos.map(([, value]) => value);
@@ -471,6 +486,7 @@ async function insertarBasico(tabla, campos) {
 }
 
 async function cambiarActivo(tabla, id, activo) {
+    validarTabla(tabla);
     return withConnection((conexion) => conexion.query(`
         UPDATE ${tabla}
         SET activo = ?,

@@ -1,7 +1,8 @@
-const { odbc, connectionString } = require('../config/db');
+const { getPool } = require('../config/db');
 
 async function obtenerTodas() {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         return await conexion.query(`
@@ -25,7 +26,8 @@ async function obtenerTodas() {
 }
 
 async function obtenerUsuarioInsignias(usuarioId) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         return await conexion.query(`
@@ -50,7 +52,8 @@ async function obtenerUsuarioInsignias(usuarioId) {
 }
 
 async function obtenerProgreso(usuarioId) {
-    const conexion = await odbc.connect(connectionString);
+    const pool = await getPool();
+    const conexion = await pool.connect();
 
     try {
         const usuarios = await conexion.query(`

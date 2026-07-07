@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'core/auth/auth_session.dart';
 import 'core/thm/app_thm.dart';
 import 'features/spl/spl_scr.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await AuthSession.init();
   runApp(const BitsacApp());
 }
 
