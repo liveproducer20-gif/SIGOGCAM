@@ -29,10 +29,56 @@ class AdmHomeScr extends StatefulWidget {
 class _AdmHomeScrState extends State<AdmHomeScr> {
   final api = AdmApi();
 
+  List<_TabDef> get _tabs => [
+        if (widget.user.hasPermission('personal.ver'))
+          _TabDef(
+            icon: Icons.groups_outlined,
+            label: 'Personal',
+            child: _PersonalTab(api: api),
+          ),
+        if (widget.user.hasPermission('catalogos.ver'))
+          _TabDef(
+            icon: Icons.list_alt_outlined,
+            label: 'Catalogos',
+            child: _CatalogosTab(api: api),
+          ),
+        if (widget.user.hasPermission('roles.ver'))
+          _TabDef(
+            icon: Icons.admin_panel_settings_outlined,
+            label: 'Roles',
+            child: _RolesTab(api: api),
+          ),
+        if (widget.user.hasPermission('lugares_servicio.ver'))
+          _TabDef(
+            icon: Icons.place_outlined,
+            label: 'Lugares',
+            child: _LugaresTab(api: api),
+          ),
+        if (widget.user.hasPermission('eas.ver'))
+          _TabDef(
+            icon: Icons.location_city_outlined,
+            label: 'EAS',
+            child: _EasTab(api: api),
+          ),
+        if (widget.user.hasPermission('moviles.ver'))
+          _TabDef(
+            icon: Icons.directions_car_outlined,
+            label: 'Moviles',
+            child: _MovilesTab(api: api),
+          ),
+        if (widget.user.hasPermission('moviles.asignar'))
+          _TabDef(
+            icon: Icons.compare_arrows_outlined,
+            label: 'Asignaciones',
+            child: _AsignacionesTab(api: api),
+          ),
+      ];
+
   @override
   Widget build(BuildContext context) {
+    final tabs = _tabs;
     return DefaultTabController(
-      length: 7,
+      length: tabs.length,
       child: Scaffold(
         backgroundColor: AppThm.bgClr,
         appBar: TopBarWdg(
@@ -49,42 +95,40 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
                 )
               : null,
         ),
-        body: Column(
-          children: [
-            const SizedBox(height: 18),
-            const TabBar(
-              isScrollable: true,
-              labelColor: AppThm.priClr,
-              unselectedLabelColor: Colors.black54,
-              indicatorColor: AppThm.secClr,
-              tabs: [
-                Tab(icon: Icon(Icons.groups_outlined), text: 'Personal'),
-                Tab(icon: Icon(Icons.list_alt_outlined), text: 'Catalogos'),
-                Tab(icon: Icon(Icons.admin_panel_settings_outlined), text: 'Roles'),
-                Tab(icon: Icon(Icons.place_outlined), text: 'Lugares'),
-                Tab(icon: Icon(Icons.location_city_outlined), text: 'EAS'),
-                Tab(icon: Icon(Icons.directions_car_outlined), text: 'Moviles'),
-                Tab(icon: Icon(Icons.compare_arrows_outlined), text: 'Asignaciones'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
+        body: tabs.isEmpty
+            ? const Center(child: Text('No tienes permisos de administración'))
+            : Column(
                 children: [
-                  _PersonalTab(api: api),
-                  _CatalogosTab(api: api),
-                  _RolesTab(api: api),
-                  _LugaresTab(api: api),
-                  _EasTab(api: api),
-                  _MovilesTab(api: api),
-                  _AsignacionesTab(api: api),
+                  const SizedBox(height: 18),
+                  TabBar(
+                    isScrollable: true,
+                    labelColor: AppThm.priClr,
+                    unselectedLabelColor: Colors.black54,
+                    indicatorColor: AppThm.secClr,
+                    tabs: [
+                      for (final tab in tabs)
+                        Tab(icon: Icon(tab.icon), text: tab.label),
+                    ],
+                  ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        for (final tab in tabs) tab.child,
+                      ],
+                    ),
+                  ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
+}
+
+class _TabDef {
+  final IconData icon;
+  final String label;
+  final Widget child;
+  const _TabDef({required this.icon, required this.label, required this.child});
 }
 
 class _PersonalTab extends StatefulWidget {
@@ -810,7 +854,6 @@ class _PersonalDialogState extends State<_PersonalDialog> {
   int? areaId;
   int? funcionId;
   int? grupoId;
-  int? jornadaId;
   int? rotacionId;
   int? rolId;
   int? estadoId;
@@ -822,7 +865,6 @@ class _PersonalDialogState extends State<_PersonalDialog> {
     areaId = _int('area_id');
     funcionId = _int('funcion_operativa_id');
     grupoId = _int('grupo_id');
-    jornadaId = _int('jornada_id');
     rotacionId = _int('tipo_rotacion_id');
     rolId = _int('rol_id');
     estadoId = _int('estado_personal_id');
@@ -842,7 +884,6 @@ class _PersonalDialogState extends State<_PersonalDialog> {
           _drop('Area', widget.catalogs['AREAS'], areaId, (v) => setState(() => areaId = v)),
           _drop('Funcion operativa', widget.catalogs['FUNCIONES_OPERATIVAS'], funcionId, (v) => setState(() => funcionId = v), optional: true),
           _drop('Grupo', widget.catalogs['GRUPOS'], grupoId, (v) => setState(() => grupoId = v)),
-          _drop('Jornada', widget.catalogs['JORNADAS'], jornadaId, (v) => setState(() => jornadaId = v)),
           _drop('Tipo rotacion', widget.catalogs['TIPOS_ROTACION'], rotacionId, (v) => setState(() => rotacionId = v), optional: true),
           _drop('Rol', widget.roles, rolId, (v) => setState(() => rolId = v)),
           _drop('Estado', widget.catalogs['ESTADOS_PERSONAL'], estadoId, (v) => setState(() => estadoId = v)),
@@ -858,7 +899,6 @@ class _PersonalDialogState extends State<_PersonalDialog> {
           'areaId': areaId,
           'funcionOperativaId': funcionId,
           'grupoId': grupoId,
-          'jornadaId': jornadaId,
           'tipoRotacionId': rotacionId,
           'rolId': rolId,
           'estadoPersonalId': estadoId,
@@ -1203,6 +1243,7 @@ Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async 
     'GRUPOS',
     'JORNADAS',
     'TIPOS_ROTACION',
+    'JORNADAS',
     'ESTADOS_PERSONAL',
     'DISTRITOS',
     'SUBUNIDADES_OPERATIVAS',
@@ -1212,7 +1253,11 @@ Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async 
   ];
   final result = <String, List<Map<String, dynamic>>>{};
   for (final code in codes) {
-    result[code] = await api.getCatalogo(code);
+    try {
+      result[code] = await api.getCatalogo(code);
+    } catch (_) {
+      result[code] = [];
+    }
   }
   return result;
 }

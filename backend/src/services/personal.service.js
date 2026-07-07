@@ -100,7 +100,7 @@ function mapPerfil(row) {
 async function crear(data) {
     validarCamposRequeridos(data, [
         'cedula', 'nombres', 'apellidos', 'correoInstitucional',
-        'fechaNacimiento', 'areaId', 'jornadaId', 'grupoId', 'rolId', 'estadoPersonalId'
+        'fechaNacimiento', 'areaId', 'grupoId', 'rolId', 'estadoPersonalId'
     ]);
 
     const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
@@ -119,7 +119,7 @@ async function actualizar(id, data) {
 
     validarCamposRequeridos(data, [
         'cedula', 'nombres', 'apellidos', 'correoInstitucional',
-        'fechaNacimiento', 'areaId', 'jornadaId', 'grupoId', 'rolId', 'estadoPersonalId'
+        'fechaNacimiento', 'areaId', 'grupoId', 'rolId', 'estadoPersonalId'
     ]);
 
     const { cedula, correoInstitucional } = validarCedulaYCorreo(data);

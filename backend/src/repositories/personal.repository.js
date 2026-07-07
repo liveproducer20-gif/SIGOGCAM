@@ -6,19 +6,17 @@ async function obtenerTodo() {
 
     try {
         const sql = `
-            SELECT vd.*,
-                   p.cargo_id,
-                   p.grado_id,
-                   p.area_id,
-                   p.funcion_operativa_id,
-                   p.jornada_id,
-                   p.grupo_id,
-                   p.tipo_rotacion_id,
-                   p.rol_id,
-                   p.estado_personal_id
+            SELECT
+                vd.id, vd.cedula, vd.nombres, vd.apellidos,
+                vd.nombre_completo, vd.correo_institucional, vd.telefono,
+                vd.fecha_nacimiento, vd.fecha_ingreso,
+                vd.rol, vd.estado_personal, vd.activo,
+                p.cargo_id, p.grado_id, p.area_id,
+                p.funcion_operativa_id, p.jornada_id, p.grupo_id,
+                p.tipo_rotacion_id, p.rol_id, p.estado_personal_id
             FROM vw_personal_detalle vd
-            INNER JOIN personal p ON p.id = vd.id
-            ORDER BY apellidos, nombres
+            INNER JOIN dbo.personal p ON p.id = vd.id
+            ORDER BY vd.apellidos, vd.nombres
         `;
 
         return await conexion.query(sql);

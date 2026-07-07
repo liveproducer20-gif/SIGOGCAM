@@ -311,15 +311,7 @@ async function obtenerPermisos(connection, rolCodigo) {
     const result = await connection.query(sql, [nombreRol(rolCodigo)]);
     const permisos = result.map((item) => item.codigo);
 
-    if (permisos.length > 0) {
-      if (rolCodigo === 'COMUNICACIONES') {
-        return [...new Set([...permisos, ...permisosPorDefecto(rolCodigo)])];
-      }
-
-      return permisos;
-    }
-
-    return permisosPorDefecto(rolCodigo);
+    return [...new Set([...permisos, ...permisosPorDefecto(rolCodigo)])];
   } catch (error) {
     return permisosPorDefecto(rolCodigo);
   }
