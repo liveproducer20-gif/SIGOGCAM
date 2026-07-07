@@ -155,7 +155,7 @@ function validarMantenimiento(data) {
 function validarCatalogo(codigo) {
     const value = (codigo || '').toString().trim().toUpperCase();
     if (!catalogosPermitidos.has(value)) {
-        throw new Error('Catalogo de administracion no permitido');
+        throw new Error('Catálogo de administración no permitido');
     }
     return value;
 }
@@ -231,7 +231,7 @@ function validarAsignacion(data) {
 function validarId(value, label) {
     const id = Number(value);
     if (!Number.isInteger(id) || id <= 0) {
-        throw new Error(`El id de ${label} no es valido`);
+        throw new Error(`El id de ${label} no es válido`);
     }
     return id;
 }
@@ -253,7 +253,7 @@ function entero(value, defaultValue) {
     if (value === undefined || value === null || value === '') return defaultValue;
     const parsed = Number(value);
     if (!Number.isInteger(parsed)) {
-        throw new Error('Ingrese un numero entero valido');
+        throw new Error('Ingrese un número entero válido');
     }
     return parsed;
 }

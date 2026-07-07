@@ -51,7 +51,7 @@ const cambiarEstado = asyncHandler(async (req, res) => {
 
 const restablecerPassword = asyncHandler(async (req, res) => {
     await service.restablecerPassword(req.params.id);
-    res.json({ ok: true, mensaje: 'Contrasena restablecida correctamente' });
+    res.json({ ok: true, mensaje: 'Contraseña restablecida correctamente' });
 });
 
 module.exports = {

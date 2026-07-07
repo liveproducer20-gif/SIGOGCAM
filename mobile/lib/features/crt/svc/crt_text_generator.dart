@@ -13,7 +13,7 @@ class CrtTextGenerator {
     final procedimiento = _procedimiento(data);
     final puntoMartillo = data.tipo == TipoCartilla.ausentismo
         ? ''
-        : '\n\nSe procedio con punto martillo en la calle $direccion.';
+        : '\n\nSe procedió con punto martillo en la calle $direccion.';
 
     return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
 *REPORTE DE ${data.modulo.label.toUpperCase()}*
@@ -49,8 +49,8 @@ ${_reporta(data)}
     final causa = data.tipo.label;
     final procedimiento = _procedimientoEas(data, direccion);
     final movil = data.movil == null || data.movil!.trim().isEmpty
-        ? 'Movil'
-        : 'Movil ${data.movil}';
+        ? 'Móvil'
+        : 'Móvil ${data.movil}';
     final cp = data.dotacion[RolMovil.conductor]?.trim();
     final jp = data.dotacion[RolMovil.jp]?.trim();
     final policia = _v(data, 'policia');
@@ -153,9 +153,9 @@ Adjunto fotografía''';
 
   static String _ubicacionInstitucional(CrtFormData data, String direccion) {
     if (data.modulo == TipoModuloCartilla.eas && data.eas != null) {
-      return '*Distrito:* #5 MODELO\n*Circuito:* ${data.eas!.codigo} ${data.eas!.nombre}\n*Direccion:* $direccion';
+      return '*Distrito:* #5 MODELO\n*Circuito:* ${data.eas!.codigo} ${data.eas!.nombre}\n*Dirección:* $direccion';
     }
-    return '*Area:* ${data.modulo.label}\n*Direccion/Punto:* $direccion';
+    return '*Area:* ${data.modulo.label}\n*Dirección/Punto:* $direccion';
   }
 
   static String _direccion(CrtFormData data) {
@@ -210,10 +210,10 @@ Adjunto fotografía''';
     if (data.modulo != TipoModuloCartilla.eas || data.movil == null) {
       final movil = data.values['movil']?.trim();
       if (movil == null || movil.isEmpty) return '';
-      return '*Movil:* $movil\n';
+      return '*Móvil:* $movil\n';
     }
 
-    return '*Movil ${data.movil}*';
+    return '*Móvil ${data.movil}*';
   }
 
   static String _reporta(CrtFormData data) {

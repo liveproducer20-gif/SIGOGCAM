@@ -258,7 +258,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 const SizedBox(height: 28),
                 const Center(
                   child: Text(
-                    'Version ${AppCnst.appVer}',
+                    'Versión ${AppCnst.appVer}',
                     style: TextStyle(color: Colors.black45),
                   ),
                 ),

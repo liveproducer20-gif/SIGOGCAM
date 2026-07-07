@@ -117,7 +117,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           children: [
             const _PanelTitle(
               icon: Icons.tune_outlined,
-              title: 'Configuracion',
+              title: 'Configuración',
             ),
             const SizedBox(height: 18),
             _Drop<TipoModuloCartilla>(
@@ -173,10 +173,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               const SizedBox(height: 14),
               _Drop<String>(
                 value: movil,
-                label: 'Movil asignado',
+                label: 'Móvil asignado',
                 icon: Icons.directions_car_outlined,
                 items: _moviles.map((item) => item.movil).toList(),
-                itemText: (value) => 'Movil $value',
+                itemText: (value) => 'Móvil $value',
                 onChanged: (value) => setState(() => movil = value),
               ),
               const SizedBox(height: 14),

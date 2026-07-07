@@ -154,7 +154,7 @@ class _PersonalTabState extends State<_PersonalTab> {
       title: 'Personal',
       subtitle: 'Cuenta institucional, datos personales y datos operativos.',
       future: future,
-      columns: const ['Cedula', 'Nombres', 'Correo', 'Rol', 'Estado', 'Acciones'],
+      columns: const ['Cédula', 'Nombres', 'Correo', 'Rol', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
       rowBuilder: (item) => [
@@ -211,8 +211,8 @@ class _PersonalTabState extends State<_PersonalTab> {
   Future<void> _reset(Map<String, dynamic> item) async {
     final ok = await _confirm(
       context,
-      'Restablecer contrasena',
-      'La contrasena volvera a ser la fecha de nacimiento en formato ddmmaaaa.',
+      'Restablecer contraseña',
+      'La contraseña volverá a ser la fecha de nacimiento en formato ddmmaaaa.',
     );
     if (ok != true) return;
     if (!mounted) return;
@@ -260,13 +260,13 @@ class _CatalogosTabState extends State<_CatalogosTab> {
       title: 'Catalogos maestros',
       subtitle: 'Grados, areas, funciones, grupos, jornadas, distritos y tipos.',
       future: future,
-      columns: const ['Codigo', 'Nombre', 'Orden', 'Estado', 'Acciones'],
+      columns: const ['Código', 'Nombre', 'Orden', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
       header: DropdownButtonFormField<String>(
         initialValue: codigo,
         decoration: const InputDecoration(
-          labelText: 'Catalogo',
+          labelText: 'Catálogo',
           border: OutlineInputBorder(),
         ),
         items: codigos
@@ -347,7 +347,7 @@ class _RolesTabState extends State<_RolesTab> {
       title: 'Roles',
       subtitle: 'Matriz de permisos del sistema por rol institucional.',
       future: future,
-      columns: const ['Nombre', 'Descripcion', 'Permisos', 'Estado', 'Acciones'],
+      columns: const ['Nombre', 'Descripción', 'Permisos', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
       rowBuilder: (item) => [
@@ -494,7 +494,7 @@ class _EasState extends State<_CrudTab> {
         title: 'EAS',
         subtitle: 'Estaciones de Accion Segura disponibles para servicios.',
         future: future,
-        columns: const ['Codigo', 'Nombre', 'Distrito', 'Estado', 'Acciones'],
+        columns: const ['Código', 'Nombre', 'Distrito', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
         rowBuilder: (item) => [
@@ -619,7 +619,7 @@ class _AsignacionState extends State<_CrudTab> {
 
   @override
   Widget build(BuildContext context) => _AsyncTable(
-        title: 'Asignacion de moviles a EAS',
+        title: 'Asignación de móviles a EAS',
         subtitle: 'Historial de asignaciones con una sola asignacion activa por movil.',
         future: future,
         columns: const ['EAS', 'Movil', 'Fecha', 'Estado', 'Acciones'],
@@ -783,7 +783,7 @@ class _Actions extends StatelessWidget {
           IconButton(
             onPressed: onReset,
             icon: const Icon(Icons.lock_reset_outlined),
-            tooltip: 'Restablecer contrasena',
+            tooltip: 'Restablecer contraseña',
           ),
       ],
     );
@@ -917,7 +917,7 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
                             DataColumn(label: Text('Fecha')),
                             DataColumn(label: Text('Km')),
                             DataColumn(label: Text('Tipo')),
-                            DataColumn(label: Text('Descripcion')),
+                            DataColumn(label: Text('Descripción')),
                           ],
                           rows: items.map((r) => DataRow(cells: [
                             DataCell(_txt(r['fecha_mantenimiento']?.toString().substring(0, 10) ?? '')),
@@ -964,7 +964,7 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
                 _drop('Tipo mantenimiento', tipos, tipoId, (v) => tipoId = v, optional: true),
               TextField(
                 controller: descCtrl,
-                decoration: const InputDecoration(labelText: 'Descripcion'),
+                decoration: const InputDecoration(labelText: 'Descripción'),
                 maxLines: 2,
               ),
             ],
@@ -1012,9 +1012,9 @@ class _CatalogoDialogState extends State<_CatalogoDialog> {
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Nuevo detalle' : 'Editar detalle',
         children: [
-          _field(codigo, 'Codigo'),
+          _field(codigo, 'Código'),
           _field(nombre, 'Nombre'),
-          _field(descripcion, 'Descripcion'),
+          _field(descripcion, 'Descripción'),
           _field(orden, 'Orden', number: true),
         ],
         onSave: () => Navigator.pop(context, {
@@ -1066,12 +1066,12 @@ class _PersonalDialogState extends State<_PersonalDialog> {
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Registrar personal' : 'Editar personal',
         children: [
-          _field(cedula, 'Cedula'),
+          _field(cedula, 'Cédula'),
           _field(nombres, 'Nombres'),
           _field(apellidos, 'Apellidos'),
           _field(correo, 'Correo institucional'),
-          _field(telefono, 'Telefono'),
-          _field(nacimiento, 'Fecha nacimiento (yyyy-mm-dd)'),
+          _field(telefono, 'Teléfono'),
+          _field(nacimiento, 'Fecha de nacimiento (yyyy-mm-dd)'),
           _drop('Grado', widget.catalogs['GRADOS'], gradoId, (v) => setState(() => gradoId = v)),
           _drop('Area', widget.catalogs['AREAS'], areaId, (v) => setState(() => areaId = v)),
           _drop('Funcion operativa', widget.catalogs['FUNCIONES_OPERATIVAS'], funcionId, (v) => setState(() => funcionId = v), optional: true),
@@ -1122,7 +1122,7 @@ class _RolDialogState extends State<_RolDialog> {
         width: 680,
         children: [
           _field(nombre, 'Nombre'),
-          _field(descripcion, 'Descripcion'),
+          _field(descripcion, 'Descripción'),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -1174,11 +1174,11 @@ class _LugarDialogState extends State<_LugarDialog> {
         title: widget.item == null ? 'Nuevo lugar' : 'Editar lugar',
         children: [
           _field(nombre, 'Nombre'),
-          _field(direccion, 'Direccion'),
+          _field(direccion, 'Dirección'),
           _drop('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
           _drop('Subunidad', widget.catalogs['SUBUNIDADES_OPERATIVAS'], subunidadId, (v) => setState(() => subunidadId = v), optional: true),
           _drop('Tipo servicio', widget.catalogs['TIPOS_SERVICIO_LUGAR'], tipoId, (v) => setState(() => tipoId = v)),
-          _field(obs, 'Observacion'),
+          _field(obs, 'Observación'),
         ],
         onSave: () => Navigator.pop(context, {
           'nombre': nombre.text.trim(),
@@ -1214,9 +1214,9 @@ class _EasDialogState extends State<_EasDialog> {
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Nueva EAS' : 'Editar EAS',
         children: [
-          _field(codigo, 'Codigo'),
+          _field(codigo, 'Código'),
           _field(nombre, 'Nombre'),
-          _field(direccion, 'Direccion'),
+          _field(direccion, 'Dirección'),
           _drop('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
         ],
         onSave: () => Navigator.pop(context, {
@@ -1256,14 +1256,14 @@ class _MovilDialogState extends State<_MovilDialog> {
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Nuevo movil' : 'Editar movil',
         children: [
-          _field(numero, 'Numero de movil'),
+          _field(numero, 'Número de móvil'),
           _field(placa, 'Placa'),
           _drop('Tipo', widget.catalogs['TIPOS_MOVIL'], tipoId, (v) => setState(() => tipoId = v)),
           _field(km, 'Kilometraje actual', number: true),
-          _field(kmMant, 'Kilometraje ultimo mantenimiento', number: true),
+          _field(kmMant, 'Kilometraje último mantenimiento', number: true),
           _drop('Estado', widget.catalogs['ESTADOS_MOVIL'], estadoId, (v) => setState(() => estadoId = v)),
-          _field(obsEstado, 'Observacion del estado'),
-          _field(obs, 'Observacion general'),
+          _field(obsEstado, 'Observación del estado'),
+          _field(obs, 'Observación general'),
         ],
         onSave: () => Navigator.pop(context, {
           'numeroMovil': numero.text.trim(),
@@ -1310,9 +1310,9 @@ class _AsignacionDialogState extends State<_AsignacionDialog> {
         children: [
           _drop('EAS', widget.eas, easId, (v) => setState(() => easId = v)),
           _drop('Movil', widget.moviles, movilId, (v) => setState(() => movilId = v), labelBuilder: (m) => '${m['numero_movil']} ${m['placa'] ?? ''}'),
-          _field(fecha, 'Fecha asignacion (yyyy-mm-dd)'),
+          _field(fecha, 'Fecha asignación (yyyy-mm-dd)'),
           _drop('Estado', widget.estados, estadoId, (v) => setState(() => estadoId = v)),
-          _field(obs, 'Observacion'),
+          _field(obs, 'Observación'),
         ],
         onSave: () => Navigator.pop(context, {
           'easId': easId,

@@ -66,7 +66,7 @@ class CrtCatalog {
       fields: [
         CrtFieldConfig(key: 'sector', label: 'Sector o punto de servicio'),
         CrtFieldConfig(key: 'personal', label: 'Personal motorizado'),
-        CrtFieldConfig(key: 'vehiculo', label: 'Numero de moto o vehiculo', required: false),
+        CrtFieldConfig(key: 'vehiculo', label: 'Número de moto o vehículo', required: false),
         CrtFieldConfig(key: 'procedimiento', label: 'Tipo de procedimiento'),
         CrtFieldConfig(key: 'novedad', label: 'Novedad o apoyo realizado', minLines: 4),
       ],
@@ -127,7 +127,7 @@ class CrtCatalog {
       fields: [
         CrtFieldConfig(key: 'ruta', label: 'Sector o ruta'),
         CrtFieldConfig(key: 'personal', label: 'Personal ciclista'),
-        CrtFieldConfig(key: 'bicicleta', label: 'Bicicleta o identificacion', required: false),
+        CrtFieldConfig(key: 'bicicleta', label: 'Bicicleta o identificación', required: false),
         CrtFieldConfig(key: 'procedimiento', label: 'Procedimiento o recorrido'),
         CrtFieldConfig(key: 'novedad', label: 'Novedad', minLines: 4),
       ],
@@ -136,7 +136,7 @@ class CrtCatalog {
       modulo: TipoModuloCartilla.conductor,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'movil', label: 'Movil asignado'),
+        CrtFieldConfig(key: 'movil', label: 'Móvil asignado'),
         CrtFieldConfig(key: 'conductor', label: 'Conductor'),
         CrtFieldConfig(key: 'jp', label: 'JP', required: false),
         CrtFieldConfig(key: 'auxiliar', label: 'Auxiliar', required: false),
@@ -158,10 +158,10 @@ class CrtCatalog {
       modulo: TipoModuloCartilla.cuadrante,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'cuadrante', label: 'Numero o nombre de cuadrante'),
+        CrtFieldConfig(key: 'cuadrante', label: 'Número o nombre de cuadrante'),
         CrtFieldConfig(key: 'sector', label: 'Sector'),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'movil', label: 'Movil', required: false),
+        CrtFieldConfig(key: 'movil', label: 'Móvil', required: false),
         CrtFieldConfig(key: 'novedad', label: 'Novedad o procedimiento', minLines: 4),
       ],
     ),
@@ -170,7 +170,7 @@ class CrtCatalog {
       tipos: commonTypes,
       fields: [
         CrtFieldConfig(key: 'lugar', label: 'Lugar del apoyo'),
-        CrtFieldConfig(key: 'institucion', label: 'Institucion o unidad apoyada', required: false),
+        CrtFieldConfig(key: 'institucion', label: 'Institución o unidad apoyada', required: false),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
         CrtFieldConfig(key: 'motivo', label: 'Motivo del apoyo'),
         CrtFieldConfig(key: 'resultado', label: 'Resultado o novedad', minLines: 4),
@@ -181,10 +181,10 @@ class CrtCatalog {
       tipos: radioperadorTypes,
       fields: [
         CrtFieldConfig(key: 'personal', label: 'Personal entrante o saliente'),
-        CrtFieldConfig(key: 'moviles', label: 'Moviles operativos'),
-        CrtFieldConfig(key: 'policias', label: 'Policias', required: false),
+        CrtFieldConfig(key: 'moviles', label: 'Móviles operativos'),
+        CrtFieldConfig(key: 'policias', label: 'Policías', required: false),
         CrtFieldConfig(key: 'novedadPersonal', label: 'Novedades de personal', minLines: 3),
-        CrtFieldConfig(key: 'novedadMovil', label: 'Novedades de movil', minLines: 3),
+        CrtFieldConfig(key: 'novedadMovil', label: 'Novedades de móvil', minLines: 3),
       ],
     ),
   ];
@@ -195,7 +195,7 @@ class CrtCatalog {
   ];
 
   static const easStations = [
-    CrtEasStation(codigo: 'ECO 1', nombre: 'URDESA', direccion: 'AV. VICTOR EMILIO ESTRADA Y CIRCUNVALACION SUR'),
+    CrtEasStation(codigo: 'ECO 1', nombre: 'URDESA', direccion: 'AV. VICTOR EMILIO ESTRADA Y CIRCUNVALACIÓN SUR'),
     CrtEasStation(codigo: 'ECO 2', nombre: 'LOMAS DE URDESA', direccion: 'AV. CERROS Y LOMAS DE URDESA'),
     CrtEasStation(codigo: 'ECO 3', nombre: 'KENNEDY VIEJA', direccion: 'AV. FRANCISCO URBINA Y AV. DEL PERIODISTA'),
     CrtEasStation(codigo: 'ECO 4', nombre: 'KENNEDY NUEVA', direccion: 'AV. JOSE SANTIAGO CASTILLO Y VICTOR HUGO'),
@@ -364,7 +364,7 @@ class CrtCatalog {
     switch (tipo) {
       case TipoCartilla.accidente:
         return const [
-          CrtFieldConfig(key: 'vehiculos', label: 'Vehiculos o placas involucradas'),
+          CrtFieldConfig(key: 'vehiculos', label: 'Vehículos o placas involucradas'),
           CrtFieldConfig(key: 'personas', label: 'Personas involucradas'),
           CrtFieldConfig(key: 'casaSalud', label: 'Casa de salud', required: false),
           CrtFieldConfig(key: 'resultado', label: 'Resultado del siniestro', minLines: 3),
@@ -401,9 +401,9 @@ class CrtCatalog {
         ];
       case TipoCartilla.visualizacionCamaras:
         return const [
-          CrtFieldConfig(key: 'camara', label: 'Camara o punto visualizado'),
-          CrtFieldConfig(key: 'motivo', label: 'Motivo de revision'),
-          CrtFieldConfig(key: 'resultado', label: 'Resultado de la visualizacion', minLines: 3),
+          CrtFieldConfig(key: 'camara', label: 'Cámara o punto visualizado'),
+          CrtFieldConfig(key: 'motivo', label: 'Motivo de revisión'),
+          CrtFieldConfig(key: 'resultado', label: 'Resultado de la visualización', minLines: 3),
         ];
       default:
         return const [

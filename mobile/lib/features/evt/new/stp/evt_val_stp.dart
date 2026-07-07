@@ -33,7 +33,7 @@ class EvtValStp extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Revise la informacion antes de crear el evento.',
+                  'Revise la información antes de crear el evento.',
                   style: TextStyle(
                     color: Colors.black54,
                     fontSize: 16,

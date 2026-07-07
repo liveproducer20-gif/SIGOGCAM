@@ -299,7 +299,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
               const SizedBox(height: 12),
               _field(
                 controller: cedulaCtl,
-                label: 'Cedula',
+                label: 'Cédula',
                 icon: Icons.badge_outlined,
                 enabled: editando,
               ),
@@ -313,7 +313,7 @@ class _ProfileDialogState extends State<ProfileDialog> {
               const SizedBox(height: 12),
               _field(
                 controller: telefonoCtl,
-                label: 'Telefono',
+                label: 'Teléfono',
                 icon: Icons.phone_outlined,
                 enabled: editando,
               ),
@@ -602,9 +602,9 @@ Future<bool> showPasswordCooldownNotice(BuildContext context) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (_) => AlertDialog(
-      title: const Text('Atencion'),
+      title: const Text('Atención'),
       content: const Text(
-        'Esta opcion se puede volver a utilizar despues de 72h.',
+        'Esta opción se puede volver a utilizar después de 72h.',
       ),
       actions: [
         FilledButton(

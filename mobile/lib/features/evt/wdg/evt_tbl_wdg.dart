@@ -42,7 +42,7 @@ class EvtTblWdg extends StatelessWidget {
                   DataColumn(label: Text('Convocados'), numeric: true),
                   DataColumn(label: Text('Confirmados'), numeric: true),
                   DataColumn(label: Text('Estado')),
-                  DataColumn(label: Text('Accion')),
+                  DataColumn(label: Text('Acción')),
                 ],
                 rows: items.map((e) {
                   return DataRow(

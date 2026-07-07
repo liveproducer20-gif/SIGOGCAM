@@ -69,12 +69,12 @@ function validarCedulaYCorreo(data, camposRequeridos) {
 
     const cedula = data.cedula.toString().trim();
     if (!/^\d{10}$/.test(cedula)) {
-        throw new Error('La cedula debe tener 10 digitos');
+        throw new Error('La cédula debe tener 10 dígitos');
     }
 
     const correoInstitucional = data.correoInstitucional.toString().trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correoInstitucional)) {
-        throw new Error('El correo institucional no es valido');
+        throw new Error('El correo institucional no es válido');
     }
 
     return { cedula, correoInstitucional };
@@ -114,7 +114,7 @@ async function crear(data) {
 async function actualizar(id, data) {
     const personalId = Number(id);
     if (!Number.isInteger(personalId) || personalId <= 0) {
-        throw new Error('El id de personal no es valido');
+        throw new Error('El id de personal no es válido');
     }
 
     validarCamposRequeridos(data, [
@@ -130,7 +130,7 @@ async function actualizar(id, data) {
 async function cambiarEstado(id, activo) {
     const personalId = Number(id);
     if (!Number.isInteger(personalId) || personalId <= 0) {
-        throw new Error('El id de personal no es valido');
+        throw new Error('El id de personal no es válido');
     }
 
     return repository.cambiarEstado(personalId, Boolean(activo));
@@ -139,7 +139,7 @@ async function cambiarEstado(id, activo) {
 async function restablecerPassword(id) {
     const personalId = Number(id);
     if (!Number.isInteger(personalId) || personalId <= 0) {
-        throw new Error('El id de personal no es valido');
+        throw new Error('El id de personal no es válido');
     }
 
     const persona = await repository.obtenerBasico(personalId);
@@ -187,7 +187,7 @@ function passwordInicial(fechaNacimiento) {
     const parts = value.includes('-') ? value.split('-') : value.split('/');
 
     if (parts.length !== 3) {
-        throw new Error('La fecha de nacimiento no es valida');
+        throw new Error('La fecha de nacimiento no es válida');
     }
 
     if (value.includes('-')) {

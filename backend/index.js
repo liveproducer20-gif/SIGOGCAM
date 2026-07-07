@@ -16,6 +16,17 @@ const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes'
 const app = express();
 
 app.use(cors());
+
+// Forzar charset UTF-8 en todas las respuestas JSON
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    return originalJson(body);
+  };
+  next();
+});
+
 app.use(express.json({ limit: process.env.JSON_LIMIT || '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: process.env.JSON_LIMIT || '25mb' }));
 

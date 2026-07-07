@@ -121,7 +121,7 @@ class EvtNewCtl extends ChangeNotifier {
 
   Future<int> crearEvento() {
     if (!puedeCrear) {
-      throw Exception('Complete la informacion requerida del evento');
+      throw Exception('Complete la información requerida del evento');
     }
 
     return _repository.crearEvento({

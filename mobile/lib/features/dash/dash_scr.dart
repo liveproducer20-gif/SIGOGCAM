@@ -51,8 +51,8 @@ class _DashScrState extends State<DashScr> {
         const SideMenuItem(title: 'Servicios', icon: Icons.local_police_outlined, enabled: false),
         const SideMenuItem(title: 'Reportes', icon: Icons.bar_chart_outlined, enabled: false),
         const SideMenuItem(title: 'Operaciones', icon: Icons.security_outlined, enabled: false),
-        const SideMenuItem(title: 'Estadisticas', icon: Icons.insights_outlined, enabled: false),
-        const SideMenuItem(title: 'Configuracion', icon: Icons.settings_outlined, enabled: false),
+        const SideMenuItem(title: 'Estadísticas', icon: Icons.insights_outlined, enabled: false),
+        const SideMenuItem(title: 'Configuración', icon: Icons.settings_outlined, enabled: false),
       ];
 
   @override
@@ -1132,7 +1132,7 @@ class _NotifItem {
         _NotifDetail('Hora', evt.hora.isEmpty ? 'Sin hora' : evt.hora),
         if (evt.lugar.isNotEmpty) _NotifDetail('Lugar', evt.lugar),
         if (evt.descripcion.isNotEmpty)
-          _NotifDetail('Descripcion', evt.descripcion),
+          _NotifDetail('Descripción', evt.descripcion),
         _NotifDetail('Convocados', '${evt.convocados}'),
         _NotifDetail('Confirmados', '${evt.confirmados}'),
         _NotifDetail('Notificacion', evt.notificar ? 'Activa' : 'Inactiva'),
@@ -1146,7 +1146,7 @@ class _NotifItem {
 
   factory _NotifItem.fromAnnouncement(AnnMdl ann, String userName) {
     final expira = ann.fecExp == null
-        ? 'Sin fecha de expiracion'
+        ? 'Sin fecha de expiración'
         : '${ann.fecExp!.day.toString().padLeft(2, '0')}/${ann.fecExp!.month.toString().padLeft(2, '0')}/${ann.fecExp!.year}';
     return _NotifItem(
       id: ann.id,
@@ -1161,9 +1161,9 @@ class _NotifItem {
         _NotifDetail('Notificacion', ann.notificar ? 'Activa' : 'Inactiva'),
         _NotifDetail('Destinatario', userName.isEmpty ? 'Agente' : userName),
         _NotifDetail('Descripcion', ann.desc),
-        _NotifDetail('Fecha de publicacion',
+        _NotifDetail('Fecha de publicación',
             '${ann.fecPub.day.toString().padLeft(2, '0')}/${ann.fecPub.month.toString().padLeft(2, '0')}/${ann.fecPub.year}'),
-        _NotifDetail('Fecha de expiracion', expira),
+        _NotifDetail('Fecha de expiración', expira),
         if (ann.imgUrl?.isNotEmpty == true)
           _NotifDetail.image('Imagen', ann.imgUrl!),
         if (ann.imgUrl?.isNotEmpty != true && ann.imgNombre?.isNotEmpty == true)

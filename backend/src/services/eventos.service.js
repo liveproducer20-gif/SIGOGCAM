@@ -71,7 +71,7 @@ async function actualizarEvento(id, data) {
     }
 
     if (!data.titulo || data.titulo.trim() === '') {
-        throw new Error('El titulo del evento es obligatorio');
+        throw new Error('El título del evento es obligatorio');
     }
 
     if (!data.tipoEventoId) {
