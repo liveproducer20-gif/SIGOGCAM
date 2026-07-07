@@ -35,7 +35,10 @@ const handlers = {
     crearAsignacion: handle((req) => service.crearAsignacion(req.body), 201, 'Asignacion creada correctamente', 'asignacionId'),
     actualizarAsignacion: handle((req) => service.actualizarAsignacion(req.params.id, req.body), 200, 'Asignacion actualizada correctamente'),
 
-    obtenerAlertasMantenimiento: handle(() => service.obtenerAlertasMantenimiento())
+    obtenerAlertasMantenimiento: handle(() => service.obtenerAlertasMantenimiento()),
+
+    listarMantenimientos: handle((req) => service.listarMantenimientos(req.params.id)),
+    crearMantenimiento: handle((req) => service.crearMantenimiento({ ...req.body, movilId: req.params.id }), 201, 'Mantenimiento registrado correctamente', 'mantenimientoId')
 };
 
 function handle(action, status = 200, mensaje = null, idKey = null) {

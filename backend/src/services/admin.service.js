@@ -13,7 +13,8 @@ const catalogosPermitidos = new Set([
     'TIPOS_SERVICIO_LUGAR',
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
-    'ESTADOS_ASIGNACION_MOVIL'
+    'ESTADOS_ASIGNACION_MOVIL',
+    'TIPOS_MANTENIMIENTO'
 ]);
 
 async function listarCatalogos() {
@@ -131,6 +132,24 @@ async function actualizarAsignacion(id, data) {
 
 async function obtenerAlertasMantenimiento() {
     return repository.obtenerAlertasMantenimiento();
+}
+
+async function listarMantenimientos(movilId) {
+    return repository.listarMantenimientos(validarId(movilId, 'movil'));
+}
+
+async function crearMantenimiento(data) {
+    return repository.crearMantenimiento(validarMantenimiento(data));
+}
+
+function validarMantenimiento(data) {
+    return {
+        movilId: validarId(data.movilId, 'movil'),
+        fechaMantenimiento: data.fechaMantenimiento || new Date().toISOString(),
+        kilometraje: entero(data.kilometraje, 0),
+        descripcion: textoOpcional(data.descripcion),
+        tipoMantenimientoId: data.tipoMantenimientoId ? validarId(data.tipoMantenimientoId, 'tipo mantenimiento') : null
+    };
 }
 
 function validarCatalogo(codigo) {
@@ -273,5 +292,7 @@ module.exports = {
     listarAsignaciones,
     crearAsignacion,
     actualizarAsignacion,
-    obtenerAlertasMantenimiento
+    obtenerAlertasMantenimiento,
+    listarMantenimientos,
+    crearMantenimiento
 };

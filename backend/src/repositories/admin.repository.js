@@ -253,10 +253,10 @@ async function listarMoviles() {
                m.proximo_mantenimiento,
                (m.proximo_mantenimiento - m.kilometraje_actual) AS kilometros_restantes,
                CASE
-                   WHEN m.kilometraje_actual > m.proximo_mantenimiento THEN N'Mantenimiento preventivo vencido'
-                   WHEN (m.proximo_mantenimiento - m.kilometraje_actual) <= 500 THEN N'Movil proximo a mantenimiento preventivo'
-                   ELSE NULL
-               END AS alerta_mantenimiento,
+                   WHEN m.kilometraje_actual > m.proximo_mantenimiento THEN N'KILOMETRAJE_EXCEDIDO'
+                   WHEN (m.proximo_mantenimiento - m.kilometraje_actual) <= 500 THEN N'EN_ESPERA'
+                   ELSE N'MANTENIMIENTO_COMPLETADO'
+               END AS estado_mantenimiento,
                m.estado_movil_id,
                estado.nombre AS estado,
                m.observacion,
@@ -405,10 +405,40 @@ async function obtenerAlertasMantenimiento() {
     return withConnection((conexion) => conexion.query(`
         SELECT *
         FROM dbo.vw_moviles_mantenimiento
-        WHERE alerta_mantenimiento IS NOT NULL
+        WHERE estado_mantenimiento != N'MANTENIMIENTO_COMPLETADO'
           AND activo = 1
         ORDER BY kilometros_restantes
     `));
+}
+
+async function listarMantenimientos(movilId) {
+    return withConnection((conexion) => conexion.query(`
+        SELECT mm.id, mm.movil_id, mm.fecha_mantenimiento, mm.kilometraje,
+               mm.descripcion, tm.nombre AS tipo_mantenimiento, mm.activo
+        FROM dbo.movil_mantenimiento mm
+        LEFT JOIN dbo.catalogo_detalles tm ON tm.id = mm.tipo_mantenimiento_id
+        WHERE mm.movil_id = ?
+        ORDER BY mm.fecha_mantenimiento DESC, mm.id DESC
+    `, [movilId]));
+}
+
+async function crearMantenimiento(data) {
+    return withConnection(async (conexion) => {
+        const result = await conexion.query(`
+            INSERT INTO dbo.movil_mantenimiento (movil_id, fecha_mantenimiento, kilometraje, descripcion, tipo_mantenimiento_id)
+            OUTPUT INSERTED.id
+            VALUES (?, ?, ?, ?, ?)
+        `, [data.movilId, data.fechaMantenimiento, data.kilometraje, data.descripcion, data.tipoMantenimientoId]);
+
+        await conexion.query(`
+            UPDATE dbo.moviles
+            SET kilometraje_ultimo_mantenimiento = ?,
+                fecha_actualizacion = SYSDATETIME()
+            WHERE id = ?
+        `, [data.kilometraje, data.movilId]);
+
+        return result[0].id;
+    });
 }
 
 async function obtenerCatalogo(conexion, codigo) {
@@ -521,5 +551,7 @@ module.exports = {
     listarAsignaciones,
     crearAsignacion,
     actualizarAsignacion,
-    obtenerAlertasMantenimiento
+    obtenerAlertasMantenimiento,
+    listarMantenimientos,
+    crearMantenimiento
 };

@@ -1,8 +1,7 @@
 const path = require('path');
 const backendNodeModules = path.join(__dirname, '..', 'backend', 'node_modules');
 const odbc = require(path.join(backendNodeModules, 'odbc'));
-
-require('dotenv').config({ path: path.join(__dirname, '..', 'backend', '.env') });
+require(path.join(backendNodeModules, 'dotenv')).config({ path: path.join(__dirname, '..', 'backend', '.env') });
 
 const {
   DB_DRIVER = 'ODBC Driver 18 for SQL Server',

@@ -72,6 +72,11 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getAlertasMantenimiento() =>
       _getList('admin/dashboard/mantenimiento');
 
+  Future<List<Map<String, dynamic>>> getMantenimientos(int movilId) =>
+      _getList('admin/moviles/$movilId/mantenimientos');
+  Future<void> createMantenimiento(int movilId, Map<String, dynamic> data) =>
+      _post('admin/moviles/$movilId/mantenimientos', data);
+
   Future<List<Map<String, dynamic>>> _getList(String path) async {
     final response = await _client.get<List<Map<String, dynamic>>>(
       path,

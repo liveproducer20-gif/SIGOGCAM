@@ -355,11 +355,11 @@ class _RolesTabState extends State<_RolesTab> {
         _txt(item['descripcion']),
         _txt((item['permisos'] as List<dynamic>? ?? []).length),
         _StateChip(active: _active(item)),
-        _Actions(
-          onEdit: () => _edit(item),
-          onToggle: () => _toggle(item),
-          active: _active(item),
-        ),
+          _Actions(
+            onEdit: () => _edit(item),
+            onToggle: () => _toggle(item),
+            active: _active(item),
+          ),
       ],
     );
   }
@@ -557,10 +557,11 @@ class _MovilState extends State<_CrudTab> {
           _txt(item['tipo']),
           _txt(item['kilometraje_actual']),
           _txt(item['proximo_mantenimiento']),
-          _AlertText(text: item['alerta_mantenimiento']?.toString()),
+          _AlertText(text: item['estado_mantenimiento']?.toString()),
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
+            onHistory: () => _showHistory(item),
             active: _active(item),
           ),
         ],
@@ -589,6 +590,22 @@ class _MovilState extends State<_CrudTab> {
       await widget.api.setMovilActivo(_id(item), !_active(item));
       _reload();
     });
+  }
+
+  Future<void> _showHistory(Map<String, dynamic> item) async {
+    final id = _id(item);
+    final catalogs = await _loadCatalogs(widget.api);
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      builder: (_) => _MantenimientoDialog(
+        movilId: id,
+        movilLabel: '${item['numero_movil']} ${item['placa'] ?? ''}'.trim(),
+        api: widget.api,
+        catalogs: catalogs,
+        onChanged: _reload,
+      ),
+    );
   }
 }
 
@@ -728,12 +745,14 @@ class _Actions extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onToggle;
   final VoidCallback? onReset;
+  final VoidCallback? onHistory;
   final bool active;
 
   const _Actions({
     this.onEdit,
     this.onToggle,
     this.onReset,
+    this.onHistory,
     required this.active,
   });
 
@@ -747,6 +766,12 @@ class _Actions extends StatelessWidget {
             onPressed: onEdit,
             icon: const Icon(Icons.edit_outlined),
             tooltip: 'Editar',
+          ),
+        if (onHistory != null)
+          IconButton(
+            onPressed: onHistory,
+            icon: const Icon(Icons.build_outlined),
+            tooltip: 'Mantenimientos',
           ),
         if (onToggle != null)
           IconButton(
@@ -791,15 +816,181 @@ class _AlertText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (text == null || text!.isEmpty) return const Text('Sin alerta');
-    final vencido = text!.toLowerCase().contains('vencido');
-    return Text(
-      text!,
-      style: TextStyle(
-        color: vencido ? Colors.red.shade700 : Colors.orange.shade800,
-        fontWeight: FontWeight.bold,
+    final estado = text;
+    if (estado == null || estado.isEmpty) return const Text('Sin alerta');
+    String label;
+    MaterialColor color;
+    switch (estado) {
+      case 'KILOMETRAJE_EXCEDIDO':
+        label = 'Kilometraje excedido';
+        color = Colors.red;
+        break;
+      case 'EN_ESPERA':
+        label = 'En espera';
+        color = Colors.amber;
+        break;
+      case 'MANTENIMIENTO_COMPLETADO':
+        label = 'Mantenimiento completado';
+        color = Colors.green;
+        break;
+      default:
+        label = estado;
+        color = Colors.grey;
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.circle, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: color.shade700)),
+      ],
+    );
+  }
+}
+
+class _MantenimientoDialog extends StatefulWidget {
+  final int movilId;
+  final String movilLabel;
+  final AdmApi api;
+  final Map<String, List<Map<String, dynamic>>> catalogs;
+  final VoidCallback onChanged;
+  const _MantenimientoDialog({
+    required this.movilId,
+    required this.movilLabel,
+    required this.api,
+    required this.catalogs,
+    required this.onChanged,
+  });
+  @override
+  State<_MantenimientoDialog> createState() => _MantenimientoDialogState();
+}
+
+class _MantenimientoDialogState extends State<_MantenimientoDialog> {
+  late Future<List<Map<String, dynamic>>> _mantenimientos;
+
+  @override
+  void initState() {
+    super.initState();
+    _mantenimientos = widget.api.getMantenimientos(widget.movilId);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text('Mantenimientos - ${widget.movilLabel}'),
+        content: SizedBox(
+          width: 600,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _mantenimientos,
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snap.hasError) return Center(child: Text('Error: ${snap.error}'));
+              final items = snap.data ?? [];
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Text('Historial de mantenimiento',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const Spacer(),
+                      FilledButton.icon(
+                        onPressed: _nuevo,
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('Nuevo'),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  if (items.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Sin registros de mantenimiento'),
+                    )
+                  else
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          columnSpacing: 16,
+                          columns: const [
+                            DataColumn(label: Text('Fecha')),
+                            DataColumn(label: Text('Km')),
+                            DataColumn(label: Text('Tipo')),
+                            DataColumn(label: Text('Descripcion')),
+                          ],
+                          rows: items.map((r) => DataRow(cells: [
+                            DataCell(_txt(r['fecha_mantenimiento']?.toString().substring(0, 10) ?? '')),
+                            DataCell(_txt(r['kilometraje']?.toString() ?? '')),
+                            DataCell(_txt(r['tipo_mantenimiento']?.toString())),
+                            DataCell(_txt(r['descripcion']?.toString())),
+                          ])).toList(),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))],
+      );
+
+  void _nuevo() async {
+    final tipos = widget.catalogs['TIPOS_MANTENIMIENTO'] ?? [];
+    final fechaCtrl = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+    final kmCtrl = TextEditingController(text: '0');
+    final descCtrl = TextEditingController();
+    int? tipoId;
+
+    final data = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Registrar mantenimiento'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: fechaCtrl,
+                decoration: const InputDecoration(labelText: 'Fecha (yyyy-mm-dd)'),
+              ),
+              TextField(
+                controller: kmCtrl,
+                decoration: const InputDecoration(labelText: 'Kilometraje'),
+                keyboardType: TextInputType.number,
+              ),
+              if (tipos.isNotEmpty)
+                _drop('Tipo mantenimiento', tipos, tipoId, (v) => tipoId = v, optional: true),
+              TextField(
+                controller: descCtrl,
+                decoration: const InputDecoration(labelText: 'Descripcion'),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, {
+              'fechaMantenimiento': fechaCtrl.text.trim(),
+              'kilometraje': int.tryParse(kmCtrl.text) ?? 0,
+              'tipoMantenimientoId': tipoId,
+              'descripcion': descCtrl.text.trim(),
+            }),
+            child: const Text('Guardar'),
+          ),
+        ],
       ),
     );
+
+    if (data == null) return;
+    await _safeRun(context, () async {
+      await widget.api.createMantenimiento(widget.movilId, data);
+      setState(() => _mantenimientos = widget.api.getMantenimientos(widget.movilId));
+      widget.onChanged();
+    });
   }
 }
 
@@ -1250,6 +1441,7 @@ Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async 
     'TIPOS_SERVICIO_LUGAR',
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
+    'TIPOS_MANTENIMIENTO',
   ];
   final result = <String, List<Map<String, dynamic>>>{};
   for (final code in codes) {

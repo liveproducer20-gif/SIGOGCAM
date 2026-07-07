@@ -118,6 +118,17 @@ router.put(
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'moviles' }),
     controller.cambiarEstadoMovil
 );
+router.get(
+    '/moviles/:id/mantenimientos',
+    requirePermission('moviles.ver'),
+    controller.listarMantenimientos
+);
+router.post(
+    '/moviles/:id/mantenimientos',
+    requirePermission('moviles.editar'),
+    auditAction({ accion: 'crear', modulo: 'administracion', tabla: 'movil_mantenimiento' }),
+    controller.crearMantenimiento
+);
 
 router.get('/movil-eas-asignaciones', requirePermission('moviles.asignar'), controller.listarAsignaciones);
 router.post(

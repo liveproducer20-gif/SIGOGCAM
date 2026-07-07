@@ -178,7 +178,7 @@ USING (
         ('AREAS','COMUNICACIONES',N'Comunicaciones',30),
         ('FUNCIONES_OPERATIVAS','RADIOPERADOR',N'Radioperador',10),
         ('FUNCIONES_OPERATIVAS','ENCARGADO',N'Encargado',20),
-        ('FUNCIONES_OPERATIVAS','PATRULLAJE',N'Patrullaje',30),
+        ('FUNCIONES_OPERATIVAS','FILA_PEDESTRE',N'Fila/Pedestre',30),
         ('FUNCIONES_OPERATIVAS','ADMINISTRATIVO',N'Administrativo',40),
         ('GRUPOS','GRUPO_A',N'Grupo A',10),
         ('GRUPOS','GRUPO_B',N'Grupo B',20),
@@ -368,6 +368,34 @@ CREATE VIEW dbo.vw_personal_disponible_sin_evento AS
 SELECT *
 FROM dbo.vw_personal_detalle
 WHERE activo = 1;
+');
+GO
+
+IF OBJECT_ID('dbo.vw_moviles_mantenimiento', 'V') IS NOT NULL
+    DROP VIEW dbo.vw_moviles_mantenimiento;
+GO
+
+EXEC ('
+CREATE VIEW dbo.vw_moviles_mantenimiento AS
+SELECT
+    m.id,
+    m.numero_movil,
+    m.placa,
+    tm.nombre AS tipo,
+    em.nombre AS estado,
+    m.kilometraje_actual,
+    m.kilometraje_ultimo_mantenimiento,
+    m.proximo_mantenimiento,
+    (m.proximo_mantenimiento - m.kilometraje_actual) AS kilometros_restantes,
+    CASE
+        WHEN m.kilometraje_actual > m.proximo_mantenimiento THEN N''KILOMETRAJE_EXCEDIDO''
+        WHEN (m.proximo_mantenimiento - m.kilometraje_actual) <= 500 THEN N''EN_ESPERA''
+        ELSE N''MANTENIMIENTO_COMPLETADO''
+    END AS estado_mantenimiento,
+    m.activo
+FROM dbo.moviles m
+INNER JOIN dbo.catalogo_detalles tm ON tm.id = m.tipo_movil_id
+INNER JOIN dbo.catalogo_detalles em ON em.id = m.estado_movil_id;
 ');
 GO
 
