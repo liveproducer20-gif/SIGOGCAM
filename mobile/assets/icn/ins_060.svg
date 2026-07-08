@@ -1,14 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="bg60" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#E5E4E2"/>
-      <stop offset="100%" style="stop-color:#B0C4DE"/>
+    <linearGradient id="g60" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E8E8E8"/><stop offset="1" stop-color="#A0B0C0"/>
     </linearGradient>
   </defs>
-  <polygon points="100,10 130,35 175,25 163,65 195,85 163,105 175,145 130,135 100,160 70,135 25,145 37,105 5,85 37,65 25,25 70,35" fill="url(#bg60)" stroke="#708090" stroke-width="3"/>
-  <circle cx="100" cy="85" r="45" fill="#F0F8FF" stroke="#708090" stroke-width="2"/>
-  <circle cx="100" cy="85" r="35" fill="none" stroke="#B0C4DE" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="100" y="93" text-anchor="middle" font-size="26" font-weight="bold" fill="#4A6A8A">60</text>
-  <path d="M85 120 L100 135 L115 120" fill="none" stroke="#708090" stroke-width="2"/>
-  <polygon points="100,45 103,55 114,55 105,62 108,73 100,66 92,73 95,62 86,55 97,55" fill="#FFD700" opacity="0.6"/>
+  <rect x="45" y="55" width="110" height="100" rx="8" fill="url(#g60)" stroke="#607080" stroke-width="3"/>
+  <rect x="55" y="65" width="90" height="80" rx="4" fill="#F0F4F8" stroke="#607080" stroke-width="2"/>
+  <rect x="55" y="65" width="90" height="20" rx="4" fill="#D0D8E0" stroke="#607080" stroke-width="2"/>
+  <circle cx="100" cy="140" r="10" fill="#607080"/>
+  <rect x="80" y="42" width="40" height="18" rx="5" fill="url(#g60)" stroke="#607080" stroke-width="2.5"/>
+  <text x="100" y="120" text-anchor="middle" font-size="18" font-weight="bold" fill="#405060">60</text>
 </svg>

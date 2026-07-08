@@ -1,17 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="bg90" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#B9F2FF"/>
-      <stop offset="100%" style="stop-color:#4A90D9"/>
+    <linearGradient id="g90" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#B9E4FF"/><stop offset="1" stop-color="#4A80B0"/>
     </linearGradient>
   </defs>
-  <circle cx="100" cy="85" r="72" fill="url(#bg90)" stroke="#2C5F8A" stroke-width="3"/>
-  <circle cx="100" cy="85" r="55" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4,3"/>
-  <circle cx="100" cy="85" r="42" fill="#E8F4FD" stroke="#2C5F8A" stroke-width="2"/>
-  <circle cx="100" cy="85" r="28" fill="none" stroke="#B9F2FF" stroke-width="1"/>
-  <text x="100" y="93" text-anchor="middle" font-size="26" font-weight="bold" fill="#1A3A5C">90</text>
-  <path d="M70 130 Q100 150 130 130" fill="none" stroke="#FFD700" stroke-width="2.5"/>
-  <path d="M60 55 Q70 45 80 50" fill="none" stroke="#FFD700" stroke-width="2"/>
-  <path d="M120 50 Q130 45 140 55" fill="none" stroke="#FFD700" stroke-width="2"/>
-  <polygon points="100,38 105,48 116,48 107,55 110,66 100,58 90,66 93,55 84,48 95,48" fill="#FFD700" opacity="0.8"/>
+  <rect x="35" y="55" width="130" height="100" rx="8" fill="url(#g90)" stroke="#2C5F8A" stroke-width="3"/>
+  <rect x="42" y="62" width="116" height="86" rx="4" fill="#FFF8E7" stroke="#2C5F8A" stroke-width="2"/>
+  <line x1="55" y1="78" x2="145" y2="78" stroke="#2C5F8A" stroke-width="1.5"/>
+  <line x1="55" y1="88" x2="130" y2="88" stroke="#2C5F8A" stroke-width="1.5"/>
+  <line x1="55" y1="98" x2="145" y2="98" stroke="#2C5F8A" stroke-width="1.5"/>
+  <line x1="55" y1="108" x2="120" y2="108" stroke="#2C5F8A" stroke-width="1.5"/>
+  <line x1="55" y1="118" x2="140" y2="118" stroke="#2C5F8A" stroke-width="1.5"/>
+  <line x1="55" y1="128" x2="110" y2="128" stroke="#2C5F8A" stroke-width="1.5"/>
+  <rect x="90" y="55" width="20" height="10" rx="3" fill="#4A80B0" stroke="#2C5F8A" stroke-width="1"/>
+  <text x="100" y="108" text-anchor="middle" font-size="22" font-weight="bold" fill="#2C5F8A">90</text>
 </svg>

@@ -122,7 +122,11 @@ VALUES
 ('cartillas_070', N'Experto en Reportes', N'Tu dominio en la generacion de cartillas es evidente. Has completado 70 cartillas y obtuviste la insignia Experto en Reportes.', 70, N'70'),
 ('cartillas_080', N'Centinela Institucional', N'Has demostrado constancia y responsabilidad institucional. Alcanzaste 80 cartillas y desbloqueaste la insignia Centinela Institucional.', 80, N'80'),
 ('cartillas_090', N'Maestro de Cartillas', N'Tu experiencia te convierte en un referente. Has generado 90 cartillas y obtuviste la insignia Maestro de Cartillas.', 90, N'90'),
-('cartillas_100', N'Leyenda Operativa', N'Felicidades. Has completado 100 cartillas y desbloqueaste la insignia Leyenda Operativa.', 100, N'100');
+('cartillas_100', N'Leyenda Operativa', N'Felicidades. Has completado 100 cartillas y desbloqueaste la insignia Leyenda Operativa.', 100, N'100'),
+('cartillas_110', N'Super Agente', N'Felicidades. Has alcanzado 110 cartillas y desbloqueaste la insignia Super Agente. Eres un verdadero ejemplo.', 110, N'110'),
+('cartillas_120', N'El mejor de los Papamike', N'Impresionante. Con 120 cartillas te has ganado la insignia El mejor de los Papamike. Nadie te supera.', 120, N'120'),
+('cartillas_130', N'El loco de las Cartillas', N'Increible. Has generado 130 cartillas y desbloqueaste la insignia El loco de las Cartillas. Eres una maquina.', 130, N'130'),
+('cartillas_140', N'Tiburon de los reportes', N'Excepcional. Con 140 cartillas has desbloqueado la insignia Tiburon de los reportes. Eres un depredador de las cartillas.', 140, N'140');
 
 MERGE dbo.insignias AS target
 USING @insignias AS source

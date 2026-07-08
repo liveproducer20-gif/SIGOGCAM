@@ -1,13 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="bg35" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#FFD700"/>
-      <stop offset="100%" style="stop-color:#DAA520"/>
+    <linearGradient id="g35" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFD700"/><stop offset="1" stop-color="#DAA520"/>
     </linearGradient>
   </defs>
-  <path d="M100 15 L140 35 L175 25 L165 65 L195 95 L165 120 L170 155 L135 145 L100 165 L65 145 L30 155 L35 120 L5 95 L35 65 L25 25 L60 35 Z" fill="url(#bg35)" stroke="#B8860B" stroke-width="3"/>
-  <path d="M100 35 L120 45 L145 38 L138 60 L155 82 L133 85 L125 105 L100 95 L75 105 L67 85 L45 82 L62 60 L55 38 L80 45 Z" fill="none" stroke="#B8860B" stroke-width="1.5"/>
-  <circle cx="100" cy="85" r="30" fill="#FFF8DC" stroke="#B8860B" stroke-width="2"/>
-  <text x="100" y="93" text-anchor="middle" font-size="26" font-weight="bold" fill="#8B6914">35</text>
-  <path d="M100 120 L95 130 L100 138 L105 130 Z" fill="#DAA520" stroke="#B8860B" stroke-width="1"/>
+  <circle cx="100" cy="80" r="55" fill="url(#g35)" stroke="#B8860B" stroke-width="3"/>
+  <circle cx="100" cy="80" r="42" fill="#FFF8DC" stroke="#B8860B" stroke-width="2"/>
+  <line x1="100" y1="35" x2="100" y2="60" stroke="#B8860B" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="100" y1="95" x2="100" y2="125" stroke="#B8860B" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="55" y1="80" x2="80" y2="80" stroke="#B8860B" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="120" y1="80" x2="145" y2="80" stroke="#B8860B" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="70" y1="50" x2="88" y2="68" stroke="#B8860B" stroke-width="3" stroke-linecap="round"/>
+  <line x1="112" y1="68" x2="130" y2="50" stroke="#B8860B" stroke-width="3" stroke-linecap="round"/>
+  <line x1="70" y1="110" x2="88" y2="92" stroke="#B8860B" stroke-width="3" stroke-linecap="round"/>
+  <line x1="112" y1="92" x2="130" y2="110" stroke="#B8860B" stroke-width="3" stroke-linecap="round"/>
+  <text x="100" y="87" text-anchor="middle" font-size="28" font-weight="bold" fill="#8B6914">35</text>
 </svg>

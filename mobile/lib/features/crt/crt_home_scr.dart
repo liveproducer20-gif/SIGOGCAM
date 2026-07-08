@@ -607,28 +607,30 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   int get _easDbId => CrtCatalog.easStations.indexOf(eas) + 1;
 
   void _desaIrSiguiente() async {
-    if (_desaCp.trim().isNotEmpty) {
-      await crtApi.saveCp(_desaCp.trim());
-    }
-    if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
-      await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
-      _desaPoliciaOtro = false;
-      _servidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
-      final nuevo = _servidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
-      if (nuevo != null) {
-        _desaPoliciaId = nuevo['id'] as int?;
+    try {
+      if (_desaCp.trim().isNotEmpty) {
+        await crtApi.saveCp(_desaCp.trim());
       }
-      _desaPoliciaCtrl.clear();
-    } else if (_desaPoliciaId != null) {
-      await crtApi.savePolicia(_desaPoliciaId);
-    }
-    if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
-      await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
-      _desaDireccionOtro = false;
-      _direcciones = await crtApi.getDirecciones(_easDbId);
-      _desaDireccion = _desaDireccion.trim();
-      _desaDireccionCtrl.clear();
-    }
+      if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
+        await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
+        _desaPoliciaOtro = false;
+        _servidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo = _servidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) {
+          _desaPoliciaId = nuevo['id'] as int?;
+        }
+        _desaPoliciaCtrl.clear();
+      } else if (_desaPoliciaId != null) {
+        await crtApi.savePolicia(_desaPoliciaId);
+      }
+      if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
+        await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
+        _desaDireccionOtro = false;
+        _direcciones = await crtApi.getDirecciones(_easDbId);
+        _desaDireccion = _desaDireccion.trim();
+        _desaDireccionCtrl.clear();
+      }
+    } catch (_) {}
     if (mounted) setState(() => _desaSection++);
   }
 

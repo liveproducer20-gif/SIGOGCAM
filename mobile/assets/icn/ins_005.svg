@@ -1,13 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
   <defs>
-    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#CD7F32"/>
-      <stop offset="100%" style="stop-color:#A0522D"/>
+    <linearGradient id="g5" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#CD7F32"/><stop offset="1" stop-color="#A0522D"/>
     </linearGradient>
   </defs>
-  <path d="M100 10 L130 30 L170 25 L160 60 L190 85 L160 105 L165 140 L130 130 L100 150 L70 130 L35 140 L40 105 L10 85 L40 60 L30 25 L70 30 Z" fill="url(#bg5)" stroke="#8B4513" stroke-width="3"/>
-  <circle cx="100" cy="80" r="40" fill="#FFE4C4" stroke="#8B4513" stroke-width="2"/>
-  <text x="100" y="92" text-anchor="middle" font-size="32" font-weight="bold" fill="#8B4513">5</text>
-  <path d="M100 120 L90 130 L100 138 L110 130 Z" fill="#CD7F32" stroke="#8B4513" stroke-width="1"/>
-  <polygon points="100,50 105,62 118,62 108,70 112,83 100,75 88,83 92,70 82,62 95,62" fill="#FFD700" opacity="0.8"/>
+  <path d="M100 10 L175 50 L175 120 Q175 160 100 190 Q25 160 25 120 L25 50 Z" fill="url(#g5)" stroke="#8B4513" stroke-width="3"/>
+  <path d="M100 30 L155 58 L155 115 Q155 145 100 170 Q45 145 45 115 L45 58 Z" fill="#FFE4C4" stroke="#8B4513" stroke-width="2"/>
+  <text x="100" y="105" text-anchor="middle" font-size="36" font-weight="bold" fill="#8B4513">5</text>
+  <circle cx="100" cy="45" r="8" fill="#CD7F32" stroke="#8B4513" stroke-width="1.5"/>
+  <circle cx="100" cy="155" r="4" fill="#CD7F32"/>
 </svg>
