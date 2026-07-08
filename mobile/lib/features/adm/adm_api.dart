@@ -55,6 +55,8 @@ class AdmApi {
 
   Future<List<Map<String, dynamic>>> getRutas() =>
       _getList('admin/rutas');
+  Future<List<Map<String, dynamic>>> getGrados() =>
+      _getList('admin/grados');
   Future<void> createRuta(Map<String, dynamic> data) =>
       _post('admin/rutas', data);
   Future<void> updateRuta(int id, Map<String, dynamic> data) =>

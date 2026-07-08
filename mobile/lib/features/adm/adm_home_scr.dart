@@ -60,12 +60,6 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
             label: 'EAS',
             child: _EasTab(api: api),
           ),
-        if (widget.user.hasPermission('eas.ver'))
-          _TabDef(
-            icon: Icons.map_outlined,
-            label: 'Rutas',
-            child: _RutasTab(api: api),
-          ),
         if (widget.user.hasPermission('moviles.ver'))
           _TabDef(
             icon: Icons.directions_car_outlined,
@@ -183,8 +177,14 @@ class _PersonalTabState extends State<_PersonalTab> {
   void _reload() => setState(() => future = widget.api.getPersonal());
 
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final catalogs = await _loadCatalogs(widget.api);
-    final roles = await widget.api.getRoles();
+    final results = await Future.wait([
+      _loadCatalogs(widget.api),
+      widget.api.getRoles(),
+      widget.api.getGrados(),
+    ]);
+    final catalogs = results[0] as Map<String, List<Map<String, dynamic>>>;
+    final roles = results[1] as List<Map<String, dynamic>>;
+    final grados = results[2] as List<Map<String, dynamic>>;
     if (!mounted) return;
 
     final data = await showDialog<Map<String, dynamic>>(
@@ -193,6 +193,7 @@ class _PersonalTabState extends State<_PersonalTab> {
         item: item,
         catalogs: catalogs,
         roles: roles,
+        grados: grados,
       ),
     );
     if (data == null) return;
@@ -249,7 +250,6 @@ class _CatalogosTab extends StatefulWidget {
 
 class _CatalogosTabState extends State<_CatalogosTab> {
   static const codigos = [
-    'GRADOS',
     'AREAS',
     'FUNCIONES_OPERATIVAS',
     'GRUPOS',
@@ -446,13 +446,6 @@ class _EasTab extends _CrudTab {
   State<_CrudTab> createState() => _EasState();
 }
 
-class _RutasTab extends _CrudTab {
-  const _RutasTab({required super.api});
-
-  @override
-  State<_CrudTab> createState() => _RutasState();
-}
-
 class _MovilesTab extends _CrudTab {
   const _MovilesTab({required super.api});
 
@@ -488,6 +481,11 @@ class _LugarState extends State<_CrudTab> {
         columns: const ['Ruta', 'Ubicacion', 'Distrito', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
+        header: OutlinedButton.icon(
+          onPressed: _showRutasManager,
+          icon: const Icon(Icons.map_outlined, size: 18),
+          label: const Text('Gestionar Rutas'),
+        ),
         rowBuilder: (item) => [
           _txt(item['ruta']),
           _txt(item['direccion']),
@@ -503,6 +501,14 @@ class _LugarState extends State<_CrudTab> {
       );
 
   void _reload() => setState(() => future = widget.api.getLugares());
+
+  void _showRutasManager() {
+    showDialog(
+      context: context,
+      builder: (_) => _RutasManagerDialog(api: widget.api),
+    );
+  }
+
   Future<void> _edit(Map<String, dynamic>? item) async {
     final results = await Future.wait([
       _loadCatalogs(widget.api),
@@ -609,36 +615,99 @@ class _EasState extends State<_CrudTab> {
   }
 }
 
-class _RutasState extends State<_CrudTab> {
-  late Future<List<Map<String, dynamic>>> future;
+class _RutasManagerDialog extends StatefulWidget {
+  final AdmApi api;
+  const _RutasManagerDialog({required this.api});
+  @override
+  State<_RutasManagerDialog> createState() => _RutasManagerDialogState();
+}
+
+class _RutasManagerDialogState extends State<_RutasManagerDialog> {
+  late Future<List<Map<String, dynamic>>> _future;
+
   @override
   void initState() {
     super.initState();
-    future = widget.api.getRutas();
+    _future = widget.api.getRutas();
   }
 
   @override
-  Widget build(BuildContext context) => _AsyncTable(
-        title: 'Rutas',
-        subtitle: 'Rutas de servicio para lugares de servicio.',
-        future: future,
-        columns: const ['Nombre', 'Estado', 'Acciones'],
-        onRefresh: _reload,
-        onCreate: () => _edit(null),
-        rowBuilder: (item) => [
-          _txt(item['nombre']),
-          _StateChip(active: _active(item)),
-          _Actions(
-            onEdit: () => _edit(item),
-            onToggle: () => _toggle(item),
-            onDelete: () => _confirmDelete(item, 'ruta ${item['nombre']}', () => widget.api.deleteRuta(_id(item))),
-            active: _active(item),
-          ),
-        ],
-      );
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Gestionar Rutas'),
+      content: SizedBox(
+        width: 500,
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: _future,
+          builder: (context, snapshot) {
+            final items = snapshot.data ?? [];
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator()));
+            }
+            if (snapshot.hasError) {
+              return Center(child: Text('${snapshot.error}'));
+            }
+            return SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: FilledButton.icon(
+                      onPressed: _create,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Nueva Ruta'),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Nombre')),
+                      DataColumn(label: Text('Estado')),
+                      DataColumn(label: Text('Acciones')),
+                    ],
+                    rows: [
+                      for (final item in items)
+                        DataRow(cells: [
+                          DataCell(_txt(item['nombre'])),
+                          DataCell(_StateChip(active: _active(item))),
+                          DataCell(_Actions(
+                            onEdit: () => _edit(item),
+                            onToggle: () => _toggle(item),
+                            onDelete: () => _confirmDelete(item),
+                            active: _active(item),
+                          )),
+                        ]),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar')),
+      ],
+    );
+  }
 
-  void _reload() => setState(() => future = widget.api.getRutas());
-  Future<void> _edit(Map<String, dynamic>? item) async {
+  void _reload() => setState(() => _future = widget.api.getRutas());
+
+  Future<void> _create() async {
+    final data = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => const _RutaDialog(),
+    );
+    if (data == null) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await widget.api.createRuta(data);
+      _reload();
+    });
+  }
+
+  Future<void> _edit(Map<String, dynamic> item) async {
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (_) => _RutaDialog(item: item),
@@ -646,9 +715,7 @@ class _RutasState extends State<_CrudTab> {
     if (data == null) return;
     if (!mounted) return;
     await _safeRun(context, () async {
-      item == null
-          ? await widget.api.createRuta(data)
-          : await widget.api.updateRuta(_id(item), data);
+      await widget.api.updateRuta(_id(item), data);
       _reload();
     });
   }
@@ -660,12 +727,12 @@ class _RutasState extends State<_CrudTab> {
     });
   }
 
-  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+  Future<void> _confirmDelete(Map<String, dynamic> item) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar ruta ${item['nombre']}?');
     if (ok != true) return;
     if (!mounted) return;
     await _safeRun(context, () async {
-      await deleteFn();
+      await widget.api.deleteRuta(_id(item));
       _reload();
     });
   }
@@ -1194,7 +1261,8 @@ class _PersonalDialog extends StatefulWidget {
   final Map<String, dynamic>? item;
   final Map<String, List<Map<String, dynamic>>> catalogs;
   final List<Map<String, dynamic>> roles;
-  const _PersonalDialog({this.item, required this.catalogs, required this.roles});
+  final List<Map<String, dynamic>> grados;
+  const _PersonalDialog({this.item, required this.catalogs, required this.roles, required this.grados});
   @override
   State<_PersonalDialog> createState() => _PersonalDialogState();
 }
@@ -1236,7 +1304,7 @@ class _PersonalDialogState extends State<_PersonalDialog> {
           _field(correo, 'Correo institucional'),
           _field(telefono, 'Teléfono'),
           _field(nacimiento, 'Fecha de nacimiento (yyyy-mm-dd)'),
-          _drop('Grado', widget.catalogs['GRADOS'], gradoId, (v) => setState(() => gradoId = v)),
+          _drop('Grado', widget.grados, gradoId, (v) => setState(() => gradoId = v)),
           _drop('Area', widget.catalogs['AREAS'], areaId, (v) => setState(() => areaId = v)),
           _drop('Funcion operativa', widget.catalogs['FUNCIONES_OPERATIVAS'], funcionId, (v) => setState(() => funcionId = v), optional: true),
           _drop('Grupo', widget.catalogs['GRUPOS'], grupoId, (v) => setState(() => grupoId = v)),
@@ -1620,7 +1688,6 @@ String _date(String value) {
 
 Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async {
   const codes = [
-    'GRADOS',
     'AREAS',
     'FUNCIONES_OPERATIVAS',
     'GRUPOS',

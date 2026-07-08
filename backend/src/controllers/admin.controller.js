@@ -45,6 +45,7 @@ const handlers = {
     eliminarLugar: handle((req) => service.eliminarLugar(req.params.id), 200, 'Lugar eliminado correctamente'),
     eliminarEas: handle((req) => service.eliminarEas(req.params.id), 200, 'EAS eliminado correctamente'),
     listarRutas: handle(() => service.listarRutas()),
+    listarGrados: handle(() => service.listarGrados()),
     crearRuta: handle((req) => service.crearRuta(req.body), 201, 'Ruta creada correctamente', 'rutaId'),
     actualizarRuta: handle((req) => service.actualizarRuta(req.params.id, req.body), 200, 'Ruta actualizada correctamente'),
     cambiarEstadoRuta: handle((req) => service.cambiarEstadoRuta(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),

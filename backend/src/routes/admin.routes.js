@@ -124,6 +124,7 @@ router.delete(
 );
 
 router.get('/rutas', requirePermission('eas.ver'), controller.listarRutas);
+router.get('/grados', requirePermission('personal.ver'), controller.listarGrados);
 router.post(
     '/rutas',
     requirePermission('eas.crear'),

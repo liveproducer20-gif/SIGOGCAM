@@ -1,7 +1,6 @@
 const repository = require('../repositories/admin.repository');
 
 const catalogosPermitidos = new Set([
-    'GRADOS',
     'AREAS',
     'FUNCIONES_OPERATIVAS',
     'GRUPOS',
@@ -101,6 +100,10 @@ async function cambiarEstadoEas(id, activo) {
 
 async function listarRutas() {
     return repository.listarRutas();
+}
+
+async function listarGrados() {
+    return repository.listarGrados();
 }
 
 async function crearRuta(data) {
@@ -342,6 +345,7 @@ module.exports = {
     actualizarRuta,
     cambiarEstadoRuta,
     eliminarRuta,
+    listarGrados,
     listarMoviles,
     crearMovil,
     actualizarMovil,

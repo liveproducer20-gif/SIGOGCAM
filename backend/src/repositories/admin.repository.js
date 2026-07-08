@@ -247,6 +247,14 @@ async function listarRutas() {
     `));
 }
 
+async function listarGrados() {
+    return withConnection((conexion) => conexion.query(`
+        SELECT id, nombre, activo
+        FROM dbo.grados
+        ORDER BY nombre
+    `));
+}
+
 async function crearRuta(data) {
     return insertarBasico('dbo.rutas', [
         ['nombre', data.nombre]
@@ -612,6 +620,7 @@ module.exports = {
     actualizarRuta,
     cambiarEstadoRuta,
     eliminarRuta,
+    listarGrados,
     listarMoviles,
     crearMovil,
     actualizarMovil,
