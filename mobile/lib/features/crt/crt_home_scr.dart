@@ -9,6 +9,7 @@ import '../ins/ins_api.dart';
 import '../ins/ins_mdl.dart';
 import 'mdl/crt_enums.dart';
 import 'mdl/crt_models.dart';
+import 'svc/crt_api.dart';
 import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
 
@@ -41,8 +42,32 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   RolMovil rolMovil = RolMovil.jp;
   bool guardando = false;
 
+  final crtApi = CrtApi();
+
+  bool _desaCargando = false;
+  int _desaStep = 0;
+  String _desaJp = '';
+  String _desaAux = '';
+  String _desaMovil = '';
+  String _desaCp = '';
+  String _desaCpGuardado = '';
+  int? _desaPoliciaId;
+  String _desaPoliciaNombre = '';
+  String _desaDireccion = '';
+  bool _desaAgresivo = false;
+  bool _desaColaboracion = false;
+  List<Map<String, dynamic>> _servidoresPoliciales = [];
+  List<Map<String, dynamic>> _direcciones = [];
+  final _desaCpCtrl = TextEditingController();
+  final _desaAuxCtrl = TextEditingController();
+  final _desaDireccionCtrl = TextEditingController();
+
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
+
+  bool get _isDesalojoFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.desalojoVendedores;
 
   @override
   void initState() {
@@ -56,6 +81,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     for (final controller in controllers.values) {
       controller.dispose();
     }
+    _desaCpCtrl.dispose();
+    _desaAuxCtrl.dispose();
+    _desaDireccionCtrl.dispose();
     super.dispose();
   }
 
@@ -84,7 +112,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 sub: 'Seleccione el modulo operativo y complete solo los campos requeridos.',
               ),
               const SizedBox(height: 26),
-              if (isWide)
+              if (_isDesalojoFlow)
+                _buildDesalojoContent(isWide, preview)
+              else if (isWide)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -106,6 +136,554 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ),
     );
+  }
+
+  Widget _buildDesalojoContent(bool isWide, String preview) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildDesalojoSelector(),
+        const SizedBox(height: 20),
+        if (isWide)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildDesalojoWizard()),
+              const SizedBox(width: 20),
+              Expanded(child: _previewPanel(preview)),
+            ],
+          )
+        else
+          Column(
+            children: [
+              _buildDesalojoWizard(),
+              const SizedBox(height: 20),
+              _previewPanel(preview),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDesalojoSelector() {
+    return _Panel(
+      child: Column(
+        children: [
+          _Drop<CrtEasStation>(
+            value: eas,
+            label: 'EAS',
+            icon: Icons.location_city_outlined,
+            items: CrtCatalog.easStations,
+            itemText: (value) => '${value.codigo} - ${value.nombre}',
+            onChanged: (value) {
+              setState(() {
+                eas = value;
+                _desaStep = 0;
+                _desaMovil = '';
+                _desaDireccion = '';
+                _direcciones = [];
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+          _InfoLine(
+            icon: Icons.place_outlined,
+            text: '${eas.nombre}: ${eas.direccion}',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesalojoWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.tune_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Desalojo de vendedores autónomos no regularizados',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_desaCargando)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildDesalojoStepContent(),
+          const SizedBox(height: 24),
+          _buildDesalojoNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesalojoStepContent() {
+    if (_desaCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    switch (_desaStep) {
+      case 0:
+        return _StepCard(
+          step: 1,
+          title: 'Datos del personal',
+          child: Column(
+            children: [
+              TextFormField(
+                initialValue: widget.user?.nombreCompleto ?? '',
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del agente JP',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _desaJp = value,
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _desaAuxCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Aux.: (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _desaAux = value,
+              ),
+            ],
+          ),
+        );
+      case 1:
+        final items = _moviles.map((m) => m.movil).toList();
+        final value = _desaMovil.isNotEmpty && items.contains(_desaMovil)
+            ? _desaMovil
+            : items.first;
+        return _StepCard(
+          step: 2,
+          title: 'Seleccione móvil',
+          child: DropdownButtonFormField<String>(
+            initialValue: value,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Móvil asignado',
+              prefixIcon: Icon(Icons.directions_car_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: items
+                .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) setState(() => _desaMovil = value);
+            },
+          ),
+        );
+      case 2:
+        return _StepCard(
+          step: 3,
+          title: 'Datos del conductor',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _desaCpCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del conductor CP',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _desaCp = value,
+              ),
+              if (_desaCpGuardado.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Último registro: $_desaCpGuardado',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppThm.secClr,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      case 3:
+        final items = _servidoresPoliciales;
+        final idx = items.indexWhere(
+            (s) => s['id'] == _desaPoliciaId);
+        final value = idx >= 0 ? items[idx] : items.firstOrNull;
+        return _StepCard(
+          step: 4,
+          title: 'Seleccione servidor policial',
+          child: DropdownButtonFormField<Map<String, dynamic>>(
+            initialValue: value,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Servidor policial',
+              prefixIcon: Icon(Icons.local_police_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: items.map((s) {
+              final nombre = s['nombre'] as String? ?? '';
+              final grado = s['grado'] as String? ?? '';
+              final label = grado.isNotEmpty ? '$grado $nombre' : nombre;
+              return DropdownMenuItem(
+                value: s,
+                child: Text(label),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _desaPoliciaId = value['id'] as int?;
+                  _desaPoliciaNombre = value['nombre'] as String? ?? '';
+                });
+              }
+            },
+          ),
+        );
+      case 4:
+    final items = _direcciones;
+    Map<String, dynamic>? value;
+    if (items.isNotEmpty && _desaDireccion.isNotEmpty) {
+      try {
+        value = items.firstWhere((d) => d['direccion'] == _desaDireccion);
+      } catch (_) {
+        value = null;
+      }
+    }
+    final tieneOtro = _desaDireccion.isNotEmpty &&
+        items.isNotEmpty &&
+        !items.any((d) => d['direccion'] == _desaDireccion);
+    return _StepCard(
+      step: 5,
+      title: 'Dirección',
+      child: Column(
+        children: [
+          DropdownButtonFormField<Map<String, dynamic>>(
+            initialValue: value,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  ...items.map((d) => DropdownMenuItem(
+                        value: d,
+                        child: Text(d['direccion'] as String? ?? ''),
+                      )),
+                  const DropdownMenuItem(
+                    value: {'id': -1, 'direccion': 'Otro'},
+                    child: Text('Otro (agregar nueva)'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'] as int?;
+                  if (id == -1) {
+                    setState(() {
+                      _desaDireccion = '';
+                      _desaDireccionCtrl.clear();
+                    });
+                  } else {
+                    setState(() {
+                      _desaDireccion = value['direccion'] as String? ?? '';
+                    });
+                  }
+                },
+              ),
+              if (_desaDireccion.isEmpty && items.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _desaDireccionCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => _desaDireccion = value,
+                  ),
+                ),
+              if (items.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _desaDireccionCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => _desaDireccion = value,
+                  ),
+                ),
+              if (tieneOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _desaDireccionCtrl..text = _desaDireccion,
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) => _desaDireccion = value,
+                  ),
+                ),
+            ],
+          ),
+        );
+      case 5:
+        return _StepCard(
+          step: 6,
+          title: 'Causa',
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF3F4F6),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'Desalojo de vendedores autónomos no regularizados',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppThm.txtClr,
+              ),
+            ),
+          ),
+        );
+      case 6:
+        return _StepCard(
+          step: 7,
+          title: '¿Los comerciantes se pusieron agresivos?',
+          child: Row(
+            children: [
+              Expanded(
+                child: _ChoiceTile(
+                  selected: _desaAgresivo,
+                  label: 'Sí',
+                  icon: Icons.warning_amber_rounded,
+                  onTap: () => setState(() => _desaAgresivo = true),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ChoiceTile(
+                  selected: !_desaAgresivo,
+                  label: 'No',
+                  icon: Icons.check_circle_outline,
+                  onTap: () => setState(() => _desaAgresivo = false),
+                ),
+              ),
+            ],
+          ),
+        );
+      case 7:
+        return _StepCard(
+          step: 8,
+          title: '¿Necesita colaboración para operativo?',
+          child: Row(
+            children: [
+              Expanded(
+                child: _ChoiceTile(
+                  selected: _desaColaboracion,
+                  label: 'Sí',
+                  icon: Icons.groups_outlined,
+                  onTap: () => setState(() => _desaColaboracion = true),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _ChoiceTile(
+                  selected: !_desaColaboracion,
+                  label: 'No',
+                  icon: Icons.do_not_disturb_alt_outlined,
+                  onTap: () => setState(() => _desaColaboracion = false),
+                ),
+              ),
+            ],
+          ),
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Widget _buildDesalojoNavButtons() {
+    final isLast = _desaStep >= _desaLastStep;
+    final isFirst = _desaStep == 0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _desaStep--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: guardando ? null : () => _generarDesalojo(),
+            icon: guardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(guardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _desaIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  int get _easDbId => CrtCatalog.easStations.indexOf(eas) + 1;
+
+  int get _desaLastStep {
+    if (_desaAgresivo) return 7;
+    return 6;
+  }
+
+  void _desaIrSiguiente() {
+    if (_desaStep == 2 && _desaCp.trim().isNotEmpty) {
+      crtApi.saveCp(_desaCp.trim());
+    }
+    if (_desaStep == 3 && _desaPoliciaId != null) {
+      crtApi.savePolicia(_desaPoliciaId);
+    }
+    if (_desaStep == 4 && _desaDireccion.isNotEmpty) {
+      final exists = _direcciones
+          .any((d) => d['direccion'] == _desaDireccion);
+      if (!exists) {
+        crtApi.crearDireccion(_easDbId, _desaDireccion);
+      }
+    }
+    setState(() => _desaStep++);
+  }
+
+  Future<void> _generarDesalojo() async {
+    if (widget.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicie sesion para generar cartillas')),
+      );
+      return;
+    }
+
+    setState(() => guardando = true);
+
+    try {
+      if (_desaCp.trim().isNotEmpty) {
+        await crtApi.saveCp(_desaCp.trim());
+      }
+      if (_desaPoliciaId != null) {
+        await crtApi.savePolicia(_desaPoliciaId);
+      }
+
+      final value = _buildText();
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
+
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => guardando = false);
+    }
+  }
+
+  Future<void> _cargarDatosDesalojo() async {
+    setState(() => _desaCargando = true);
+    try {
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(),
+        _cargarDirecciones(),
+      ]);
+
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+
+      setState(() {
+        _desaCpGuardado = cpGuardado ?? '';
+        if (_desaCpGuardado.isNotEmpty) {
+          _desaCpCtrl.text = _desaCpGuardado;
+          _desaCp = _desaCpGuardado;
+        }
+        _servidoresPoliciales = servidores;
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _desaPoliciaId = pid;
+          _desaPoliciaNombre =
+              policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {
+      // Silently fail on temp data load
+    } finally {
+      if (mounted) setState(() => _desaCargando = false);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _cargarDirecciones() async {
+    try {
+      final easIdx = CrtCatalog.easStations.indexOf(eas);
+      final direcciones = await crtApi.getDirecciones(easIdx + 1);
+      if (mounted) {
+        setState(() => _direcciones = direcciones);
+      }
+      return direcciones;
+    } catch (_) {
+      return [];
+    }
   }
 
   Widget _formPanel() {
@@ -348,6 +926,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   String _buildText() {
+    if (_isDesalojoFlow) {
+      return _buildDesalojoText();
+    }
     final now = DateTime.now();
     return CrtTextGenerator.build(
       CrtFormData(
@@ -365,6 +946,35 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             : const {},
         values: {
           for (final entry in controllers.entries) entry.key: entry.value.text,
+        },
+      ),
+    );
+  }
+
+  String _buildDesalojoText() {
+    final now = DateTime.now();
+    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.desalojoVendedores,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        movil: movilValue,
+        values: {
+          '_desa_jp': _desaJp.isNotEmpty
+              ? _desaJp
+              : (widget.user?.nombreCompleto ?? ''),
+          '_desa_aux': _desaAux,
+          '_desa_movil': movilValue,
+          '_desa_cp': _desaCp,
+          '_desa_policia': _desaPoliciaNombre,
+          '_desa_direccion': _desaDireccion,
+          '_desa_agresivo': _desaAgresivo ? 'si' : 'no',
+          '_desa_colaboracion': _desaColaboracion ? 'si' : 'no',
         },
       ),
     );
@@ -403,6 +1013,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (controllers['reporta']!.text.isEmpty &&
         widget.user?.nombreCompleto.isNotEmpty == true) {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
+    }
+
+    if (_isDesalojoFlow) {
+      _cargarDatosDesalojo();
     }
   }
 
@@ -610,6 +1224,106 @@ class _Field extends StatelessWidget {
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
+}
+
+class _StepCard extends StatelessWidget {
+  final int step;
+  final String title;
+  final Widget child;
+
+  const _StepCard({
+    required this.step,
+    required this.title,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            CircleAvatar(
+              radius: 14,
+              backgroundColor: AppThm.accClr,
+              child: Text(
+                '$step',
+                style: const TextStyle(
+                  color: AppThm.priClr,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                title,
+                style: const TextStyle(
+                  color: AppThm.priClr,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        child,
+      ],
+    );
+  }
+}
+
+class _ChoiceTile extends StatelessWidget {
+  final bool selected;
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ChoiceTile({
+    required this.selected,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: selected ? AppThm.accClr : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppThm.secClr : Colors.black26,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: selected ? AppThm.priClr : AppThm.txtClr,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? AppThm.priClr : AppThm.txtClr,
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

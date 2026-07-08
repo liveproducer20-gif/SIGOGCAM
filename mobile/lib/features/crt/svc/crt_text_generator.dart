@@ -48,6 +48,11 @@ ${_reporta(data)}
         : '${eas.codigo.replaceFirst('ECO', 'EAS')} - ${eas.nombre}';
     final causa = data.tipo.label;
     final procedimiento = _procedimientoEas(data, direccion);
+
+    if (data.tipo == TipoCartilla.desalojoVendedores) {
+      return _buildEasDesalojo(data, circuito, causa, procedimiento, direccion);
+    }
+
     final movil = data.movil == null || data.movil!.trim().isEmpty
         ? 'Móvil'
         : 'Móvil ${data.movil}';
@@ -84,6 +89,59 @@ $movil
 Adjunto fotografía''';
   }
 
+  static String _buildEasDesalojo(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String procedimiento,
+    String direccion,
+  ) {
+    final movilStr = _v(data, '_desa_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_desa_jp');
+    final cp = _v(data, '_desa_cp');
+    final aux = _v(data, '_desa_aux');
+    final policia = _v(data, '_desa_policia');
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    if (aux.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*Aux.:* $aux');
+    }
+    if (policia.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*POLICÍA:* $policia');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $direccion
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+$procedimiento
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
+  }
+
   static String _procedimientoEas(CrtFormData data, String direccion) {
     final saludo =
         '${_saludoFormal(DateTime.now())}, Sr. Maldonado Cabrera Freddy, Jefe de Control Municipal, muy respetuosamente me permito informarle que';
@@ -93,10 +151,6 @@ Adjunto fotografía''';
     final motivo = _v(data, 'motivo');
     final resultado = _v(data, 'resultado');
     final detalle = _v(data, 'detalle');
-    final vendedores = _v(data, 'vendedores');
-    final mercaderia = _v(data, 'mercaderia');
-    final actitud = _v(data, 'actitud');
-    final incidente = _v(data, 'incidente');
     final entidad = _v(data, 'entidad');
     final persona = _v(data, 'persona');
     final servidor = _v(data, 'servidor');
@@ -108,8 +162,7 @@ Adjunto fotografía''';
     final camara = _v(data, 'camara');
 
     final body = switch (data.tipo) {
-      TipoCartilla.desalojoVendedores =>
-        'durante el servicio asignado en $direccion se constató la presencia de vendedores informales en el espacio público${vendedores.isEmpty ? '' : ', identificándose aproximadamente a $vendedores'}, quienes comercializaban ${mercaderia.isEmpty ? 'diversos productos' : mercaderia} sin autorización municipal. Se procedió a dialogar de manera respetuosa y preventiva, solicitando el retiro voluntario del lugar${motivo.isEmpty ? '' : ' por motivo de $motivo'}. ${actitud.isEmpty ? '' : 'La actitud de los vendedores durante el procedimiento fue $actitud.'} ${incidente.isEmpty ? '' : 'Se presentó el siguiente incidente: $incidente'} ${resultado.isEmpty ? 'El procedimiento se desarrolló sin novedades adicionales y se mantuvo presencia municipal para conservar el orden en el sector.' : resultado}',
+      TipoCartilla.desalojoVendedores => _buildDesalojoBody(data, direccion),
       TipoCartilla.retiroTemporal =>
         'durante el recorrido preventivo en $direccion se realizó el retiro temporal correspondiente${motivo.isEmpty ? '' : ' debido a $motivo'}, manteniendo el trato respetuoso con las personas presentes y precautelando el buen uso del espacio público. ${resultado.isEmpty ? 'La novedad fue atendida y el punto quedó bajo observación preventiva.' : resultado}',
       TipoCartilla.requerimiento =>
@@ -153,6 +206,25 @@ Adjunto fotografía''';
     };
 
     return _compact('$saludo $body$puntoMartillo${detalle.isEmpty ? '' : ' $detalle'}');
+  }
+
+  static String _buildDesalojoBody(CrtFormData data, String direccion) {
+    final direc = _v(data, '_desa_direccion');
+    final esAgresivo = _v(data, '_desa_agresivo');
+    final necesitaColab = _v(data, '_desa_colaboracion');
+
+    final calle = direc.isEmpty ? direccion : direc;
+    final saludo = _saludoFormal(DateTime.now());
+
+    if (esAgresivo == 'no') {
+      return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se realizo el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo de manera pacífica y respetando la integridad de los señores comerciantes no regularizados se les indicó que no pueden permanecer en el lugar y que posterior a ello se retiren del sitio, así mismo haciendo cumplir la ordenanza municipal De Uso De Espacio Y Vía Pública se dejó el espacio sin novedad.';
+    }
+
+    if (necesitaColab == 'si') {
+      return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso a las indicaciones que se les está dando de parte del personal municipal, solicito colaboración con otro móvil para realizar un operativo en el sector mencionado para evitar el asentamiento no regularizado de los comerciantes en el punto.';
+    }
+
+    return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso, de tal manera se les indicó que, si mantenían esa actitud y no colaboraban con lo solicitado, se procedería a realizar el retiro temporal de la mercadería, de tal modo una vez indicado el procedimiento que iba a tomar el personal municipal, procedieron a retirarse.';
   }
 
   static String _ubicacionInstitucional(CrtFormData data, String direccion) {

@@ -75,3 +75,25 @@ class CrtFormData {
     this.dotacion = const {},
   });
 }
+
+class CrtDesalojoData {
+  final String jp;
+  final String auxiliar;
+  final String movil;
+  final String cp;
+  final String? servidorPolicial;
+  final String direccion;
+  final bool agresivo;
+  final bool necesitaColaboracion;
+
+  const CrtDesalojoData({
+    required this.jp,
+    this.auxiliar = '',
+    required this.movil,
+    required this.cp,
+    this.servidorPolicial,
+    required this.direccion,
+    required this.agresivo,
+    required this.necesitaColaboracion,
+  });
+}

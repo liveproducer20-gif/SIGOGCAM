@@ -10,6 +10,7 @@ const anunciosRoutes = require('./src/routes/anuncios.routes');
 const catalogosRoutes = require('./src/routes/catalogos.routes');
 const adminRoutes = require('./src/routes/admin.routes');
 const cartillasRoutes = require('./src/routes/cartillas.routes');
+const cartillaFlowRoutes = require('./src/routes/cartilla-flow.routes');
 const insigniasRoutes = require('./src/routes/insignias.routes');
 const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes');
 
@@ -37,6 +38,7 @@ app.use('/api/personal', personalRoutes);
 app.use('/api/eventos', eventosRoutes);
 app.use('/api/anuncios', anunciosRoutes);
 app.use('/api/cartillas', cartillasRoutes);
+app.use('/api/cartillas', cartillaFlowRoutes);
 app.use('/api/insignias', insigniasRoutes);
 app.use('/api/usuarios', usuariosInsigniasRoutes);
 

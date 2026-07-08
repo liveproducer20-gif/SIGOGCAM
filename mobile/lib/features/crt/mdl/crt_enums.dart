@@ -107,7 +107,7 @@ extension TipoCartillaX on TipoCartilla {
       case TipoCartilla.operativo:
         return 'Operativo';
       case TipoCartilla.desalojoVendedores:
-        return 'Desalojo de vendedores';
+        return 'Desalojo de vendedores autónomos no regularizados';
       case TipoCartilla.retiroTemporal:
         return 'Retiro temporal';
       case TipoCartilla.requerimiento:
