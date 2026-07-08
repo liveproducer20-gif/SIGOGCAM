@@ -30,41 +30,49 @@ class _InsShareWdgState extends State<InsShareWdg> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Compartir insignia'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RepaintBoundary(
-            key: _repaintKey,
-            child: _buildShareCard(),
-          ),
-          const SizedBox(height: 20),
-          if (_generating)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
-            )
-          else
-              SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _generating ? null : _generarYCompartir,
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Compartir en mis redes'),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
-                ),
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Compartir insignia',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
-            ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancelar'),
+              const SizedBox(height: 16),
+              RepaintBoundary(
+                key: _repaintKey,
+                child: _buildShareCard(),
+              ),
+              const SizedBox(height: 16),
+              if (_generating)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: CircularProgressIndicator(),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: _generating ? null : _generarYCompartir,
+                    icon: const Icon(Icons.share_outlined),
+                    label: const Text('Compartir en mis redes'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(48),
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancelar'),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
