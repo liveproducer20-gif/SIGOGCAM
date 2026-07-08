@@ -362,6 +362,14 @@ class CrtCatalog {
 
   static List<CrtFieldConfig> _easSpecificFields(TipoCartilla tipo) {
     switch (tipo) {
+      case TipoCartilla.desalojoVendedores:
+        return const [
+          CrtFieldConfig(key: 'vendedores', label: 'Cantidad o identificación de vendedores'),
+          CrtFieldConfig(key: 'mercaderia', label: 'Tipo de mercadería que comercializaban'),
+          CrtFieldConfig(key: 'actitud', label: 'Actitud durante el procedimiento'),
+          CrtFieldConfig(key: 'incidente', label: 'Incidente durante el procedimiento', required: false, minLines: 2),
+          CrtFieldConfig(key: 'resultado', label: 'Resultado del procedimiento', minLines: 3),
+        ];
       case TipoCartilla.accidente:
         return const [
           CrtFieldConfig(key: 'vehiculos', label: 'Vehículos o placas involucradas'),

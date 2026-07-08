@@ -93,6 +93,10 @@ Adjunto fotografía''';
     final motivo = _v(data, 'motivo');
     final resultado = _v(data, 'resultado');
     final detalle = _v(data, 'detalle');
+    final vendedores = _v(data, 'vendedores');
+    final mercaderia = _v(data, 'mercaderia');
+    final actitud = _v(data, 'actitud');
+    final incidente = _v(data, 'incidente');
     final entidad = _v(data, 'entidad');
     final persona = _v(data, 'persona');
     final servidor = _v(data, 'servidor');
@@ -105,7 +109,7 @@ Adjunto fotografía''';
 
     final body = switch (data.tipo) {
       TipoCartilla.desalojoVendedores =>
-        'durante el servicio asignado en $direccion se verificó la presencia de vendedores informales en el espacio público, por lo que se procedió a dialogar de manera respetuosa y preventiva, solicitando el retiro voluntario del lugar${motivo.isEmpty ? '' : ' por motivo de $motivo'}. El procedimiento se desarrolló sin mayores novedades y se mantuvo presencia municipal para conservar el orden en el sector.',
+        'durante el servicio asignado en $direccion se constató la presencia de vendedores informales en el espacio público${vendedores.isEmpty ? '' : ', identificándose aproximadamente a $vendedores'}, quienes comercializaban ${mercaderia.isEmpty ? 'diversos productos' : mercaderia} sin autorización municipal. Se procedió a dialogar de manera respetuosa y preventiva, solicitando el retiro voluntario del lugar${motivo.isEmpty ? '' : ' por motivo de $motivo'}. ${actitud.isEmpty ? '' : 'La actitud de los vendedores durante el procedimiento fue $actitud.'} ${incidente.isEmpty ? '' : 'Se presentó el siguiente incidente: $incidente'} ${resultado.isEmpty ? 'El procedimiento se desarrolló sin novedades adicionales y se mantuvo presencia municipal para conservar el orden en el sector.' : resultado}',
       TipoCartilla.retiroTemporal =>
         'durante el recorrido preventivo en $direccion se realizó el retiro temporal correspondiente${motivo.isEmpty ? '' : ' debido a $motivo'}, manteniendo el trato respetuoso con las personas presentes y precautelando el buen uso del espacio público. ${resultado.isEmpty ? 'La novedad fue atendida y el punto quedó bajo observación preventiva.' : resultado}',
       TipoCartilla.requerimiento =>
