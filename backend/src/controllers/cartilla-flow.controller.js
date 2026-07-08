@@ -1,6 +1,6 @@
 const service = require('../services/cartilla-flow.service');
 
-const { asyncHandler } = require('../middleware/error.middleware');
+const { asyncHandler } = require('../middleware/async-handler');
 
 const obtenerCp = asyncHandler(async (req, res) => {
     const data = await service.obtenerCp(req.user.id);
@@ -23,8 +23,13 @@ const guardarPolicia = asyncHandler(async (req, res) => {
 });
 
 const listarServidoresPoliciales = asyncHandler(async (req, res) => {
-    const list = await service.listarServidoresPoliciales();
+    const list = await service.listarServidoresPoliciales(req.query.easId);
     res.json({ ok: true, datos: list });
+});
+
+const crearServidorPolicial = asyncHandler(async (req, res) => {
+    const result = await service.crearServidorPolicial(req.body.easId, req.body.nombre);
+    res.status(201).json({ ok: true, mensaje: 'Servidor policial guardado', ...result });
 });
 
 const listarDirecciones = asyncHandler(async (req, res) => {
@@ -43,6 +48,7 @@ module.exports = {
     obtenerPolicia,
     guardarPolicia,
     listarServidoresPoliciales,
+    crearServidorPolicial,
     listarDirecciones,
     crearDireccion
 };

@@ -39,7 +39,7 @@ async function guardarCp(usuarioId, nombreCp) {
 async function obtenerPolicia(usuarioId) {
     return withConnection(async (conexion) => {
         const result = await conexion.query(`
-            SELECT TOP 1 cp.id, cp.servidor_policial_id, sp.nombre AS servidor_nombre, sp.grado AS servidor_grado
+            SELECT TOP 1 cp.id, cp.servidor_policial_id, sp.nombre AS servidor_nombre
             FROM dbo.cartilla_temp_policia cp
             LEFT JOIN dbo.servidores_policiales sp ON sp.id = cp.servidor_policial_id
             WHERE cp.usuario_id = ?
@@ -64,13 +64,24 @@ async function guardarPolicia(usuarioId, servidorPolicialId) {
     });
 }
 
-async function listarServidoresPoliciales() {
+async function listarServidoresPoliciales(easId) {
     return withConnection((conexion) => conexion.query(`
-        SELECT id, nombre, grado
+        SELECT id, nombre
         FROM dbo.servidores_policiales
-        WHERE activo = 1
+        WHERE eas_id = ? AND activo = 1
         ORDER BY id
-    `));
+    `, [easId]));
+}
+
+async function crearServidorPolicial(easId, nombre) {
+    return withConnection(async (conexion) => {
+        const result = await conexion.query(`
+            INSERT INTO dbo.servidores_policiales (eas_id, nombre)
+            OUTPUT INSERTED.id
+            VALUES (?, ?)
+        `, [easId, nombre]);
+        return result[0].id;
+    });
 }
 
 async function listarDireccionesPorEas(easId) {
@@ -99,6 +110,7 @@ module.exports = {
     obtenerPolicia,
     guardarPolicia,
     listarServidoresPoliciales,
+    crearServidorPolicial,
     listarDireccionesPorEas,
     crearDireccion
 };

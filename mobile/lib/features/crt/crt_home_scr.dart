@@ -45,7 +45,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final crtApi = CrtApi();
 
   bool _desaCargando = false;
-  int _desaStep = 0;
+  int _desaSection = 0;
   String _desaJp = '';
   String _desaAux = '';
   String _desaMovil = '';
@@ -53,6 +53,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _desaCpGuardado = '';
   int? _desaPoliciaId;
   String _desaPoliciaNombre = '';
+  bool _desaPoliciaOtro = false;
+  final _desaPoliciaCtrl = TextEditingController();
   String _desaDireccion = '';
   bool _desaAgresivo = false;
   bool _desaColaboracion = false;
@@ -83,6 +85,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
     _desaCpCtrl.dispose();
     _desaAuxCtrl.dispose();
+    _desaPoliciaCtrl.dispose();
     _desaDireccionCtrl.dispose();
     super.dispose();
   }
@@ -178,7 +181,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             onChanged: (value) {
               setState(() {
                 eas = value;
-                _desaStep = 0;
+                _desaSection = 0;
                 _desaMovil = '';
                 _desaDireccion = '';
                 _direcciones = [];
@@ -241,9 +244,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       );
     }
 
-    switch (_desaStep) {
-      case 0:
-        return _StepCard(
+    if (_desaSection == 0) {
+      return _buildSection1();
+    }
+    return _buildSection2();
+  }
+
+  Widget _buildSection1() {
+    final movilItems = _moviles.map((m) => m.movil).toList();
+    final movilValue = _desaMovil.isNotEmpty && movilItems.contains(_desaMovil)
+        ? _desaMovil
+        : movilItems.first;
+    return Column(
+      children: [
+        _StepCard(
           step: 1,
           title: 'Datos del personal',
           child: Column(
@@ -269,33 +283,29 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
             ],
           ),
-        );
-      case 1:
-        final items = _moviles.map((m) => m.movil).toList();
-        final value = _desaMovil.isNotEmpty && items.contains(_desaMovil)
-            ? _desaMovil
-            : items.first;
-        return _StepCard(
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
           step: 2,
           title: 'Seleccione móvil',
           child: DropdownButtonFormField<String>(
-            initialValue: value,
+            initialValue: movilValue,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Móvil asignado',
               prefixIcon: Icon(Icons.directions_car_outlined),
               border: OutlineInputBorder(),
             ),
-            items: items
+            items: movilItems
                 .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
                 .toList(),
             onChanged: (value) {
               if (value != null) setState(() => _desaMovil = value);
             },
           ),
-        );
-      case 2:
-        return _StepCard(
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
           step: 3,
           title: 'Datos del conductor',
           child: Column(
@@ -324,17 +334,39 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
             ],
           ),
-        );
-      case 3:
-        final items = _servidoresPoliciales;
-        final idx = items.indexWhere(
-            (s) => s['id'] == _desaPoliciaId);
-        final value = idx >= 0 ? items[idx] : items.firstOrNull;
-        return _StepCard(
-          step: 4,
-          title: 'Seleccione servidor policial',
-          child: DropdownButtonFormField<Map<String, dynamic>>(
-            initialValue: value,
+        ),
+        const SizedBox(height: 20),
+        _buildPoliciaSection(),
+      ],
+    );
+  }
+
+  Widget _buildPoliciaSection() {
+    final sinPolicia = <String, dynamic>{'id': 0, 'nombre': 'Sin servidor policial'};
+    final otto = <String, dynamic>{'id': -1, 'nombre': 'Otro'};
+    final items = [sinPolicia, ..._servidoresPoliciales, otto];
+
+    Map<String, dynamic>? selected;
+    if (_desaPoliciaOtro) {
+      selected = otto;
+    } else if (_desaPoliciaId != null && _desaPoliciaId! > 0) {
+      final idx = _servidoresPoliciales.indexWhere((s) => s['id'] == _desaPoliciaId);
+      if (idx >= 0) {
+        selected = _servidoresPoliciales[idx];
+      } else {
+        selected = sinPolicia;
+      }
+    } else {
+      selected = sinPolicia;
+    }
+
+    return _StepCard(
+      step: 4,
+      title: 'Seleccione servidor policial',
+      child: Column(
+        children: [
+          DropdownButtonFormField<Map<String, dynamic>>(
+            initialValue: selected,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Servidor policial',
@@ -343,43 +375,69 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             items: items.map((s) {
               final nombre = s['nombre'] as String? ?? '';
-              final grado = s['grado'] as String? ?? '';
-              final label = grado.isNotEmpty ? '$grado $nombre' : nombre;
-              return DropdownMenuItem(
-                value: s,
-                child: Text(label),
-              );
+              return DropdownMenuItem(value: s, child: Text(nombre));
             }).toList(),
             onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _desaPoliciaId = value['id'] as int?;
+              if (value == null) return;
+              final id = value['id'] as int?;
+              setState(() {
+                if (id == -1) {
+                  _desaPoliciaOtro = true;
+                  _desaPoliciaId = null;
+                  _desaPoliciaNombre = '';
+                } else if (id == 0) {
+                  _desaPoliciaOtro = false;
+                  _desaPoliciaId = null;
+                  _desaPoliciaNombre = '';
+                } else {
+                  _desaPoliciaOtro = false;
+                  _desaPoliciaId = id;
                   _desaPoliciaNombre = value['nombre'] as String? ?? '';
-                });
-              }
+                }
+              });
             },
           ),
-        );
-      case 4:
+          if (_desaPoliciaOtro)
+            Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: TextField(
+                controller: _desaPoliciaCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nuevo servidor policial',
+                  prefixIcon: Icon(Icons.person_add_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) => _desaPoliciaNombre = value,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection2() {
     final items = _direcciones;
-    Map<String, dynamic>? value;
+    Map<String, dynamic>? dirValue;
     if (items.isNotEmpty && _desaDireccion.isNotEmpty) {
       try {
-        value = items.firstWhere((d) => d['direccion'] == _desaDireccion);
+        dirValue = items.firstWhere((d) => d['direccion'] == _desaDireccion);
       } catch (_) {
-        value = null;
+        dirValue = null;
       }
     }
     final tieneOtro = _desaDireccion.isNotEmpty &&
         items.isNotEmpty &&
         !items.any((d) => d['direccion'] == _desaDireccion);
-    return _StepCard(
-      step: 5,
-      title: 'Dirección',
-      child: Column(
-        children: [
-          DropdownButtonFormField<Map<String, dynamic>>(
-            initialValue: value,
+
+    return Column(
+      children: [
+        _StepCard(
+          step: 5,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Dirección',
@@ -411,50 +469,26 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   }
                 },
               ),
-              if (_desaDireccion.isEmpty && items.isNotEmpty)
+              if (_desaDireccion.isEmpty || tieneOtro)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: TextField(
                     controller: _desaDireccionCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Nueva dirección',
-                      prefixIcon: Icon(Icons.edit_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) => _desaDireccion = value,
-                  ),
-                ),
-              if (items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: TextField(
-                    controller: _desaDireccionCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Dirección',
-                      prefixIcon: Icon(Icons.edit_outlined),
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) => _desaDireccion = value,
-                  ),
-                ),
-              if (tieneOtro)
-                Padding(
-                  padding: const EdgeInsets.only(top: 14),
-                  child: TextField(
-                    controller: _desaDireccionCtrl..text = _desaDireccion,
-                    decoration: const InputDecoration(
-                      labelText: 'Nueva dirección',
-                      prefixIcon: Icon(Icons.edit_outlined),
-                      border: OutlineInputBorder(),
+                    decoration: InputDecoration(
+                      labelText: tieneOtro || items.isEmpty
+                          ? 'Nueva dirección'
+                          : 'Dirección',
+                      prefixIcon: const Icon(Icons.edit_outlined),
+                      border: const OutlineInputBorder(),
                     ),
                     onChanged: (value) => _desaDireccion = value,
                   ),
                 ),
             ],
           ),
-        );
-      case 5:
-        return _StepCard(
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
           step: 6,
           title: 'Causa',
           child: Container(
@@ -473,9 +507,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
             ),
           ),
-        );
-      case 6:
-        return _StepCard(
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
           step: 7,
           title: '¿Los comerciantes se pusieron agresivos?',
           child: Row(
@@ -499,48 +533,49 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
             ],
           ),
-        );
-      case 7:
-        return _StepCard(
-          step: 8,
-          title: '¿Necesita colaboración para operativo?',
-          child: Row(
-            children: [
-              Expanded(
-                child: _ChoiceTile(
-                  selected: _desaColaboracion,
-                  label: 'Sí',
-                  icon: Icons.groups_outlined,
-                  onTap: () => setState(() => _desaColaboracion = true),
+        ),
+        if (_desaAgresivo) ...[
+          const SizedBox(height: 20),
+          _StepCard(
+            step: 8,
+            title: '¿Necesita colaboración para operativo?',
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ChoiceTile(
+                    selected: _desaColaboracion,
+                    label: 'Sí',
+                    icon: Icons.groups_outlined,
+                    onTap: () => setState(() => _desaColaboracion = true),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _ChoiceTile(
-                  selected: !_desaColaboracion,
-                  label: 'No',
-                  icon: Icons.do_not_disturb_alt_outlined,
-                  onTap: () => setState(() => _desaColaboracion = false),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _ChoiceTile(
+                    selected: !_desaColaboracion,
+                    label: 'No',
+                    icon: Icons.do_not_disturb_alt_outlined,
+                    onTap: () => setState(() => _desaColaboracion = false),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        );
-      default:
-        return const SizedBox();
-    }
+        ],
+      ],
+    );
   }
 
   Widget _buildDesalojoNavButtons() {
-    final isLast = _desaStep >= _desaLastStep;
-    final isFirst = _desaStep == 0;
+    final isLast = _desaSection == 1;
+    final isFirst = _desaSection == 0;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _desaStep--),
+            onPressed: () => setState(() => _desaSection--),
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -570,26 +605,30 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   int get _easDbId => CrtCatalog.easStations.indexOf(eas) + 1;
 
-  int get _desaLastStep {
-    if (_desaAgresivo) return 7;
-    return 6;
-  }
-
-  void _desaIrSiguiente() {
-    if (_desaStep == 2 && _desaCp.trim().isNotEmpty) {
-      crtApi.saveCp(_desaCp.trim());
+  void _desaIrSiguiente() async {
+    if (_desaCp.trim().isNotEmpty) {
+      await crtApi.saveCp(_desaCp.trim());
     }
-    if (_desaStep == 3 && _desaPoliciaId != null) {
-      crtApi.savePolicia(_desaPoliciaId);
+    if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
+      await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
+      _desaPoliciaOtro = false;
+      _servidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
+      final nuevo = _servidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+      if (nuevo != null) {
+        _desaPoliciaId = nuevo['id'] as int?;
+      }
+      _desaPoliciaCtrl.clear();
+    } else if (_desaPoliciaId != null) {
+      await crtApi.savePolicia(_desaPoliciaId);
     }
-    if (_desaStep == 4 && _desaDireccion.isNotEmpty) {
-      final exists = _direcciones
-          .any((d) => d['direccion'] == _desaDireccion);
+    if (_desaDireccion.isNotEmpty) {
+      final exists = _direcciones.any((d) => d['direccion'] == _desaDireccion);
       if (!exists) {
-        crtApi.crearDireccion(_easDbId, _desaDireccion);
+        await crtApi.crearDireccion(_easDbId, _desaDireccion);
+        _direcciones = await crtApi.getDirecciones(_easDbId);
       }
     }
-    setState(() => _desaStep++);
+    if (mounted) setState(() => _desaSection++);
   }
 
   Future<void> _generarDesalojo() async {
@@ -606,7 +645,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       if (_desaCp.trim().isNotEmpty) {
         await crtApi.saveCp(_desaCp.trim());
       }
-      if (_desaPoliciaId != null) {
+      if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
+        await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
+      } else if (_desaPoliciaId != null) {
         await crtApi.savePolicia(_desaPoliciaId);
       }
 
@@ -641,10 +682,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Future<void> _cargarDatosDesalojo() async {
     setState(() => _desaCargando = true);
     try {
+      final easId = _easDbId;
       final results = await Future.wait([
         crtApi.getCp(),
         crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(),
+        crtApi.getServidoresPoliciales(easId),
         _cargarDirecciones(),
       ]);
 

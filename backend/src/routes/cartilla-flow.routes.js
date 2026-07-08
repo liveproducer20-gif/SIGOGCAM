@@ -20,6 +20,10 @@ router.put('/temp/policia',
 );
 
 router.get('/servidores-policiales', controller.listarServidoresPoliciales);
+router.post('/servidores-policiales',
+    auditAction({ accion: 'crear_servidor_policial', modulo: 'cartillas', tabla: 'servidores_policiales' }),
+    controller.crearServidorPolicial
+);
 
 router.get('/eas-direcciones', controller.listarDirecciones);
 router.post('/eas-direcciones',

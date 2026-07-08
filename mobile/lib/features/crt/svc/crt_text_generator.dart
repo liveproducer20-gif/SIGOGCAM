@@ -94,8 +94,10 @@ Adjunto fotografía''';
     String circuito,
     String causa,
     String procedimiento,
-    String direccion,
+    String _,
   ) {
+    final direcValue = _v(data, '_desa_direccion');
+    final direccion = direcValue.isNotEmpty ? direcValue : _direccion(data);
     final movilStr = _v(data, '_desa_movil');
     final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
     final jp = _v(data, '_desa_jp');
@@ -145,7 +147,8 @@ Adjunto fotografía''';
   static String _procedimientoEas(CrtFormData data, String direccion) {
     final saludo =
         '${_saludoFormal(DateTime.now())}, Sr. Maldonado Cabrera Freddy, Jefe de Control Municipal, muy respetuosamente me permito informarle que';
-    final puntoMartillo = data.tipo == TipoCartilla.permisoAusentismo
+    final puntoMartillo = data.tipo == TipoCartilla.permisoAusentismo ||
+            data.tipo == TipoCartilla.desalojoVendedores
         ? ''
         : ' Se procedió con punto martillo en la calle $direccion.';
     final motivo = _v(data, 'motivo');

@@ -33,12 +33,20 @@ class CrtApi {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getServidoresPoliciales() async {
+  Future<List<Map<String, dynamic>>> getServidoresPoliciales(int easId) async {
     final resp = await _client.get<List>(
-      'cartillas/servidores-policiales',
+      'cartillas/servidores-policiales?easId=$easId',
       (value) => value as List,
     );
     return (resp.datos ?? []).cast<Map<String, dynamic>>();
+  }
+
+  Future<void> crearServidorPolicial(int easId, String nombre) async {
+    await _client.post(
+      'cartillas/servidores-policiales',
+      {'easId': easId, 'nombre': nombre},
+      (_) => true,
+    );
   }
 
   Future<List<Map<String, dynamic>>> getDirecciones(int easId) async {

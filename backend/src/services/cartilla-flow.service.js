@@ -15,11 +15,10 @@ async function guardarCp(usuarioId, nombreCp) {
 
 async function obtenerPolicia(usuarioId) {
     const data = await repository.obtenerPolicia(usuarioId);
-    if (!data) return { servidorPolicialId: null, servidorNombre: null, servidorGrado: null };
+    if (!data) return { servidorPolicialId: null, servidorNombre: null };
     return {
         servidorPolicialId: data.servidor_policial_id,
         servidorNombre: data.servidor_nombre,
-        servidorGrado: data.servidor_grado
     };
 }
 
@@ -28,8 +27,19 @@ async function guardarPolicia(usuarioId, servidorPolicialId) {
     return { ok: true };
 }
 
-async function listarServidoresPoliciales() {
-    return repository.listarServidoresPoliciales();
+async function listarServidoresPoliciales(easId) {
+    if (!easId || isNaN(Number(easId))) {
+        throw new Error('El ID del EAS es requerido');
+    }
+    return repository.listarServidoresPoliciales(Number(easId));
+}
+
+async function crearServidorPolicial(easId, nombre) {
+    if (!nombre || !nombre.trim()) {
+        throw new Error('El nombre del servidor policial es requerido');
+    }
+    const id = await repository.crearServidorPolicial(Number(easId), nombre.trim());
+    return { id, nombre: nombre.trim() };
 }
 
 async function listarDireccionesPorEas(easId) {
@@ -53,6 +63,7 @@ module.exports = {
     obtenerPolicia,
     guardarPolicia,
     listarServidoresPoliciales,
+    crearServidorPolicial,
     listarDireccionesPorEas,
     crearDireccion
 };
