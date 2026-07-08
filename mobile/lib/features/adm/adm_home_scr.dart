@@ -60,6 +60,12 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
             label: 'EAS',
             child: _EasTab(api: api),
           ),
+        if (widget.user.hasPermission('eas.ver'))
+          _TabDef(
+            icon: Icons.map_outlined,
+            label: 'Rutas',
+            child: _RutasTab(api: api),
+          ),
         if (widget.user.hasPermission('moviles.ver'))
           _TabDef(
             icon: Icons.directions_car_outlined,
@@ -440,6 +446,13 @@ class _EasTab extends _CrudTab {
   State<_CrudTab> createState() => _EasState();
 }
 
+class _RutasTab extends _CrudTab {
+  const _RutasTab({required super.api});
+
+  @override
+  State<_CrudTab> createState() => _RutasState();
+}
+
 class _MovilesTab extends _CrudTab {
   const _MovilesTab({required super.api});
 
@@ -491,11 +504,16 @@ class _LugarState extends State<_CrudTab> {
 
   void _reload() => setState(() => future = widget.api.getLugares());
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final catalogs = await _loadCatalogs(widget.api);
+    final results = await Future.wait([
+      _loadCatalogs(widget.api),
+      widget.api.getRutas(),
+    ]);
+    final catalogs = results[0] as Map<String, List<Map<String, dynamic>>>;
+    final rutas = results[1] as List<Map<String, dynamic>>;
     if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _LugarDialog(item: item, catalogs: catalogs),
+      builder: (_) => _LugarDialog(item: item, rutas: rutas, catalogs: catalogs),
     );
     if (data == null) return;
     if (!mounted) return;
@@ -576,6 +594,68 @@ class _EasState extends State<_CrudTab> {
   Future<void> _toggle(Map<String, dynamic> item) async {
     await _safeRun(context, () async {
       await widget.api.setEasActivo(_id(item), !_active(item));
+      _reload();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
+      _reload();
+    });
+  }
+}
+
+class _RutasState extends State<_CrudTab> {
+  late Future<List<Map<String, dynamic>>> future;
+  @override
+  void initState() {
+    super.initState();
+    future = widget.api.getRutas();
+  }
+
+  @override
+  Widget build(BuildContext context) => _AsyncTable(
+        title: 'Rutas',
+        subtitle: 'Rutas de servicio para lugares de servicio.',
+        future: future,
+        columns: const ['Nombre', 'Estado', 'Acciones'],
+        onRefresh: _reload,
+        onCreate: () => _edit(null),
+        rowBuilder: (item) => [
+          _txt(item['nombre']),
+          _StateChip(active: _active(item)),
+          _Actions(
+            onEdit: () => _edit(item),
+            onToggle: () => _toggle(item),
+            onDelete: () => _confirmDelete(item, 'ruta ${item['nombre']}', () => widget.api.deleteRuta(_id(item))),
+            active: _active(item),
+          ),
+        ],
+      );
+
+  void _reload() => setState(() => future = widget.api.getRutas());
+  Future<void> _edit(Map<String, dynamic>? item) async {
+    final data = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _RutaDialog(item: item),
+    );
+    if (data == null) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      item == null
+          ? await widget.api.createRuta(data)
+          : await widget.api.updateRuta(_id(item), data);
+      _reload();
+    });
+  }
+
+  Future<void> _toggle(Map<String, dynamic> item) async {
+    await _safeRun(context, () async {
+      await widget.api.setRutaActivo(_id(item), !_active(item));
       _reload();
     });
   }
@@ -1232,8 +1312,11 @@ class _RolDialogState extends State<_RolDialog> {
       );
 }
 
-class _LugarDialog extends _BaseCatalogDialog {
-  const _LugarDialog({super.item, required super.catalogs});
+class _LugarDialog extends StatefulWidget {
+  final Map<String, dynamic>? item;
+  final List<Map<String, dynamic>> rutas;
+  final Map<String, List<Map<String, dynamic>>> catalogs;
+  const _LugarDialog({this.item, required this.rutas, required this.catalogs});
   @override
   State<_LugarDialog> createState() => _LugarDialogState();
 }
@@ -1256,7 +1339,7 @@ class _LugarDialogState extends State<_LugarDialog> {
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Nuevo lugar' : 'Editar lugar',
         children: [
-          _drop('Ruta', widget.catalogs['RUTAS'], rutaId, (v) => setState(() => rutaId = v)),
+          _drop('Ruta', widget.rutas, rutaId, (v) => setState(() => rutaId = v)),
           _field(direccion, 'Ubicacion'),
           _drop('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
           _field(horaEntrada, 'Horario de entrada (HH:mm)'),
@@ -1274,6 +1357,28 @@ class _LugarDialogState extends State<_LugarDialog> {
       );
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
+}
+
+class _RutaDialog extends StatefulWidget {
+  final Map<String, dynamic>? item;
+  const _RutaDialog({this.item});
+  @override
+  State<_RutaDialog> createState() => _RutaDialogState();
+}
+
+class _RutaDialogState extends State<_RutaDialog> {
+  late final nombre = TextEditingController(text: _s('nombre'));
+  @override
+  Widget build(BuildContext context) => _FormDialog(
+        title: widget.item == null ? 'Nueva Ruta' : 'Editar Ruta',
+        children: [
+          _field(nombre, 'Nombre'),
+        ],
+        onSave: () => Navigator.pop(context, {
+          'nombre': nombre.text.trim(),
+        }),
+      );
+  String _s(String key) => widget.item?[key]?.toString() ?? '';
 }
 
 class _EasDialog extends _BaseCatalogDialog {
@@ -1529,7 +1634,6 @@ Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async 
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
     'TIPOS_MANTENIMIENTO',
-    'RUTAS',
   ];
   final result = <String, List<Map<String, dynamic>>>{};
   for (final code in codes) {

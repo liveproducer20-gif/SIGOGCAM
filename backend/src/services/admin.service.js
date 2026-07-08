@@ -14,8 +14,7 @@ const catalogosPermitidos = new Set([
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
     'ESTADOS_ASIGNACION_MOVIL',
-    'TIPOS_MANTENIMIENTO',
-    'RUTAS'
+    'TIPOS_MANTENIMIENTO'
 ]);
 
 async function listarCatalogos() {
@@ -98,6 +97,26 @@ async function actualizarEas(id, data) {
 
 async function cambiarEstadoEas(id, activo) {
     return repository.cambiarEstadoEas(validarId(id, 'EAS'), Boolean(activo));
+}
+
+async function listarRutas() {
+    return repository.listarRutas();
+}
+
+async function crearRuta(data) {
+    return repository.crearRuta(validarRuta(data));
+}
+
+async function actualizarRuta(id, data) {
+    return repository.actualizarRuta(validarId(id, 'ruta'), validarRuta(data));
+}
+
+async function cambiarEstadoRuta(id, activo) {
+    return repository.cambiarEstadoRuta(validarId(id, 'ruta'), Boolean(activo));
+}
+
+async function eliminarRuta(id) {
+    return repository.eliminarRuta(validarId(id, 'ruta'));
 }
 
 async function listarMoviles() {
@@ -224,6 +243,12 @@ function validarEas(data) {
     };
 }
 
+function validarRuta(data) {
+    return {
+        nombre: texto(data.nombre, 'nombre')
+    };
+}
+
 function validarMovil(data) {
     const kilometrajeActual = entero(data.kilometrajeActual, 0);
     const kilometrajeUltimoMantenimiento = entero(data.kilometrajeUltimoMantenimiento, 0);
@@ -311,6 +336,12 @@ module.exports = {
     crearEas,
     actualizarEas,
     cambiarEstadoEas,
+    eliminarEas,
+    listarRutas,
+    crearRuta,
+    actualizarRuta,
+    cambiarEstadoRuta,
+    eliminarRuta,
     listarMoviles,
     crearMovil,
     actualizarMovil,

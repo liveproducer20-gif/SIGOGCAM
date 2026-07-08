@@ -53,6 +53,15 @@ class AdmApi {
   Future<void> setEasActivo(int id, bool activo) =>
       _put('admin/eas/$id/estado', {'activo': activo});
 
+  Future<List<Map<String, dynamic>>> getRutas() =>
+      _getList('admin/rutas');
+  Future<void> createRuta(Map<String, dynamic> data) =>
+      _post('admin/rutas', data);
+  Future<void> updateRuta(int id, Map<String, dynamic> data) =>
+      _put('admin/rutas/$id', data);
+  Future<void> setRutaActivo(int id, bool activo) =>
+      _put('admin/rutas/$id/estado', {'activo': activo});
+
   Future<List<Map<String, dynamic>>> getMoviles() =>
       _getList('admin/moviles');
   Future<void> createMovil(Map<String, dynamic> data) =>
@@ -74,6 +83,7 @@ class AdmApi {
   Future<void> deleteRol(int id) => _delete('admin/roles/$id');
   Future<void> deleteLugar(int id) => _delete('admin/lugares-servicio/$id');
   Future<void> deleteEas(int id) => _delete('admin/eas/$id');
+  Future<void> deleteRuta(int id) => _delete('admin/rutas/$id');
   Future<void> deleteMovil(int id) => _delete('admin/moviles/$id');
   Future<void> deleteAsignacion(int id) => _delete('admin/movil-eas-asignaciones/$id');
 

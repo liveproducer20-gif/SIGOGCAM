@@ -160,7 +160,7 @@ async function listarLugares() {
                l.hora_entrada, l.hora_salida, l.consignas,
                l.activo
         FROM dbo.lugares_servicio l
-        INNER JOIN dbo.catalogo_detalles ruta ON ruta.id = l.ruta_id
+        INNER JOIN dbo.rutas ruta ON ruta.id = l.ruta_id
         INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
         ORDER BY ruta.nombre, l.direccion
     `));
@@ -237,6 +237,37 @@ async function actualizarEas(id, data) {
 
 async function cambiarEstadoEas(id, activo) {
     return cambiarActivo('dbo.eas_estaciones', id, activo);
+}
+
+async function listarRutas() {
+    return withConnection((conexion) => conexion.query(`
+        SELECT id, nombre, activo
+        FROM dbo.rutas
+        ORDER BY nombre
+    `));
+}
+
+async function crearRuta(data) {
+    return insertarBasico('dbo.rutas', [
+        ['nombre', data.nombre]
+    ]);
+}
+
+async function actualizarRuta(id, data) {
+    return withConnection((conexion) => conexion.query(`
+        UPDATE dbo.rutas
+        SET nombre = ?,
+            fecha_actualizacion = SYSDATETIME()
+        WHERE id = ?
+    `, [data.nombre, id]));
+}
+
+async function cambiarEstadoRuta(id, activo) {
+    return cambiarActivo('dbo.rutas', id, activo);
+}
+
+async function eliminarRuta(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.rutas WHERE id = ?', [id]));
 }
 
 async function listarMoviles() {
@@ -490,6 +521,7 @@ const TABLAS_PERMITIDAS = new Set([
     'dbo.lugares_servicio',
     'dbo.eas_estaciones',
     'dbo.moviles',
+    'dbo.rutas',
 ]);
 
 function validarTabla(tabla) {
@@ -575,6 +607,11 @@ module.exports = {
     actualizarEas,
     cambiarEstadoEas,
     eliminarEas,
+    listarRutas,
+    crearRuta,
+    actualizarRuta,
+    cambiarEstadoRuta,
+    eliminarRuta,
     listarMoviles,
     crearMovil,
     actualizarMovil,

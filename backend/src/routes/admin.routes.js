@@ -123,6 +123,32 @@ router.delete(
     controller.eliminarEas
 );
 
+router.get('/rutas', requirePermission('eas.ver'), controller.listarRutas);
+router.post(
+    '/rutas',
+    requirePermission('eas.crear'),
+    auditAction({ accion: 'crear', modulo: 'administracion', tabla: 'rutas' }),
+    controller.crearRuta
+);
+router.put(
+    '/rutas/:id',
+    requirePermission('eas.editar'),
+    auditAction({ accion: 'editar', modulo: 'administracion', tabla: 'rutas' }),
+    controller.actualizarRuta
+);
+router.put(
+    '/rutas/:id/estado',
+    requirePermission('eas.estado'),
+    auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'rutas' }),
+    controller.cambiarEstadoRuta
+);
+router.delete(
+    '/rutas/:id',
+    requirePermission('eas.estado'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'rutas' }),
+    controller.eliminarRuta
+);
+
 router.get('/moviles', requirePermission('moviles.ver'), controller.listarMoviles);
 router.post(
     '/moviles',
