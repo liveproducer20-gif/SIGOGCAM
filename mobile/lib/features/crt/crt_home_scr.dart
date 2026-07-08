@@ -681,6 +681,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         causa: '${modulo.label} - ${tipo.label}',
       );
       await Clipboard.setData(ClipboardData(text: value));
+      _direcciones = await crtApi.getDirecciones(_easDbId);
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

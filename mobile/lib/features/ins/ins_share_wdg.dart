@@ -46,12 +46,15 @@ class _InsShareWdgState extends State<InsShareWdg> {
               child: CircularProgressIndicator(),
             )
           else
-            FilledButton.icon(
-              onPressed: _generating ? null : _generarYCompartir,
-              icon: const Icon(Icons.share_outlined),
-              label: const Text('Compartir en mis redes'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
+              SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _generating ? null : _generarYCompartir,
+                icon: const Icon(Icons.share_outlined),
+                label: const Text('Compartir en mis redes'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
               ),
             ),
         ],
@@ -94,113 +97,126 @@ class _InsShareWdgState extends State<InsShareWdg> {
               painter: _ConfettiPainter(),
             ),
             Center(
-              child: Container(
-                width: 340,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 20,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset('assets/img/logo_segura.png', height: 44, fit: BoxFit.contain),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Cuerpo de Agentes de Control Municipal',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF1D3F73),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  width: 340,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Text(
-                      'SIGO-GCAM',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Color(0xFF00A6D6),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 2.5,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    BadgeIcon(metaCartillas: meta, size: 80),
-                    const SizedBox(height: 10),
-                    Text(
-                      widget.nombreUsuario,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF1F2937),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.insignia.titulo,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF1D3F73),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFC400).withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFFC400).withValues(alpha: 0.3)),
-                      ),
-                      child: Text(
-                        'Por haber completado $meta cartillas.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Color(0xFF1F2937),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                    ],
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _InnerConfettiPainter(),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.star, color: Color(0xFFFFC400), size: 18),
-                        const SizedBox(width: 6),
-                        Text(
-                          '¡Felicidades!',
-                          style: TextStyle(
-                            color: const Color(0xFF00A6D6),
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                            shadows: [
-                              Shadow(
-                                color: const Color(0xFF00A6D6).withValues(alpha: 0.3),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset('assets/img/logo_segura.png', height: 44, fit: BoxFit.contain),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Cuerpo de Agentes de Control Municipal',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFF1D3F73),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                height: 1.2,
                               ),
-                            ],
-                          ),
+                            ),
+                            const SizedBox(height: 2),
+                            const Text(
+                              'SIGO-GCAM',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFF00A6D6),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 2.5,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            BadgeIcon(metaCartillas: meta, size: 80),
+                            const SizedBox(height: 10),
+                            Text(
+                              widget.nombreUsuario,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF1F2937),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              widget.insignia.titulo,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Color(0xFF1D3F73),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFC400).withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFFFC400).withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                'Por haber completado $meta cartillas.',
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFF1F2937),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.star, color: Color(0xFFFFC400), size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '¡Felicidades!',
+                                  style: TextStyle(
+                                    color: const Color(0xFF00A6D6),
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1.5,
+                                    shadows: [
+                                      Shadow(
+                                        color: const Color(0xFF00A6D6).withValues(alpha: 0.3),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Icon(Icons.star, color: Color(0xFFFFC400), size: 18),
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        const Icon(Icons.star, color: Color(0xFFFFC400), size: 18),
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -289,6 +305,43 @@ class _ConfettiPainter extends CustomPainter {
           Offset(x - s * math.cos(a), y - s * math.sin(a)),
           Offset(x + s * math.cos(a), y + s * math.sin(a)),
           Paint()..color = color..strokeWidth = 1.5..strokeCap = StrokeCap.round,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _InnerConfettiPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = math.Random(7);
+    final colors = [
+      const Color(0xFFFFC400).withValues(alpha: 0.25),
+      const Color(0xFF00A6D6).withValues(alpha: 0.15),
+      const Color(0xFF1D3F73).withValues(alpha: 0.1),
+      const Color(0xFFFFD700).withValues(alpha: 0.2),
+    ];
+
+    for (int i = 0; i < 30; i++) {
+      final x = rng.nextDouble() * size.width;
+      final y = rng.nextDouble() * size.height;
+      final s = 2 + rng.nextDouble() * 6;
+      final color = colors[i % colors.length];
+      final shape = rng.nextInt(3);
+
+      if (shape == 0) {
+        canvas.drawCircle(Offset(x, y), s, Paint()..color = color);
+      } else if (shape == 1) {
+        canvas.drawRect(Rect.fromCenter(center: Offset(x, y), width: s, height: s * 0.5), Paint()..color = color);
+      } else {
+        final a = rng.nextDouble() * math.pi;
+        canvas.drawLine(
+          Offset(x - s * math.cos(a), y - s * math.sin(a)),
+          Offset(x + s * math.cos(a), y + s * math.sin(a)),
+          Paint()..color = color..strokeWidth = 1..strokeCap = StrokeCap.round,
         );
       }
     }
