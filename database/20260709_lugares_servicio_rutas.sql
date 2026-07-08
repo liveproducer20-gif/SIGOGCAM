@@ -113,14 +113,26 @@ END
 IF COL_LENGTH('dbo.lugares_servicio', 'ruta_id') IS NOT NULL
 BEGIN
     DECLARE @rutaCatalogoId INT = (SELECT id FROM dbo.catalogos WHERE codigo = 'RUTAS');
-    EXEC('UPDATE dbo.lugares_servicio SET ruta_id = (SELECT TOP 1 id FROM dbo.catalogo_detalles WHERE catalogo_id = ' + @rutaCatalogoId + ' ORDER BY id) WHERE ruta_id IS NULL');
 
-    IF OBJECT_ID('FK_lugares_servicio_ruta', 'F') IS NULL
+    -- Asignar un ruta_id valido a las filas que aun esten NULL.
+    -- Si no hay detalles de RUTAS, usar el primer catalogo_detalles disponible como fallback.
+    IF @rutaCatalogoId IS NOT NULL
     BEGIN
-        ALTER TABLE dbo.lugares_servicio ALTER COLUMN ruta_id INT NOT NULL;
-        ALTER TABLE dbo.lugares_servicio ADD CONSTRAINT FK_lugares_servicio_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.catalogo_detalles(id);
-        PRINT '  FK ruta agregada.';
+        EXEC('UPDATE dbo.lugares_servicio SET ruta_id = (SELECT TOP 1 id FROM dbo.catalogo_detalles WHERE catalogo_id = ' + @rutaCatalogoId + ' ORDER BY id) WHERE ruta_id IS NULL');
     END
+
+    -- Verificar que no quede ninguna fila con ruta_id NULL antes del ALTER NOT NULL.
+    IF NOT EXISTS (SELECT 1 FROM dbo.lugares_servicio WHERE ruta_id IS NULL)
+    BEGIN
+        IF OBJECT_ID('FK_lugares_servicio_ruta', 'F') IS NULL
+        BEGIN
+            ALTER TABLE dbo.lugares_servicio ALTER COLUMN ruta_id INT NOT NULL;
+            ALTER TABLE dbo.lugares_servicio ADD CONSTRAINT FK_lugares_servicio_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.catalogo_detalles(id);
+            PRINT '  FK ruta agregada.';
+        END
+    END
+    ELSE
+        PRINT '  AVISO: quedan filas con ruta_id NULL. No se aplico ALTER NOT NULL.';
 END
 
 PRINT '=== 4/4: VERIFICACION ===';

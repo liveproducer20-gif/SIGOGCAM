@@ -39,6 +39,27 @@ BEGIN
     DELETE FROM dbo.anuncios;
 END;
 
+-- Limpiar tablas hijas que referencian a personal antes del DELETE.
+IF OBJECT_ID('dbo.cartilla_temp_policia', 'U') IS NOT NULL
+BEGIN
+    DELETE FROM dbo.cartilla_temp_policia;
+END;
+
+IF OBJECT_ID('dbo.cartilla_temp_cp', 'U') IS NOT NULL
+BEGIN
+    DELETE FROM dbo.cartilla_temp_cp;
+END;
+
+IF OBJECT_ID('dbo.cartillas_generadas', 'U') IS NOT NULL
+BEGIN
+    DELETE FROM dbo.cartillas_generadas;
+END;
+
+IF OBJECT_ID('dbo.usuario_insignias', 'U') IS NOT NULL
+BEGIN
+    DELETE FROM dbo.usuario_insignias;
+END;
+
 DELETE FROM dbo.personal;
 
 DECLARE @cargoId INT;

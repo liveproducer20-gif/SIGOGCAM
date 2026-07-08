@@ -92,9 +92,13 @@ BEGIN
 END
 GO
 
-ALTER TABLE dbo.cartilla_temp_policia ADD CONSTRAINT FK_temppol_servidor FOREIGN KEY (servidor_policial_id) REFERENCES dbo.servidores_policiales(id);
-GO
-PRINT '  FK a servidores_policiales agregada.';
+IF OBJECT_ID(N'dbo.servidores_policiales', N'U') IS NOT NULL
+BEGIN
+    ALTER TABLE dbo.cartilla_temp_policia ADD CONSTRAINT FK_temppol_servidor FOREIGN KEY (servidor_policial_id) REFERENCES dbo.servidores_policiales(id);
+    PRINT '  FK a servidores_policiales agregada.';
+END
+ELSE
+    PRINT '  AVISO: dbo.servidores_policiales no existe. FK_temppol_servidor omitida.';
 GO
 
 PRINT '';

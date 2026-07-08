@@ -40,6 +40,12 @@ IF OBJECT_ID('dbo.eventos', 'U') IS NOT NULL
 IF OBJECT_ID('dbo.anuncios', 'U') IS NOT NULL
     DELETE FROM dbo.anuncios;
 
+IF OBJECT_ID('dbo.cartilla_temp_policia', 'U') IS NOT NULL
+    DELETE FROM dbo.cartilla_temp_policia;
+
+IF OBJECT_ID('dbo.cartilla_temp_cp', 'U') IS NOT NULL
+    DELETE FROM dbo.cartilla_temp_cp;
+
 DELETE FROM dbo.personal;
 
 DECLARE @cargoId INT;
