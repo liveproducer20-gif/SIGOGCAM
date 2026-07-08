@@ -31,46 +31,48 @@ class _InsShareWdgState extends State<InsShareWdg> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text(
                 'Compartir insignia',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
-              const SizedBox(height: 16),
-              RepaintBoundary(
-                key: _repaintKey,
-                child: _buildShareCard(),
-              ),
-              const SizedBox(height: 16),
-              if (_generating)
-                const Padding(
-                  padding: EdgeInsets.all(16),
-                  child: CircularProgressIndicator(),
-                )
-              else
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _generating ? null : _generarYCompartir,
-                    icon: const Icon(Icons.share_outlined),
-                    label: const Text('Compartir en mis redes'),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(48),
-                    ),
+            ),
+            const SizedBox(height: 12),
+            RepaintBoundary(
+              key: _repaintKey,
+              child: _buildShareCard(),
+            ),
+            const SizedBox(height: 12),
+            if (_generating)
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: CircularProgressIndicator(),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: FilledButton.icon(
+                  onPressed: _generating ? null : _generarYCompartir,
+                  icon: const Icon(Icons.share_outlined),
+                  label: const Text('Compartir en mis redes'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
                   ),
                 ),
-              const SizedBox(height: 8),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
               ),
-            ],
-          ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
@@ -110,7 +112,15 @@ class _InsShareWdgState extends State<InsShareWdg> {
                 child: Container(
                   width: 340,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    gradient: const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFF0F7FF),
+                        Colors.white,
+                        Color(0xFFFFF9E6),
+                      ],
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.15),

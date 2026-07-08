@@ -73,6 +73,13 @@ class _BadgePainter extends CustomPainter {
       case 455: _drawSuperhero(canvas, cx, cy, r);
       case 475: _drawShadow(canvas, cx, cy, r);
       case 500: _drawCommand(canvas, cx, cy, r);
+      case 530: _drawDiamond(canvas, cx, cy, r);
+      case 565: _drawCrown(canvas, cx, cy, r);
+      case 605: _drawGem(canvas, cx, cy, r);
+      case 650: _drawSunburst(canvas, cx, cy, r);
+      case 700: _drawWings(canvas, cx, cy, r);
+      case 755: _drawPedestal(canvas, cx, cy, r);
+      case 800: _drawGrandStar(canvas, cx, cy, r);
       default: _drawShield(canvas, cx, cy, r);
     }
   }
@@ -853,6 +860,255 @@ class _BadgePainter extends CustomPainter {
       ..cubicTo(cx, cy + 45 * s, cx + 35 * s, cy + 60 * s, cx + 58 * s, cy + 45 * s);
     c.drawPath(ribbon, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3 * s..strokeCap = StrokeCap.round);
     _drawN(c, cx, cy - 10 * s, r * 0.25);
+  }
+
+  // ── 530: Comisionado de Élite ── diamond badge ──────────────────────
+  void _drawDiamond(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    final diamond = Path()
+      ..moveTo(cx, cy - 85 * s)
+      ..lineTo(cx + 70 * s, cy)
+      ..lineTo(cx, cy + 85 * s)
+      ..lineTo(cx - 70 * s, cy)
+      ..close();
+    c.drawPath(diamond, Paint()..color = _pri);
+    c.drawPath(diamond, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    final inner = Path()
+      ..moveTo(cx, cy - 55 * s)
+      ..lineTo(cx + 45 * s, cy)
+      ..lineTo(cx, cy + 55 * s)
+      ..lineTo(cx - 45 * s, cy)
+      ..close();
+    c.drawPath(inner, Paint()..color = _wht);
+    c.drawPath(inner, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    final star = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 22 * s : 9 * s;
+      star.lineTo(cx + rad * math.cos(a), cy + rad * math.sin(a));
+      if (i == 0) { star.moveTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+    }
+    star.close();
+    c.drawPath(star, Paint()..color = _acc);
+    c.drawPath(star, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    _drawN(c, cx, cy, r * 0.35);
+  }
+
+  // ── 565: Guardián Supremo ── crown badge ───────────────────────────
+  void _drawCrown(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    c.drawCircle(Offset(cx, cy + 10 * s), 72 * s, Paint()..color = _pri);
+    c.drawCircle(Offset(cx, cy + 10 * s), 72 * s, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    c.drawCircle(Offset(cx, cy + 10 * s), 54 * s, Paint()..color = _wht);
+    c.drawCircle(Offset(cx, cy + 10 * s), 54 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5 * s);
+    // Crown points
+    final crown = Path()
+      ..moveTo(cx - 45 * s, cy + 40 * s)
+      ..lineTo(cx - 35 * s, cy - 30 * s)
+      ..lineTo(cx - 12 * s, cy - 5 * s)
+      ..lineTo(cx, cy - 45 * s)
+      ..lineTo(cx + 12 * s, cy - 5 * s)
+      ..lineTo(cx + 35 * s, cy - 30 * s)
+      ..lineTo(cx + 45 * s, cy + 40 * s)
+      ..close();
+    c.drawPath(crown, Paint()..color = _acc);
+    c.drawPath(crown, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5 * s);
+    c.drawCircle(Offset(cx, cy - 5 * s), 8 * s, Paint()..color = _pri);
+    _drawN(c, cx, cy + 45 * s, r * 0.35);
+  }
+
+  // ── 605: Maestro Consumado ── gem / faceted badge ─────────────────
+  void _drawGem(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    final gem = Path()
+      ..moveTo(cx, cy - 80 * s)
+      ..lineTo(cx + 60 * s, cy - 30 * s)
+      ..lineTo(cx + 70 * s, cy + 35 * s)
+      ..lineTo(cx, cy + 85 * s)
+      ..lineTo(cx - 70 * s, cy + 35 * s)
+      ..lineTo(cx - 60 * s, cy - 30 * s)
+      ..close();
+    c.drawPath(gem, Paint()..color = _sec);
+    c.drawPath(gem, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    final facetV = Path()
+      ..moveTo(cx, cy - 80 * s)
+      ..lineTo(cx, cy + 85 * s);
+    c.drawPath(facetV, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    final facetH = Path()
+      ..moveTo(cx - 65 * s, cy)
+      ..lineTo(cx + 65 * s, cy);
+    c.drawPath(facetH, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    final star = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 25 * s : 10 * s;
+      if (i == 0) { star.moveTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+      else { star.lineTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+    }
+    star.close();
+    c.drawPath(star, Paint()..color = _acc);
+    c.drawPath(star, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    _drawN(c, cx, cy, r * 0.35);
+  }
+
+  // ── 650: Leyenda Viviente ── sunburst star ────────────────────────
+  void _drawSunburst(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    // Outer ring
+    c.drawCircle(Offset(cx, cy), 75 * s, Paint()..color = _acc);
+    c.drawCircle(Offset(cx, cy), 75 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    c.drawCircle(Offset(cx, cy), 58 * s, Paint()..color = _pri);
+    c.drawCircle(Offset(cx, cy), 58 * s, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 2.5 * s);
+    c.drawCircle(Offset(cx, cy), 42 * s, Paint()..color = _wht);
+    c.drawCircle(Offset(cx, cy), 42 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    // Sun rays (12 lines)
+    for (int i = 0; i < 12; i++) {
+      final a = i * math.pi / 6;
+      final inner = 48 * s;
+      final outer = 72 * s;
+      c.drawLine(
+        Offset(cx + inner * math.cos(a), cy + inner * math.sin(a)),
+        Offset(cx + outer * math.cos(a), cy + outer * math.sin(a)),
+        Paint()..color = _acc..strokeWidth = 2.5 * s..strokeCap = StrokeCap.round,
+      );
+    }
+    c.drawCircle(Offset(cx, cy), 10 * s, Paint()..color = _acc);
+    c.drawCircle(Offset(cx, cy), 10 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    _drawN(c, cx, cy, r * 0.3);
+  }
+
+  // ── 700: Emblema de Honor ── shield with wings ────────────────────
+  void _drawWings(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    // Shield
+    final shield = Path()
+      ..moveTo(cx, cy - 75 * s)
+      ..lineTo(cx + 60 * s, cy - 40 * s)
+      ..lineTo(cx + 60 * s, cy + 20 * s)
+      ..cubicTo(cx + 60 * s, cy + 52 * s, cx, cy + 78 * s, cx, cy + 78 * s)
+      ..cubicTo(cx, cy + 78 * s, cx - 60 * s, cy + 52 * s, cx - 60 * s, cy + 20 * s)
+      ..lineTo(cx - 60 * s, cy - 40 * s)
+      ..close();
+    c.drawPath(shield, Paint()..color = _pri);
+    c.drawPath(shield, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    // Wings
+    final wingL = Path()
+      ..moveTo(cx - 55 * s, cy - 20 * s)
+      ..cubicTo(cx - 85 * s, cy - 60 * s, cx - 75 * s, cy - 70 * s, cx - 45 * s, cy - 55 * s);
+    c.drawPath(wingL, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 3 * s..strokeCap = StrokeCap.round);
+    final wingR = Path()
+      ..moveTo(cx + 55 * s, cy - 20 * s)
+      ..cubicTo(cx + 85 * s, cy - 60 * s, cx + 75 * s, cy - 70 * s, cx + 45 * s, cy - 55 * s);
+    c.drawPath(wingR, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 3 * s..strokeCap = StrokeCap.round);
+    // Inner star
+    final inner = Path()
+      ..moveTo(cx, cy - 52 * s)
+      ..lineTo(cx + 35 * s, cy - 28 * s)
+      ..lineTo(cx + 35 * s, cy + 15 * s)
+      ..cubicTo(cx + 35 * s, cy + 35 * s, cx, cy + 50 * s, cx, cy + 50 * s)
+      ..cubicTo(cx, cy + 50 * s, cx - 35 * s, cy + 35 * s, cx - 35 * s, cy + 15 * s)
+      ..lineTo(cx - 35 * s, cy - 28 * s)
+      ..close();
+    c.drawPath(inner, Paint()..color = _wht);
+    c.drawPath(inner, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    final star = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 18 * s : 7 * s;
+      if (i == 0) { star.moveTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+      else { star.lineTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+    }
+    star.close();
+    c.drawPath(star, Paint()..color = _acc);
+    c.drawPath(star, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    _drawN(c, cx, cy + 30 * s, r * 0.35);
+  }
+
+  // ── 755: Custodio del Sistema ── pedestal / guardian ─────────────
+  void _drawPedestal(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    // Top circle
+    c.drawCircle(Offset(cx, cy - 20 * s), 52 * s, Paint()..color = _sec);
+    c.drawCircle(Offset(cx, cy - 20 * s), 52 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    c.drawCircle(Offset(cx, cy - 20 * s), 38 * s, Paint()..color = _wht);
+    c.drawCircle(Offset(cx, cy - 20 * s), 38 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5 * s);
+    c.drawCircle(Offset(cx, cy - 20 * s), 22 * s, Paint()..color = _pri);
+    c.drawCircle(Offset(cx, cy - 20 * s), 22 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    // Pedestal base
+    final base = Rect.fromCenter(center: Offset(cx, cy + 45 * s), width: 90 * s, height: 14 * s);
+    c.drawRRect(RRect.fromRectAndRadius(base, Radius.circular(5 * s)), Paint()..color = _pri);
+    c.drawRRect(RRect.fromRectAndRadius(base, Radius.circular(5 * s)), Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    final pillar = Rect.fromCenter(center: Offset(cx, cy + 20 * s), width: 24 * s, height: 40 * s);
+    c.drawRect(pillar, Paint()..color = _pri);
+    c.drawRect(pillar, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    // Laurel
+    final branchL = Path()
+      ..moveTo(cx - 65 * s, cy - 45 * s)
+      ..cubicTo(cx - 50 * s, cy - 65 * s, cx - 25 * s, cy - 50 * s, cx - 25 * s, cy - 45 * s);
+    c.drawPath(branchL, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 2.5 * s..strokeCap = StrokeCap.round);
+    final branchR = Path()
+      ..moveTo(cx + 65 * s, cy - 45 * s)
+      ..cubicTo(cx + 50 * s, cy - 65 * s, cx + 25 * s, cy - 50 * s, cx + 25 * s, cy - 45 * s);
+    c.drawPath(branchR, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 2.5 * s..strokeCap = StrokeCap.round);
+    final star = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 14 * s : 6 * s;
+      if (i == 0) { star.moveTo(cx + rad * math.cos(a), cy - 20 * s + rad * math.sin(a)); }
+      else { star.lineTo(cx + rad * math.cos(a), cy - 20 * s + rad * math.sin(a)); }
+    }
+    star.close();
+    c.drawPath(star, Paint()..color = _acc);
+    c.drawPath(star, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    _drawN(c, cx, cy + 55 * s, r * 0.3);
+  }
+
+  // ── 800: Pináculo del Mérito ── grand star ───────────────────────
+  void _drawGrandStar(Canvas c, double cx, double cy, double r) {
+    final s = r / 100;
+    c.drawCircle(Offset(cx, cy), 80 * s, Paint()..color = _pri);
+    c.drawCircle(Offset(cx, cy), 80 * s, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3.5 * s);
+    c.drawCircle(Offset(cx, cy), 64 * s, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 3 * s);
+    c.drawCircle(Offset(cx, cy), 48 * s, Paint()..color = _wht);
+    c.drawCircle(Offset(cx, cy), 48 * s, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5 * s);
+    // Large 10-point star
+    final starO = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 38 * s : 15 * s;
+      if (i == 0) { starO.moveTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+      else { starO.lineTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+    }
+    starO.close();
+    c.drawPath(starO, Paint()..color = _pri);
+    c.drawPath(starO, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2 * s);
+    // Small inner star
+    final starI = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? 20 * s : 8 * s;
+      if (i == 0) { starI.moveTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+      else { starI.lineTo(cx + rad * math.cos(a), cy + rad * math.sin(a)); }
+    }
+    starI.close();
+    c.drawPath(starI, Paint()..color = _acc);
+    c.drawPath(starI, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5 * s);
+    // Laurel
+    final laurelL = Path()
+      ..moveTo(cx - 65 * s, cy - 55 * s)
+      ..cubicTo(cx - 40 * s, cy - 75 * s, cx - 20 * s, cy - 60 * s, cx - 20 * s, cy - 50 * s);
+    c.drawPath(laurelL, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 3 * s..strokeCap = StrokeCap.round);
+    final laurelR = Path()
+      ..moveTo(cx + 65 * s, cy - 55 * s)
+      ..cubicTo(cx + 40 * s, cy - 75 * s, cx + 20 * s, cy - 60 * s, cx + 20 * s, cy - 50 * s);
+    c.drawPath(laurelR, Paint()..color = _acc..style = PaintingStyle.stroke..strokeWidth = 3 * s..strokeCap = StrokeCap.round);
+    // Ribbon
+    final ribbon = Path()
+      ..moveTo(cx - 50 * s, cy + 55 * s)
+      ..cubicTo(cx - 25 * s, cy + 70 * s, cx, cy + 55 * s, cx, cy + 55 * s)
+      ..cubicTo(cx, cy + 55 * s, cx + 25 * s, cy + 70 * s, cx + 50 * s, cy + 55 * s);
+    c.drawPath(ribbon, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 2.5 * s..strokeCap = StrokeCap.round);
+    _drawN(c, cx, cy, r * 0.25);
   }
 
   void _drawN(Canvas c, double cx, double cy, double s) {

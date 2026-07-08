@@ -135,7 +135,14 @@ VALUES
 ('cartillas_435', N'Cartillas por doquier', N'Las cartillas te persiguen. Alcanzaste 435 cartillas y obtuviste la insignia Cartillas por doquier.', 435, N'435'),
 ('cartillas_455', N'Superheroe Operativo', N'Eres un heroe de las operaciones. Con 455 cartillas desbloqueaste la insignia Superheroe Operativo.', 455, N'455'),
 ('cartillas_475', N'Merodeador de incidencias', N'Siempre en el lugar correcto. Alcanzaste 475 cartillas y obtuviste la insignia Merodeador de incidencias.', 475, N'475'),
-('cartillas_500', N'Jefe de asuntos operativos', N'La cima del rendimiento. Con 500 cartillas has desbloqueado la insignia Jefe de asuntos operativos. Eres la maxima autoridad.', 500, N'500');
+('cartillas_500', N'Jefe de asuntos operativos', N'La cima del rendimiento. Con 500 cartillas has desbloqueado la insignia Jefe de asuntos operativos. Eres la maxima autoridad.', 500, N'500'),
+('cartillas_530', N'Comisionado de Élite', N'Excelencia comprobada. Con 530 cartillas has desbloqueado la insignia Comisionado de Élite. Tu dedicacion es ejemplar.', 530, N'530'),
+('cartillas_565', N'Guardián Supremo', N'Constancia inquebrantable. Al alcanzar 565 cartillas has obtenido la insignia Guardián Supremo. Nadie iguala tu entrega.', 565, N'565'),
+('cartillas_605', N'Maestro Consumado', N'Maestria absoluta. Con 605 cartillas desbloqueaste la insignia Maestro Consumado. Eres un verdadero experto.', 605, N'605'),
+('cartillas_650', N'Leyenda Viviente', N'Tu nombre es leyenda. Al llegar a 650 cartillas has obtenido la insignia Leyenda Viviente. Tu legado perdura.', 650, N'650'),
+('cartillas_700', N'Emblema de Honor', N'Honor y excelencia. Con 700 cartillas desbloqueaste la insignia Emblema de Honor. Representas lo mejor de la institucion.', 700, N'700'),
+('cartillas_755', N'Custodio del Sistema', N'Guardian incansable. Al alcanzar 755 cartillas has obtenido la insignia Custodio del Sistema. El sistema te necesita.', 755, N'755'),
+('cartillas_800', N'Pináculo del Mérito', N'La cima absoluta. Con 800 cartillas has desbloqueado la insignia Pináculo del Mérito. Eres una leyenda viva.', 800, N'800');
 
 MERGE dbo.insignias AS target
 USING @insignias AS source
