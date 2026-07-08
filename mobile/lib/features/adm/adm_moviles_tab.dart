@@ -1,24 +1,29 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
 class MovilesTab extends AdmCrudTab {
-  const MovilesTab({super.key, required super.api});
+  final int tabIndex;
+  const MovilesTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
   State<AdmCrudTab> createState() => _MovilState();
 }
 
-class _MovilState extends State<AdmCrudTab> {
+class _MovilState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
   late Future<List<Map<String, dynamic>>> future;
   @override
   void initState() {
     super.initState();
-    future = widget.api.getMoviles();
+    future = Future.value([]);
+    initLazy((widget as MovilesTab).tabIndex, () => future = widget.api.getMoviles());
   }
+
+  void _reload() => setState(() => future = widget.api.getMoviles());
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
@@ -47,8 +52,6 @@ class _MovilState extends State<AdmCrudTab> {
           ),
         ],
       );
-
-  void _reload() => setState(() { future = widget.api.getMoviles(); });
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final catalogs = await admLoadCatalogs(widget.api);
@@ -299,11 +302,8 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
     if (!mounted) return;
     await admSafeRun(context, () async {
       await widget.api.createMantenimiento(widget.movilId, data);
-      setState(() {
-        _mantenimientos = widget.api.getMantenimientos(widget.movilId);
-      });
+      setState(() => _mantenimientos = widget.api.getMantenimientos(widget.movilId));
       widget.onChanged();
     });
   }
 }
-

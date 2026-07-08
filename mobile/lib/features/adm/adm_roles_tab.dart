@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_helpers.dart';
@@ -45,7 +45,7 @@ class _RolesTabState extends State<RolesTab> {
     );
   }
 
-  void _reload() => setState(() { future = widget.api.getRoles(); });
+  void _reload() => setState(() => future = widget.api.getRoles());
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final permisos = await widget.api.getPermisos();
@@ -74,7 +74,10 @@ class _RolesTabState extends State<RolesTab> {
   }
 
   Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    await admSafeDelete(context, label, () async {
+    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await admSafeRun(context, () async {
       await deleteFn();
       _reload();
     });
@@ -134,5 +137,3 @@ class _RolDialogState extends State<_RolDialog> {
         }),
       );
 }
-
-

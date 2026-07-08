@@ -1,4 +1,4 @@
-const sql = require('msnodesqlv8');
+const odbc = require('odbc');
 
 const {
   DB_DRIVER = 'ODBC Driver 18 for SQL Server',
@@ -37,101 +37,53 @@ const connectionString =
       : `Trusted_Connection=${DB_TRUSTED_CONNECTION};`
   );
 
-// Adapter que expone la misma interfaz que usaba node-odbc (promesas,
-// conexion.query(sql, params), conexion.close, transaction) pero sobre
-// msnodesqlv8, el cual maneja NVARCHAR/UTF-16 de forma nativa y evita que
-// los acentidos se conviertan en el caracter de reemplazo (U+FFFD / '�').
-function openConnection() {
-  return new Promise((resolve, reject) => {
-    sql.open(connectionString, (err, conn) => {
-      if (err) return reject(err);
-      resolve(conn);
-    });
-  });
-}
-
-function queryOn(conn, sqlText, params) {
-  return new Promise((resolve, reject) => {
-    conn.query(sqlText, params || [], (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
-}
-
-function beginTransaction(conn) {
-  return new Promise((resolve, reject) => {
-    conn.beginTransaction((err) => (err ? reject(err) : resolve()));
-  });
-}
-
-function commit(conn) {
-  return new Promise((resolve, reject) => {
-    conn.commit((err) => (err ? reject(err) : resolve()));
-  });
-}
-
-function rollback(conn) {
-  return new Promise((resolve) => {
-    conn.rollback(() => resolve());
-  });
-}
-
-// Pool simple: mantiene una unica conexion abierta reutilizable.
-// msnodesqlv8 gestiona internamente la conexion; para mayor concurrencia
-// se abre una conexion por operacion (open es rapido y maneja Unicode bien).
 let poolInstance = null;
 
 async function getPool() {
   if (!poolInstance) {
-    poolInstance = {
-      async connect() {
-        const conn = await openConnection();
-        return {
-          query: (sqlText, params) => queryOn(conn, sqlText, params),
-          beginTransaction: () => beginTransaction(conn),
-          commit: () => commit(conn),
-          rollback: () => rollback(conn),
-          close: () => new Promise((res) => conn.close(() => res())),
-        };
-      },
-    };
+    poolInstance = await odbc.pool(connectionString, {
+      initialSize: 5,
+      maxSize: 20,
+      connectionTimeout: timeout * 1000,
+    });
 
-    process.on('exit', () => {
-      // msnodesqlv8 cierra las conexiones al salir del proceso.
+    process.on('exit', async () => {
+      if (poolInstance) {
+        try { await poolInstance.close(); } catch (_) {}
+      }
     });
   }
   return poolInstance;
 }
 
-async function query(sqlText, params) {
-  const conn = await openConnection();
+async function query(sql, params) {
+  const pool = await getPool();
+  const conexion = await pool.connect();
   try {
-    return await queryOn(conn, sqlText, params);
+    return await conexion.query(sql, params);
   } finally {
-    await new Promise((res) => conn.close(() => res()));
+    await conexion.close();
   }
 }
 
 async function transaction(callback) {
-  const conn = await openConnection();
+  const pool = await getPool();
+  const conexion = await pool.connect();
   try {
-    await beginTransaction(conn);
-    const result = await callback({
-      query: (sqlText, params) => queryOn(conn, sqlText, params),
-    });
-    await commit(conn);
+    await conexion.beginTransaction();
+    const result = await callback(conexion);
+    await conexion.commit();
     return result;
   } catch (error) {
-    await rollback(conn);
+    try { await conexion.rollback(); } catch (_) {}
     throw error;
   } finally {
-    await new Promise((res) => conn.close(() => res()));
+    await conexion.close();
   }
 }
 
 module.exports = {
-  sql,
+  odbc,
   connectionString,
   getPool,
   query,

@@ -45,9 +45,7 @@ class _RutasTabState extends State<RutasTab> {
 
   void _reload() {
     if (!mounted) return;
-    setState(() {
-      future = widget.api.getRutas();
-    });
+    setState(() => future = widget.api.getRutas());
   }
 
   Future<void> _edit(Map<String, dynamic>? item) async {

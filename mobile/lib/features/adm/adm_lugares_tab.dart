@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_crud_tab.dart';
@@ -51,7 +51,7 @@ class _LugarState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() { future = widget.api.getLugares(); });
+  void _reload() => setState(() => future = widget.api.getLugares());
 
   void _showRutasManager() {
     showDialog(
@@ -91,7 +91,10 @@ class _LugarState extends State<AdmCrudTab> {
 
   Future<void> _confirmDelete(
       Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    await admSafeDelete(context, label, () async {
+    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await admSafeRun(context, () async {
       await deleteFn();
       _reload();
     });
@@ -177,9 +180,7 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
 
   void _reload() {
     if (!mounted) return;
-    setState(() {
-      _future = widget.api.getRutas();
-    });
+    setState(() => _future = widget.api.getRutas());
   }
 
   Future<void> _create() async {
@@ -294,4 +295,3 @@ class _LugarDialogState extends State<_LugarDialog> {
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
 }
-

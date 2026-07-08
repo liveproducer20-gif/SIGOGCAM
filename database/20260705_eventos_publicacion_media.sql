@@ -3,8 +3,7 @@ GO
 
 IF OBJECT_ID('dbo.eventos', 'U') IS NULL
 BEGIN
-    PRINT 'AVISO: dbo.eventos no existe aun (el esquema base lo crea el backend). Script omitido.';
-    RETURN;
+    THROW 50002, 'No existe la tabla dbo.eventos en la base BITSAC.', 1;
 END;
 GO
 

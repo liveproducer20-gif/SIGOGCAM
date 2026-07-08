@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
@@ -44,7 +44,7 @@ class _AsignacionState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() { future = widget.api.getAsignaciones(); });
+  void _reload() => setState(() => future = widget.api.getAsignaciones());
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final eas = await widget.api.getEas();
@@ -72,7 +72,10 @@ class _AsignacionState extends State<AdmCrudTab> {
 
   Future<void> _confirmDelete(
       Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    await admSafeDelete(context, label, () async {
+    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await admSafeRun(context, () async {
       await deleteFn();
       _reload();
     });
@@ -126,4 +129,3 @@ class _AsignacionDialogState extends State<_AsignacionDialog> {
         }),
       );
 }
-

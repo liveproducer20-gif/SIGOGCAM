@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_helpers.dart';
@@ -51,7 +51,7 @@ class _PersonalTabState extends State<PersonalTab> {
     );
   }
 
-  void _reload() => setState(() { future = widget.api.getPersonal(); });
+  void _reload() => setState(() => future = widget.api.getPersonal());
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final results = await Future.wait([
@@ -108,7 +108,10 @@ class _PersonalTabState extends State<PersonalTab> {
 
   Future<void> _confirmDelete(
       Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    await admSafeDelete(context, label, () async {
+    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await admSafeRun(context, () async {
       await deleteFn();
       _reload();
     });
@@ -190,4 +193,3 @@ class _PersonalDialogState extends State<_PersonalDialog> {
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
 }
-

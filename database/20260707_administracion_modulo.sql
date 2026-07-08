@@ -1,9 +1,6 @@
 USE BITSAC;
 GO
 
-SET QUOTED_IDENTIFIER ON;
-GO
-
 IF OBJECT_ID('dbo.catalogos', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.catalogos (
@@ -241,12 +238,25 @@ IF COL_LENGTH('dbo.movil_eas_asignaciones', 'activo') IS NULL
     ALTER TABLE dbo.movil_eas_asignaciones ADD activo BIT NOT NULL CONSTRAINT DF_movil_eas_activo DEFAULT (1);
 GO
 
--- NOTA: El bloque CTE (marcar una sola asignacion activa por movil) y el indice
--- filtrado UX_movil_eas_asignacion_activa se omiten intencionalmente: el backend
--- ya gestiona el estado 'activo' de las asignaciones y la columna es creada por la
--- app. Mantenerlos aqui causaba "Invalid column name 'activo'" al compilar el batch
--- en sqlcmd. Si se requiere, ejecutar aparte con SET QUOTED_IDENTIFIER ON.
-PRINT 'Columna activo verificada en movil_eas_asignaciones.';
+;WITH asignaciones AS (
+    SELECT id,
+           ROW_NUMBER() OVER (
+               PARTITION BY movil_id
+               ORDER BY fecha_asignacion DESC, id DESC
+           ) AS rn
+    FROM dbo.movil_eas_asignaciones
+    WHERE activo = 1
+)
+UPDATE asignaciones
+SET activo = CASE WHEN rn = 1 THEN 1 ELSE 0 END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_movil_eas_asignacion_activa' AND object_id = OBJECT_ID('dbo.movil_eas_asignaciones'))
+BEGIN
+    CREATE UNIQUE INDEX UX_movil_eas_asignacion_activa
+    ON dbo.movil_eas_asignaciones (movil_id)
+    WHERE activo = 1;
+END;
 GO
 
 IF OBJECT_ID('dbo.roles', 'U') IS NULL

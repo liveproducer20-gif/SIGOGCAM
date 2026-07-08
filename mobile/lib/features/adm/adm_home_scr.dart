@@ -36,56 +36,66 @@ class AdmHomeScr extends StatefulWidget {
 class _AdmHomeScrState extends State<AdmHomeScr> {
   final api = AdmApi();
 
-  List<_TabDef> get _tabs => [
-        if (widget.user.hasPermission('personal.ver'))
-          _TabDef(
-            icon: Icons.groups_outlined,
-            label: 'Personal',
-            child: PersonalTab(api: api),
-          ),
-        if (widget.user.hasPermission('catalogos.ver'))
-          _TabDef(
-            icon: Icons.list_alt_outlined,
-            label: 'Catalogos',
-            child: CatalogosTab(api: api),
-          ),
-        if (widget.user.hasPermission('roles.ver'))
-          _TabDef(
-            icon: Icons.admin_panel_settings_outlined,
-            label: 'Roles',
-            child: RolesTab(api: api),
-          ),
-        if (widget.user.hasPermission('lugares_servicio.ver'))
-          _TabDef(
-            icon: Icons.place_outlined,
-            label: 'Lugares',
-            child: LugaresTab(api: api),
-          ),
-        if (widget.user.hasPermission('rutas.ver'))
-          _TabDef(
-            icon: Icons.map_outlined,
-            label: 'Rutas',
-            child: RutasTab(api: api),
-          ),
-        if (widget.user.hasPermission('eas.ver'))
-          _TabDef(
-            icon: Icons.location_city_outlined,
-            label: 'EAS',
-            child: EasTab(api: api),
-          ),
-        if (widget.user.hasPermission('moviles.ver'))
-          _TabDef(
-            icon: Icons.directions_car_outlined,
-            label: 'Moviles',
-            child: MovilesTab(api: api),
-          ),
-        if (widget.user.hasPermission('moviles.asignar'))
-          _TabDef(
-            icon: Icons.compare_arrows_outlined,
-            label: 'Asignaciones',
-            child: AsignacionesTab(api: api),
-          ),
-      ];
+  List<_TabDef> get _tabs {
+    final list = <_TabDef>[];
+    if (widget.user.hasPermission('personal.ver')) {
+      list.add(_TabDef(
+        icon: Icons.groups_outlined,
+        label: 'Personal',
+        child: PersonalTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('catalogos.ver')) {
+      list.add(_TabDef(
+        icon: Icons.list_alt_outlined,
+        label: 'Catalogos',
+        child: CatalogosTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('roles.ver')) {
+      list.add(_TabDef(
+        icon: Icons.admin_panel_settings_outlined,
+        label: 'Roles',
+        child: RolesTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('lugares_servicio.ver')) {
+      list.add(_TabDef(
+        icon: Icons.place_outlined,
+        label: 'Lugares',
+        child: LugaresTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('rutas.ver')) {
+      list.add(_TabDef(
+        icon: Icons.map_outlined,
+        label: 'Rutas',
+        child: RutasTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('eas.ver')) {
+      list.add(_TabDef(
+        icon: Icons.location_city_outlined,
+        label: 'EAS',
+        child: EasTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('moviles.ver')) {
+      list.add(_TabDef(
+        icon: Icons.directions_car_outlined,
+        label: 'Moviles',
+        child: MovilesTab(api: api, tabIndex: list.length),
+      ));
+    }
+    if (widget.user.hasPermission('moviles.asignar')) {
+      list.add(_TabDef(
+        icon: Icons.compare_arrows_outlined,
+        label: 'Asignaciones',
+        child: AsignacionesTab(api: api),
+      ));
+    }
+    return list;
+  }
 
   @override
   Widget build(BuildContext context) {
