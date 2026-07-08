@@ -37,6 +37,8 @@ dependencies:
   http: ^1.2.2
   web: ^1.1.1
   shared_preferences: ^2.5.5
+  share_plus: ^10.0.0
+  path_provider: ^2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -59,3 +61,4 @@ flutter:
 
   assets:
     - assets/img/
+    - assets/icn/

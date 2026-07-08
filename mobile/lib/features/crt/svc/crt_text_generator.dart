@@ -107,10 +107,14 @@ Adjunto fotografía''';
 
     final reporta = StringBuffer();
     reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
-    reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
-    if (aux.isNotEmpty) {
-      reporta.writeln();
-      reporta.write('*Aux.:* $aux');
+    if (policia.isNotEmpty) {
+      reporta.write('*Aux.:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    } else {
+      reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+      if (aux.isNotEmpty) {
+        reporta.writeln();
+        reporta.write('*Aux.:* $aux');
+      }
     }
     if (policia.isNotEmpty) {
       reporta.writeln();

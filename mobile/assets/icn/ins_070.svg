@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg70" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E5E4E2"/>
+      <stop offset="100%" style="stop-color:#B0C4DE"/>
+    </linearGradient>
+  </defs>
+  <polygon points="100,10 130,35 175,25 163,65 195,85 163,105 175,145 130,135 100,160 70,135 25,145 37,105 5,85 37,65 25,25 70,35" fill="url(#bg70)" stroke="#708090" stroke-width="3"/>
+  <circle cx="100" cy="85" r="45" fill="#F0F8FF" stroke="#708090" stroke-width="2"/>
+  <circle cx="100" cy="85" r="35" fill="none" stroke="#B0C4DE" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="100" y="93" text-anchor="middle" font-size="26" font-weight="bold" fill="#4A6A8A">70</text>
+  <path d="M85 120 L100 135 L115 120" fill="none" stroke="#708090" stroke-width="2"/>
+  <polygon points="100,45 103,55 114,55 105,62 108,73 100,66 92,73 95,62 86,55 97,55" fill="#FFD700" opacity="0.6"/>
+</svg>

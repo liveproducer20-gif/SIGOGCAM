@@ -6,6 +6,7 @@ import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import '../ins/ins_api.dart';
+import '../ins/ins_badge_dlg.dart';
 import '../ins/ins_mdl.dart';
 import 'mdl/crt_enums.dart';
 import 'mdl/crt_models.dart';
@@ -48,6 +49,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   int _desaSection = 0;
   String _desaJp = '';
   String _desaAux = '';
+  bool get _hasPolicia =>
+      _desaPoliciaOtro || _desaPoliciaId != null;
   String _desaMovil = '';
   String _desaCp = '';
   String _desaCpGuardado = '';
@@ -266,23 +269,25 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             children: [
               TextFormField(
                 initialValue: widget.user?.nombreCompleto ?? '',
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del agente JP',
+                decoration: InputDecoration(
+                  labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
                   prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
+                  border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) => _desaJp = value,
               ),
-              const SizedBox(height: 14),
-              TextField(
-                controller: _desaAuxCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Aux.: (opcional)',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+              if (!_hasPolicia) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _desaAuxCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Aux.: (opcional)',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) => _desaAux = value,
                 ),
-                onChanged: (value) => _desaAux = value,
-              ),
+              ],
             ],
           ),
         ),
@@ -927,43 +932,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Future<void> _showBadgeDialog(InsigniaDesbloqueadaMdl insignia) {
     return showDialog<void>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text('Nueva insignia desbloqueada'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(
-              radius: 34,
-              backgroundColor: AppThm.accClr,
-              child: Text(
-                insignia.icono.isEmpty ? 'OK' : insignia.icono,
-                style: const TextStyle(
-                  color: AppThm.priClr,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              insignia.titulo,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppThm.priClr,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text(insignia.mensaje, textAlign: TextAlign.center),
-          ],
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Aceptar'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      builder: (_) => BadgeUnlockDialog(insignia: insignia),
     );
   }
 

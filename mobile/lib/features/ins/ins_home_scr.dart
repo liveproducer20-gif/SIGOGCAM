@@ -5,7 +5,9 @@ import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import 'ins_api.dart';
+import 'ins_icn_wdg.dart';
 import 'ins_mdl.dart';
+import 'ins_share_wdg.dart';
 
 class InsHomeScr extends StatefulWidget {
   final AppUser user;
@@ -87,10 +89,11 @@ class _InsHomeScrState extends State<InsHomeScr> {
                           crossAxisCount: columns,
                           crossAxisSpacing: 14,
                           mainAxisSpacing: 14,
-                          mainAxisExtent: 176,
+                          mainAxisExtent: 210,
                         ),
                         itemBuilder: (_, index) => _InsCard(
                           insignia: data.insignias[index],
+                          user: widget.user,
                         ),
                       );
                     },
@@ -191,8 +194,9 @@ class _ProgressPanel extends StatelessWidget {
 
 class _InsCard extends StatelessWidget {
   final InsMdl insignia;
+  final AppUser user;
 
-  const _InsCard({required this.insignia});
+  const _InsCard({required this.insignia, required this.user});
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +217,10 @@ class _InsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: unlocked
-                    ? AppThm.accClr.withValues(alpha: 0.22)
-                    : Colors.black.withValues(alpha: 0.06),
-                child: Icon(
-                  unlocked ? Icons.workspace_premium : Icons.lock_outline,
-                  color: unlocked ? AppThm.priClr : Colors.black45,
-                ),
+              BadgeIcon(
+                metaCartillas: insignia.metaCartillas,
+                size: 48,
+                unlocked: unlocked,
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -250,7 +250,34 @@ class _InsCard extends StatelessWidget {
               style: const TextStyle(color: Colors.black54),
             ),
           ),
+          if (unlocked) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _compartir(context),
+                icon: const Icon(Icons.share_outlined, size: 18),
+                label: const Text('Compartir en mis redes', style: TextStyle(fontSize: 12)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppThm.priClr,
+                  side: BorderSide(color: AppThm.priClr.withValues(alpha: 0.3)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+  void _compartir(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => InsShareWdg(
+        insignia: insignia,
+        nombreUsuario: user.nombreCompleto,
       ),
     );
   }

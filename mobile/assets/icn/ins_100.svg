@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg100" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#B9F2FF"/>
+      <stop offset="100%" style="stop-color:#4A90D9"/>
+    </linearGradient>
+    <radialGradient id="innerGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#FFFFFF"/>
+      <stop offset="100%" style="stop-color:#E8F4FD"/>
+    </radialGradient>
+  </defs>
+  <circle cx="100" cy="85" r="72" fill="url(#bg100)" stroke="#2C5F8A" stroke-width="4"/>
+  <circle cx="100" cy="85" r="60" fill="none" stroke="#FFD700" stroke-width="2" stroke-dasharray="6,4"/>
+  <circle cx="100" cy="85" r="42" fill="url(#innerGlow)" stroke="#2C5F8A" stroke-width="3"/>
+  <circle cx="100" cy="85" r="28" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+  <text x="100" y="93" text-anchor="middle" font-size="24" font-weight="bold" fill="#1A3A5C">100</text>
+  <path d="M60 130 Q100 158 140 130" fill="none" stroke="#FFD700" stroke-width="3"/>
+  <path d="M55 50 Q70 38 85 45" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <path d="M115 45 Q130 38 145 50" fill="none" stroke="#FFD700" stroke-width="2"/>
+  <polygon points="100,32 106,44 120,44 109,53 113,66 100,57 87,66 91,53 80,44 94,44" fill="#FFD700"/>
+  <polygon points="100,38 104,47 115,47 107,53 110,63 100,56 90,63 93,53 85,47 96,47" fill="#FFF8DC"/>
+</svg>
