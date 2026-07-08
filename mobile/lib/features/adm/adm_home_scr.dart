@@ -11,6 +11,7 @@ import 'adm_lugares_tab.dart';
 import 'adm_moviles_tab.dart';
 import 'adm_personal_tab.dart';
 import 'adm_roles_tab.dart';
+import 'adm_rutas_tab.dart';
 
 class AdmHomeScr extends StatefulWidget {
   final AppUser user;
@@ -59,6 +60,12 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
             icon: Icons.place_outlined,
             label: 'Lugares',
             child: LugaresTab(api: api),
+          ),
+        if (widget.user.hasPermission('rutas.ver'))
+          _TabDef(
+            icon: Icons.map_outlined,
+            label: 'Rutas',
+            child: RutasTab(api: api),
           ),
         if (widget.user.hasPermission('eas.ver'))
           _TabDef(

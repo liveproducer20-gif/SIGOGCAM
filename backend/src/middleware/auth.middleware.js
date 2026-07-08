@@ -12,10 +12,7 @@ function requireAuth(req, res, next) {
     }
 
     try {
-        req.user = jwt.verify(
-            token,
-            process.env.JWT_SECRET || 'sigo_gcam_secret'
-        );
+        req.user = jwt.verify(token, process.env.JWT_SECRET);
 
         next();
     } catch (error) {

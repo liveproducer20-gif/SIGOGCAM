@@ -123,7 +123,7 @@ router.delete(
     controller.eliminarEas
 );
 
-router.get('/rutas', requirePermission('eas.ver'), controller.listarRutas);
+router.get('/rutas', requirePermission('rutas.ver'), controller.listarRutas);
 router.get('/grados', requirePermission('personal.ver'), controller.listarGrados);
 router.post(
     '/rutas',

@@ -8,7 +8,7 @@ class EvtApi {
   Future<List<Map<String, dynamic>>> obtenerTiposEvento() async {
     final response = await _client.get<List<Map<String, dynamic>>>(
       'catalogos/TIPOS_EVENTO',
-      _parseList,
+      parseApiList,
     );
 
     return response.datos ?? [];
@@ -17,7 +17,7 @@ class EvtApi {
   Future<List<Map<String, dynamic>>> obtenerPersonalOperativo() async {
     final response = await _client.get<List<Map<String, dynamic>>>(
       'personal/operativos',
-      _parseList,
+      parseApiList,
     );
 
     return response.datos ?? [];
@@ -33,7 +33,7 @@ class EvtApi {
     final path = params.isEmpty ? 'eventos' : 'eventos?${params.join('&')}';
     final response = await _client.get<List<Map<String, dynamic>>>(
       path,
-      _parseList,
+      parseApiList,
     );
 
     return response.datos ?? [];
@@ -73,13 +73,5 @@ class EvtApi {
       'eventos/$id',
       (_) => true,
     );
-  }
-
-  List<Map<String, dynamic>> _parseList(Object? value) {
-    final list = value as List<dynamic>? ?? [];
-    return list
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
   }
 }

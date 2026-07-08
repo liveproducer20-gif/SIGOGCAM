@@ -3,7 +3,20 @@ import 'package:flutter/material.dart';
 import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 
-int admId(Map<String, dynamic> item) => int.tryParse(item['id']?.toString() ?? '') ?? 0;
+int admId(Map<String, dynamic> item) {
+  final id = int.tryParse(item['id']?.toString() ?? '');
+  if (id == null) {
+    throw ArgumentError(
+      'Item sin id válido: ${item['nombre'] ?? item['codigo'] ?? item}',
+    );
+  }
+  return id;
+}
+
+List<Map<String, dynamic>> admParseList(Object? value) {
+  final list = value as List<dynamic>? ?? [];
+  return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+}
 
 bool admIsActive(Map<String, dynamic> item, {String key = 'activo'}) {
   final value = item[key];

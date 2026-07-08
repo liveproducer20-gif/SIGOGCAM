@@ -69,12 +69,22 @@ function handle(action, status = 200, mensaje = null, idKey = null) {
 
             res.status(status).json(body);
         } catch (error) {
-            res.status(400).json({
+            const statusCode = _statusFromError(error);
+            res.status(statusCode).json({
                 ok: false,
                 mensaje: error.message
             });
         }
     };
+}
+
+function _statusFromError(error) {
+    const msg = (error.message || '').toLowerCase();
+    if (msg.includes('no encontrado') || msg.includes('not found')) return 404;
+    if (msg.includes('obligatorio') || msg.includes('requerido') || msg.includes('invalido') || msg.includes('inválido')) return 400;
+    if (msg.includes('permiso') || msg.includes('autorizado') || msg.includes('prohibido')) return 403;
+    if (msg.includes('conflicto') || msg.includes('ya existe') || msg.includes('duplicado')) return 409;
+    return 400;
 }
 
 module.exports = handlers;

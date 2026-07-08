@@ -178,7 +178,10 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
     );
   }
 
-  void _reload() => setState(() => _future = widget.api.getRutas());
+  void _reload() {
+    if (!mounted) return;
+    setState(() => _future = widget.api.getRutas());
+  }
 
   Future<void> _create() async {
     final data = await showDialog<Map<String, dynamic>>(

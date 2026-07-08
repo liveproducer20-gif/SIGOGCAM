@@ -6,6 +6,11 @@ import 'package:http/http.dart' as http;
 import '../auth/auth_session.dart';
 import 'api_response.dart';
 
+List<Map<String, dynamic>> parseApiList(Object? value) {
+  final list = value as List<dynamic>? ?? [];
+  return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+}
+
 class UnauthorizedException implements Exception {
   final String message;
   const UnauthorizedException([this.message = 'Su sesión ha expirado']);

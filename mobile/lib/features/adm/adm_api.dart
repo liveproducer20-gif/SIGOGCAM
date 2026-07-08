@@ -100,7 +100,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> _getList(String path) async {
     final response = await _client.get<List<Map<String, dynamic>>>(
       path,
-      _parseList,
+      parseApiList,
     );
     return response.datos ?? [];
   }
@@ -115,13 +115,5 @@ class AdmApi {
 
   Future<void> _delete(String path) async {
     await _client.delete<bool>(path, (_) => true);
-  }
-
-  List<Map<String, dynamic>> _parseList(Object? value) {
-    final list = value as List<dynamic>? ?? [];
-    return list
-        .whereType<Map>()
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList();
   }
 }

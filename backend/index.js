@@ -18,13 +18,8 @@ const app = express();
 
 app.use(cors());
 
-// Forzar charset UTF-8 en todas las respuestas JSON
 app.use((req, res, next) => {
-  const originalJson = res.json.bind(res);
-  res.json = (body) => {
-    res.set('Content-Type', 'application/json; charset=utf-8');
-    return originalJson(body);
-  };
+  res.set('Content-Type', 'application/json; charset=utf-8');
   next();
 });
 
