@@ -49,23 +49,32 @@ class _BadgePainter extends CustomPainter {
     switch (metaCartillas) {
       case 5: _drawShield(canvas, cx, cy, r);
       case 10: _drawPen(canvas, cx, cy, r);
-      case 15: _drawNotepad(canvas, cx, cy, r);
-      case 20: _drawRadio(canvas, cx, cy, r);
-      case 25: _drawCamera(canvas, cx, cy, r);
-      case 30: _drawWhistle(canvas, cx, cy, r);
-      case 35: _drawMagnifier(canvas, cx, cy, r);
-      case 40: _drawCompass(canvas, cx, cy, r);
-      case 45: _drawStarBadge(canvas, cx, cy, r);
-      case 50: _drawSheriffStar(canvas, cx, cy, r);
-      case 60: _drawBriefcase(canvas, cx, cy, r);
-      case 70: _drawClipboard(canvas, cx, cy, r);
-      case 80: _drawWatchtower(canvas, cx, cy, r);
-      case 90: _drawScroll(canvas, cx, cy, r);
-      case 100: _drawLaurel(canvas, cx, cy, r);
-      case 110: _drawAgent(canvas, cx, cy, r);
-      case 120: _drawPapamike(canvas, cx, cy, r);
-      case 130: _drawCrazy(canvas, cx, cy, r);
-      case 140: _drawShark(canvas, cx, cy, r);
+      case 20: _drawNotepad(canvas, cx, cy, r);
+      case 30: _drawRadio(canvas, cx, cy, r);
+      case 45: _drawCamera(canvas, cx, cy, r);
+      case 60: _drawWhistle(canvas, cx, cy, r);
+      case 75: _drawMagnifier(canvas, cx, cy, r);
+      case 95: _drawCompass(canvas, cx, cy, r);
+      case 115: _drawStarBadge(canvas, cx, cy, r);
+      case 135: _drawSheriffStar(canvas, cx, cy, r);
+      case 155: _drawBriefcase(canvas, cx, cy, r);
+      case 175: _drawClipboard(canvas, cx, cy, r);
+      case 195: _drawWatchtower(canvas, cx, cy, r);
+      case 215: _drawScroll(canvas, cx, cy, r);
+      case 235: _drawLaurel(canvas, cx, cy, r);
+      case 255: _drawAgent(canvas, cx, cy, r);
+      case 275: _drawPapamike(canvas, cx, cy, r);
+      case 295: _drawCrazy(canvas, cx, cy, r);
+      case 315: _drawShark(canvas, cx, cy, r);
+      case 335: _drawSniper(canvas, cx, cy, r);
+      case 355: _drawTarget(canvas, cx, cy, r);
+      case 375: _drawForensic(canvas, cx, cy, r);
+      case 395: _drawEpaulettes(canvas, cx, cy, r);
+      case 415: _drawRain(canvas, cx, cy, r);
+      case 435: _drawFlying(canvas, cx, cy, r);
+      case 455: _drawSuperhero(canvas, cx, cy, r);
+      case 475: _drawShadow(canvas, cx, cy, r);
+      case 500: _drawCommand(canvas, cx, cy, r);
       default: _drawShield(canvas, cx, cy, r);
     }
   }
@@ -464,6 +473,264 @@ class _BadgePainter extends CustomPainter {
       ..cubicTo(cx + r * 0.3, cy + r * 0.25, cx - r * 0.2, cy + r * 0.2, cx - r * 0.4, cy + r * 0.1);
     c.drawPath(belly, Paint()..color = _wht);
     _drawN(c, cx - r * 0.05, cy + r * 0.15, r * 0.35);
+  }
+
+  void _drawSniper(Canvas c, double cx, double cy, double r) {
+    final body = Rect.fromCenter(center: Offset(cx, cy), width: r * 1.2, height: r * 0.6);
+    c.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(r * 0.08)), Paint()..color = _pri);
+    c.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(r * 0.08)), Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final screen = Rect.fromCenter(center: Offset(cx - r * 0.15, cy), width: r * 0.45, height: r * 0.35);
+    c.drawRRect(RRect.fromRectAndRadius(screen, Radius.circular(3)), Paint()..color = _sec);
+    c.drawRRect(RRect.fromRectAndRadius(screen, Radius.circular(3)), Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    final cross = Paint()..color = _acc..strokeWidth = 1.5;
+    c.drawLine(Offset(cx - r * 0.35, cy), Offset(cx + r * 0.05, cy), cross);
+    c.drawLine(Offset(cx - r * 0.15, cy - r * 0.12), Offset(cx - r * 0.15, cy + r * 0.12), cross);
+    c.drawCircle(Offset(cx - r * 0.15, cy), r * 0.04, Paint()..color = _acc);
+    final gripLeft = Path()
+      ..moveTo(cx - r * 0.3, cy + r * 0.3)
+      ..lineTo(cx - r * 0.35, cy + r * 0.55)
+      ..lineTo(cx - r * 0.2, cy + r * 0.55)
+      ..lineTo(cx - r * 0.15, cy + r * 0.3);
+    c.drawPath(gripLeft, Paint()..color = _pri);
+    c.drawPath(gripLeft, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    final gripRight = Path()
+      ..moveTo(cx + r * 0.35, cy + r * 0.3)
+      ..lineTo(cx + r * 0.4, cy + r * 0.55)
+      ..lineTo(cx + r * 0.5, cy + r * 0.55)
+      ..lineTo(cx + r * 0.45, cy + r * 0.3);
+    c.drawPath(gripRight, Paint()..color = _pri);
+    c.drawPath(gripRight, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    c.drawLine(Offset(cx, cy - r * 0.3), Offset(cx, cy - r * 0.55), Paint()..color = _drk..strokeWidth = 2);
+    c.drawCircle(Offset(cx, cy - r * 0.55), r * 0.04, Paint()..color = _acc);
+    _drawN(c, cx + r * 0.35, cy, r * 0.3);
+  }
+
+  void _drawTarget(Canvas c, double cx, double cy, double r) {
+    c.drawCircle(Offset(cx, cy), r * 0.8, Paint()..color = _sec);
+    c.drawCircle(Offset(cx, cy), r * 0.8, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5);
+    c.drawCircle(Offset(cx, cy), r * 0.6, Paint()..color = _wht);
+    c.drawCircle(Offset(cx, cy), r * 0.6, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    c.drawCircle(Offset(cx, cy), r * 0.4, Paint()..color = _acc);
+    c.drawCircle(Offset(cx, cy), r * 0.4, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    c.drawCircle(Offset(cx, cy), r * 0.2, Paint()..color = _acc);
+    c.drawCircle(Offset(cx, cy), r * 0.2, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    c.drawCircle(Offset(cx, cy), r * 0.08, Paint()..color = _drk);
+    c.drawLine(Offset(cx - r * 0.85, cy), Offset(cx + r * 0.85, cy), Paint()..color = _acc..strokeWidth = 1.5);
+    c.drawLine(Offset(cx, cy - r * 0.85), Offset(cx, cy + r * 0.85), Paint()..color = _acc..strokeWidth = 1.5);
+    _drawN(c, cx, cy, r * 0.3);
+  }
+
+  void _drawForensic(Canvas c, double cx, double cy, double r) {
+    final loop = Path()
+      ..addOval(Rect.fromCenter(center: Offset(cx - r * 0.15, cy - r * 0.15), width: r * 1.0, height: r * 1.0));
+    c.drawPath(loop, Paint()..color = _sec..style = PaintingStyle.stroke..strokeWidth = 3);
+    final mag = Rect.fromCenter(center: Offset(cx - r * 0.15, cy - r * 0.15), width: r * 0.55, height: r * 0.55);
+    c.drawOval(mag, Paint()..color = _wht);
+    c.drawOval(mag, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    c.drawCircle(Offset(cx - r * 0.15, cy - r * 0.15), r * 0.12, Paint()..color = _acc);
+    c.drawLine(Offset(cx + r * 0.35, cy + r * 0.35), Offset(cx + r * 0.75, cy + r * 0.75), Paint()..color = _drk..strokeWidth = r * 0.1..strokeCap = StrokeCap.round);
+    c.drawLine(Offset(cx + r * 0.35, cy + r * 0.35), Offset(cx + r * 0.75, cy + r * 0.75), Paint()..color = _sec..strokeWidth = r * 0.05..strokeCap = StrokeCap.round);
+    final brush = Rect.fromCenter(center: Offset(cx + r * 0.4, cy + r * 0.6), width: r * 0.08, height: r * 0.1);
+    c.drawRRect(RRect.fromRectAndRadius(brush, Radius.circular(2)), Paint()..color = _acc);
+    _drawN(c, cx + r * 0.1, cy + r * 0.5, r * 0.3);
+  }
+
+  void _drawEpaulettes(Canvas c, double cx, double cy, double r) {
+    final left = Path()
+      ..moveTo(cx - r * 0.2, cy - r * 0.3)
+      ..lineTo(cx - r * 0.6, cy - r * 0.1)
+      ..lineTo(cx - r * 0.55, cy + r * 0.15)
+      ..lineTo(cx - r * 0.2, cy + r * 0.3)
+      ..close();
+    c.drawPath(left, Paint()..color = _pri);
+    c.drawPath(left, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final right = Path()
+      ..moveTo(cx + r * 0.2, cy - r * 0.3)
+      ..lineTo(cx + r * 0.6, cy - r * 0.1)
+      ..lineTo(cx + r * 0.55, cy + r * 0.15)
+      ..lineTo(cx + r * 0.2, cy + r * 0.3)
+      ..close();
+    c.drawPath(right, Paint()..color = _pri);
+    c.drawPath(right, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    c.drawCircle(Offset(cx - r * 0.4, cy), r * 0.06, Paint()..color = _acc);
+    c.drawCircle(Offset(cx + r * 0.4, cy), r * 0.06, Paint()..color = _acc);
+    c.drawCircle(Offset(cx - r * 0.4, cy), r * 0.06, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    c.drawCircle(Offset(cx + r * 0.4, cy), r * 0.06, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    final centerStar = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? r * 0.12 : r * 0.05;
+      final sx = cx + rad * math.cos(a);
+      final sy = cy + rad * math.sin(a);
+      if (i == 0) { centerStar.moveTo(sx, sy); } else { centerStar.lineTo(sx, sy); }
+    }
+    centerStar.close();
+    c.drawPath(centerStar, Paint()..color = _gld..style = PaintingStyle.fill);
+    c.drawPath(centerStar, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    _drawN(c, cx, cy + r * 0.45, r * 0.3);
+  }
+
+  void _drawRain(Canvas c, double cx, double cy, double r) {
+    final body = Rect.fromCenter(center: Offset(cx, cy + r * 0.1), width: r * 0.6, height: r * 0.7);
+    c.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(r * 0.08)), Paint()..color = _pri);
+    c.drawRRect(RRect.fromRectAndRadius(body, Radius.circular(r * 0.08)), Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    for (int i = 0; i < 4; i++) {
+      final ly = cy - r * 0.2 + i * r * 0.15;
+      c.drawLine(Offset(cx - r * 0.15, ly), Offset(cx + r * 0.15, ly), Paint()..color = _wht..strokeWidth = 1.2);
+    }
+    final cloud = Path()
+      ..addOval(Rect.fromCenter(center: Offset(cx - r * 0.25, cy - r * 0.5), width: r * 0.35, height: r * 0.25))
+      ..addOval(Rect.fromCenter(center: Offset(cx + r * 0.25, cy - r * 0.5), width: r * 0.35, height: r * 0.25))
+      ..addOval(Rect.fromCenter(center: Offset(cx, cy - r * 0.55), width: r * 0.4, height: r * 0.3));
+    c.drawPath(cloud, Paint()..color = _sec);
+    c.drawPath(cloud, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final drop = Path()
+      ..moveTo(cx - r * 0.5, cy + r * 0.55)
+      ..lineTo(cx - r * 0.45, cy + r * 0.7)
+      ..lineTo(cx - r * 0.55, cy + r * 0.7)
+      ..close();
+    c.drawPath(drop, Paint()..color = _sec);
+    c.drawPath(drop, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    final drop2 = Path()
+      ..moveTo(cx + r * 0.4, cy + r * 0.55)
+      ..lineTo(cx + r * 0.45, cy + r * 0.7)
+      ..lineTo(cx + r * 0.35, cy + r * 0.7)
+      ..close();
+    c.drawPath(drop2, Paint()..color = _sec);
+    c.drawPath(drop2, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    _drawN(c, cx, cy + r * 0.15, r * 0.3);
+  }
+
+  void _drawFlying(Canvas c, double cx, double cy, double r) {
+    for (int i = 0; i < 4; i++) {
+      final a = -math.pi / 3 + i * math.pi / 4;
+      final dx = cx + r * 0.6 * math.cos(a);
+      final dy = cy - r * 0.2 + r * 0.6 * math.sin(a);
+      final paper = Path()
+        ..addRRect(RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(dx, dy), width: r * 0.22, height: r * 0.28),
+          Radius.circular(2)));
+      c.drawPath(paper, Paint()..color = _wht);
+      c.drawPath(paper, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+      c.drawLine(Offset(dx - r * 0.06, dy - r * 0.06), Offset(dx + r * 0.06, dy - r * 0.06), Paint()..color = _drk..strokeWidth = 0.8);
+      c.drawLine(Offset(dx - r * 0.06, dy), Offset(dx + r * 0.06, dy), Paint()..color = _drk..strokeWidth = 0.8);
+    }
+    final center = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? r * 0.2 : r * 0.08;
+      final sx = cx + rad * math.cos(a);
+      final sy = cy - r * 0.2 + rad * math.sin(a);
+      if (i == 0) { center.moveTo(sx, sy); } else { center.lineTo(sx, sy); }
+    }
+    center.close();
+    c.drawPath(center, Paint()..color = _acc..style = PaintingStyle.fill);
+    c.drawPath(center, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    _drawN(c, cx, cy + r * 0.6, r * 0.25);
+  }
+
+  void _drawSuperhero(Canvas c, double cx, double cy, double r) {
+    c.drawCircle(Offset(cx, cy - r * 0.2), r * 0.25, Paint()..color = const Color(0xFFFFE0BD));
+    c.drawCircle(Offset(cx, cy - r * 0.2), r * 0.25, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final mask = Path()
+      ..moveTo(cx - r * 0.25, cy - r * 0.35)
+      ..lineTo(cx - r * 0.2, cy - r * 0.15)
+      ..lineTo(cx + r * 0.2, cy - r * 0.15)
+      ..lineTo(cx + r * 0.25, cy - r * 0.35)
+      ..close();
+    c.drawPath(mask, Paint()..color = _pri);
+    c.drawPath(mask, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    c.drawCircle(Offset(cx - r * 0.08, cy - r * 0.25), r * 0.02, Paint()..color = _wht);
+    c.drawCircle(Offset(cx + r * 0.08, cy - r * 0.25), r * 0.02, Paint()..color = _wht);
+    final body = Path()
+      ..moveTo(cx - r * 0.4, cy + r * 0.08)
+      ..lineTo(cx - r * 0.5, cy + r * 0.6)
+      ..lineTo(cx - r * 0.2, cy + r * 0.6)
+      ..lineTo(cx - r * 0.1, cy + r * 0.3)
+      ..lineTo(cx + r * 0.1, cy + r * 0.3)
+      ..lineTo(cx + r * 0.2, cy + r * 0.6)
+      ..lineTo(cx + r * 0.5, cy + r * 0.6)
+      ..lineTo(cx + r * 0.4, cy + r * 0.08)
+      ..close();
+    c.drawPath(body, Paint()..color = _pri);
+    c.drawPath(body, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final emblem = Path()
+      ..moveTo(cx, cy + r * 0.12)
+      ..lineTo(cx - r * 0.08, cy + r * 0.22)
+      ..lineTo(cx + r * 0.08, cy + r * 0.22)
+      ..close();
+    c.drawPath(emblem, Paint()..color = _acc);
+    c.drawPath(emblem, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1);
+    final cape = Path()
+      ..moveTo(cx - r * 0.4, cy + r * 0.08)
+      ..cubicTo(cx - r * 0.5, cy - r * 0.2, cx + r * 0.5, cy - r * 0.2, cx + r * 0.4, cy + r * 0.08)
+      ..close();
+    c.drawPath(cape, Paint()..color = _sec);
+    c.drawPath(cape, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    _drawN(c, cx, cy + r * 0.35, r * 0.35);
+  }
+
+  void _drawShadow(Canvas c, double cx, double cy, double r) {
+    c.drawCircle(Offset(cx, cy - r * 0.15), r * 0.2, Paint()..color = const Color(0xFF2D2A5F));
+    c.drawCircle(Offset(cx, cy - r * 0.15), r * 0.2, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final body = Path()
+      ..moveTo(cx - r * 0.35, cy + r * 0.05)
+      ..lineTo(cx - r * 0.45, cy + r * 0.6)
+      ..lineTo(cx - r * 0.15, cy + r * 0.6)
+      ..lineTo(cx - r * 0.1, cy + r * 0.3)
+      ..lineTo(cx + r * 0.1, cy + r * 0.3)
+      ..lineTo(cx + r * 0.15, cy + r * 0.6)
+      ..lineTo(cx + r * 0.45, cy + r * 0.6)
+      ..lineTo(cx + r * 0.35, cy + r * 0.05)
+      ..close();
+    c.drawPath(body, Paint()..color = const Color(0xFF2D2A5F));
+    c.drawPath(body, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final eyes = Paint()..color = _acc;
+    c.drawCircle(Offset(cx - r * 0.08, cy - r * 0.18), r * 0.03, eyes);
+    c.drawCircle(Offset(cx + r * 0.08, cy - r * 0.18), r * 0.03, eyes);
+    final symbol = Path()
+      ..moveTo(cx, cy + r * 0.15)
+      ..lineTo(cx - r * 0.06, cy + r * 0.25)
+      ..lineTo(cx + r * 0.06, cy + r * 0.25)
+      ..close();
+    c.drawPath(symbol, Paint()..color = _sec);
+    final trail = Path()
+      ..moveTo(cx + r * 0.35, cy + r * 0.05)
+      ..quadraticBezierTo(cx + r * 0.7, cy - r * 0.1, cx + r * 0.5, cy - r * 0.3)
+      ..quadraticBezierTo(cx + r * 0.5, cy - r * 0.2, cx + r * 0.4, cy - r * 0.1);
+    c.drawPath(trail, Paint()..color = _pri..style = PaintingStyle.stroke..strokeWidth = 2);
+    _drawN(c, cx, cy + r * 0.4, r * 0.35);
+  }
+
+  void _drawCommand(Canvas c, double cx, double cy, double r) {
+    c.drawCircle(Offset(cx, cy), r * 0.85, Paint()..color = _pri);
+    c.drawCircle(Offset(cx, cy), r * 0.85, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 3);
+    c.drawCircle(Offset(cx, cy), r * 0.7, Paint()..color = const Color(0xFF2D2A5F));
+    c.drawCircle(Offset(cx, cy), r * 0.7, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2.5);
+    c.drawCircle(Offset(cx, cy), r * 0.55, Paint()..color = _acc);
+    c.drawCircle(Offset(cx, cy), r * 0.55, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 2);
+    final star = Path();
+    for (int i = 0; i < 10; i++) {
+      final a = -math.pi / 2 + i * math.pi / 5;
+      final rad = i.isEven ? r * 0.35 : r * 0.15;
+      final sx = cx + rad * math.cos(a);
+      final sy = cy + rad * math.sin(a);
+      if (i == 0) { star.moveTo(sx, sy); } else { star.lineTo(sx, sy); }
+    }
+    star.close();
+    c.drawPath(star, Paint()..color = _gld..style = PaintingStyle.fill);
+    c.drawPath(star, Paint()..color = _drk..style = PaintingStyle.stroke..strokeWidth = 1.5);
+    for (int i = 0; i < 20; i++) {
+      final a = i * 2 * math.pi / 20;
+      final outer = r * 0.82;
+      final inner = r * 0.72;
+      final dotR = r * 0.03;
+      c.drawCircle(Offset(cx + outer * math.cos(a), cy + outer * math.sin(a)), dotR, Paint()..color = _gld);
+      if (i.isEven) {
+        c.drawCircle(Offset(cx + inner * math.cos(a), cy + inner * math.sin(a)), dotR * 0.7, Paint()..color = _acc);
+      }
+    }
+    _drawN(c, cx, cy, r * 0.3);
   }
 
   void _drawN(Canvas c, double cx, double cy, double s) {

@@ -26,13 +26,23 @@ async function obtenerCp(usuarioId) {
 
 async function guardarCp(usuarioId, nombreCp) {
     return withConnection(async (conexion) => {
-        await conexion.query('DELETE FROM dbo.cartilla_temp_cp WHERE usuario_id = ?', [usuarioId]);
-        const result = await conexion.query(`
-            INSERT INTO dbo.cartilla_temp_cp (usuario_id, nombre_cp)
-            OUTPUT INSERTED.id
-            VALUES (?, ?)
-        `, [usuarioId, nombreCp]);
-        return result[0].id;
+        try {
+            await conexion.query('DELETE FROM dbo.cartilla_temp_cp WHERE usuario_id = ?', [usuarioId]);
+        } catch (e) {
+            console.error('[guardarCp] DELETE error:', e.message);
+            throw e;
+        }
+        try {
+            const result = await conexion.query(`
+                INSERT INTO dbo.cartilla_temp_cp (usuario_id, nombre_cp)
+                OUTPUT INSERTED.id
+                VALUES (?, ?)
+            `, [usuarioId, nombreCp]);
+            return result[0].id;
+        } catch (e) {
+            console.error('[guardarCp] INSERT error:', e.message);
+            throw e;
+        }
     });
 }
 
@@ -75,6 +85,13 @@ async function listarServidoresPoliciales(easId) {
 
 async function crearServidorPolicial(easId, nombre) {
     return withConnection(async (conexion) => {
+        const existing = await conexion.query(`
+            SELECT id FROM dbo.servidores_policiales
+            WHERE eas_id = ? AND nombre = ? AND activo = 1
+        `, [easId, nombre]);
+        if (existing.length > 0) {
+            return existing[0].id;
+        }
         const result = await conexion.query(`
             INSERT INTO dbo.servidores_policiales (eas_id, nombre)
             OUTPUT INSERTED.id
@@ -95,6 +112,13 @@ async function listarDireccionesPorEas(easId) {
 
 async function crearDireccion(easId, direccion) {
     return withConnection(async (conexion) => {
+        const existing = await conexion.query(`
+            SELECT id FROM dbo.eas_direcciones
+            WHERE eas_id = ? AND direccion = ? AND activo = 1
+        `, [easId, direccion]);
+        if (existing.length > 0) {
+            return existing[0].id;
+        }
         const result = await conexion.query(`
             INSERT INTO dbo.eas_direcciones (eas_id, direccion)
             OUTPUT INSERTED.id

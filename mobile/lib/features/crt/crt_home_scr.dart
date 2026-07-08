@@ -607,30 +607,41 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   int get _easDbId => CrtCatalog.easStations.indexOf(eas) + 1;
 
   void _desaIrSiguiente() async {
-    try {
-      if (_desaCp.trim().isNotEmpty) {
-        await crtApi.saveCp(_desaCp.trim());
-      }
-      if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
-        await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
-        _desaPoliciaOtro = false;
+    final saves = <Future<void>>[];
+    if (_desaCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_desaCp.trim()).catchError((_) {}));
+    }
+    if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi
+          .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
+          .catchError((_) {}));
+    } else if (_desaPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_desaPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+
+    if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
+      _desaPoliciaOtro = false;
+      _desaPoliciaCtrl.clear();
+      try {
         _servidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
         final nuevo = _servidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
         if (nuevo != null) {
           _desaPoliciaId = nuevo['id'] as int?;
         }
-        _desaPoliciaCtrl.clear();
-      } else if (_desaPoliciaId != null) {
-        await crtApi.savePolicia(_desaPoliciaId);
-      }
-      if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
+      } catch (_) {}
+    }
+    if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
+      _desaDireccionOtro = false;
+      _desaDireccionCtrl.clear();
+      try {
         await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
-        _desaDireccionOtro = false;
         _direcciones = await crtApi.getDirecciones(_easDbId);
         _desaDireccion = _desaDireccion.trim();
-        _desaDireccionCtrl.clear();
+      } catch (_) {
+        _direcciones = await crtApi.getDirecciones(_easDbId);
       }
-    } catch (_) {}
+    }
     if (mounted) setState(() => _desaSection++);
   }
 
@@ -645,18 +656,24 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     setState(() => guardando = true);
 
     try {
+      final saves = <Future<void>>[];
       if (_desaCp.trim().isNotEmpty) {
-        await crtApi.saveCp(_desaCp.trim());
+        saves.add(crtApi.saveCp(_desaCp.trim()).catchError((_) {}));
       }
       if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
-        await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
+        saves.add(crtApi
+            .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
+            .catchError((_) {}));
       } else if (_desaPoliciaId != null) {
-        await crtApi.savePolicia(_desaPoliciaId);
+        saves.add(crtApi.savePolicia(_desaPoliciaId).catchError((_) {}));
       }
       if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
-        await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
-        _desaDireccionOtro = false;
+        saves.add(crtApi
+            .crearDireccion(_easDbId, _desaDireccion.trim())
+            .catchError((_) {}));
       }
+      await Future.wait(saves);
+      if (_desaDireccionOtro) _desaDireccionOtro = false;
 
       final value = _buildText();
       final result = await InsApi().registrarCartilla(
