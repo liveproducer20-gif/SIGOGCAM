@@ -155,51 +155,46 @@ async function listarPermisos() {
 
 async function listarLugares() {
     return withConnection((conexion) => conexion.query(`
-        SELECT l.id, l.nombre, l.direccion, l.distrito_id,
-               distrito.nombre AS distrito,
-               l.subunidad_operativa_id,
-               subunidad.nombre AS subunidad_operativa,
-               l.tipo_servicio_id,
-               tipo.nombre AS tipo_servicio,
-               l.observacion,
+        SELECT l.id, l.ruta_id, ruta.nombre AS ruta, l.direccion,
+               l.distrito_id, distrito.nombre AS distrito,
+               l.hora_entrada, l.hora_salida, l.consignas,
                l.activo
         FROM dbo.lugares_servicio l
+        INNER JOIN dbo.catalogo_detalles ruta ON ruta.id = l.ruta_id
         INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
-        LEFT JOIN dbo.catalogo_detalles subunidad ON subunidad.id = l.subunidad_operativa_id
-        INNER JOIN dbo.catalogo_detalles tipo ON tipo.id = l.tipo_servicio_id
-        ORDER BY distrito.nombre, l.nombre
+        ORDER BY ruta.nombre, l.direccion
     `));
 }
 
 async function crearLugar(data) {
     return insertarBasico('dbo.lugares_servicio', [
-        ['nombre', data.nombre],
+        ['ruta_id', data.rutaId],
         ['direccion', data.direccion],
         ['distrito_id', data.distritoId],
-        ['subunidad_operativa_id', data.subunidadOperativaId],
-        ['tipo_servicio_id', data.tipoServicioId],
-        ['observacion', data.observacion]
+        ['hora_entrada', data.horaEntrada],
+        ['hora_salida', data.horaSalida],
+        ['consignas', data.consignas]
     ]);
 }
 
 async function actualizarLugar(id, data) {
     return withConnection((conexion) => conexion.query(`
         UPDATE dbo.lugares_servicio
-        SET nombre = ?,
+        SET ruta_id = ?,
             direccion = ?,
             distrito_id = ?,
-            subunidad_operativa_id = ?,
-            tipo_servicio_id = ?,
-            observacion = ?,
+            hora_entrada = ?,
+            hora_salida = ?,
+            consignas = ?,
             fecha_actualizacion = SYSDATETIME()
         WHERE id = ?
     `, [
-        data.nombre,
+        data.rutaId,
         data.direccion,
         data.distritoId,
-        data.subunidadOperativaId,
-        data.tipoServicioId,
-        data.observacion,
+        data.horaEntrada,
+        data.horaSalida,
+        data.consignas,
         id
     ]));
 }

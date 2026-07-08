@@ -14,7 +14,8 @@ const catalogosPermitidos = new Set([
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
     'ESTADOS_ASIGNACION_MOVIL',
-    'TIPOS_MANTENIMIENTO'
+    'TIPOS_MANTENIMIENTO',
+    'RUTAS'
 ]);
 
 async function listarCatalogos() {
@@ -205,12 +206,12 @@ function validarRol(data) {
 
 function validarLugar(data) {
     return {
-        nombre: texto(data.nombre, 'nombre'),
-        direccion: texto(data.direccion, 'direccion'),
+        rutaId: validarId(data.rutaId, 'ruta'),
+        direccion: texto(data.direccion, 'ubicacion'),
         distritoId: validarId(data.distritoId, 'distrito'),
-        subunidadOperativaId: data.subunidadOperativaId ? validarId(data.subunidadOperativaId, 'subunidad') : null,
-        tipoServicioId: validarId(data.tipoServicioId, 'tipo de servicio'),
-        observacion: textoOpcional(data.observacion)
+        horaEntrada: data.horaEntrada || null,
+        horaSalida: data.horaSalida || null,
+        consignas: textoOpcional(data.consignas)
     };
 }
 

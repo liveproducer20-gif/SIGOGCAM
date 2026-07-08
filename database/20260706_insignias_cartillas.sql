@@ -157,7 +157,9 @@ WHEN MATCHED THEN
         activo = 1
 WHEN NOT MATCHED THEN
     INSERT (codigo, titulo, descripcion, meta_cartillas, categoria, icono, activo)
-    VALUES (source.codigo, source.titulo, source.descripcion, source.meta_cartillas, 'cartillas', source.icono, 1);
+    VALUES (source.codigo, source.titulo, source.descripcion, source.meta_cartillas, 'cartillas', source.icono, 1)
+WHEN NOT MATCHED BY SOURCE AND target.categoria = 'cartillas' THEN
+    UPDATE SET activo = 0;
 
 IF OBJECT_ID('dbo.permisos', 'U') IS NOT NULL
 BEGIN

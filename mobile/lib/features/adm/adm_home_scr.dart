@@ -470,20 +470,20 @@ class _LugarState extends State<_CrudTab> {
   @override
   Widget build(BuildContext context) => _AsyncTable(
         title: 'Lugares de servicio',
-        subtitle: 'Puntos operativos organizados por distrito.',
+        subtitle: 'Puntos operativos organizados por ruta y distrito.',
         future: future,
-        columns: const ['Nombre', 'Distrito', 'Tipo', 'Estado', 'Acciones'],
+        columns: const ['Ruta', 'Ubicacion', 'Distrito', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
         rowBuilder: (item) => [
-          _txt(item['nombre']),
+          _txt(item['ruta']),
+          _txt(item['direccion']),
           _txt(item['distrito']),
-          _txt(item['tipo_servicio']),
           _StateChip(active: _active(item)),
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
-            onDelete: () => _confirmDelete(item, 'lugar ${item['nombre']}', () => widget.api.deleteLugar(_id(item))),
+            onDelete: () => _confirmDelete(item, 'lugar ${item['direccion']}', () => widget.api.deleteLugar(_id(item))),
             active: _active(item),
           ),
         ],
@@ -1239,38 +1239,37 @@ class _LugarDialog extends _BaseCatalogDialog {
 }
 
 class _LugarDialogState extends State<_LugarDialog> {
-  late final nombre = TextEditingController(text: _s('nombre'));
   late final direccion = TextEditingController(text: _s('direccion'));
-  late final obs = TextEditingController(text: _s('observacion'));
+  late final horaEntrada = TextEditingController(text: _s('hora_entrada'));
+  late final horaSalida = TextEditingController(text: _s('hora_salida'));
+  late final consignas = TextEditingController(text: _s('consignas'));
+  int? rutaId;
   int? distritoId;
-  int? subunidadId;
-  int? tipoId;
   @override
   void initState() {
     super.initState();
+    rutaId = _int('ruta_id');
     distritoId = _int('distrito_id');
-    subunidadId = _int('subunidad_operativa_id');
-    tipoId = _int('tipo_servicio_id');
   }
 
   @override
   Widget build(BuildContext context) => _FormDialog(
         title: widget.item == null ? 'Nuevo lugar' : 'Editar lugar',
         children: [
-          _field(nombre, 'Nombre'),
-          _field(direccion, 'Dirección'),
+          _drop('Ruta', widget.catalogs['RUTAS'], rutaId, (v) => setState(() => rutaId = v)),
+          _field(direccion, 'Ubicacion'),
           _drop('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
-          _drop('Subunidad', widget.catalogs['SUBUNIDADES_OPERATIVAS'], subunidadId, (v) => setState(() => subunidadId = v), optional: true),
-          _drop('Tipo servicio', widget.catalogs['TIPOS_SERVICIO_LUGAR'], tipoId, (v) => setState(() => tipoId = v)),
-          _field(obs, 'Observación'),
+          _field(horaEntrada, 'Horario de entrada (HH:mm)'),
+          _field(horaSalida, 'Horario de salida (HH:mm)'),
+          _field(consignas, 'Consignas'),
         ],
         onSave: () => Navigator.pop(context, {
-          'nombre': nombre.text.trim(),
+          'rutaId': rutaId,
           'direccion': direccion.text.trim(),
           'distritoId': distritoId,
-          'subunidadOperativaId': subunidadId,
-          'tipoServicioId': tipoId,
-          'observacion': obs.text.trim(),
+          'horaEntrada': horaEntrada.text.trim(),
+          'horaSalida': horaSalida.text.trim(),
+          'consignas': consignas.text.trim(),
         }),
       );
   String _s(String key) => widget.item?[key]?.toString() ?? '';
@@ -1530,6 +1529,7 @@ Future<Map<String, List<Map<String, dynamic>>>> _loadCatalogs(AdmApi api) async 
     'TIPOS_MOVIL',
     'ESTADOS_MOVIL',
     'TIPOS_MANTENIMIENTO',
+    'RUTAS',
   ];
   final result = <String, List<Map<String, dynamic>>>{};
   for (final code in codes) {
