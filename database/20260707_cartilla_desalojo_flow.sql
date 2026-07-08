@@ -38,13 +38,8 @@ ELSE
     PRINT '  dbo.eas_direcciones ya existe.';
 GO
 
--- Insertar direcciones por defecto para cada EAS (solo si la tabla está vacía)
-IF NOT EXISTS (SELECT 1 FROM dbo.eas_direcciones)
-BEGIN
-    INSERT INTO dbo.eas_direcciones (eas_id, direccion)
-    SELECT id, direccion FROM dbo.eas_estaciones WHERE activo = 1;
-    PRINT '  Direcciones por defecto insertadas (1 por EAS).';
-END
+-- Las direcciones se insertan manualmente desde la app via "Otro"
+PRINT '  eas_direcciones lista para recibir direcciones desde la app.';
 GO
 
 -- Tabla temporal para CP (8h)

@@ -56,6 +56,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool _desaPoliciaOtro = false;
   final _desaPoliciaCtrl = TextEditingController();
   String _desaDireccion = '';
+  bool _desaDireccionOtro = false;
   bool _desaAgresivo = false;
   bool _desaColaboracion = false;
   List<Map<String, dynamic>> _servidoresPoliciales = [];
@@ -184,6 +185,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _desaSection = 0;
                 _desaMovil = '';
                 _desaDireccion = '';
+                _desaDireccionOtro = false;
                 _direcciones = [];
               });
             },
@@ -417,17 +419,19 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Widget _buildSection2() {
     final items = _direcciones;
+    final ottoDir = <String, dynamic>{'id': -1, 'direccion': 'Otro'};
+    final dirOptions = [if (items.isNotEmpty) ...items, ottoDir];
+
     Map<String, dynamic>? dirValue;
-    if (items.isNotEmpty && _desaDireccion.isNotEmpty) {
+    if (_desaDireccionOtro) {
+      dirValue = ottoDir;
+    } else if (_desaDireccion.isNotEmpty && items.isNotEmpty) {
       try {
         dirValue = items.firstWhere((d) => d['direccion'] == _desaDireccion);
       } catch (_) {
         dirValue = null;
       }
     }
-    final tieneOtro = _desaDireccion.isNotEmpty &&
-        items.isNotEmpty &&
-        !items.any((d) => d['direccion'] == _desaDireccion);
 
     return Column(
       children: [
@@ -444,42 +448,34 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.place_outlined),
                   border: OutlineInputBorder(),
                 ),
-                items: [
-                  ...items.map((d) => DropdownMenuItem(
-                        value: d,
-                        child: Text(d['direccion'] as String? ?? ''),
-                      )),
-                  const DropdownMenuItem(
-                    value: {'id': -1, 'direccion': 'Otro'},
-                    child: Text('Otro (agregar nueva)'),
-                  ),
-                ],
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  return DropdownMenuItem(value: d, child: Text(nombre));
+                }).toList(),
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'] as int?;
-                  if (id == -1) {
-                    setState(() {
+                  setState(() {
+                    if (id == -1) {
+                      _desaDireccionOtro = true;
                       _desaDireccion = '';
                       _desaDireccionCtrl.clear();
-                    });
-                  } else {
-                    setState(() {
+                    } else {
+                      _desaDireccionOtro = false;
                       _desaDireccion = value['direccion'] as String? ?? '';
-                    });
-                  }
+                    }
+                  });
                 },
               ),
-              if (_desaDireccion.isEmpty || tieneOtro)
+              if (_desaDireccionOtro)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: TextField(
                     controller: _desaDireccionCtrl,
-                    decoration: InputDecoration(
-                      labelText: tieneOtro || items.isEmpty
-                          ? 'Nueva dirección'
-                          : 'Dirección',
-                      prefixIcon: const Icon(Icons.edit_outlined),
-                      border: const OutlineInputBorder(),
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
                     ),
                     onChanged: (value) => _desaDireccion = value,
                   ),
@@ -621,12 +617,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     } else if (_desaPoliciaId != null) {
       await crtApi.savePolicia(_desaPoliciaId);
     }
-    if (_desaDireccion.isNotEmpty) {
-      final exists = _direcciones.any((d) => d['direccion'] == _desaDireccion);
-      if (!exists) {
-        await crtApi.crearDireccion(_easDbId, _desaDireccion);
-        _direcciones = await crtApi.getDirecciones(_easDbId);
-      }
+    if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
+      await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
+      _desaDireccionOtro = false;
+      _direcciones = await crtApi.getDirecciones(_easDbId);
+      _desaDireccion = _desaDireccion.trim();
+      _desaDireccionCtrl.clear();
     }
     if (mounted) setState(() => _desaSection++);
   }
@@ -649,6 +645,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         await crtApi.crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim());
       } else if (_desaPoliciaId != null) {
         await crtApi.savePolicia(_desaPoliciaId);
+      }
+      if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
+        await crtApi.crearDireccion(_easDbId, _desaDireccion.trim());
+        _desaDireccionOtro = false;
       }
 
       final value = _buildText();
