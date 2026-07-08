@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_crud_tab.dart';
@@ -48,7 +48,7 @@ class _MovilState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() => future = widget.api.getMoviles());
+  void _reload() => setState(() { future = widget.api.getMoviles(); });
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final catalogs = await admLoadCatalogs(widget.api);
@@ -299,8 +299,11 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
     if (!mounted) return;
     await admSafeRun(context, () async {
       await widget.api.createMantenimiento(widget.movilId, data);
-      setState(() => _mantenimientos = widget.api.getMantenimientos(widget.movilId));
+      setState(() {
+        _mantenimientos = widget.api.getMantenimientos(widget.movilId);
+      });
       widget.onChanged();
     });
   }
 }
+

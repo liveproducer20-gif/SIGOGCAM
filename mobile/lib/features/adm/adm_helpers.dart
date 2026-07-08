@@ -28,19 +28,55 @@ Future<Map<String, List<Map<String, dynamic>>>> admLoadCatalogs(AdmApi api) asyn
   return Map.fromEntries(results);
 }
 
-Future<void> admSafeRun(BuildContext context, Future<void> Function() action) async {
+/// Ejecuta una accion y muestra un mensaje claro segun el resultado.
+/// [operation] describe la accion para personalizar el mensaje
+/// (por ejemplo 'eliminar', 'guardar', 'actualizar').
+Future<void> admSafeRun(
+  BuildContext context,
+  Future<void> Function() action, {
+  String operation = 'realizar la operacion',
+}) async {
   try {
     await action();
     if (!context.mounted) return;
+    final exito = operation.toLowerCase().contains('elimin')
+        ? 'Se elimino correctamente.'
+        : 'Operacion realizada correctamente.';
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Operacion realizada correctamente')),
+      SnackBar(content: Text(exito)),
     );
   } catch (error) {
     if (!context.mounted) return;
+    final fallo = operation.toLowerCase().contains('elimin')
+        ? 'No se pudo eliminar: ${_admMensaje(error)}'
+        : 'No se pudo $operation: ${_admMensaje(error)}';
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error.toString())),
+      SnackBar(content: Text(fallo)),
     );
   }
+}
+
+/// Confirma y elimina un elemento mostrando siempre un mensaje claro:
+/// exito, cancelacion o error.
+Future<void> admSafeDelete(
+  BuildContext context,
+  String label,
+  Future<void> Function() deleteFn,
+) async {
+  final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
+  if (ok != true) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('No se elimino. Accion cancelada.')),
+    );
+    return;
+  }
+  await admSafeRun(context, deleteFn, operation: 'eliminar');
+}
+
+String _admMensaje(Object error) {
+  final msg = error.toString().replaceFirst(RegExp(r'^.*Exception:\s*'), '');
+  return msg.isEmpty ? 'Error desconocido' : msg;
 }
 
 Future<bool?> admConfirm(BuildContext context, String title, String message) {

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
@@ -45,7 +45,7 @@ class _EasState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() => future = widget.api.getEas());
+  void _reload() => setState(() { future = widget.api.getEas(); });
   Future<void> _edit(Map<String, dynamic>? item) async {
     final catalogs = await admLoadCatalogs(widget.api);
     if (!mounted) return;
@@ -72,10 +72,7 @@ class _EasState extends State<AdmCrudTab> {
 
   Future<void> _confirmDelete(
       Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
-    if (ok != true) return;
-    if (!mounted) return;
-    await admSafeRun(context, () async {
+    await admSafeDelete(context, label, () async {
       await deleteFn();
       _reload();
     });
@@ -124,3 +121,4 @@ class _EasDialogState extends State<_EasDialog> {
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
 }
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
 import 'adm_helpers.dart';
@@ -80,7 +80,7 @@ class _CatalogosTabState extends State<CatalogosTab> {
     );
   }
 
-  void _reload() => setState(() => future = widget.api.getCatalogo(codigo));
+  void _reload() => setState(() { future = widget.api.getCatalogo(codigo); });
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final data = await showDialog<Map<String, dynamic>>(
@@ -111,10 +111,7 @@ class _CatalogosTabState extends State<CatalogosTab> {
 
   Future<void> _confirmDelete(
       Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
-    final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
-    if (ok != true) return;
-    if (!mounted) return;
-    await admSafeRun(context, () async {
+    await admSafeDelete(context, label, () async {
       await deleteFn();
       _reload();
     });
@@ -151,3 +148,4 @@ class _CatalogoDialogState extends State<_CatalogoDialog> {
         }),
       );
 }
+
