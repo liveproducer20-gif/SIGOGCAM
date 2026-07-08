@@ -136,6 +136,14 @@ async function cambiarEstado(id, activo) {
     return repository.cambiarEstado(personalId, Boolean(activo));
 }
 
+async function eliminar(id) {
+    const personalId = Number(id);
+    if (!Number.isInteger(personalId) || personalId <= 0) {
+        throw new Error('El id de personal no es válido');
+    }
+    return repository.eliminar(personalId);
+}
+
 async function restablecerPassword(id) {
     const personalId = Number(id);
     if (!Number.isInteger(personalId) || personalId <= 0) {
@@ -172,7 +180,7 @@ function normalizarPayload(data, base) {
         gradoId: Number(gradoId),
         areaId: Number(data.areaId),
         funcionOperativaId: data.funcionOperativaId ? Number(data.funcionOperativaId) : null,
-        jornadaId: Number(data.jornadaId),
+        jornadaId: data.jornadaId ? Number(data.jornadaId) : null,
         grupoId: Number(data.grupoId),
         tipoRotacionId: data.tipoRotacionId ? Number(data.tipoRotacionId) : null,
         rolId: Number(data.rolId),
@@ -208,5 +216,6 @@ module.exports = {
     crear,
     actualizar,
     cambiarEstado,
-    restablecerPassword
+    restablecerPassword,
+    eliminar
 };

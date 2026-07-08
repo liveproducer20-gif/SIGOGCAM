@@ -37,6 +37,12 @@ router.put(
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'catalogo_detalles' }),
     controller.cambiarEstadoDetalle
 );
+router.delete(
+    '/catalogos/detalles/:id',
+    requirePermission('catalogos.estado'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'catalogo_detalles' }),
+    controller.eliminarDetalle
+);
 
 router.get('/roles', requirePermission('roles.ver'), controller.listarRoles);
 router.post(
@@ -56,6 +62,12 @@ router.put(
     requirePermission('roles.editar'),
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'roles' }),
     controller.cambiarEstadoRol
+);
+router.delete(
+    '/roles/:id',
+    requirePermission('roles.editar'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'roles' }),
+    controller.eliminarRol
 );
 router.get('/permisos', requirePermission('permisos.ver'), controller.listarPermisos);
 
@@ -78,6 +90,12 @@ router.put(
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'lugares_servicio' }),
     controller.cambiarEstadoLugar
 );
+router.delete(
+    '/lugares-servicio/:id',
+    requirePermission('lugares_servicio.estado'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'lugares_servicio' }),
+    controller.eliminarLugar
+);
 
 router.get('/eas', requirePermission('eas.ver'), controller.listarEas);
 router.post(
@@ -98,6 +116,12 @@ router.put(
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'eas_estaciones' }),
     controller.cambiarEstadoEas
 );
+router.delete(
+    '/eas/:id',
+    requirePermission('eas.estado'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'eas_estaciones' }),
+    controller.eliminarEas
+);
 
 router.get('/moviles', requirePermission('moviles.ver'), controller.listarMoviles);
 router.post(
@@ -117,6 +141,12 @@ router.put(
     requirePermission('moviles.estado'),
     auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'moviles' }),
     controller.cambiarEstadoMovil
+);
+router.delete(
+    '/moviles/:id',
+    requirePermission('moviles.estado'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'moviles' }),
+    controller.eliminarMovil
 );
 router.get(
     '/moviles/:id/mantenimientos',
@@ -142,6 +172,12 @@ router.put(
     requirePermission('moviles.asignar'),
     auditAction({ accion: 'editar', modulo: 'administracion', tabla: 'movil_eas_asignaciones' }),
     controller.actualizarAsignacion
+);
+router.delete(
+    '/movil-eas-asignaciones/:id',
+    requirePermission('moviles.asignar'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'movil_eas_asignaciones' }),
+    controller.eliminarAsignacion
 );
 
 module.exports = router;

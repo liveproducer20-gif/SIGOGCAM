@@ -167,6 +167,7 @@ class _PersonalTabState extends State<_PersonalTab> {
           onEdit: () => _edit(item),
           onToggle: () => _toggle(item),
           onReset: () => _reset(item),
+          onDelete: () => _confirmDelete(item, 'personal ${item['nombres']} ${item['apellidos']}'.trim(), () => widget.api.deletePersonal(_id(item))),
           active: _active(item),
         ),
       ],
@@ -220,6 +221,16 @@ class _PersonalTabState extends State<_PersonalTab> {
   }
 
   Future<void> _run(Future<void> Function() action) => _safeRun(context, action);
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
+      _reload();
+    });
+  }
 }
 
 class _CatalogosTab extends StatefulWidget {
@@ -288,6 +299,7 @@ class _CatalogosTabState extends State<_CatalogosTab> {
         _Actions(
           onEdit: () => _edit(item),
           onToggle: () => _toggle(item),
+          onDelete: () => _confirmDelete(item, 'detalle ${item['nombre']}', () => widget.api.deleteCatalogoDetalle(_id(item))),
           active: _active(item, key: 'estado'),
         ),
       ],
@@ -319,6 +331,16 @@ class _CatalogosTabState extends State<_CatalogosTab> {
         _id(item),
         !_active(item, key: 'estado'),
       );
+      _reload();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
       _reload();
     });
   }
@@ -358,6 +380,7 @@ class _RolesTabState extends State<_RolesTab> {
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
+            onDelete: () => _confirmDelete(item, 'rol ${item['nombre']}', () => widget.api.deleteRol(_id(item))),
             active: _active(item),
           ),
       ],
@@ -388,6 +411,16 @@ class _RolesTabState extends State<_RolesTab> {
   Future<void> _toggle(Map<String, dynamic> item) async {
     await _safeRun(context, () async {
       await widget.api.setRolActivo(_id(item), !_active(item));
+      _reload();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
       _reload();
     });
   }
@@ -450,6 +483,7 @@ class _LugarState extends State<_CrudTab> {
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
+            onDelete: () => _confirmDelete(item, 'lugar ${item['nombre']}', () => widget.api.deleteLugar(_id(item))),
             active: _active(item),
           ),
         ],
@@ -479,6 +513,16 @@ class _LugarState extends State<_CrudTab> {
       _reload();
     });
   }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
+      _reload();
+    });
+  }
 }
 
 class _EasState extends State<_CrudTab> {
@@ -505,6 +549,7 @@ class _EasState extends State<_CrudTab> {
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
+            onDelete: () => _confirmDelete(item, 'EAS ${item['nombre']}', () => widget.api.deleteEas(_id(item))),
             active: _active(item),
           ),
         ],
@@ -531,6 +576,16 @@ class _EasState extends State<_CrudTab> {
   Future<void> _toggle(Map<String, dynamic> item) async {
     await _safeRun(context, () async {
       await widget.api.setEasActivo(_id(item), !_active(item));
+      _reload();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
       _reload();
     });
   }
@@ -561,6 +616,7 @@ class _MovilState extends State<_CrudTab> {
           _Actions(
             onEdit: () => _edit(item),
             onToggle: () => _toggle(item),
+            onDelete: () => _confirmDelete(item, 'movil ${item['numero_movil']}', () => widget.api.deleteMovil(_id(item))),
             onHistory: () => _showHistory(item),
             active: _active(item),
           ),
@@ -607,6 +663,16 @@ class _MovilState extends State<_CrudTab> {
       ),
     );
   }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
+      _reload();
+    });
+  }
 }
 
 class _AsignacionState extends State<_CrudTab> {
@@ -630,7 +696,7 @@ class _AsignacionState extends State<_CrudTab> {
           _txt('${item['numero_movil'] ?? ''} ${item['placa'] ?? ''}'.trim()),
           _txt(item['fecha_asignacion']),
           _StateChip(active: _active(item), label: item['estado']?.toString()),
-          _Actions(onEdit: () => _edit(item), active: _active(item)),
+          _Actions(onEdit: () => _edit(item), onDelete: () => _confirmDelete(item, 'asignacion', () => widget.api.deleteAsignacion(_id(item))), active: _active(item)),
         ],
       );
 
@@ -655,6 +721,16 @@ class _AsignacionState extends State<_CrudTab> {
       item == null
           ? await widget.api.createAsignacion(data)
           : await widget.api.updateAsignacion(_id(item), data);
+      _reload();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    final ok = await _confirm(context, 'Confirmar', '¿Eliminar $label?');
+    if (ok != true) return;
+    if (!mounted) return;
+    await _safeRun(context, () async {
+      await deleteFn();
       _reload();
     });
   }
@@ -744,6 +820,7 @@ class _AsyncTable extends StatelessWidget {
 class _Actions extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onToggle;
+  final VoidCallback? onDelete;
   final VoidCallback? onReset;
   final VoidCallback? onHistory;
   final bool active;
@@ -751,6 +828,7 @@ class _Actions extends StatelessWidget {
   const _Actions({
     this.onEdit,
     this.onToggle,
+    this.onDelete,
     this.onReset,
     this.onHistory,
     required this.active,
@@ -783,7 +861,13 @@ class _Actions extends StatelessWidget {
           IconButton(
             onPressed: onReset,
             icon: const Icon(Icons.lock_reset_outlined),
-            tooltip: 'Restablecer contraseña',
+            tooltip: 'Restablecer contrasena',
+          ),
+        if (onDelete != null)
+          IconButton(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            tooltip: 'Eliminar',
           ),
       ],
     );

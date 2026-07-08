@@ -142,6 +142,30 @@ async function crearMantenimiento(data) {
     return repository.crearMantenimiento(validarMantenimiento(data));
 }
 
+async function eliminarDetalle(id) {
+    return repository.eliminarDetalle(validarId(id, 'detalle'));
+}
+
+async function eliminarRol(id) {
+    return repository.eliminarRol(validarId(id, 'rol'));
+}
+
+async function eliminarLugar(id) {
+    return repository.eliminarLugar(validarId(id, 'lugar'));
+}
+
+async function eliminarEas(id) {
+    return repository.eliminarEas(validarId(id, 'EAS'));
+}
+
+async function eliminarMovil(id) {
+    return repository.eliminarMovil(validarId(id, 'movil'));
+}
+
+async function eliminarAsignacion(id) {
+    return repository.eliminarAsignacion(validarId(id, 'asignacion'));
+}
+
 function validarMantenimiento(data) {
     return {
         movilId: validarId(data.movilId, 'movil'),
@@ -295,5 +319,11 @@ module.exports = {
     actualizarAsignacion,
     obtenerAlertasMantenimiento,
     listarMantenimientos,
-    crearMantenimiento
+    crearMantenimiento,
+    eliminarDetalle,
+    eliminarRol,
+    eliminarLugar,
+    eliminarEas,
+    eliminarMovil,
+    eliminarAsignacion
 };

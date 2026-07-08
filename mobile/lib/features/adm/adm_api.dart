@@ -69,6 +69,14 @@ class AdmApi {
   Future<void> updateAsignacion(int id, Map<String, dynamic> data) =>
       _put('admin/movil-eas-asignaciones/$id', data);
 
+  Future<void> deletePersonal(int id) => _delete('personal/$id');
+  Future<void> deleteCatalogoDetalle(int id) => _delete('admin/catalogos/detalles/$id');
+  Future<void> deleteRol(int id) => _delete('admin/roles/$id');
+  Future<void> deleteLugar(int id) => _delete('admin/lugares-servicio/$id');
+  Future<void> deleteEas(int id) => _delete('admin/eas/$id');
+  Future<void> deleteMovil(int id) => _delete('admin/moviles/$id');
+  Future<void> deleteAsignacion(int id) => _delete('admin/movil-eas-asignaciones/$id');
+
   Future<List<Map<String, dynamic>>> getAlertasMantenimiento() =>
       _getList('admin/dashboard/mantenimiento');
 
@@ -91,6 +99,10 @@ class AdmApi {
 
   Future<void> _put(String path, Map<String, dynamic> data) async {
     await _client.put<bool>(path, data, (_) => true);
+  }
+
+  Future<void> _delete(String path) async {
+    await _client.delete<bool>(path, (_) => true);
   }
 
   List<Map<String, dynamic>> _parseList(Object? value) {

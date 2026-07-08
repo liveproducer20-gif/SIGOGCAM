@@ -529,32 +529,66 @@ async function cambiarActivo(tabla, id, activo) {
     `, [activo ? 1 : 0, id]));
 }
 
+async function eliminarDetalle(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.catalogo_detalles WHERE id = ?', [id]));
+}
+
+async function eliminarRol(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.rol_permiso WHERE rol_id = ?; DELETE FROM dbo.roles WHERE id = ?', [id, id]));
+}
+
+async function eliminarLugar(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.lugares_servicio WHERE id = ?', [id]));
+}
+
+async function eliminarEas(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.eas_estaciones WHERE id = ?', [id]));
+}
+
+async function eliminarMovil(id) {
+    return withConnection(async (conexion) => {
+        await conexion.query('DELETE FROM dbo.movil_mantenimiento WHERE movil_id = ?', [id]);
+        await conexion.query('DELETE FROM dbo.movil_eas_asignaciones WHERE movil_id = ?', [id]);
+        await conexion.query('DELETE FROM dbo.moviles WHERE id = ?', [id]);
+    });
+}
+
+async function eliminarAsignacion(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.movil_eas_asignaciones WHERE id = ?', [id]));
+}
+
 module.exports = {
     listarCatalogos,
     listarDetalles,
     crearDetalle,
     actualizarDetalle,
     cambiarEstadoDetalle,
+    eliminarDetalle,
     listarRoles,
     crearRol,
     actualizarRol,
     cambiarEstadoRol,
+    eliminarRol,
     listarPermisos,
     listarLugares,
     crearLugar,
     actualizarLugar,
     cambiarEstadoLugar,
+    eliminarLugar,
     listarEas,
     crearEas,
     actualizarEas,
     cambiarEstadoEas,
+    eliminarEas,
     listarMoviles,
     crearMovil,
     actualizarMovil,
     cambiarEstadoMovil,
+    eliminarMovil,
     listarAsignaciones,
     crearAsignacion,
     actualizarAsignacion,
+    eliminarAsignacion,
     obtenerAlertasMantenimiento,
     listarMantenimientos,
     crearMantenimiento

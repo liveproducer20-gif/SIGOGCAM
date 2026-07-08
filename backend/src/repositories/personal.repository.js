@@ -425,6 +425,16 @@ async function obtenerDetalleId(conexion, catalogo, codigo) {
     }
 }
 
+async function eliminar(id) {
+    const pool = await getPool();
+    const conexion = await pool.connect();
+    try {
+        await conexion.query('DELETE FROM personal WHERE id = ?', [id]);
+    } finally {
+        await conexion.close();
+    }
+}
+
 module.exports = {
     obtenerTodo,
     obtenerOperativos,
@@ -436,6 +446,7 @@ module.exports = {
     crear,
     actualizar,
     cambiarEstado,
+    eliminar,
     obtenerBasico,
     actualizarPassword
 };

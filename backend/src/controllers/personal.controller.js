@@ -54,6 +54,11 @@ const restablecerPassword = asyncHandler(async (req, res) => {
     res.json({ ok: true, mensaje: 'Contraseña restablecida correctamente' });
 });
 
+const eliminar = asyncHandler(async (req, res) => {
+    await service.eliminar(req.params.id);
+    res.json({ ok: true, mensaje: 'Personal eliminado correctamente' });
+});
+
 module.exports = {
     obtenerTodo,
     obtenerOperativos,
@@ -65,5 +70,6 @@ module.exports = {
     crear,
     actualizar,
     cambiarEstado,
-    restablecerPassword
+    restablecerPassword,
+    eliminar
 };

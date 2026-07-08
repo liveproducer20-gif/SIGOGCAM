@@ -38,7 +38,14 @@ const handlers = {
     obtenerAlertasMantenimiento: handle(() => service.obtenerAlertasMantenimiento()),
 
     listarMantenimientos: handle((req) => service.listarMantenimientos(req.params.id)),
-    crearMantenimiento: handle((req) => service.crearMantenimiento({ ...req.body, movilId: req.params.id }), 201, 'Mantenimiento registrado correctamente', 'mantenimientoId')
+    crearMantenimiento: handle((req) => service.crearMantenimiento({ ...req.body, movilId: req.params.id }), 201, 'Mantenimiento registrado correctamente', 'mantenimientoId'),
+
+    eliminarDetalle: handle((req) => service.eliminarDetalle(req.params.id), 200, 'Detalle eliminado correctamente'),
+    eliminarRol: handle((req) => service.eliminarRol(req.params.id), 200, 'Rol eliminado correctamente'),
+    eliminarLugar: handle((req) => service.eliminarLugar(req.params.id), 200, 'Lugar eliminado correctamente'),
+    eliminarEas: handle((req) => service.eliminarEas(req.params.id), 200, 'EAS eliminado correctamente'),
+    eliminarMovil: handle((req) => service.eliminarMovil(req.params.id), 200, 'Movil eliminado correctamente'),
+    eliminarAsignacion: handle((req) => service.eliminarAsignacion(req.params.id), 200, 'Asignacion eliminada correctamente')
 };
 
 function handle(action, status = 200, mensaje = null, idKey = null) {
