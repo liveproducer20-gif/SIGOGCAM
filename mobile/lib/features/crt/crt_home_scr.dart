@@ -79,6 +79,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.puntoMartillo;
 
+  bool get _isRondasDisuasivasFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.rondasDisuasivas;
+
   @override
   void initState() {
     super.initState();
@@ -157,6 +161,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 20),
         if (_isDesalojoFlow) _buildDesalojoWizard()
         else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
+        else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
         else _formPanel(),
       ],
     );
@@ -294,6 +299,15 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _syncFields();
               }),
             ),
+            _EasTypeCard(
+              icon: Icons.directions_walk_outlined,
+              title: 'Rondas disuasivas',
+              selected: tipo == TipoCartilla.rondasDisuasivas,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.rondasDisuasivas;
+                _syncFields();
+              }),
+            ),
           ],
         ),
       ],
@@ -329,7 +343,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               prefixIcon: Icon(Icons.person_outline),
               border: OutlineInputBorder(),
             ),
-            onChanged: (value) => _desaCp = value,
+            onChanged: (value) {
+              _desaCp = value;
+              setState(() {});
+            },
           ),
           if (_desaCpGuardado.isNotEmpty)
             Padding(
@@ -351,7 +368,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               prefixIcon: const Icon(Icons.badge_outlined),
               border: const OutlineInputBorder(),
             ),
-            onChanged: (value) => _desaJp = value,
+            onChanged: (value) {
+              _desaJp = value;
+              setState(() {});
+            },
           ),
           const SizedBox(height: 14),
           TextField(
@@ -361,7 +381,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               prefixIcon: Icon(Icons.place_outlined),
               border: OutlineInputBorder(),
             ),
-            onChanged: (value) => _desaDireccion = value,
+            onChanged: (value) {
+              _desaDireccion = value;
+              setState(() {});
+            },
           ),
           const SizedBox(height: 14),
           _buildPoliciaSection(),
@@ -374,7 +397,104 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (value) => _desaAux = value,
+              onChanged: (value) {
+                _desaAux = value;
+                setState(() {});
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRondasDisuasivasForm() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.directions_walk_outlined, color: AppThm.secClr),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Rondas disuasivas',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _desaCpCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del conductor CP',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaCp = value;
+              setState(() {});
+            },
+          ),
+          if (_desaCpGuardado.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Último registro: $_desaCpGuardado',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppThm.secClr,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+          TextFormField(
+            initialValue: widget.user?.nombreCompleto ?? '',
+            decoration: InputDecoration(
+              labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
+              prefixIcon: const Icon(Icons.badge_outlined),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaJp = value;
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _desaDireccionCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Dirección',
+              prefixIcon: Icon(Icons.place_outlined),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaDireccion = value;
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 14),
+          _buildPoliciaSection(),
+          if (_hasPolicia) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _desaAuxCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Aux.: (opcional)',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _desaAux = value;
+                setState(() {});
+              },
             ),
           ],
         ],
@@ -453,7 +573,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.badge_outlined),
                   border: const OutlineInputBorder(),
                 ),
-                onChanged: (value) => _desaJp = value,
+                onChanged: (value) {
+                  _desaJp = value;
+                  setState(() {});
+                },
               ),
               if (!_hasPolicia) ...[
                 const SizedBox(height: 14),
@@ -464,7 +587,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     prefixIcon: Icon(Icons.person_outline),
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (value) => _desaAux = value,
+                  onChanged: (value) {
+                    _desaAux = value;
+                    setState(() {});
+                  },
                 ),
               ],
             ],
@@ -504,7 +630,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (value) => _desaCp = value,
+                onChanged: (value) {
+                  _desaCp = value;
+                  setState(() {});
+                },
               ),
               if (_desaCpGuardado.isNotEmpty)
                 Padding(
@@ -593,7 +722,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_add_outlined),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (value) => _desaPoliciaNombre = value,
+                onChanged: (value) {
+                  _desaPoliciaNombre = value;
+                  setState(() {});
+                },
               ),
             ),
         ],
@@ -661,7 +793,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (value) => _desaDireccion = value,
+                    onChanged: (value) {
+                      _desaDireccion = value;
+                      setState(() {});
+                    },
                   ),
                 ),
             ],
@@ -1114,6 +1249,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isPuntoMartilloFlow) {
       return _buildPuntoMartilloText();
     }
+    if (_isRondasDisuasivasFlow) {
+      return _buildRondasDisuasivasText();
+    }
     final now = DateTime.now();
     return CrtTextGenerator.build(
       CrtFormData(
@@ -1191,6 +1329,32 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  String _buildRondasDisuasivasText() {
+    final now = DateTime.now();
+    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.rondasDisuasivas,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        values: {
+          '_rd_jp': _desaJp.isNotEmpty
+              ? _desaJp
+              : (widget.user?.nombreCompleto ?? ''),
+          '_rd_aux': _desaAux,
+          '_rd_movil': movilValue,
+          '_rd_cp': _desaCp,
+          '_rd_policia': _desaPoliciaNombre,
+          '_rd_direccion': _desaDireccion,
+        },
+      ),
+    );
+  }
+
   List<CrtMovilDotacion> get _moviles {
     return CrtCatalog.dotacionEas[eas.nombre] ??
         [
@@ -1227,7 +1391,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
     }
 
-    if (_isDesalojoFlow || _isPuntoMartilloFlow) {
+    if (_isDesalojoFlow || _isPuntoMartilloFlow || _isRondasDisuasivasFlow) {
       _cargarDatosDesalojo();
     }
   }

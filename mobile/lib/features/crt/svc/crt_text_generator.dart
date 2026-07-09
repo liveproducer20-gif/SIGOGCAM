@@ -55,6 +55,9 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.puntoMartillo) {
       return _buildEasPuntoMartillo(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.rondasDisuasivas) {
+      return _buildEasRondasDisuasivas(data, circuito, causa, direccion);
+    }
 
     final movil = data.movil == null || data.movil!.trim().isEmpty
         ? 'Móvil'
@@ -197,6 +200,65 @@ Adjunto fotografía''';
 *PROCEDIMIENTO:*
 
 $saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Punto martillo, dando apoyo a la seguridad ciudadana y presencia disuasiva.
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
+  }
+
+  static String _buildEasRondasDisuasivas(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_rd_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_rd_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_rd_jp');
+    final cp = _v(data, '_rd_cp');
+    final aux = _v(data, '_rd_aux');
+    final policia = _v(data, '_rd_policia');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      reporta.write('*Aux.:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    } else {
+      reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    if (aux.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*Aux.:* $aux');
+    }
+    if (policia.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*POLICÍA:* $policia');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Rondas disuasivas, dando apoyo a la seguridad ciudadana y presencia disuasiva.
 
 Notifico novedades para fines correspondientes.
 
