@@ -73,6 +73,9 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.colaboracionEventos) {
       return _buildEasColaboracionCiudadana(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.permisoAusentismo) {
+      return _buildEasAusentismo(data, circuito, causa, direccion);
+    }
     if (_isGenericWizardTipo(data.tipo)) {
       return _buildEasDefaultWizard(data, circuito, causa, direccion);
     }
@@ -916,7 +919,6 @@ Adjunto fotografía''';
     return [
       TipoCartilla.presenciaAgenteControl,
       TipoCartilla.operativoConjunto,
-      TipoCartilla.permisoAusentismo,
       TipoCartilla.roboManoArmada,
       TipoCartilla.perdidaBienInmueble,
       TipoCartilla.extorsion,
@@ -927,6 +929,103 @@ Adjunto fotografía''';
       TipoCartilla.resguardoPersonal,
       TipoCartilla.colaboracionAtm,
     ].contains(tipo);
+  }
+
+  static String _buildEasAusentismo(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_aus_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_aus_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_aus_jp');
+    final cp = _v(data, '_aus_cp');
+    final aux1 = _v(data, '_aus_aux1');
+    final aux2 = _v(data, '_aus_aux2');
+    final policia = _v(data, '_aus_policia');
+    final tipoPermiso = _v(data, '_aus_tipoPermiso');
+    final horaSalida = _v(data, '_aus_horaSalida');
+    final horaRetorno = _v(data, '_aus_horaRetorno');
+    final fechaInicio = _v(data, '_aus_fechaInicio');
+    final fechaFin = _v(data, '_aus_fechaFin');
+    final motivo = _v(data, '_aus_motivo');
+    final lugar = _v(data, '_aus_lugar');
+    final detalle = _v(data, '_aus_detalle');
+    final infoAdicional = _v(data, '_aus_infoAdicional');
+
+    final saludo = _saludoFormal(DateTime.now());
+
+    final procedimiento = StringBuffer();
+    if (tipoPermiso == 'Permiso por horas') {
+      procedimiento.write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me retiro temporalmente de mis funciones por motivo de $motivo, desde las $horaSalida hasta las $horaRetorno.');
+    } else {
+      procedimiento.write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me ausentaré temporalmente de mis funciones por motivo de $motivo, desde el día $fechaInicio hasta el día $fechaFin.');
+    }
+
+    if (lugar.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('Durante este ${tipoPermiso == 'Permiso por horas' ? 'tiempo' : 'período'} me trasladaré hacia $lugar para cumplir con la diligencia correspondiente.');
+    }
+
+    if (detalle.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.writeln('El motivo específico del permiso corresponde a:');
+      procedimiento.writeln();
+      procedimiento.write(detalle);
+    }
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final un = _v(data, '_aus_userNombre');
+      if (un.isNotEmpty) auxNames.add(un);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) auxNames.add(jp);
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uAux = auxNames.toSet().toList();
+
+    final rp = StringBuffer();
+    rp.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      rp.writeln('*JP:* $policia');
+    } else {
+      rp.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final a in uAux) {
+      rp.writeln('*Aux.:* $a');
+    }
+
+    final adicional = infoAdicional.isEmpty ? '' : '\n$infoAdicional\n';
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO*:
+
+${procedimiento.toString()}$adicional
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${rp.toString().trimRight()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
   }
 
   static String _buildEasDefaultWizard(
