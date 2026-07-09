@@ -143,6 +143,31 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _colCasaSalud = '';
   bool _colGuardando = false;
 
+  bool _reqCargando = false;
+  int _reqSection = 0;
+  String _reqJp = '';
+  String _reqMovil = '';
+  String _reqCp = '';
+  String _reqCpGuardado = '';
+  int? _reqPoliciaId;
+  String _reqPoliciaNombre = '';
+  bool _reqPoliciaOtro = false;
+  final _reqPoliciaCtrl = TextEditingController();
+  final _reqJpCtrl = TextEditingController();
+  final _reqCpCtrl = TextEditingController();
+  String _reqDireccion = '';
+  bool _reqDireccionOtro = false;
+  List<Map<String, dynamic>> _reqServidoresPoliciales = [];
+  List<Map<String, dynamic>> _reqDirecciones = [];
+  String _reqAux1 = '';
+  final _reqAux1Ctrl = TextEditingController();
+  String _reqAux2 = '';
+  final _reqAux2Ctrl = TextEditingController();
+  String _reqSolicitante = '';
+  String _reqTipo = 'Requerimiento';
+  String _reqInfoAdicional = '';
+  bool _reqGuardando = false;
+
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
 
@@ -166,10 +191,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.colaboracionEntidades;
 
+  bool get _isRequerimientoFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.requerimiento;
+
   bool get _isEasCustomCardFlow {
     if (modulo != TipoModuloCartilla.eas) return false;
     return [
-      TipoCartilla.requerimiento,
       TipoCartilla.colaboracionEventos,
       TipoCartilla.permisoAusentismo,
     ].contains(tipo);
@@ -207,6 +235,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _colCpCtrl.dispose();
     _colAux1Ctrl.dispose();
     _colAux2Ctrl.dispose();
+    _reqPoliciaCtrl.dispose();
+    _reqJpCtrl.dispose();
+    _reqCpCtrl.dispose();
+    _reqAux1Ctrl.dispose();
+    _reqAux2Ctrl.dispose();
     super.dispose();
   }
 
@@ -272,6 +305,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
         else if (_isRetiroTemporalFlow) _buildRetiroTemporalWizard()
         else if (_isColaboracionFlow) _buildColaboracionWizard()
+        else if (_isRequerimientoFlow) _buildRequerimientoWizard()
         else if (_isEasCustomCardFlow) _buildEasCustomForm()
         else _formPanel(),
       ],
@@ -1388,6 +1422,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           }
           if (_isColaboracionFlow) {
             _colDirecciones = direcciones;
+          }
+          if (_isRequerimientoFlow) {
+            _reqDirecciones = direcciones;
           }
         });
       }
@@ -2800,6 +2837,503 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  Future<void> _cargarDatosRequerimiento() async {
+    setState(() => _reqCargando = true);
+    try {
+      final easId = _easDbId;
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(easId),
+        _cargarDirecciones(),
+      ]);
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+      setState(() {
+        _reqCpGuardado = cpGuardado ?? '';
+        if (_reqCpGuardado.isNotEmpty) {
+          _reqCpCtrl.text = _reqCpGuardado;
+          _reqCp = _reqCpGuardado;
+        }
+        _reqServidoresPoliciales = servidores;
+        _reqMovil = _moviles.first.movil;
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _reqPoliciaId = pid;
+          _reqPoliciaNombre =
+              policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {
+      // Silently fail on temp data load
+    } finally {
+      if (mounted) setState(() => _reqCargando = false);
+    }
+  }
+
+  Widget _buildRequerimientoWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.receipt_long_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Requerimiento',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_reqCargando)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildRequerimientoStepContent(),
+          const SizedBox(height: 24),
+          _buildReqNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequerimientoStepContent() {
+    if (_reqCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (_reqSection == 0) return _buildReqSection1();
+    return _buildReqSection2();
+  }
+
+  Widget _buildReqSection1() {
+    final dirOptions = [
+      ..._reqDirecciones.map((d) => d),
+      const {'id': -1, 'direccion': 'Otra dirección'},
+    ];
+    final dirValue = _reqDireccionOtro
+        ? dirOptions.last
+        : (_reqDireccion.isNotEmpty
+            ? dirOptions.firstWhere(
+                (d) => d['direccion'] == _reqDireccion,
+                orElse: () => dirOptions.last,
+              )
+            : null);
+
+    return Column(
+      children: [
+        if (rolMovil != RolMovil.jp)
+          _StepCard(
+            step: 1,
+            title: 'Nombre del JP',
+            child: TextFormField(
+              controller: _reqJpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del agente JP',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _reqJp = value;
+                setState(() {});
+              },
+            ),
+          ),
+        if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
+        if (rolMovil != RolMovil.conductor)
+          _StepCard(
+            step: 2,
+            title: 'Nombre del CP',
+            child: TextFormField(
+              controller: _reqCpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del conductor CP',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _reqCp = value;
+                setState(() {});
+              },
+            ),
+          ),
+        if (rolMovil != RolMovil.conductor) const SizedBox(height: 20),
+        _StepCard(
+          step: 3,
+          title: 'Servidor policial',
+          child: DropdownButtonFormField<int?>(
+            initialValue: _reqPoliciaId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Servidor policial',
+              prefixIcon: Icon(Icons.local_police_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              ..._reqServidoresPoliciales.map((sp) {
+                final id = sp['id'] as int?;
+                final nombre = sp['nombre'] as String? ?? '';
+                return DropdownMenuItem(value: id, child: Text(nombre));
+              }),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _reqPoliciaId = value;
+                if (value != null) {
+                  _reqPoliciaOtro = false;
+                  _reqPoliciaNombre = _reqServidoresPoliciales
+                      .firstWhere(
+                        (sp) => sp['id'] == value,
+                        orElse: () => <String, dynamic>{},
+                      )['nombre'] as String? ?? '';
+                } else {
+                  _reqPoliciaNombre = '';
+                }
+                _reqPoliciaCtrl.clear();
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 4,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  return DropdownMenuItem(value: d, child: Text(nombre));
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'] as int?;
+                  setState(() {
+                    if (id == -1) {
+                      _reqDireccionOtro = true;
+                      _reqDireccion = '';
+                    } else {
+                      _reqDireccionOtro = false;
+                      _reqDireccion = value['direccion'] as String? ?? '';
+                    }
+                  });
+                },
+              ),
+              if (_reqDireccionOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _reqDireccion = value;
+                      setState(() {});
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 5,
+          title: 'Auxiliares',
+          child: Column(
+            children: [
+              TextField(
+                controller: _reqAux1Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 1 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _reqAux1 = value;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _reqAux2Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 2 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _reqAux2 = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReqSection2() {
+    return Column(
+      children: [
+        _StepCard(
+          step: 6,
+          title: 'Solicitante',
+          child: DropdownButtonFormField<String>(
+            initialValue: _reqSolicitante.isNotEmpty ? _reqSolicitante : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: '¿Quién solicita el requerimiento?',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'ECO-12', child: Text('ECO-12')),
+              DropdownMenuItem(value: 'CR', child: Text('CR')),
+              DropdownMenuItem(value: 'OJ1', child: Text('OJ1')),
+              DropdownMenuItem(value: 'Jefe de Control Municipal', child: Text('Jefe de Control Municipal')),
+              DropdownMenuItem(value: 'Lima Oscar', child: Text('Lima Oscar')),
+              DropdownMenuItem(value: 'Sircon Andrade', child: Text('Sircon Andrade')),
+              DropdownMenuItem(value: 'Sr. Figallo', child: Text('Sr. Figallo')),
+              DropdownMenuItem(value: 'Sr. Alex Anchundia', child: Text('Sr. Alex Anchundia')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _reqSolicitante = value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 7,
+          title: 'Tipo de requerimiento',
+          child: DropdownButtonFormField<String>(
+            initialValue: _reqTipo,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: '¿Qué requerimiento realizará?',
+              prefixIcon: Icon(Icons.description_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Requerimiento', child: Text('Requerimiento')),
+              DropdownMenuItem(value: 'Punto martillo', child: Text('Punto martillo')),
+              DropdownMenuItem(value: 'Ronda disuasiva', child: Text('Ronda disuasiva')),
+              DropdownMenuItem(value: 'Presencia de Agente de Control', child: Text('Presencia de Agente de Control')),
+              DropdownMenuItem(value: 'Operativo en conjunto', child: Text('Operativo en conjunto')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _reqTipo = value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Información adicional',
+          child: TextField(
+            decoration: const InputDecoration(
+              labelText: 'Información adicional (opcional)',
+              prefixIcon: Icon(Icons.notes_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 5,
+            onChanged: (value) {
+              _reqInfoAdicional = value;
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReqNavButtons() {
+    final isLast = _reqSection == 1;
+    final isFirst = _reqSection == 0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _reqSection--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: _reqGuardando ? null : () => _generarRequerimiento(),
+            icon: _reqGuardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(_reqGuardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _reqIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  void _reqIrSiguiente() async {
+    final saves = <Future<void>>[];
+    if (_reqCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_reqCp.trim()).catchError((_) {}));
+    }
+    if (_reqPoliciaOtro && _reqPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi
+          .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
+          .catchError((_) {}));
+    } else if (_reqPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_reqPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+
+    if (_reqPoliciaOtro && _reqPoliciaNombre.trim().isNotEmpty) {
+      _reqPoliciaOtro = false;
+      _reqPoliciaCtrl.clear();
+      try {
+        _reqServidoresPoliciales =
+            await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo =
+            _reqServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) {
+          _reqPoliciaId = nuevo['id'] as int?;
+        }
+      } catch (_) {}
+    }
+    if (_reqDireccionOtro && _reqDireccion.trim().isNotEmpty) {
+      _reqDireccionOtro = false;
+      try {
+        await crtApi.crearDireccion(_easDbId, _reqDireccion.trim());
+        _reqDirecciones = await crtApi.getDirecciones(_easDbId);
+        _reqDireccion = _reqDireccion.trim();
+      } catch (_) {
+        _reqDirecciones = await crtApi.getDirecciones(_easDbId);
+      }
+    }
+    if (mounted) setState(() => _reqSection++);
+  }
+
+  Future<void> _generarRequerimiento() async {
+    if (widget.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicie sesion para generar cartillas')),
+      );
+      return;
+    }
+    setState(() => _reqGuardando = true);
+    try {
+      final saves = <Future<void>>[];
+      if (_reqCp.trim().isNotEmpty) {
+        saves.add(crtApi.saveCp(_reqCp.trim()).catchError((_) {}));
+      }
+      if (_reqPoliciaOtro && _reqPoliciaNombre.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
+            .catchError((_) {}));
+      } else if (_reqPoliciaId != null) {
+        saves.add(crtApi.savePolicia(_reqPoliciaId).catchError((_) {}));
+      }
+      if (_reqDireccionOtro && _reqDireccion.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearDireccion(_easDbId, _reqDireccion.trim())
+            .catchError((_) {}));
+      }
+      await Future.wait(saves);
+      if (_reqDireccionOtro) _reqDireccionOtro = false;
+
+      final value = _buildRequerimientoText();
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _reqGuardando = false);
+    }
+  }
+
+  String _buildRequerimientoText() {
+    final now = DateTime.now();
+    final movilValue = _reqMovil.isNotEmpty ? _reqMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.requerimiento,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        rolMovil: rolMovil,
+        values: {
+          '_req_jp': _reqJp.isNotEmpty ? _reqJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_req_movil': movilValue,
+          '_req_cp': _reqCp.isNotEmpty ? _reqCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_req_policia': _reqPoliciaNombre,
+          '_req_direccion': _reqDireccion,
+          '_req_aux1': _reqAux1,
+          '_req_aux2': _reqAux2,
+          '_req_userNombre': widget.user?.nombreCompleto ?? '',
+          '_req_solicitante': _reqSolicitante,
+          '_req_tipo': _reqTipo,
+          '_req_infoAdicional': _reqInfoAdicional,
+        },
+      ),
+    );
+  }
+
   Widget _formPanel() {
     return _Panel(
       child: Form(
@@ -2991,6 +3525,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isColaboracionFlow) {
       return _buildColaboracionText();
     }
+    if (_isRequerimientoFlow) {
+      return _buildRequerimientoText();
+    }
     if (_isEasCustomCardFlow) {
       return _buildEasCustomText();
     }
@@ -3164,6 +3701,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _cargarDatosRetiroTemporal();
     } else if (_isColaboracionFlow) {
       _cargarDatosColaboracion();
+    } else if (_isRequerimientoFlow) {
+      _cargarDatosRequerimiento();
     } else if (_isDesalojoFlow ||
         _isPuntoMartilloFlow ||
         _isRondasDisuasivasFlow ||
@@ -3183,21 +3722,27 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _colCpCtrl.text = '';
     _colJpCtrl.text = '';
     _colAux1Ctrl.text = '';
+    _reqCpCtrl.text = '';
+    _reqJpCtrl.text = '';
+    _reqAux1Ctrl.text = '';
     switch (rolMovil) {
       case RolMovil.jp:
         _desaJpCtrl.text = name;
         _rtJpCtrl.text = name;
         _colJpCtrl.text = name;
+        _reqJpCtrl.text = name;
         break;
       case RolMovil.conductor:
         _desaCpCtrl.text = name;
         _rtCpCtrl.text = name;
         _colCpCtrl.text = name;
+        _reqCpCtrl.text = name;
         break;
       case RolMovil.auxiliar:
         _desaAuxCtrl.text = name;
         _rtAux1Ctrl.text = name;
         _colAux1Ctrl.text = name;
+        _reqAux1Ctrl.text = name;
         break;
     }
     _desaJp = _desaJpCtrl.text;
@@ -3209,6 +3754,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _colJp = _colJpCtrl.text;
     _colCp = _colCpCtrl.text;
     _colAux1 = _colAux1Ctrl.text;
+    _reqJp = _reqJpCtrl.text;
+    _reqCp = _reqCpCtrl.text;
+    _reqAux1 = _reqAux1Ctrl.text;
   }
 
   TextEditingController _controller(String key) {

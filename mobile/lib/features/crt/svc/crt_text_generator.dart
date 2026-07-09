@@ -67,6 +67,9 @@ ${_reporta(data)}
       }
       return _buildEasColaboracionEntidad(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.requerimiento) {
+      return _buildEasRequerimiento(data, circuito, causa, direccion);
+    }
     if (_isCardTipo(data.tipo)) {
       return _buildEasGeneric(data, circuito, causa, direccion);
     }
@@ -587,9 +590,95 @@ ${reporta.toString().trimRight()}
 Adjunto fotografía''';
   }
 
+  static String _buildEasRequerimiento(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_req_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_req_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_req_jp');
+    final cp = _v(data, '_req_cp');
+    final aux1 = _v(data, '_req_aux1');
+    final aux2 = _v(data, '_req_aux2');
+    final policia = _v(data, '_req_policia');
+    final solicitante = _v(data, '_req_solicitante');
+    final tipoReq = _v(data, '_req_tipo');
+    final infoAdicional = _v(data, '_req_infoAdicional');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final accion = switch (tipoReq) {
+      'Requerimiento' => 'atender requerimiento en el sector de "$dir" para apoyo a la seguridad ciudadana',
+      'Punto martillo' => 'ejecutar punto martillo en "$dir" para control del espacio público y apoyo a la seguridad ciudadana',
+      'Ronda disuasiva' => 'realizar ronda disuasiva a lo largo de "$dir" para apoyo a la seguridad ciudadana',
+      'Presencia de Agente de Control' => 'brindar presencia de Agente de Control en "$dir" para apoyo a la seguridad ciudadana',
+      'Operativo en conjunto' => 'ejecutar operativo en conjunto en "$dir" para control del espacio público y apoyo a la seguridad ciudadana',
+      _ => 'atender requerimiento en el sector de "$dir" para apoyo a la seguridad ciudadana',
+    };
+
+    final procedimiento = StringBuffer()
+      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir", por órdenes de $solicitante, se procede a $accion.');
+    if (infoAdicional.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write(infoAdicional);
+    }
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final userNombre = _v(data, '_req_userNombre');
+      if (userNombre.isNotEmpty) auxNames.add(userNombre);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) {
+      auxNames.add(jp);
+    }
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uniqueAux = auxNames.toSet().toList();
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      reporta.writeln('*JP:* $policia');
+    } else {
+      reporta.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final aux in uniqueAux) {
+      reporta.writeln('*Aux.:* $aux');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+${procedimiento.toString()}
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString().trimRight()}
+
+*"Lealtad, Valor y Orden"
+
+Adjunto fotografía''';
+  }
+
   static bool _isCardTipo(TipoCartilla tipo) {
     return [
-      TipoCartilla.requerimiento,
       TipoCartilla.colaboracionEventos,
       TipoCartilla.permisoAusentismo,
     ].contains(tipo);
