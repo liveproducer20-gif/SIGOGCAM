@@ -23,7 +23,11 @@ class _MovilState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
     initLazy((widget as MovilesTab).tabIndex, () => future = widget.api.getMoviles());
   }
 
-  void _reload() => setState(() => future = widget.api.getMoviles());
+  void _reload() {
+    setState(() {
+      future = widget.api.getMoviles();
+    });
+  }
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
@@ -302,7 +306,9 @@ class _MantenimientoDialogState extends State<_MantenimientoDialog> {
     if (!mounted) return;
     await admSafeRun(context, () async {
       await widget.api.createMantenimiento(widget.movilId, data);
-      setState(() => _mantenimientos = widget.api.getMantenimientos(widget.movilId));
+      setState(() {
+        _mantenimientos = widget.api.getMantenimientos(widget.movilId);
+      });
       widget.onChanged();
     });
   }

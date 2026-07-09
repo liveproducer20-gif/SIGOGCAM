@@ -80,7 +80,11 @@ class _CatalogosTabState extends State<CatalogosTab> {
     );
   }
 
-  void _reload() => setState(() => future = widget.api.getCatalogo(codigo));
+  void _reload() {
+    setState(() {
+      future = widget.api.getCatalogo(codigo);
+    });
+  }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final data = await showDialog<Map<String, dynamic>>(

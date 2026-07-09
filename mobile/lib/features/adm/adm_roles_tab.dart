@@ -45,7 +45,11 @@ class _RolesTabState extends State<RolesTab> {
     );
   }
 
-  void _reload() => setState(() => future = widget.api.getRoles());
+  void _reload() {
+    setState(() {
+      future = widget.api.getRoles();
+    });
+  }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final permisos = await widget.api.getPermisos();

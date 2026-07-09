@@ -51,7 +51,11 @@ class _PersonalTabState extends State<PersonalTab> {
     );
   }
 
-  void _reload() => setState(() => future = widget.api.getPersonal());
+  void _reload() {
+    setState(() {
+      future = widget.api.getPersonal();
+    });
+  }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final results = await Future.wait([

@@ -45,7 +45,11 @@ class _EasState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() => future = widget.api.getEas());
+  void _reload() {
+    setState(() {
+      future = widget.api.getEas();
+    });
+  }
   Future<void> _edit(Map<String, dynamic>? item) async {
     final catalogs = await admLoadCatalogs(widget.api);
     if (!mounted) return;

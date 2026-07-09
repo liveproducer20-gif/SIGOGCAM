@@ -44,7 +44,11 @@ class _AsignacionState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() => future = widget.api.getAsignaciones());
+  void _reload() {
+    setState(() {
+      future = widget.api.getAsignaciones();
+    });
+  }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final eas = await widget.api.getEas();

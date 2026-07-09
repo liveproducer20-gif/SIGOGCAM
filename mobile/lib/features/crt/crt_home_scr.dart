@@ -75,6 +75,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.desalojoVendedores;
 
+  bool get _isPuntoMartilloFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.puntoMartillo;
+
   @override
   void initState() {
     super.initState();
@@ -119,8 +123,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 sub: 'Seleccione el modulo operativo y complete solo los campos requeridos.',
               ),
               const SizedBox(height: 26),
-              if (_isDesalojoFlow)
-                _buildDesalojoContent(isWide, preview)
+              if (modulo == TipoModuloCartilla.eas)
+                _buildEasLayout(isWide, preview)
               else if (isWide)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,30 +149,113 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Widget _buildDesalojoContent(bool isWide, String preview) {
-    return Column(
+  Widget _buildEasLayout(bool isWide, String preview) {
+    final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDesalojoSelector(),
+        _buildEasConfigPanel(),
         const SizedBox(height: 20),
-        if (isWide)
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildDesalojoWizard()),
-              const SizedBox(width: 20),
-              Expanded(child: _previewPanel(preview)),
-            ],
-          )
-        else
-          Column(
-            children: [
-              _buildDesalojoWizard(),
-              const SizedBox(height: 20),
-              _previewPanel(preview),
-            ],
-          ),
+        if (_isDesalojoFlow) _buildDesalojoWizard()
+        else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
+        else _formPanel(),
       ],
+    );
+
+    if (!isWide) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          left,
+          const SizedBox(height: 20),
+          _previewPanel(preview),
+        ],
+      );
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(child: left),
+        const SizedBox(width: 20),
+        Expanded(child: _previewPanel(preview)),
+      ],
+    );
+  }
+
+  Widget _buildEasConfigPanel() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PanelTitle(
+            icon: Icons.tune_outlined,
+            title: 'Configuración',
+          ),
+          const SizedBox(height: 18),
+          _Drop<TipoModuloCartilla>(
+            value: modulo,
+            label: 'Modulo de cartilla',
+            icon: Icons.dashboard_customize_outlined,
+            items: TipoModuloCartilla.values,
+            itemText: (value) => value.label,
+            onChanged: (value) {
+              setState(() {
+                modulo = value;
+                final tipos = CrtCatalog.configFor(modulo).tipos;
+                if (!tipos.contains(tipo)) tipo = tipos.first;
+                if (modulo == TipoModuloCartilla.eas) {
+                  movil = _moviles.first.movil;
+                }
+                _syncFields();
+              });
+            },
+          ),
+          const SizedBox(height: 14),
+          _buildEasTypeButtons(),
+          const SizedBox(height: 14),
+          _Drop<CrtEasStation>(
+            value: eas,
+            label: 'EAS',
+            icon: Icons.location_city_outlined,
+            items: CrtCatalog.easStations,
+            itemText: (value) => '${value.codigo} - ${value.nombre}',
+            onChanged: (value) {
+              setState(() {
+                eas = value;
+                movil = _moviles.first.movil;
+                _desaSection = 0;
+                _desaMovil = '';
+                _desaDireccion = '';
+                _desaDireccionOtro = false;
+                _direcciones = [];
+              });
+            },
+          ),
+          const SizedBox(height: 8),
+          _InfoLine(
+            icon: Icons.place_outlined,
+            text: '${eas.nombre}: ${eas.direccion}',
+          ),
+          const SizedBox(height: 14),
+          _Drop<String>(
+            value: movil,
+            label: 'Móvil asignado',
+            icon: Icons.directions_car_outlined,
+            items: _moviles.map((item) => item.movil).toList(),
+            itemText: (value) => 'Móvil $value',
+            onChanged: (value) => setState(() => movil = value),
+          ),
+          const SizedBox(height: 14),
+          _Drop<RolMovil>(
+            value: rolMovil,
+            label: 'Que rol cumple usted en el movil',
+            icon: Icons.assignment_ind_outlined,
+            items: RolMovil.values,
+            itemText: (value) => value.label,
+            onChanged: (value) => setState(() => rolMovil = value),
+          ),
+        ],
+      ),
     );
   }
 
@@ -185,30 +272,27 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 10,
           children: [
-            Expanded(
-              child: _EasTypeCard(
-                icon: Icons.storefront_outlined,
-                title: 'Desalojo de vendedores\nautónomos no regularizados',
-                selected: tipo == TipoCartilla.desalojoVendedores,
-                onTap: () => setState(() {
-                  tipo = TipoCartilla.desalojoVendedores;
-                  _syncFields();
-                }),
-              ),
+            _EasTypeCard(
+              icon: Icons.storefront_outlined,
+              title: 'Desalojo de vendedores\nautónomos no regularizados',
+              selected: tipo == TipoCartilla.desalojoVendedores,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.desalojoVendedores;
+                _syncFields();
+              }),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _EasTypeCard(
-                icon: Icons.gavel_outlined,
-                title: 'Punto martillo',
-                selected: tipo == TipoCartilla.puntoMartillo,
-                onTap: () => setState(() {
-                  tipo = TipoCartilla.puntoMartillo;
-                  _syncFields();
-                }),
-              ),
+            _EasTypeCard(
+              icon: Icons.gavel_outlined,
+              title: 'Punto martillo',
+              selected: tipo == TipoCartilla.puntoMartillo,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.puntoMartillo;
+                _syncFields();
+              }),
             ),
           ],
         ),
@@ -216,47 +300,83 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Widget _buildDesalojoSelector() {
+  Widget _buildPuntoMartilloForm() {
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildEasTypeButtons(),
-          const SizedBox(height: 20),
-          _Drop<CrtEasStation>(
-            value: eas,
-            label: 'EAS',
-            icon: Icons.location_city_outlined,
-            items: CrtCatalog.easStations,
-            itemText: (value) => '${value.codigo} - ${value.nombre}',
-            onChanged: (value) {
-              setState(() {
-                eas = value;
-                _desaSection = 0;
-                _desaMovil = '';
-                _desaDireccion = '';
-                _desaDireccionOtro = false;
-                _direcciones = [];
-              });
-            },
+          const Row(
+            children: [
+              Icon(Icons.gavel_outlined, color: AppThm.secClr),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Punto martillo',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          _InfoLine(
-            icon: Icons.place_outlined,
-            text: '${eas.nombre}: ${eas.direccion}',
+          const SizedBox(height: 20),
+          TextField(
+            controller: _desaCpCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del conductor CP',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) => _desaCp = value,
+          ),
+          if (_desaCpGuardado.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Último registro: $_desaCpGuardado',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppThm.secClr,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+          TextFormField(
+            initialValue: widget.user?.nombreCompleto ?? '',
+            decoration: InputDecoration(
+              labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
+              prefixIcon: const Icon(Icons.badge_outlined),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) => _desaJp = value,
           ),
           const SizedBox(height: 14),
-          _Drop<TipoCartilla>(
-            value: tipo,
-            label: 'Otros tipos EAS',
-            icon: Icons.description_outlined,
-            items: CrtCatalog.easTypes,
-            itemText: (value) => value.label,
-            onChanged: (value) => setState(() {
-              tipo = value;
-              _syncFields();
-            }),
+          TextField(
+            controller: _desaDireccionCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Dirección',
+              prefixIcon: Icon(Icons.place_outlined),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) => _desaDireccion = value,
           ),
+          const SizedBox(height: 14),
+          _buildPoliciaSection(),
+          if (_hasPolicia) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _desaAuxCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Aux.: (opcional)',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) => _desaAux = value,
+            ),
+          ],
         ],
       ),
     );
@@ -819,84 +939,51 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const _PanelTitle(
-              icon: Icons.tune_outlined,
-              title: 'Configuración',
-            ),
-            const SizedBox(height: 18),
-            _Drop<TipoModuloCartilla>(
-              value: modulo,
-              label: 'Modulo de cartilla',
-              icon: Icons.dashboard_customize_outlined,
-              items: TipoModuloCartilla.values,
-              itemText: (value) => value.label,
-              onChanged: (value) {
-                setState(() {
-                  modulo = value;
-                  final tipos = CrtCatalog.configFor(modulo).tipos;
-                  if (!tipos.contains(tipo)) tipo = tipos.first;
-                  if (modulo == TipoModuloCartilla.eas) {
-                    movil = _moviles.first.movil;
-                  }
-                  _syncFields();
-                });
-              },
-            ),
-            const SizedBox(height: 14),
-            if (modulo == TipoModuloCartilla.eas) ...[
-              _buildEasTypeButtons(),
-              const SizedBox(height: 14),
-            ],
-            _Drop<TipoCartilla>(
-              value: tipo,
-              label: 'Tipo de cartilla',
-              icon: Icons.description_outlined,
-              items: config.tipos,
-              itemText: (value) => value.label,
-              onChanged: (value) => setState(() {
-                tipo = value;
-                _syncFields();
-              }),
-            ),
-            if (modulo == TipoModuloCartilla.eas) ...[
-              const SizedBox(height: 14),
-              _Drop<CrtEasStation>(
-                value: eas,
-                label: 'EAS',
-                icon: Icons.location_city_outlined,
-                items: CrtCatalog.easStations,
-                itemText: (value) => '${value.codigo} - ${value.nombre}',
+            if (modulo != TipoModuloCartilla.eas) ...[
+              const _PanelTitle(
+                icon: Icons.tune_outlined,
+                title: 'Configuración',
+              ),
+              const SizedBox(height: 18),
+              _Drop<TipoModuloCartilla>(
+                value: modulo,
+                label: 'Modulo de cartilla',
+                icon: Icons.dashboard_customize_outlined,
+                items: TipoModuloCartilla.values,
+                itemText: (value) => value.label,
                 onChanged: (value) {
                   setState(() {
-                    eas = value;
-                    movil = _moviles.first.movil;
+                    modulo = value;
+                    final tipos = CrtCatalog.configFor(modulo).tipos;
+                    if (!tipos.contains(tipo)) tipo = tipos.first;
+                    if (modulo == TipoModuloCartilla.eas) {
+                      movil = _moviles.first.movil;
+                    }
+                    _syncFields();
                   });
                 },
               ),
-              const SizedBox(height: 8),
-              _InfoLine(
-                icon: Icons.place_outlined,
-                text: '${eas.nombre}: ${eas.direccion}',
-              ),
               const SizedBox(height: 14),
-              _Drop<String>(
-                value: movil,
-                label: 'Móvil asignado',
-                icon: Icons.directions_car_outlined,
-                items: _moviles.map((item) => item.movil).toList(),
-                itemText: (value) => 'Móvil $value',
-                onChanged: (value) => setState(() => movil = value),
-              ),
-              const SizedBox(height: 14),
-              _Drop<RolMovil>(
-                value: rolMovil,
-                label: 'Que rol cumple usted en el movil',
-                icon: Icons.assignment_ind_outlined,
-                items: RolMovil.values,
+              _Drop<TipoCartilla>(
+                value: tipo,
+                label: 'Tipo de cartilla',
+                icon: Icons.description_outlined,
+                items: config.tipos,
                 itemText: (value) => value.label,
-                onChanged: (value) => setState(() => rolMovil = value),
+                onChanged: (value) => setState(() {
+                  tipo = value;
+                  _syncFields();
+                }),
               ),
+              const SizedBox(height: 14),
             ],
+            _Field(
+              controller: _controller('direccion'),
+              label: 'Dirección',
+              icon: Icons.place_outlined,
+              required: false,
+              onChanged: () => setState(() {}),
+            ),
             const SizedBox(height: 14),
             for (final field in activeFields) ...[
               _Field(
@@ -974,7 +1061,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _generar(String value) async {
-    if (!formKey.currentState!.validate()) return;
+    if (formKey.currentState != null && !formKey.currentState!.validate()) return;
     if (widget.user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Inicie sesion para generar cartillas')),
@@ -1023,6 +1110,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _buildText() {
     if (_isDesalojoFlow) {
       return _buildDesalojoText();
+    }
+    if (_isPuntoMartilloFlow) {
+      return _buildPuntoMartilloText();
     }
     final now = DateTime.now();
     return CrtTextGenerator.build(
@@ -1075,6 +1165,32 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  String _buildPuntoMartilloText() {
+    final now = DateTime.now();
+    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.puntoMartillo,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        values: {
+          '_pm_jp': _desaJp.isNotEmpty
+              ? _desaJp
+              : (widget.user?.nombreCompleto ?? ''),
+          '_pm_aux': _desaAux,
+          '_pm_movil': movilValue,
+          '_pm_cp': _desaCp,
+          '_pm_policia': _desaPoliciaNombre,
+          '_pm_direccion': _desaDireccion,
+        },
+      ),
+    );
+  }
+
   List<CrtMovilDotacion> get _moviles {
     return CrtCatalog.dotacionEas[eas.nombre] ??
         [
@@ -1100,6 +1216,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final keys = {
       ...activeFields.map((field) => field.key),
       'reporta',
+      'direccion',
     };
     for (final key in keys) {
       controllers.putIfAbsent(key, () => TextEditingController());
@@ -1110,7 +1227,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
     }
 
-    if (_isDesalojoFlow) {
+    if (_isDesalojoFlow || _isPuntoMartilloFlow) {
       _cargarDatosDesalojo();
     }
   }

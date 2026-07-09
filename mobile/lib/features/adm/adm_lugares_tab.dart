@@ -51,7 +51,11 @@ class _LugarState extends State<AdmCrudTab> {
         ],
       );
 
-  void _reload() => setState(() => future = widget.api.getLugares());
+  void _reload() {
+    setState(() {
+      future = widget.api.getLugares();
+    });
+  }
 
   void _showRutasManager() {
     showDialog(
@@ -180,7 +184,9 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
 
   void _reload() {
     if (!mounted) return;
-    setState(() => _future = widget.api.getRutas());
+    setState(() {
+      _future = widget.api.getRutas();
+    });
   }
 
   Future<void> _create() async {
