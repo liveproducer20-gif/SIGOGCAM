@@ -37,7 +37,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final formKey = GlobalKey<FormState>();
 
   TipoModuloCartilla modulo = TipoModuloCartilla.eas;
-  TipoCartilla tipo = CrtCatalog.easTypes.first;
+  TipoCartilla tipo = TipoCartilla.puntoMartillo;
   CrtEasStation eas = CrtCatalog.easStations.last;
   String movil = '187';
   RolMovil rolMovil = RolMovil.jp;
@@ -172,10 +172,57 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  Widget _buildEasTypeButtons() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tipo de cartilla:',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppThm.priClr,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _EasTypeCard(
+                icon: Icons.storefront_outlined,
+                title: 'Desalojo de vendedores\nautónomos no regularizados',
+                selected: tipo == TipoCartilla.desalojoVendedores,
+                onTap: () => setState(() {
+                  tipo = TipoCartilla.desalojoVendedores;
+                  _syncFields();
+                }),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _EasTypeCard(
+                icon: Icons.gavel_outlined,
+                title: 'Punto martillo',
+                selected: tipo == TipoCartilla.puntoMartillo,
+                onTap: () => setState(() {
+                  tipo = TipoCartilla.puntoMartillo;
+                  _syncFields();
+                }),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildDesalojoSelector() {
     return _Panel(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildEasTypeButtons(),
+          const SizedBox(height: 20),
           _Drop<CrtEasStation>(
             value: eas,
             label: 'EAS',
@@ -197,6 +244,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           _InfoLine(
             icon: Icons.place_outlined,
             text: '${eas.nombre}: ${eas.direccion}',
+          ),
+          const SizedBox(height: 14),
+          _Drop<TipoCartilla>(
+            value: tipo,
+            label: 'Otros tipos EAS',
+            icon: Icons.description_outlined,
+            items: CrtCatalog.easTypes,
+            itemText: (value) => value.label,
+            onChanged: (value) => setState(() {
+              tipo = value;
+              _syncFields();
+            }),
           ),
         ],
       ),
@@ -784,6 +843,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               },
             ),
             const SizedBox(height: 14),
+            if (modulo == TipoModuloCartilla.eas) ...[
+              _buildEasTypeButtons(),
+              const SizedBox(height: 14),
+            ],
             _Drop<TipoCartilla>(
               value: tipo,
               label: 'Tipo de cartilla',
@@ -1307,6 +1370,53 @@ class _StepCard extends StatelessWidget {
         const SizedBox(height: 16),
         child,
       ],
+    );
+  }
+}
+
+class _EasTypeCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _EasTypeCard({
+    required this.icon,
+    required this.title,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: selected ? AppThm.accClr : Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppThm.secClr : Colors.black26,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 28, color: selected ? AppThm.priClr : AppThm.txtClr),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: selected ? AppThm.priClr : AppThm.txtClr,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
