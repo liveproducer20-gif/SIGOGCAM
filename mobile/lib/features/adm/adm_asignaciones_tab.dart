@@ -2,31 +2,73 @@ import 'package:flutter/material.dart';
 
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
 class AsignacionesTab extends AdmCrudTab {
-  const AsignacionesTab({super.key, required super.api});
+  final int tabIndex;
+  const AsignacionesTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
   State<AdmCrudTab> createState() => _AsignacionState();
 }
 
-class _AsignacionState extends State<AdmCrudTab> {
-  late Future<List<Map<String, dynamic>>> future;
+class _AsignacionState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
+
   @override
   void initState() {
     super.initState();
-    future = widget.api.getAsignaciones();
+    _future = Future.value([]);
+    initLazy((widget as AsignacionesTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getAsignaciones(page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
+  }
+
+  void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
+    setState(() {
+      _search = value;
+      _page = 1;
+    });
+    _load();
   }
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
         title: 'Asignación de móviles a EAS',
         subtitle: 'Historial de asignaciones con una sola asignacion activa por movil.',
-        future: future,
+        future: _future,
         columns: const ['EAS', 'Movil', 'Fecha', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
+        total: _total,
+        currentPage: _page,
+        totalPages: _totalPages,
+        onPageChanged: _onPageChanged,
+        onSearch: _onSearch,
+        searchHint: 'Buscar asignación...',
         rowBuilder: (item) => [
           admText('${item['eas_codigo'] ?? ''} ${item['eas'] ?? ''}'.trim()),
           admText('${item['numero_movil'] ?? ''} ${item['placa'] ?? ''}'.trim()),
@@ -43,12 +85,6 @@ class _AsignacionState extends State<AdmCrudTab> {
           ),
         ],
       );
-
-  void _reload() {
-    setState(() {
-      future = widget.api.getAsignaciones();
-    });
-  }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final eas = await widget.api.getEasList();

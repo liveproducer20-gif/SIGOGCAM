@@ -76,8 +76,10 @@ class AdmApi {
   Future<void> setMovilActivo(int id, bool activo) =>
       _put('admin/moviles/$id/estado', {'activo': activo});
 
-  Future<List<Map<String, dynamic>>> getAsignaciones() =>
+  Future<List<Map<String, dynamic>>> getAsignacionesList() =>
       _getList('admin/movil-eas-asignaciones');
+  Future<AdmPaginatedResult> getAsignaciones({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('admin/movil-eas-asignaciones?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<void> createAsignacion(Map<String, dynamic> data) =>
       _post('admin/movil-eas-asignaciones', data);
   Future<void> updateAsignacion(int id, Map<String, dynamic> data) =>

@@ -485,23 +485,6 @@ async function cambiarEstadoMovil(id, activo) {
     return cambiarActivo('dbo.moviles', id, activo);
 }
 
-async function listarAsignaciones() {
-    return withConnection((conexion) => conexion.query(`
-        SELECT a.id, a.eas_id, e.codigo AS eas_codigo, e.nombre AS eas,
-               a.movil_id, m.numero_movil, m.placa,
-               a.fecha_asignacion,
-               a.estado_asignacion_id,
-               estado.nombre AS estado,
-               a.observacion,
-               a.activo
-        FROM dbo.movil_eas_asignaciones a
-        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
-        INNER JOIN dbo.moviles m ON m.id = a.movil_id
-        INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
-        ORDER BY a.fecha_asignacion DESC, a.id DESC
-    `));
-}
-
 async function crearAsignacion(data) {
     return withConnection(async (conexion) => {
         const estadoActivoId = await obtenerDetalleId(conexion, 'ESTADOS_ASIGNACION_MOVIL', 'ACTIVA');
@@ -664,8 +647,33 @@ async function guardarPermisosRol(conexion, rolId, permisos) {
     }
 }
 
-async function listarAsignaciones() {
-    return withConnection((conexion) => conexion.query(`
+async function listarAsignaciones(query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+
+    let searchClause = '';
+    const params = [];
+    if (search) {
+        searchClause = ' AND (e.nombre LIKE ? OR e.codigo LIKE ? OR m.numero_movil LIKE ? OR m.placa LIKE ? OR estado.nombre LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s, s, s, s);
+    }
+
+    let countSql = `
+        SELECT COUNT(*) AS total
+        FROM dbo.movil_eas_asignaciones a
+        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
+        INNER JOIN dbo.moviles m ON m.id = a.movil_id
+        INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
+        WHERE 1=1 ${searchClause}
+    `;
+    const countResult = await withConnection((conexion) => conexion.query(countSql, params));
+    const total = countResult[0]?.total ?? 0;
+
+    if (paginate && total === 0) {
+        return { datos: [], total: 0, page: 1 };
+    }
+
+    const dataSql = `
         SELECT a.id, a.eas_id, e.codigo AS eas_codigo, e.nombre AS eas,
                a.movil_id, m.numero_movil, m.placa,
                a.fecha_asignacion,
@@ -677,8 +685,15 @@ async function listarAsignaciones() {
         INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
         INNER JOIN dbo.moviles m ON m.id = a.movil_id
         INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
+        WHERE 1=1 ${searchClause}
         ORDER BY a.fecha_asignacion DESC, a.id DESC
-    `));
+        ${paginate ? 'OFFSET ? ROWS FETCH NEXT ? ROWS ONLY' : ''}
+    `;
+    const dataParams = [...params];
+    if (paginate) dataParams.push(offset, limit);
+
+    const datos = await withConnection((conexion) => conexion.query(dataSql, dataParams));
+    return { datos, total, page: paginate ? page : null };
 }
 
 const TABLAS_PERMITIDAS = new Set([

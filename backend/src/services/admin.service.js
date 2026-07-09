@@ -142,8 +142,8 @@ async function cambiarEstadoMovil(id, activo) {
     return repository.cambiarEstadoMovil(validarId(id, 'movil'), Boolean(activo));
 }
 
-async function listarAsignaciones() {
-    return repository.listarAsignaciones();
+async function listarAsignaciones(query = {}) {
+    return repository.listarAsignaciones(query);
 }
 
 async function crearAsignacion(data) {

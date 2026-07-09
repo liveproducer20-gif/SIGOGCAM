@@ -84,7 +84,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
     if (widget.user.hasPermission('moviles.asignar')) {
       list.add(_TabDef(
         icon: Icons.compare_arrows_outlined, label: 'Asignaciones',
-        child: AsignacionesTab(api: api),
+        child: AsignacionesTab(api: api, tabIndex: list.length),
       ));
     }
     return list;

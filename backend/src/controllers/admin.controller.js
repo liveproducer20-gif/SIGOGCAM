@@ -32,7 +32,7 @@ const handlers = {
     actualizarMovil: handle((req) => service.actualizarMovil(req.params.id, req.body), 200, 'Movil actualizado correctamente'),
     cambiarEstadoMovil: handle((req) => service.cambiarEstadoMovil(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
 
-    listarAsignaciones: handle(() => service.listarAsignaciones()),
+    listarAsignaciones: handle((req) => service.listarAsignaciones(req.query)),
     crearAsignacion: handle((req) => service.crearAsignacion(req.body), 201, 'Asignacion creada correctamente', 'asignacionId'),
     actualizarAsignacion: handle((req) => service.actualizarAsignacion(req.params.id, req.body), 200, 'Asignacion actualizada correctamente'),
 
