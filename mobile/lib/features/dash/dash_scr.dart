@@ -202,6 +202,57 @@ class _WebContent extends StatefulWidget {
 }
 
 class _WebContentState extends State<_WebContent> {
+  List<Widget>? _children;
+
+  List<Widget> _buildChildren() {
+    final common = (
+      user: widget.user,
+      onUserChanged: widget.onUserChanged,
+      onLogout: widget.onLogout,
+      onNotifications: widget.onNotifications,
+    );
+    return [
+      EvtHomeScr(
+        user: common.user,
+        onUserChanged: common.onUserChanged,
+        onLogout: common.onLogout,
+        onNotifications: common.onNotifications,
+      ),
+      CrtHomeScr(
+        user: common.user,
+        onUserChanged: common.onUserChanged,
+        onLogout: common.onLogout,
+        onNotifications: common.onNotifications,
+      ),
+      InsHomeScr(
+        user: common.user,
+        onUserChanged: common.onUserChanged,
+        onLogout: common.onLogout,
+        onNotifications: common.onNotifications,
+      ),
+      if (widget.user.puedeVerAdministracion)
+        AdmHomeScr(
+          user: common.user,
+          onUserChanged: common.onUserChanged,
+          onLogout: common.onLogout,
+          onNotifications: common.onNotifications,
+        )
+      else
+        const SizedBox.shrink(),
+    ];
+  }
+
+  @override
+  void didUpdateWidget(covariant _WebContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user != oldWidget.user ||
+        widget.onUserChanged != oldWidget.onUserChanged ||
+        widget.onLogout != oldWidget.onLogout ||
+        widget.onNotifications != oldWidget.onNotifications) {
+      _children = null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!widget.item.enabled) {
@@ -218,35 +269,10 @@ class _WebContentState extends State<_WebContent> {
       );
     }
 
+    _children ??= _buildChildren();
     return IndexedStack(
       index: widget.idxSel,
-      children: [
-        if (widget.user.puedeVerAdministracion)
-          AdmHomeScr(
-            user: widget.user,
-            onUserChanged: widget.onUserChanged,
-            onLogout: widget.onLogout,
-            onNotifications: widget.onNotifications,
-          ),
-        CrtHomeScr(
-          user: widget.user,
-          onUserChanged: widget.onUserChanged,
-          onLogout: widget.onLogout,
-          onNotifications: widget.onNotifications,
-        ),
-        EvtHomeScr(
-          user: widget.user,
-          onUserChanged: widget.onUserChanged,
-          onLogout: widget.onLogout,
-          onNotifications: widget.onNotifications,
-        ),
-        InsHomeScr(
-          user: widget.user,
-          onUserChanged: widget.onUserChanged,
-          onLogout: widget.onLogout,
-          onNotifications: widget.onNotifications,
-        ),
-      ],
+      children: _children!,
     );
   }
 }
