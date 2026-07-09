@@ -58,7 +58,7 @@ class _MovilState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
       );
 
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final catalogs = await admLoadCatalogs(widget.api);
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
     if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
@@ -83,7 +83,7 @@ class _MovilState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
 
   Future<void> _showHistory(Map<String, dynamic> item) async {
     final id = admId(item);
-    final catalogs = await admLoadCatalogs(widget.api);
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
     if (!mounted) return;
     await showDialog(
       context: context,

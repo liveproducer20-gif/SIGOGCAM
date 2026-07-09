@@ -51,7 +51,7 @@ class _EasState extends State<AdmCrudTab> {
     });
   }
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final catalogs = await admLoadCatalogs(widget.api);
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
     if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,

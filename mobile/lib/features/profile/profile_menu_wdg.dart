@@ -8,7 +8,7 @@ import '../evt/ann/svc/ann_svc.dart';
 import '../evt/svc/evt_svc.dart';
 import 'profile_api.dart';
 
-class ProfileMenuWdg extends StatelessWidget {
+class ProfileMenuWdg extends StatefulWidget {
   final AppUser user;
   final ValueChanged<AppUser>? onUserChanged;
   final VoidCallback? onLogout;
@@ -23,6 +23,27 @@ class ProfileMenuWdg extends StatelessWidget {
   });
 
   @override
+  State<ProfileMenuWdg> createState() => _ProfileMenuWdgState();
+}
+
+class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
+  late Future<int> _notifCountFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _notifCountFuture = _notificationCount();
+  }
+
+  @override
+  void didUpdateWidget(ProfileMenuWdg oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.user.id != oldWidget.user.id) {
+      _notifCountFuture = _notificationCount();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return PopupMenuButton<_ProfileAction>(
       tooltip: 'Perfil',
@@ -35,9 +56,9 @@ class ProfileMenuWdg extends StatelessWidget {
         } else if (action == _ProfileAction.password) {
           _openPasswordFlow(context);
         } else if (action == _ProfileAction.notifications) {
-          onNotifications?.call();
+          widget.onNotifications?.call();
         } else {
-          onLogout?.call();
+          widget.onLogout?.call();
         }
       },
       itemBuilder: (_) => const [
@@ -86,15 +107,15 @@ class ProfileMenuWdg extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(right: 16),
         child: FutureBuilder<int>(
-          future: _notificationCount(),
+          future: _notifCountFuture,
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
             return Stack(
               clipBehavior: Clip.none,
               children: [
                 _ProfileAvatar(
-                  imageUrl: user.fotoPerfilUrl,
-                  initials: _initials(user),
+                  imageUrl: widget.user.fotoPerfilUrl,
+                  initials: _initials(widget.user),
                   radius: 21,
                 ),
                 if (count > 0)
@@ -133,7 +154,7 @@ class ProfileMenuWdg extends StatelessWidget {
     final annList = await _safeLoadAnnouncements();
     final announcements = annList.where((ann) {
       if (!ann.publicado || !ann.notificar) return false;
-      return !user.esUsuario || ann.personalIds.contains(user.id);
+      return !widget.user.esUsuario || ann.personalIds.contains(widget.user.id);
     });
     final unreadEvents = events.where(
       (evt) => evt.notificar && !NotifReadStore.isRead('evento:${evt.id}'),
@@ -148,7 +169,7 @@ class ProfileMenuWdg extends StatelessWidget {
   Future<List<dynamic>> _safeLoadEvents() async {
     try {
       return await EvtSvc.getLst(
-        personalId: user.soloEventosConvocados ? user.id : null,
+        personalId: widget.user.soloEventosConvocados ? widget.user.id : null,
       );
     } catch (_) {
       return [];
@@ -158,7 +179,7 @@ class ProfileMenuWdg extends StatelessWidget {
   Future<List<dynamic>> _safeLoadAnnouncements() async {
     try {
       return await AnnSvc.getLst(
-        personalId: user.esUsuario ? user.id : null,
+        personalId: widget.user.esUsuario ? widget.user.id : null,
       );
     } catch (_) {
       return [];
@@ -172,13 +193,13 @@ class ProfileMenuWdg extends StatelessWidget {
     final updated = await showDialog<AppUser>(
       context: context,
       builder: (_) => ProfileDialog(
-        user: user,
+        user: widget.user,
         editMode: editMode,
       ),
     );
 
     if (updated != null) {
-      onUserChanged?.call(updated);
+      widget.onUserChanged?.call(updated);
     }
   }
 

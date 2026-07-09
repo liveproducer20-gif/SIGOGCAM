@@ -59,7 +59,7 @@ class _PersonalTabState extends State<PersonalTab> {
 
   Future<void> _edit(Map<String, dynamic>? item) async {
     final results = await Future.wait([
-      admLoadCatalogs(widget.api),
+      CatalogCache.instance.getOrLoad(widget.api),
       widget.api.getRoles(),
       widget.api.getGrados(),
     ]);

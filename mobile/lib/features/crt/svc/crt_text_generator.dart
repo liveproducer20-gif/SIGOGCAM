@@ -58,6 +58,9 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.rondasDisuasivas) {
       return _buildEasRondasDisuasivas(data, circuito, causa, direccion);
     }
+    if (_isCardTipo(data.tipo)) {
+      return _buildEasGeneric(data, circuito, causa, direccion);
+    }
 
     final movil = data.movil == null || data.movil!.trim().isEmpty
         ? 'Móvil'
@@ -259,6 +262,89 @@ Adjunto fotografía''';
 *PROCEDIMIENTO:*
 
 $saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Rondas disuasivas, dando apoyo a la seguridad ciudadana y presencia disuasiva.
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
+  }
+
+  static bool _isCardTipo(TipoCartilla tipo) {
+    return [
+      TipoCartilla.retiroTemporal,
+      TipoCartilla.requerimiento,
+      TipoCartilla.colaboracionEntidades,
+      TipoCartilla.colaboracionEventos,
+      TipoCartilla.permisoAusentismo,
+    ].contains(tipo);
+  }
+
+  static String _buildEasGeneric(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_ez_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_ez_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_ez_jp');
+    final cp = _v(data, '_ez_cp');
+    final aux = _v(data, '_ez_aux');
+    final policia = _v(data, '_ez_policia');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final accion = switch (data.tipo) {
+      TipoCartilla.retiroTemporal =>
+        'retiro temporal, manteniendo el orden y la seguridad ciudadana',
+      TipoCartilla.requerimiento =>
+        'requerimiento ciudadano, brindando la atención necesaria',
+      TipoCartilla.colaboracionEntidades =>
+        'colaboración con otras entidades, apoyando en las actividades planificadas',
+      TipoCartilla.colaboracionEventos =>
+        'colaboración ciudadana, apoyando en las actividades del sector',
+      TipoCartilla.permisoAusentismo =>
+        'permiso de ausentismo, dejando constancia para conocimiento de la superioridad',
+      _ => 'la novedad reportada, dando atención conforme al procedimiento',
+    };
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      reporta.write('*Aux.:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    } else {
+      reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    if (aux.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*Aux.:* $aux');
+    }
+    if (policia.isNotEmpty) {
+      reporta.writeln();
+      reporta.write('*POLICÍA:* $policia');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con $accion.
 
 Notifico novedades para fines correspondientes.
 

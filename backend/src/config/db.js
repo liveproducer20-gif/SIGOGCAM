@@ -42,8 +42,8 @@ let poolInstance = null;
 async function getPool() {
   if (!poolInstance) {
     poolInstance = await odbc.pool(connectionString, {
-      initialSize: 5,
-      maxSize: 20,
+      initialSize: 15,
+      maxSize: 30,
       connectionTimeout: timeout * 1000,
     });
 

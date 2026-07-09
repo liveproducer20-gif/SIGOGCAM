@@ -68,6 +68,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final _desaCpCtrl = TextEditingController();
   final _desaAuxCtrl = TextEditingController();
   final _desaDireccionCtrl = TextEditingController();
+  final _ezDetalleCtrl = TextEditingController();
 
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
@@ -83,6 +84,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool get _isRondasDisuasivasFlow =>
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.rondasDisuasivas;
+
+  bool get _isEasCustomCardFlow {
+    if (modulo != TipoModuloCartilla.eas) return false;
+    return [
+      TipoCartilla.retiroTemporal,
+      TipoCartilla.requerimiento,
+      TipoCartilla.colaboracionEntidades,
+      TipoCartilla.colaboracionEventos,
+      TipoCartilla.permisoAusentismo,
+    ].contains(tipo);
+  }
 
   @override
   void initState() {
@@ -102,6 +114,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _desaJpCtrl.dispose();
     _desaPoliciaCtrl.dispose();
     _desaDireccionCtrl.dispose();
+    _ezDetalleCtrl.dispose();
     super.dispose();
   }
 
@@ -165,6 +178,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         if (_isDesalojoFlow) _buildDesalojoWizard()
         else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
         else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
+        else if (_isEasCustomCardFlow) _buildEasCustomForm()
         else _formPanel(),
       ],
     );
@@ -313,6 +327,51 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               selected: tipo == TipoCartilla.rondasDisuasivas,
               onTap: () => setState(() {
                 tipo = TipoCartilla.rondasDisuasivas;
+                _syncFields();
+              }),
+            ),
+            _EasTypeCard(
+              icon: Icons.backup_outlined,
+              title: 'Retiro temporal',
+              selected: tipo == TipoCartilla.retiroTemporal,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.retiroTemporal;
+                _syncFields();
+              }),
+            ),
+            _EasTypeCard(
+              icon: Icons.receipt_long_outlined,
+              title: 'Requerimiento',
+              selected: tipo == TipoCartilla.requerimiento,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.requerimiento;
+                _syncFields();
+              }),
+            ),
+            _EasTypeCard(
+              icon: Icons.groups_outlined,
+              title: 'Colaboración con\notras entidades',
+              selected: tipo == TipoCartilla.colaboracionEntidades,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.colaboracionEntidades;
+                _syncFields();
+              }),
+            ),
+            _EasTypeCard(
+              icon: Icons.people_outlined,
+              title: 'Colaboración\nciudadana',
+              selected: tipo == TipoCartilla.colaboracionEventos,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.colaboracionEventos;
+                _syncFields();
+              }),
+            ),
+            _EasTypeCard(
+              icon: Icons.logout_outlined,
+              title: 'Permiso de\nausentismo',
+              selected: tipo == TipoCartilla.permisoAusentismo,
+              onTap: () => setState(() {
+                tipo = TipoCartilla.permisoAusentismo;
                 _syncFields();
               }),
             ),
@@ -503,6 +562,130 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _desaAux = value;
                 setState(() {});
               },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEasCustomForm() {
+    final titulo = switch (tipo) {
+      TipoCartilla.retiroTemporal => 'Retiro temporal',
+      TipoCartilla.requerimiento => 'Requerimiento',
+      TipoCartilla.colaboracionEntidades => 'Colaboración con otras entidades',
+      TipoCartilla.colaboracionEventos => 'Colaboración ciudadana',
+      TipoCartilla.permisoAusentismo => 'Permiso de ausentismo',
+      _ => '',
+    };
+    final icono = switch (tipo) {
+      TipoCartilla.retiroTemporal => Icons.backup_outlined,
+      TipoCartilla.requerimiento => Icons.receipt_long_outlined,
+      TipoCartilla.colaboracionEntidades => Icons.groups_outlined,
+      TipoCartilla.colaboracionEventos => Icons.people_outlined,
+      TipoCartilla.permisoAusentismo => Icons.logout_outlined,
+      _ => Icons.article_outlined,
+    };
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icono, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  titulo,
+                  style: const TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          TextField(
+            controller: _desaCpCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Nombre del conductor CP',
+              prefixIcon: Icon(Icons.person_outline),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaCp = value;
+              setState(() {});
+            },
+          ),
+          if (_desaCpGuardado.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Último registro: $_desaCpGuardado',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppThm.secClr,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _desaJpCtrl,
+            decoration: InputDecoration(
+              labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
+              prefixIcon: const Icon(Icons.badge_outlined),
+              border: const OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaJp = value;
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _desaDireccionCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Dirección',
+              prefixIcon: Icon(Icons.place_outlined),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _desaDireccion = value;
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 14),
+          _buildPoliciaSection(),
+          if (_hasPolicia) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _desaAuxCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Aux.: (opcional)',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _desaAux = value;
+                setState(() {});
+              },
+            ),
+          ],
+          if (tipo == TipoCartilla.colaboracionEntidades) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ezDetalleCtrl,
+              decoration: const InputDecoration(
+                labelText:
+                    'Detalle (accidente ocurrido, actividades realizadas, etc.)',
+                prefixIcon: Icon(Icons.description_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (_) => setState(() {}),
             ),
           ],
         ],
@@ -1260,6 +1443,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isRondasDisuasivasFlow) {
       return _buildRondasDisuasivasText();
     }
+    if (_isEasCustomCardFlow) {
+      return _buildEasCustomText();
+    }
     final now = DateTime.now();
     return CrtTextGenerator.build(
       CrtFormData(
@@ -1363,6 +1549,33 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  String _buildEasCustomText() {
+    final now = DateTime.now();
+    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: tipo,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        values: {
+          '_ez_jp': _desaJp.isNotEmpty
+              ? _desaJp
+              : (widget.user?.nombreCompleto ?? ''),
+          '_ez_aux': _desaAux,
+          '_ez_movil': movilValue,
+          '_ez_cp': _desaCp,
+          '_ez_policia': _desaPoliciaNombre,
+          '_ez_direccion': _desaDireccion,
+          '_ez_detalle': _ezDetalleCtrl.text,
+        },
+      ),
+    );
+  }
+
   List<CrtMovilDotacion> get _moviles {
     return CrtCatalog.dotacionEas[eas.nombre] ??
         [
@@ -1399,7 +1612,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
     }
 
-    if (_isDesalojoFlow || _isPuntoMartilloFlow || _isRondasDisuasivasFlow) {
+    if (_isDesalojoFlow ||
+        _isPuntoMartilloFlow ||
+        _isRondasDisuasivasFlow ||
+        _isEasCustomCardFlow) {
       _cargarDatosDesalojo();
     }
   }

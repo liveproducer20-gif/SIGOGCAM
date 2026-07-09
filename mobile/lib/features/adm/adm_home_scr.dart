@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 import '../../core/auth/app_user.dart';
@@ -35,9 +33,8 @@ class AdmHomeScr extends StatefulWidget {
   State<AdmHomeScr> createState() => _AdmHomeScrState();
 }
 
-class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
+class _AdmHomeScrState extends State<AdmHomeScr> {
   final api = AdmApi();
-  late TabController _tabController;
 
   List<_TabDef> get _tabs {
     final list = <_TabDef>[];
@@ -101,73 +98,51 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   }
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 0, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     final tabs = _tabs;
-    if (_tabController.length != tabs.length) {
-      final oldIndex = _tabController.index;
-      _tabController.dispose();
-      _tabController = TabController(length: tabs.length, vsync: this, initialIndex: oldIndex.clamp(0, tabs.length - 1));
-      _tabController.addListener(() {
-        if (!_tabController.indexIsChanging) {
-          setState(() {});
-        }
-      });
-    }
-    return Scaffold(
-      backgroundColor: AppThm.bgClr,
-      appBar: TopBarWdg(
-        ttl: 'Administracion',
-        user: widget.user,
-        onUserChanged: widget.onUserChanged,
-        onLogout: widget.onLogout,
-        onNotifications: widget.onNotifications,
-        leading: widget.showBack
-            ? IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close),
-                tooltip: 'Salir',
-              )
-            : null,
-      ),
-      body: tabs.isEmpty
-          ? const Center(child: Text('No tienes permisos de administración'))
-          : Column(
-              children: [
-                const SizedBox(height: 18),
-                TabBar(
-                  controller: _tabController,
-                  isScrollable: true,
-                  labelColor: AppThm.priClr,
-                  unselectedLabelColor: Colors.black54,
-                  indicatorColor: AppThm.secClr,
-                  tabs: [
-                    for (final tab in tabs)
-                      Tab(icon: Icon(tab.icon), text: tab.label),
-                  ],
-                ),
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
+    return DefaultTabController(
+      length: tabs.length,
+      child: Scaffold(
+        backgroundColor: AppThm.bgClr,
+        appBar: TopBarWdg(
+          ttl: 'Administracion',
+          user: widget.user,
+          onUserChanged: widget.onUserChanged,
+          onLogout: widget.onLogout,
+          onNotifications: widget.onNotifications,
+          leading: widget.showBack
+              ? IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                  tooltip: 'Salir',
+                )
+              : null,
+        ),
+        body: tabs.isEmpty
+            ? const Center(child: Text('No tienes permisos de administración'))
+            : Column(
+                children: [
+                  const SizedBox(height: 18),
+                  TabBar(
+                    isScrollable: true,
+                    labelColor: AppThm.priClr,
+                    unselectedLabelColor: Colors.black54,
+                    indicatorColor: AppThm.secClr,
+                    tabs: [
                       for (final tab in tabs)
-                        _LoadingDelay(child: tab.child),
+                        Tab(icon: Icon(tab.icon), text: tab.label),
                     ],
                   ),
-                ),
-              ],
-            ),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        for (final tab in tabs) tab.child,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -177,37 +152,4 @@ class _TabDef {
   final String label;
   final Widget child;
   const _TabDef({required this.icon, required this.label, required this.child});
-}
-
-class _LoadingDelay extends StatefulWidget {
-  final Widget child;
-  const _LoadingDelay({required this.child});
-  @override
-  State<_LoadingDelay> createState() => _LoadingDelayState();
-}
-
-class _LoadingDelayState extends State<_LoadingDelay> with AutomaticKeepAliveClientMixin {
-  bool _ready = false;
-
-  @override
-  bool get wantKeepAlive => false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ready = false;
-    unawaited(_wait());
-  }
-
-  Future<void> _wait() async {
-    await Future.delayed(const Duration(seconds: 3));
-    if (mounted) setState(() => _ready = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    super.build(context);
-    if (_ready) return widget.child;
-    return const Center(child: CircularProgressIndicator());
-  }
 }

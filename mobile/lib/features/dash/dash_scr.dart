@@ -122,7 +122,7 @@ class _DashScrState extends State<DashScr> {
   }
 }
 
-class _WebDash extends StatelessWidget {
+class _WebDash extends StatefulWidget {
   final List<SideMenuItem> items;
   final AppUser user;
   final int idxSel;
@@ -146,27 +146,32 @@ class _WebDash extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final item = items[idxSel];
+  State<_WebDash> createState() => _WebDashState();
+}
 
+class _WebDashState extends State<_WebDash> {
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.items[widget.idxSel];
     return Scaffold(
       body: Row(
         children: [
           SideMenuWdg(
-            menuOpen: menuOpen,
-            idxSel: idxSel,
-            items: items,
-            onMenuTap: onMenuTap,
-            onItemTap: onSel,
-            onLogout: onLogout,
+            menuOpen: widget.menuOpen,
+            idxSel: widget.idxSel,
+            items: widget.items,
+            onMenuTap: widget.onMenuTap,
+            onItemTap: widget.onSel,
+            onLogout: widget.onLogout,
           ),
           Expanded(
             child: _WebContent(
               item: item,
-              user: user,
-              onUserChanged: onUserChanged,
-              onLogout: onLogout,
-              onNotifications: onNotifications,
+              user: widget.user,
+              idxSel: widget.idxSel,
+              onUserChanged: widget.onUserChanged,
+              onLogout: widget.onLogout,
+              onNotifications: widget.onNotifications,
             ),
           ),
         ],
@@ -175,9 +180,10 @@ class _WebDash extends StatelessWidget {
   }
 }
 
-class _WebContent extends StatelessWidget {
+class _WebContent extends StatefulWidget {
   final SideMenuItem item;
   final AppUser user;
+  final int idxSel;
   final ValueChanged<AppUser> onUserChanged;
   final VoidCallback onLogout;
   final VoidCallback onNotifications;
@@ -185,73 +191,62 @@ class _WebContent extends StatelessWidget {
   const _WebContent({
     required this.item,
     required this.user,
+    required this.idxSel,
     required this.onUserChanged,
     required this.onLogout,
     required this.onNotifications,
   });
 
   @override
+  State<_WebContent> createState() => _WebContentState();
+}
+
+class _WebContentState extends State<_WebContent> {
+  @override
   Widget build(BuildContext context) {
-    if (!item.enabled) {
+    if (!widget.item.enabled) {
       return Scaffold(
         backgroundColor: AppThm.bgClr,
         appBar: TopBarWdg(
-          ttl: item.title,
-          user: user,
-          onUserChanged: onUserChanged,
-          onLogout: onLogout,
-          onNotifications: onNotifications,
+          ttl: widget.item.title,
+          user: widget.user,
+          onUserChanged: widget.onUserChanged,
+          onLogout: widget.onLogout,
+          onNotifications: widget.onNotifications,
         ),
-        body: DevCardWdg(ttl: item.title),
+        body: DevCardWdg(ttl: widget.item.title),
       );
     }
 
-    if (item.title == 'Eventos') {
-      return EvtHomeScr(
-        user: user,
-        onUserChanged: onUserChanged,
-        onLogout: onLogout,
-        onNotifications: onNotifications,
-      );
-    }
-
-    if (item.title == 'Cartillas') {
-      return CrtHomeScr(
-        user: user,
-        onUserChanged: onUserChanged,
-        onLogout: onLogout,
-        onNotifications: onNotifications,
-      );
-    }
-
-    if (item.title == 'Mis insignias') {
-      return InsHomeScr(
-        user: user,
-        onUserChanged: onUserChanged,
-        onLogout: onLogout,
-        onNotifications: onNotifications,
-      );
-    }
-
-    if (item.title == 'Administracion') {
-      return AdmHomeScr(
-        user: user,
-        onUserChanged: onUserChanged,
-        onLogout: onLogout,
-        onNotifications: onNotifications,
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppThm.bgClr,
-      appBar: TopBarWdg(
-        ttl: item.title,
-        user: user,
-        onUserChanged: onUserChanged,
-        onLogout: onLogout,
-        onNotifications: onNotifications,
-      ),
-      body: DevCardWdg(ttl: item.title),
+    return IndexedStack(
+      index: widget.idxSel,
+      children: [
+        if (widget.user.puedeVerAdministracion)
+          AdmHomeScr(
+            user: widget.user,
+            onUserChanged: widget.onUserChanged,
+            onLogout: widget.onLogout,
+            onNotifications: widget.onNotifications,
+          ),
+        CrtHomeScr(
+          user: widget.user,
+          onUserChanged: widget.onUserChanged,
+          onLogout: widget.onLogout,
+          onNotifications: widget.onNotifications,
+        ),
+        EvtHomeScr(
+          user: widget.user,
+          onUserChanged: widget.onUserChanged,
+          onLogout: widget.onLogout,
+          onNotifications: widget.onNotifications,
+        ),
+        InsHomeScr(
+          user: widget.user,
+          onUserChanged: widget.onUserChanged,
+          onLogout: widget.onLogout,
+          onNotifications: widget.onNotifications,
+        ),
+      ],
     );
   }
 }
