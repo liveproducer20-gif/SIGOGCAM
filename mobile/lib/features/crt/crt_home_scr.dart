@@ -58,6 +58,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _desaPoliciaNombre = '';
   bool _desaPoliciaOtro = false;
   final _desaPoliciaCtrl = TextEditingController();
+  final _desaJpCtrl = TextEditingController();
   String _desaDireccion = '';
   bool _desaDireccionOtro = false;
   bool _desaAgresivo = false;
@@ -88,6 +89,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     super.initState();
     _syncFields();
     movil = _moviles.first.movil;
+    _autoFillByRole();
   }
 
   @override
@@ -97,6 +99,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
     _desaCpCtrl.dispose();
     _desaAuxCtrl.dispose();
+    _desaJpCtrl.dispose();
     _desaPoliciaCtrl.dispose();
     _desaDireccionCtrl.dispose();
     super.dispose();
@@ -257,7 +260,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             icon: Icons.assignment_ind_outlined,
             items: RolMovil.values,
             itemText: (value) => value.label,
-            onChanged: (value) => setState(() => rolMovil = value),
+            onChanged: (value) {
+              setState(() {
+                rolMovil = value;
+                _autoFillByRole();
+              });
+            },
           ),
         ],
       ),
@@ -362,7 +370,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
           const SizedBox(height: 14),
           TextFormField(
-            initialValue: widget.user?.nombreCompleto ?? '',
+            controller: _desaJpCtrl,
             decoration: InputDecoration(
               labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
               prefixIcon: const Icon(Icons.badge_outlined),
@@ -456,7 +464,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
           const SizedBox(height: 14),
           TextFormField(
-            initialValue: widget.user?.nombreCompleto ?? '',
+            controller: _desaJpCtrl,
             decoration: InputDecoration(
               labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
               prefixIcon: const Icon(Icons.badge_outlined),
@@ -567,7 +575,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           child: Column(
             children: [
               TextFormField(
-                initialValue: widget.user?.nombreCompleto ?? '',
+                controller: _desaJpCtrl,
                 decoration: InputDecoration(
                   labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
                   prefixIcon: Icon(Icons.badge_outlined),
@@ -1394,6 +1402,27 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isDesalojoFlow || _isPuntoMartilloFlow || _isRondasDisuasivasFlow) {
       _cargarDatosDesalojo();
     }
+  }
+
+  void _autoFillByRole() {
+    final name = widget.user?.nombreCompleto ?? '';
+    _desaAuxCtrl.text = '';
+    _desaCpCtrl.text = '';
+    _desaJpCtrl.text = '';
+    switch (rolMovil) {
+      case RolMovil.jp:
+        _desaJpCtrl.text = name;
+        break;
+      case RolMovil.conductor:
+        _desaCpCtrl.text = name;
+        break;
+      case RolMovil.auxiliar:
+        _desaAuxCtrl.text = name;
+        break;
+    }
+    _desaJp = _desaJpCtrl.text;
+    _desaCp = _desaCpCtrl.text;
+    _desaAux = _desaAuxCtrl.text;
   }
 
   TextEditingController _controller(String key) {
