@@ -70,6 +70,34 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final _desaDireccionCtrl = TextEditingController();
   final _ezDetalleCtrl = TextEditingController();
 
+  bool _rtCargando = false;
+  int _rtSection = 0;
+  String _rtJp = '';
+  String _rtMovil = '';
+  String _rtCp = '';
+  String _rtCpGuardado = '';
+  int? _rtPoliciaId;
+  String _rtPoliciaNombre = '';
+  bool _rtPoliciaOtro = false;
+  final _rtPoliciaCtrl = TextEditingController();
+  final _rtJpCtrl = TextEditingController();
+  final _rtCpCtrl = TextEditingController();
+  String _rtDireccion = '';
+  bool _rtDireccionOtro = false;
+  List<Map<String, dynamic>> _rtServidoresPoliciales = [];
+  List<Map<String, dynamic>> _rtDirecciones = [];
+  String _rtAux1 = '';
+  final _rtAux1Ctrl = TextEditingController();
+  String _rtAux2 = '';
+  final _rtAux2Ctrl = TextEditingController();
+  String _rtActividad = '';
+  final _rtActividadCtrl = TextEditingController();
+  String _rtElementos = '';
+  final _rtElementosCtrl = TextEditingController();
+  String _rtCantidad = '';
+  final _rtCantidadCtrl = TextEditingController();
+  bool _rtGuardando = false;
+
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
 
@@ -85,10 +113,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.rondasDisuasivas;
 
+  bool get _isRetiroTemporalFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.retiroTemporal;
+
   bool get _isEasCustomCardFlow {
     if (modulo != TipoModuloCartilla.eas) return false;
     return [
-      TipoCartilla.retiroTemporal,
       TipoCartilla.requerimiento,
       TipoCartilla.colaboracionEntidades,
       TipoCartilla.colaboracionEventos,
@@ -115,6 +146,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _desaPoliciaCtrl.dispose();
     _desaDireccionCtrl.dispose();
     _ezDetalleCtrl.dispose();
+    _rtPoliciaCtrl.dispose();
+    _rtJpCtrl.dispose();
+    _rtCpCtrl.dispose();
+    _rtAux1Ctrl.dispose();
+    _rtAux2Ctrl.dispose();
+    _rtActividadCtrl.dispose();
+    _rtElementosCtrl.dispose();
+    _rtCantidadCtrl.dispose();
     super.dispose();
   }
 
@@ -178,6 +217,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         if (_isDesalojoFlow) _buildDesalojoWizard()
         else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
         else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
+        else if (_isRetiroTemporalFlow) _buildRetiroTemporalWizard()
         else if (_isEasCustomCardFlow) _buildEasCustomForm()
         else _formPanel(),
       ],
@@ -1245,17 +1285,590 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
   }
 
+  Future<void> _cargarDatosRetiroTemporal() async {
+    setState(() => _rtCargando = true);
+    try {
+      final easId = _easDbId;
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(easId),
+        _cargarDirecciones(),
+      ]);
+
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+
+      setState(() {
+        _rtCpGuardado = cpGuardado ?? '';
+        if (_rtCpGuardado.isNotEmpty) {
+          _rtCpCtrl.text = _rtCpGuardado;
+          _rtCp = _rtCpGuardado;
+        }
+        _rtServidoresPoliciales = servidores;
+        _rtMovil = _moviles.first.movil;
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _rtPoliciaId = pid;
+          _rtPoliciaNombre =
+              policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {
+      // Silently fail on temp data load
+    } finally {
+      if (mounted) setState(() => _rtCargando = false);
+    }
+  }
+
   Future<List<Map<String, dynamic>>> _cargarDirecciones() async {
     try {
       final easIdx = CrtCatalog.easStations.indexOf(eas);
       final direcciones = await crtApi.getDirecciones(easIdx + 1);
       if (mounted) {
-        setState(() => _direcciones = direcciones);
+        setState(() {
+          _direcciones = direcciones;
+          if (_isRetiroTemporalFlow) {
+            _rtDirecciones = direcciones;
+          }
+        });
       }
       return direcciones;
     } catch (_) {
       return [];
     }
+  }
+
+  Widget _buildRetiroTemporalWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.backup_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Retiro temporal',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_rtCargando)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildRetiroTemporalStepContent(),
+          const SizedBox(height: 24),
+          _buildRetiroTemporalNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRetiroTemporalStepContent() {
+    if (_rtCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_rtSection == 0) {
+      return _buildRTSection1();
+    }
+    return _buildRTSection2();
+  }
+
+  Widget _buildRTSection1() {
+    final movilItems = _moviles.map((m) => m.movil).toList();
+    final movilValue = _rtMovil.isNotEmpty && movilItems.contains(_rtMovil)
+        ? _rtMovil
+        : movilItems.first;
+    final dirOptions = [
+      ..._rtDirecciones.map((d) => d),
+      const {'id': -1, 'direccion': 'Otra dirección'},
+    ];
+    final dirValue = _rtDireccionOtro
+        ? dirOptions.last
+        : (_rtDireccion.isNotEmpty
+            ? dirOptions.firstWhere(
+                (d) => d['direccion'] == _rtDireccion,
+                orElse: () => dirOptions.last,
+              )
+            : null);
+
+    return Column(
+      children: [
+        _StepCard(
+          step: 1,
+          title: 'Datos del personal',
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _rtJpCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del agente JP',
+                  prefixIcon: Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _rtJp = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 2,
+          title: 'Seleccione móvil',
+          child: DropdownButtonFormField<String>(
+            initialValue: movilValue,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Móvil asignado',
+              prefixIcon: Icon(Icons.directions_car_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: movilItems
+                .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) setState(() => _rtMovil = value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 3,
+          title: 'Datos del conductor',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _rtCpCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del conductor CP',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _rtCp = value;
+                  setState(() {});
+                },
+              ),
+              if (_rtCpGuardado.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Último registro: $_rtCpGuardado',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppThm.secClr,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 4,
+          title: 'Servidor policial',
+          child: Column(
+            children: [
+              DropdownButtonFormField<int?>(
+                initialValue: _rtPoliciaId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Servidor policial',
+                  prefixIcon: Icon(Icons.local_police_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+                  ..._rtServidoresPoliciales.map((sp) {
+                    final id = sp['id'] as int?;
+                    final nombre = sp['nombre'] as String? ?? '';
+                    return DropdownMenuItem(value: id, child: Text(nombre));
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _rtPoliciaId = value;
+                    if (value != null) {
+                      _rtPoliciaOtro = false;
+                      _rtPoliciaNombre = _rtServidoresPoliciales
+                              .firstWhere(
+                                (sp) => sp['id'] == value,
+                                orElse: () => <String, dynamic>{},
+                              )['nombre'] as String? ??
+                          '';
+                    } else {
+                      _rtPoliciaNombre = '';
+                    }
+                    _rtPoliciaCtrl.clear();
+                  });
+                },
+              ),
+              if (_rtPoliciaOtro || (_rtPoliciaId == null && _rtPoliciaNombre.isNotEmpty && !_rtPoliciaOtro))
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _rtPoliciaCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del servidor policial',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _rtPoliciaNombre = value;
+                      setState(() {});
+                    },
+                  ),
+                ),
+              if (!_rtPoliciaOtro && _rtPoliciaId == null && _rtPoliciaNombre.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: InkWell(
+                    onTap: () => setState(() {
+                      _rtPoliciaOtro = true;
+                      _rtPoliciaId = null;
+                    }),
+                    child: const Text(
+                      'Ingresar otro servidor policial',
+                      style: TextStyle(
+                        color: AppThm.secClr,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 5,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  return DropdownMenuItem(value: d, child: Text(nombre));
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'] as int?;
+                  setState(() {
+                    if (id == -1) {
+                      _rtDireccionOtro = true;
+                      _rtDireccion = '';
+                    } else {
+                      _rtDireccionOtro = false;
+                      _rtDireccion = value['direccion'] as String? ?? '';
+                    }
+                  });
+                },
+              ),
+              if (_rtDireccionOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _rtDireccion = value;
+                      setState(() {});
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 6,
+          title: 'Auxiliares',
+          child: Column(
+            children: [
+              TextField(
+                controller: _rtAux1Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 1 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _rtAux1 = value;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _rtAux2Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 2 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _rtAux2 = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRTSection2() {
+    return Column(
+      children: [
+        _StepCard(
+          step: 7,
+          title: 'Actividad comercial',
+          child: TextFormField(
+            controller: _rtActividadCtrl,
+            decoration: const InputDecoration(
+              labelText: '¿Qué actividad comercial realizaba?',
+              prefixIcon: Icon(Icons.store_outlined),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _rtActividad = value;
+              setState(() {});
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Elementos retirados',
+          child: TextFormField(
+            controller: _rtElementosCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Elementos retirados',
+              prefixIcon: Icon(Icons.inventory_2_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onChanged: (value) {
+              _rtElementos = value;
+              setState(() {});
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 9,
+          title: 'Cantidad aproximada',
+          child: TextFormField(
+            controller: _rtCantidadCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Cantidad aproximada',
+              prefixIcon: Icon(Icons.numbers_outlined),
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (value) {
+              _rtCantidad = value;
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRetiroTemporalNavButtons() {
+    final isLast = _rtSection == 1;
+    final isFirst = _rtSection == 0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _rtSection--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: _rtGuardando ? null : () => _generarRetiroTemporal(),
+            icon: _rtGuardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(_rtGuardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _rtIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  void _rtIrSiguiente() async {
+    final saves = <Future<void>>[];
+    if (_rtCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_rtCp.trim()).catchError((_) {}));
+    }
+    if (_rtPoliciaOtro && _rtPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi
+          .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
+          .catchError((_) {}));
+    } else if (_rtPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_rtPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+
+    if (_rtPoliciaOtro && _rtPoliciaNombre.trim().isNotEmpty) {
+      _rtPoliciaOtro = false;
+      _rtPoliciaCtrl.clear();
+      try {
+        _rtServidoresPoliciales =
+            await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo =
+            _rtServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) {
+          _rtPoliciaId = nuevo['id'] as int?;
+        }
+      } catch (_) {}
+    }
+    if (_rtDireccionOtro && _rtDireccion.trim().isNotEmpty) {
+      _rtDireccionOtro = false;
+      try {
+        await crtApi.crearDireccion(_easDbId, _rtDireccion.trim());
+        _rtDirecciones = await crtApi.getDirecciones(_easDbId);
+        _rtDireccion = _rtDireccion.trim();
+      } catch (_) {
+        _rtDirecciones = await crtApi.getDirecciones(_easDbId);
+      }
+    }
+    if (mounted) setState(() => _rtSection++);
+  }
+
+  Future<void> _generarRetiroTemporal() async {
+    if (widget.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicie sesion para generar cartillas')),
+      );
+      return;
+    }
+
+    setState(() => _rtGuardando = true);
+
+    try {
+      final saves = <Future<void>>[];
+      if (_rtCp.trim().isNotEmpty) {
+        saves.add(crtApi.saveCp(_rtCp.trim()).catchError((_) {}));
+      }
+      if (_rtPoliciaOtro && _rtPoliciaNombre.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
+            .catchError((_) {}));
+      } else if (_rtPoliciaId != null) {
+        saves.add(crtApi.savePolicia(_rtPoliciaId).catchError((_) {}));
+      }
+      if (_rtDireccionOtro && _rtDireccion.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearDireccion(_easDbId, _rtDireccion.trim())
+            .catchError((_) {}));
+      }
+      await Future.wait(saves);
+      if (_rtDireccionOtro) _rtDireccionOtro = false;
+
+      final value = _buildRetiroTemporalText();
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
+
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _rtGuardando = false);
+    }
+  }
+
+  String _buildRetiroTemporalText() {
+    final now = DateTime.now();
+    final movilValue = _rtMovil.isNotEmpty ? _rtMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.retiroTemporal,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        values: {
+          '_rt_jp': _rtJp,
+          '_rt_movil': movilValue,
+          '_rt_cp': _rtCp,
+          '_rt_policia': _rtPoliciaNombre,
+          '_rt_direccion': _rtDireccion,
+          '_rt_aux1': _rtAux1,
+          '_rt_aux2': _rtAux2,
+          '_rt_actividad': _rtActividad,
+          '_rt_elementos': _rtElementos,
+          '_rt_cantidad': _rtCantidad,
+        },
+      ),
+    );
   }
 
   Widget _formPanel() {
@@ -1443,6 +2056,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isRondasDisuasivasFlow) {
       return _buildRondasDisuasivasText();
     }
+    if (_isRetiroTemporalFlow) {
+      return _buildRetiroTemporalText();
+    }
     if (_isEasCustomCardFlow) {
       return _buildEasCustomText();
     }
@@ -1612,7 +2228,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
     }
 
-    if (_isDesalojoFlow ||
+    if (_isRetiroTemporalFlow) {
+      _cargarDatosRetiroTemporal();
+    } else if (_isDesalojoFlow ||
         _isPuntoMartilloFlow ||
         _isRondasDisuasivasFlow ||
         _isEasCustomCardFlow) {

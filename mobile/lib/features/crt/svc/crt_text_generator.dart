@@ -58,6 +58,9 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.rondasDisuasivas) {
       return _buildEasRondasDisuasivas(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.retiroTemporal) {
+      return _buildEasRetiroTemporal(data, circuito, causa, direccion);
+    }
     if (_isCardTipo(data.tipo)) {
       return _buildEasGeneric(data, circuito, causa, direccion);
     }
@@ -275,9 +278,88 @@ ${reporta.toString()}
 Adjunto fotografía''';
   }
 
+  static String _buildEasRetiroTemporal(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_rt_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_rt_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_rt_jp');
+    final cp = _v(data, '_rt_cp');
+    final aux1 = _v(data, '_rt_aux1');
+    final aux2 = _v(data, '_rt_aux2');
+    final policia = _v(data, '_rt_policia');
+    final actividad = _v(data, '_rt_actividad');
+    final elementos = _v(data, '_rt_elementos');
+    final cantidad = _v(data, '_rt_cantidad');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final procedimiento = StringBuffer()
+      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con retiro temporal, manteniendo el orden y la seguridad ciudadana.');
+    if (actividad.isNotEmpty || elementos.isNotEmpty || cantidad.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('Se retiraron ${elementos.isEmpty ? "elementos" : elementos} (cantidad aproximada: ${cantidad.isEmpty ? "no determinada" : cantidad})${actividad.isEmpty ? "." : " relacionados con actividad comercial de $actividad."}');
+    }
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      if (jp.isNotEmpty) {
+        reporta.writeln('*Aux.:* $jp');
+      }
+      if (aux1.isNotEmpty) {
+        reporta.writeln('*Aux.:* $aux1');
+      }
+      if (aux2.isNotEmpty) {
+        reporta.writeln('*Aux.:* $aux2');
+      }
+      reporta.write('*POLICÍA:* $policia');
+    } else {
+      reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+      if (aux1.isNotEmpty) {
+        reporta.writeln();
+        reporta.write('*Aux.:* $aux1');
+      }
+      if (aux2.isNotEmpty) {
+        reporta.writeln();
+        reporta.write('*Aux.:* $aux2');
+      }
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+${procedimiento.toString()}
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString()}
+
+*"Lealtad, Valor y Orden"
+
+Adjunto fotografía''';
+  }
+
   static bool _isCardTipo(TipoCartilla tipo) {
     return [
-      TipoCartilla.retiroTemporal,
       TipoCartilla.requerimiento,
       TipoCartilla.colaboracionEntidades,
       TipoCartilla.colaboracionEventos,
