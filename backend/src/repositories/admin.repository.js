@@ -658,16 +658,19 @@ async function listarAsignaciones(query = {}) {
         params.push(s, s, s, s, s);
     }
 
-    let countSql = `
-        SELECT COUNT(*) AS total
-        FROM dbo.movil_eas_asignaciones a
-        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
-        INNER JOIN dbo.moviles m ON m.id = a.movil_id
-        INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
-        WHERE 1=1 ${searchClause}
-    `;
-    const countResult = await withConnection((conexion) => conexion.query(countSql, params));
-    const total = countResult[0]?.total ?? 0;
+    let total = 0;
+    if (paginate || search) {
+        const countSql = `
+            SELECT COUNT(*) AS total
+            FROM dbo.movil_eas_asignaciones a
+            INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
+            INNER JOIN dbo.moviles m ON m.id = a.movil_id
+            INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
+            WHERE 1=1 ${searchClause}
+        `;
+        const countResult = await withConnection((conexion) => conexion.query(countSql, params));
+        total = countResult[0]?.total ?? 0;
+    }
 
     if (paginate && total === 0) {
         return { datos: [], total: 0, page };
@@ -693,7 +696,7 @@ async function listarAsignaciones(query = {}) {
     if (paginate) dataParams.push(offset, limit);
 
     const datos = await withConnection((conexion) => conexion.query(dataSql, dataParams));
-    return { datos, total, page: paginate ? page : null };
+    return { datos, total: paginate || search ? total : null, page: paginate ? page : null };
 }
 
 const TABLAS_PERMITIDAS = new Set([

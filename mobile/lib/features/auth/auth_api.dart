@@ -14,7 +14,7 @@ class AuthApi {
     final response = await _client.post<AppUser>(
       'auth/login',
       {
-        'usuario': usuario,
+        'correo': usuario,
         'password': password,
       },
       (value) {

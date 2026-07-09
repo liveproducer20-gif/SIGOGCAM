@@ -25,14 +25,17 @@ async function obtenerTodo(query = {}) {
             params.push(s, s, s, s);
         }
 
-        let countSql = `
-            SELECT COUNT(*) AS total
-            FROM vw_personal_detalle vd
-            INNER JOIN dbo.personal p ON p.id = vd.id
-            WHERE 1=1 ${searchClause}
-        `;
-        const countResult = await conexion.query(countSql, params);
-        const total = countResult[0]?.total ?? 0;
+        let total = 0;
+        if (paginate || search) {
+            const countSql = `
+                SELECT COUNT(*) AS total
+                FROM vw_personal_detalle vd
+                INNER JOIN dbo.personal p ON p.id = vd.id
+                WHERE 1=1 ${searchClause}
+            `;
+            const countResult = await conexion.query(countSql, params);
+            total = countResult[0]?.total ?? 0;
+        }
 
         if (paginate && total === 0) {
             return { datos: [], total: 0, page };
@@ -57,7 +60,7 @@ async function obtenerTodo(query = {}) {
         if (paginate) dataParams.push(offset, limit);
 
         const datos = await conexion.query(dataSql, dataParams);
-        return { datos, total, page: paginate ? page : null };
+        return { datos, total: paginate || search ? total : null, page: paginate ? page : null };
     } finally {
         await conexion.close();
     }
