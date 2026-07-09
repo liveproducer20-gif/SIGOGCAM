@@ -648,7 +648,7 @@ async function guardarPermisosRol(conexion, rolId, permisos) {
 }
 
 async function listarAsignaciones(query = {}) {
-    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const { paginate, page, limit, offset, search } = parsePaginacion(query);
 
     let searchClause = '';
     const params = [];
@@ -670,7 +670,7 @@ async function listarAsignaciones(query = {}) {
     const total = countResult[0]?.total ?? 0;
 
     if (paginate && total === 0) {
-        return { datos: [], total: 0, page: 1 };
+        return { datos: [], total: 0, page };
     }
 
     const dataSql = `
