@@ -35,7 +35,7 @@ class AdmHomeScr extends StatefulWidget {
   State<AdmHomeScr> createState() => _AdmHomeScrState();
 }
 
-class _AdmHomeScrState extends State<AdmHomeScr> with SingleTickerProviderStateMixin {
+class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   final api = AdmApi();
   late TabController _tabController;
 
