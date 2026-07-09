@@ -164,6 +164,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _reqAux2 = '';
   final _reqAux2Ctrl = TextEditingController();
   String _reqSolicitante = '';
+  String _reqSolicitanteOtro = '';
+  final _reqSolicitanteOtroCtrl = TextEditingController();
   String _reqTipo = 'Requerimiento';
   String _reqInfoAdicional = '';
   bool _reqGuardando = false;
@@ -240,6 +242,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _reqCpCtrl.dispose();
     _reqAux1Ctrl.dispose();
     _reqAux2Ctrl.dispose();
+    _reqSolicitanteOtroCtrl.dispose();
     super.dispose();
   }
 
@@ -3104,27 +3107,48 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         _StepCard(
           step: 6,
           title: 'Solicitante',
-          child: DropdownButtonFormField<String>(
-            initialValue: _reqSolicitante.isNotEmpty ? _reqSolicitante : null,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: '¿Quién solicita el requerimiento?',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: 'ECO-12', child: Text('ECO-12')),
-              DropdownMenuItem(value: 'CR', child: Text('CR')),
-              DropdownMenuItem(value: 'OJ1', child: Text('OJ1')),
-              DropdownMenuItem(value: 'Jefe de Control Municipal', child: Text('Jefe de Control Municipal')),
-              DropdownMenuItem(value: 'Lima Oscar', child: Text('Lima Oscar')),
-              DropdownMenuItem(value: 'Sircon Andrade', child: Text('Sircon Andrade')),
-              DropdownMenuItem(value: 'Sr. Figallo', child: Text('Sr. Figallo')),
-              DropdownMenuItem(value: 'Sr. Alex Anchundia', child: Text('Sr. Alex Anchundia')),
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _reqSolicitante.isNotEmpty ? _reqSolicitante : null,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: '¿Quién solicita el requerimiento?',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                  DropdownMenuItem(value: 'CR', child: Text('CR')),
+                  DropdownMenuItem(value: 'OJ1', child: Text('OJ1')),
+                  DropdownMenuItem(value: 'Jefe de Control Municipal', child: Text('Jefe de Control Municipal')),
+                  DropdownMenuItem(value: 'Lima Oscar', child: Text('Lima Oscar')),
+                  DropdownMenuItem(value: 'Sircon Andrade', child: Text('Sircon Andrade')),
+                  DropdownMenuItem(value: 'Sr. Figallo', child: Text('Sr. Figallo')),
+                  DropdownMenuItem(value: 'Sr. Alex Anchundia', child: Text('Sr. Alex Anchundia')),
+                  DropdownMenuItem(value: 'Otro', child: Text('Otro')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _reqSolicitante = value);
+                },
+              ),
+              if (_reqSolicitante == 'Otro')
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _reqSolicitanteOtroCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del solicitante',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _reqSolicitanteOtro = value;
+                      setState(() {});
+                    },
+                  ),
+                ),
             ],
-            onChanged: (value) {
-              if (value != null) setState(() => _reqSolicitante = value);
-            },
           ),
         ),
         const SizedBox(height: 20),
@@ -3326,7 +3350,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           '_req_aux1': _reqAux1,
           '_req_aux2': _reqAux2,
           '_req_userNombre': widget.user?.nombreCompleto ?? '',
-          '_req_solicitante': _reqSolicitante,
+          '_req_solicitante': _reqSolicitante == 'Otro' ? _reqSolicitanteOtro : _reqSolicitante,
           '_req_tipo': _reqTipo,
           '_req_infoAdicional': _reqInfoAdicional,
         },
