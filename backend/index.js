@@ -3,6 +3,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 const { getPool } = require('./src/config/db');
+const { errorHandler, notFoundHandler } = require('./src/middleware/error.middleware');
+
 const authRoutes = require('./src/routes/auth.routes');
 const personalRoutes = require('./src/routes/personal.routes');
 const eventosRoutes = require('./src/routes/eventos.routes');
@@ -19,11 +21,11 @@ const app = express();
 app.use(cors());
 
 app.use((req, res, next) => {
-  res.set('Content-Type', 'application/json; charset=utf-8');
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
-  next();
+    res.set('Content-Type', 'application/json; charset=utf-8');
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+    next();
 });
 
 app.use(express.json({ limit: process.env.JSON_LIMIT || '25mb' }));
@@ -41,86 +43,45 @@ app.use('/api/insignias', insigniasRoutes);
 app.use('/api/usuarios', usuariosInsigniasRoutes);
 
 app.get('/api', (req, res) => {
-  res.json({
-    ok: true,
-    mensaje: 'API BITSAC funcionando correctamente',
-    rutas: [
-      '/api/auth',
-      '/api/catalogos',
-      '/api/admin',
-      '/api/personal',
-      '/api/eventos',
-      '/api/anuncios',
-      '/api/cartillas',
-      '/api/insignias',
-      '/api/probar-db'
-    ]
-  });
+    res.json({
+        ok: true,
+        mensaje: 'API BITSAC funcionando correctamente',
+        rutas: [
+            '/api/auth', '/api/catalogos', '/api/admin',
+            '/api/personal', '/api/eventos', '/api/anuncios',
+            '/api/cartillas', '/api/insignias', '/api/probar-db'
+        ]
+    });
 });
 
 app.get('/', (req, res) => {
-  res.send('API BITSAC funcionando correctamente');
+    res.send('API BITSAC funcionando correctamente');
 });
 
 async function probarDb(req, res) {
-  try {
-    const pool = await getPool();
-    const connection = await pool.connect();
-    const result = await connection.query('SELECT DB_NAME() AS baseDatos');
-    await connection.close();
-
-    res.json({
-      ok: true,
-      mensaje: 'Conexión correcta con SQL Server',
-      baseDatos: result[0].baseDatos
-    });
-  } catch (error) {
-    res.status(500).json({
-      ok: false,
-      mensaje: 'Error al conectar con SQL Server',
-      error: error.message,
-      detalle: error.odbcErrors || error
-    });
-  }
+    try {
+        const pool = await getPool();
+        const connection = await pool.connect();
+        const result = await connection.query('SELECT DB_NAME() AS baseDatos');
+        await connection.close();
+        res.json({ ok: true, mensaje: 'Conexión correcta con SQL Server', baseDatos: result[0].baseDatos });
+    } catch (error) {
+        res.status(500).json({ ok: false, mensaje: 'Error al conectar con SQL Server', error: error.message });
+    }
 }
 
 app.get('/api/probar-db', probarDb);
 
-app.use((req, res) => {
-  res.status(404).json({
-    ok: false,
-    mensaje: `Ruta no encontrada: ${req.method} ${req.originalUrl}`
-  });
-});
-
-app.use((error, req, res, next) => {
-  if (error?.type === 'entity.too.large') {
-    return res.status(413).json({
-      ok: false,
-      mensaje: 'El archivo o imagen supera el tamaño permitido por la API.'
-    });
-  }
-
-  if (error instanceof SyntaxError && 'body' in error) {
-    return res.status(400).json({
-      ok: false,
-      mensaje: 'El cuerpo enviado no es un JSON válido.'
-    });
-  }
-
-  return res.status(500).json({
-    ok: false,
-    mensaje: error?.message || 'Error interno del servidor'
-  });
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 3000;
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
-  console.error('ERROR: JWT_SECRET no configurado o muy corto. Defina una clave segura en .env');
-  process.exit(1);
+    console.error('ERROR: JWT_SECRET no configurado o muy corto. Defina una clave segura en .env');
+    process.exit(1);
 }
 
 app.listen(PORT, () => {
-  console.log(`Servidor BITSAC corriendo en puerto ${PORT}`);
+    console.log(`Servidor BITSAC corriendo en puerto ${PORT}`);
 });

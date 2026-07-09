@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 
-import 'adm_api.dart';
+import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
-class CatalogosTab extends StatefulWidget {
-  final AdmApi api;
-  const CatalogosTab({super.key, required this.api});
+class CatalogosTab extends AdmCrudTab {
+  final int tabIndex;
+  const CatalogosTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
-  State<CatalogosTab> createState() => _CatalogosTabState();
+  State<AdmCrudTab> createState() => _CatalogosTabState();
 }
 
-class _CatalogosTabState extends State<CatalogosTab> {
+class _CatalogosTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
   static const codigos = [
     'AREAS',
     'FUNCIONES_OPERATIVAS',
@@ -27,12 +28,54 @@ class _CatalogosTabState extends State<CatalogosTab> {
     'ESTADOS_MOVIL',
   ];
   String codigo = codigos.first;
-  late Future<List<Map<String, dynamic>>> future;
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
 
   @override
   void initState() {
     super.initState();
-    future = widget.api.getCatalogo(codigo);
+    _future = Future.value([]);
+    initLazy((widget as CatalogosTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getCatalogo(codigo, page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
+  }
+
+  void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
+    setState(() {
+      _search = value;
+      _page = 1;
+    });
+    _load();
+  }
+
+  void _cambiarCatalogo(String value) {
+    setState(() {
+      codigo = value;
+      _page = 1;
+      _search = '';
+    });
+    _load();
   }
 
   @override
@@ -40,10 +83,16 @@ class _CatalogosTabState extends State<CatalogosTab> {
     return AdmAsyncTable(
       title: 'Catalogos maestros',
       subtitle: 'Grados, areas, funciones, grupos, jornadas, distritos y tipos.',
-      future: future,
+      future: _future,
       columns: const ['Código', 'Nombre', 'Orden', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
+      total: _total,
+      currentPage: _page,
+      totalPages: _totalPages,
+      onPageChanged: _onPageChanged,
+      onSearch: _onSearch,
+      searchHint: 'Buscar detalle...',
       header: DropdownButtonFormField<String>(
         initialValue: codigo,
         decoration: const InputDecoration(
@@ -55,10 +104,7 @@ class _CatalogosTabState extends State<CatalogosTab> {
             .toList(),
         onChanged: (value) {
           if (value == null) return;
-          setState(() {
-            codigo = value;
-            future = widget.api.getCatalogo(codigo);
-          });
+          _cambiarCatalogo(value);
         },
       ),
       rowBuilder: (item) => [
@@ -78,12 +124,6 @@ class _CatalogosTabState extends State<CatalogosTab> {
         ),
       ],
     );
-  }
-
-  void _reload() {
-    setState(() {
-      future = widget.api.getCatalogo(codigo);
-    });
   }
 
   Future<void> _edit(Map<String, dynamic>? item) async {

@@ -4,29 +4,30 @@ const handlers = {
     listarCatalogos: handle(() => service.listarCatalogos()),
     listarDetalles: handle((req) => service.listarDetalles(
         req.params.codigo,
-        req.query.incluirInactivos === '1'
+        req.query.incluirInactivos === '1',
+        req.query
     )),
     crearDetalle: handle((req) => service.crearDetalle(req.params.codigo, req.body), 201, 'Detalle creado correctamente', 'detalleId'),
     actualizarDetalle: handle((req) => service.actualizarDetalle(req.params.id, req.body), 200, 'Detalle actualizado correctamente'),
     cambiarEstadoDetalle: handle((req) => service.cambiarEstadoDetalle(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
 
-    listarRoles: handle(() => service.listarRoles()),
+    listarRoles: handle((req) => service.listarRoles(req.query)),
     crearRol: handle((req) => service.crearRol(req.body), 201, 'Rol creado correctamente', 'rolId'),
     actualizarRol: handle((req) => service.actualizarRol(req.params.id, req.body), 200, 'Rol actualizado correctamente'),
     cambiarEstadoRol: handle((req) => service.cambiarEstadoRol(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
     listarPermisos: handle(() => service.listarPermisos()),
 
-    listarLugares: handle(() => service.listarLugares()),
+    listarLugares: handle((req) => service.listarLugares(req.query)),
     crearLugar: handle((req) => service.crearLugar(req.body), 201, 'Lugar de servicio creado correctamente', 'lugarId'),
     actualizarLugar: handle((req) => service.actualizarLugar(req.params.id, req.body), 200, 'Lugar de servicio actualizado correctamente'),
     cambiarEstadoLugar: handle((req) => service.cambiarEstadoLugar(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
 
-    listarEas: handle(() => service.listarEas()),
+    listarEas: handle((req) => service.listarEas(req.query)),
     crearEas: handle((req) => service.crearEas(req.body), 201, 'EAS creado correctamente', 'easId'),
     actualizarEas: handle((req) => service.actualizarEas(req.params.id, req.body), 200, 'EAS actualizado correctamente'),
     cambiarEstadoEas: handle((req) => service.cambiarEstadoEas(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
 
-    listarMoviles: handle(() => service.listarMoviles()),
+    listarMoviles: handle((req) => service.listarMoviles(req.query)),
     crearMovil: handle((req) => service.crearMovil(req.body), 201, 'Movil creado correctamente', 'movilId'),
     actualizarMovil: handle((req) => service.actualizarMovil(req.params.id, req.body), 200, 'Movil actualizado correctamente'),
     cambiarEstadoMovil: handle((req) => service.cambiarEstadoMovil(req.params.id, req.body.activo), 200, 'Estado actualizado correctamente'),
@@ -57,14 +58,18 @@ const handlers = {
 function handle(action, status = 200, mensaje = null, idKey = null) {
     return async (req, res) => {
         try {
-            const datos = await action(req);
+            const result = await action(req);
             const body = { ok: true };
 
             if (mensaje) body.mensaje = mensaje;
             if (idKey) {
-                body[idKey] = datos;
+                body[idKey] = result;
+            } else if (result && typeof result === 'object' && !Array.isArray(result) && result.datos !== undefined) {
+                body.datos = result.datos;
+                if (result.total !== null && result.total !== undefined) body.total = result.total;
+                if (result.page !== null && result.page !== undefined) body.page = result.page;
             } else {
-                body.datos = datos;
+                body.datos = result;
             }
 
             res.status(status).json(body);

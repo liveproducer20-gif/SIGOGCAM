@@ -1,8 +1,8 @@
 const bcrypt = require('bcrypt');
 const repository = require('../repositories/personal.repository');
 
-async function obtenerTodo() {
-    return await repository.obtenerTodo();
+async function obtenerTodo(query = {}) {
+    return await repository.obtenerTodo(query);
 }
 
 async function obtenerOperativos() {

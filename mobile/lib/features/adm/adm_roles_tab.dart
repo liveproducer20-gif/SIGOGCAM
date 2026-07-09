@@ -1,24 +1,58 @@
 import 'package:flutter/material.dart';
 
-import 'adm_api.dart';
+import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
-class RolesTab extends StatefulWidget {
-  final AdmApi api;
-  const RolesTab({super.key, required this.api});
+class RolesTab extends AdmCrudTab {
+  final int tabIndex;
+  const RolesTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
-  State<RolesTab> createState() => _RolesTabState();
+  State<AdmCrudTab> createState() => _RolesTabState();
 }
 
-class _RolesTabState extends State<RolesTab> {
-  late Future<List<Map<String, dynamic>>> future;
+class _RolesTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
 
   @override
   void initState() {
     super.initState();
-    future = widget.api.getRoles();
+    _future = Future.value([]);
+    initLazy((widget as RolesTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getRoles(page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
+  }
+
+  void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
+    setState(() {
+      _search = value;
+      _page = 1;
+    });
+    _load();
   }
 
   @override
@@ -26,10 +60,16 @@ class _RolesTabState extends State<RolesTab> {
     return AdmAsyncTable(
       title: 'Roles',
       subtitle: 'Matriz de permisos del sistema por rol institucional.',
-      future: future,
+      future: _future,
       columns: const ['Nombre', 'Descripción', 'Permisos', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
+      total: _total,
+      currentPage: _page,
+      totalPages: _totalPages,
+      onPageChanged: _onPageChanged,
+      onSearch: _onSearch,
+      searchHint: 'Buscar rol...',
       rowBuilder: (item) => [
         admText(item['nombre']),
         admText(item['descripcion']),
@@ -43,12 +83,6 @@ class _RolesTabState extends State<RolesTab> {
         ),
       ],
     );
-  }
-
-  void _reload() {
-    setState(() {
-      future = widget.api.getRoles();
-    });
   }
 
   Future<void> _edit(Map<String, dynamic>? item) async {

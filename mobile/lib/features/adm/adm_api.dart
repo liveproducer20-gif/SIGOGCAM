@@ -5,20 +5,13 @@ class AdmApi {
 
   AdmApi({ApiClient? client}) : _client = client ?? ApiClient();
 
-  Future<List<Map<String, dynamic>>> getPersonal() => _getList('personal');
-  Future<void> createPersonal(Map<String, dynamic> data) =>
-      _post('personal', data);
-  Future<void> updatePersonal(int id, Map<String, dynamic> data) =>
-      _put('personal/$id', data);
-  Future<void> setPersonalActivo(int id, bool activo) =>
-      _put('personal/$id/estado', {'activo': activo});
-  Future<void> resetPassword(int id) =>
-      _post('personal/$id/reset-password', {});
+  Future<List<Map<String, dynamic>>> getPersonalList() => _getList('personal');
+  Future<AdmPaginatedResult> getPersonal({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('personal?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
 
-  Future<List<Map<String, dynamic>>> getCatalogos() =>
-      _getList('admin/catalogos');
-  Future<List<Map<String, dynamic>>> getCatalogo(String codigo) =>
-      _getList('admin/catalogos/$codigo?incluirInactivos=1');
+  Future<AdmPaginatedResult> getCatalogos() => _getPaginated('admin/catalogos', 50);
+  Future<AdmPaginatedResult> getCatalogo(String codigo, {int page = 1, int limit = 100, String search = ''}) =>
+      _getPaginated('admin/catalogos/$codigo?incluirInactivos=1&page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<void> createCatalogoDetalle(String codigo, Map<String, dynamic> data) =>
       _post('admin/catalogos/$codigo', data);
   Future<void> updateCatalogoDetalle(int id, Map<String, dynamic> data) =>
@@ -26,7 +19,10 @@ class AdmApi {
   Future<void> setCatalogoDetalleActivo(int id, bool activo) =>
       _put('admin/catalogos/detalles/$id/estado', {'activo': activo});
 
-  Future<List<Map<String, dynamic>>> getRoles() => _getList('admin/roles');
+  Future<List<Map<String, dynamic>>> getRolesList() =>
+      _getList('admin/roles');
+  Future<AdmPaginatedResult> getRoles({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('admin/roles?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<List<Map<String, dynamic>>> getPermisos() =>
       _getList('admin/permisos');
   Future<void> createRol(Map<String, dynamic> data) =>
@@ -36,8 +32,10 @@ class AdmApi {
   Future<void> setRolActivo(int id, bool activo) =>
       _put('admin/roles/$id/estado', {'activo': activo});
 
-  Future<List<Map<String, dynamic>>> getLugares() =>
+  Future<List<Map<String, dynamic>>> getLugaresList() =>
       _getList('admin/lugares-servicio');
+  Future<AdmPaginatedResult> getLugares({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('admin/lugares-servicio?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<void> createLugar(Map<String, dynamic> data) =>
       _post('admin/lugares-servicio', data);
   Future<void> updateLugar(int id, Map<String, dynamic> data) =>
@@ -45,7 +43,10 @@ class AdmApi {
   Future<void> setLugarActivo(int id, bool activo) =>
       _put('admin/lugares-servicio/$id/estado', {'activo': activo});
 
-  Future<List<Map<String, dynamic>>> getEas() => _getList('admin/eas');
+  Future<List<Map<String, dynamic>>> getEasList() =>
+      _getList('admin/eas');
+  Future<AdmPaginatedResult> getEas({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('admin/eas?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<void> createEas(Map<String, dynamic> data) =>
       _post('admin/eas', data);
   Future<void> updateEas(int id, Map<String, dynamic> data) =>
@@ -64,8 +65,10 @@ class AdmApi {
   Future<void> setRutaActivo(int id, bool activo) =>
       _put('admin/rutas/$id/estado', {'activo': activo});
 
-  Future<List<Map<String, dynamic>>> getMoviles() =>
+  Future<List<Map<String, dynamic>>> getMovilesList() =>
       _getList('admin/moviles');
+  Future<AdmPaginatedResult> getMoviles({int page = 1, int limit = 50, String search = ''}) =>
+      _getPaginated('admin/moviles?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
   Future<void> createMovil(Map<String, dynamic> data) =>
       _post('admin/moviles', data);
   Future<void> updateMovil(int id, Map<String, dynamic> data) =>
@@ -80,6 +83,10 @@ class AdmApi {
   Future<void> updateAsignacion(int id, Map<String, dynamic> data) =>
       _put('admin/movil-eas-asignaciones/$id', data);
 
+  Future<void> createPersonal(Map<String, dynamic> data) => _post('personal', data);
+  Future<void> updatePersonal(int id, Map<String, dynamic> data) => _put('personal/$id', data);
+  Future<void> setPersonalActivo(int id, bool activo) => _put('personal/$id/estado', {'activo': activo});
+  Future<void> resetPassword(int id) => _post('personal/$id/reset-password', {});
   Future<void> deletePersonal(int id) => _delete('personal/$id');
   Future<void> deleteCatalogoDetalle(int id) => _delete('admin/catalogos/detalles/$id');
   Future<void> deleteRol(int id) => _delete('admin/roles/$id');
@@ -105,6 +112,14 @@ class AdmApi {
     return response.datos ?? [];
   }
 
+  Future<AdmPaginatedResult> _getPaginated(String path, int limit) async {
+    final full = await _client.getFull(path);
+    final datos = parseApiList(full['datos']);
+    final total = full['total'] as int? ?? datos.length;
+    final page = full['page'] as int? ?? 1;
+    return AdmPaginatedResult(datos: datos, total: total, page: page, limit: limit);
+  }
+
   Future<void> _post(String path, Map<String, dynamic> data) async {
     await _client.post<bool>(path, data, (_) => true);
   }
@@ -115,5 +130,24 @@ class AdmApi {
 
   Future<void> _delete(String path) async {
     await _client.delete<bool>(path, (_) => true);
+  }
+}
+
+class AdmPaginatedResult {
+  final List<Map<String, dynamic>> datos;
+  final int total;
+  final int page;
+  final int limit;
+
+  const AdmPaginatedResult({
+    required this.datos,
+    required this.total,
+    this.page = 1,
+    this.limit = 50,
+  });
+
+  int get totalPages {
+    if (total == 0) return 1;
+    return (total / limit).ceil();
   }
 }

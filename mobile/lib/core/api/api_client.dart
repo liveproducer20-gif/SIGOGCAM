@@ -151,6 +151,11 @@ class ApiClient {
     http.Response response,
     T Function(Object? value) parseDatos,
   ) {
+    final decoded = _decodeResponse(response);
+    return ApiResponse<T>.fromJson(decoded, parseDatos);
+  }
+
+  Map<String, dynamic> _decodeResponse(http.Response response) {
     final Object? raw;
     try {
       raw = jsonDecode(response.body);
@@ -185,6 +190,24 @@ class ApiClient {
       );
     }
 
-    return ApiResponse<T>.fromJson(decoded, parseDatos);
+    return decoded;
+  }
+
+  /// Obtiene respuesta completa como mapa (útil para endpoints paginados).
+  Future<Map<String, dynamic>> getFull(String path) async {
+    try {
+      final response = await _client
+          .get(_uri(path), headers: _headers())
+          .timeout(const Duration(seconds: 12));
+      return _decodeResponse(response);
+    } on TimeoutException {
+      throw Exception(
+        'La API no respondió a tiempo. Verifique el backend en $baseUrl',
+      );
+    } on http.ClientException {
+      throw Exception(
+        'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+      );
+    }
   }
 }

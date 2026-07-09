@@ -35,62 +35,55 @@ class AdmHomeScr extends StatefulWidget {
 
 class _AdmHomeScrState extends State<AdmHomeScr> {
   final api = AdmApi();
+  List<_TabDef>? _cachedTabs;
 
-  List<_TabDef> get _tabs {
+  List<_TabDef> _buildTabs() {
     final list = <_TabDef>[];
     if (widget.user.hasPermission('personal.ver')) {
       list.add(_TabDef(
-        icon: Icons.groups_outlined,
-        label: 'Personal',
-        child: PersonalTab(api: api),
+        icon: Icons.groups_outlined, label: 'Personal',
+        child: PersonalTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('catalogos.ver')) {
       list.add(_TabDef(
-        icon: Icons.list_alt_outlined,
-        label: 'Catalogos',
-        child: CatalogosTab(api: api),
+        icon: Icons.list_alt_outlined, label: 'Catalogos',
+        child: CatalogosTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('roles.ver')) {
       list.add(_TabDef(
-        icon: Icons.admin_panel_settings_outlined,
-        label: 'Roles',
-        child: RolesTab(api: api),
+        icon: Icons.admin_panel_settings_outlined, label: 'Roles',
+        child: RolesTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('lugares_servicio.ver')) {
       list.add(_TabDef(
-        icon: Icons.place_outlined,
-        label: 'Lugares',
-        child: LugaresTab(api: api),
+        icon: Icons.place_outlined, label: 'Lugares',
+        child: LugaresTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('rutas.ver')) {
       list.add(_TabDef(
-        icon: Icons.map_outlined,
-        label: 'Rutas',
+        icon: Icons.map_outlined, label: 'Rutas',
         child: RutasTab(api: api),
       ));
     }
     if (widget.user.hasPermission('eas.ver')) {
       list.add(_TabDef(
-        icon: Icons.location_city_outlined,
-        label: 'EAS',
-        child: EasTab(api: api),
+        icon: Icons.location_city_outlined, label: 'EAS',
+        child: EasTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('moviles.ver')) {
       list.add(_TabDef(
-        icon: Icons.directions_car_outlined,
-        label: 'Moviles',
+        icon: Icons.directions_car_outlined, label: 'Moviles',
         child: MovilesTab(api: api, tabIndex: list.length),
       ));
     }
     if (widget.user.hasPermission('moviles.asignar')) {
       list.add(_TabDef(
-        icon: Icons.compare_arrows_outlined,
-        label: 'Asignaciones',
+        icon: Icons.compare_arrows_outlined, label: 'Asignaciones',
         child: AsignacionesTab(api: api),
       ));
     }
@@ -99,7 +92,8 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
 
   @override
   Widget build(BuildContext context) {
-    final tabs = _tabs;
+    _cachedTabs ??= _buildTabs();
+    final tabs = _cachedTabs!;
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
@@ -136,7 +130,8 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        for (final tab in tabs) tab.child,
+                        for (final tab in tabs)
+                          RepaintBoundary(child: tab.child),
                       ],
                     ),
                   ),

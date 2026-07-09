@@ -1,11 +1,44 @@
 const { getPool } = require('../config/db');
 
-async function obtenerTodo() {
+function parsePaginacion(query) {
+    const rawPage = query.page ? parseInt(query.page, 10) : NaN;
+    const hasPaginacion = Number.isInteger(rawPage) && rawPage > 0;
+    const page = hasPaginacion ? rawPage : 1;
+    const limit = hasPaginacion ? Math.min(500, Math.max(1, parseInt(query.limit, 10) || 50)) : 0;
+    const offset = (page - 1) * (limit || 1);
+    const search = (query.search || '').trim();
+    return { paginate: hasPaginacion, page, limit, offset, search };
+}
+
+async function obtenerTodo(query = {}) {
     const pool = await getPool();
     const conexion = await pool.connect();
 
     try {
-        const sql = `
+        const { paginate, limit, offset, search } = parsePaginacion(query);
+
+        let searchClause = '';
+        const params = [];
+        if (search) {
+            searchClause = ' AND (vd.nombres LIKE ? OR vd.apellidos LIKE ? OR vd.cedula LIKE ? OR vd.correo_institucional LIKE ?)';
+            const s = `%${search}%`;
+            params.push(s, s, s, s);
+        }
+
+        let countSql = `
+            SELECT COUNT(*) AS total
+            FROM vw_personal_detalle vd
+            INNER JOIN dbo.personal p ON p.id = vd.id
+            WHERE 1=1 ${searchClause}
+        `;
+        const countResult = await conexion.query(countSql, params);
+        const total = countResult[0]?.total ?? 0;
+
+        if (paginate && total === 0) {
+            return { datos: [], total: 0, page: 1 };
+        }
+
+        const dataSql = `
             SELECT
                 vd.id, vd.cedula, vd.nombres, vd.apellidos,
                 vd.nombre_completo, vd.correo_institucional, vd.telefono,
@@ -16,10 +49,15 @@ async function obtenerTodo() {
                 p.tipo_rotacion_id, p.rol_id, p.estado_personal_id
             FROM vw_personal_detalle vd
             INNER JOIN dbo.personal p ON p.id = vd.id
+            WHERE 1=1 ${searchClause}
             ORDER BY vd.apellidos, vd.nombres
+            ${paginate ? 'OFFSET ? ROWS FETCH NEXT ? ROWS ONLY' : ''}
         `;
+        const dataParams = [...params];
+        if (paginate) dataParams.push(offset, limit);
 
-        return await conexion.query(sql);
+        const datos = await conexion.query(dataSql, dataParams);
+        return { datos, total, page: paginate ? page : null };
     } finally {
         await conexion.close();
     }

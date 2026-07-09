@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/auth/app_user.dart';
@@ -170,6 +170,113 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _reqInfoAdicional = '';
   bool _reqGuardando = false;
 
+  bool _ciuCargando = false;
+  int _ciuSection = 0;
+  String _ciuJp = '';
+  String _ciuMovil = '';
+  String _ciuCp = '';
+  String _ciuCpGuardado = '';
+  int? _ciuPoliciaId;
+  String _ciuPoliciaNombre = '';
+  bool _ciuPoliciaOtro = false;
+  final _ciuPoliciaCtrl = TextEditingController();
+  final _ciuJpCtrl = TextEditingController();
+  final _ciuCpCtrl = TextEditingController();
+  String _ciuDireccion = '';
+  bool _ciuDireccionOtro = false;
+  List<Map<String, dynamic>> _ciuServidoresPoliciales = [];
+  List<Map<String, dynamic>> _ciuDirecciones = [];
+  String _ciuAux1 = '';
+  final _ciuAux1Ctrl = TextEditingController();
+  String _ciuAux2 = '';
+  final _ciuAux2Ctrl = TextEditingController();
+  String _ciuTipoGeneral = 'denuncia';
+  String _ciuTipoEspecifico = '';
+  String _ciuNombreCiudadano = '';
+  final _ciuNombreCiudadanoCtrl = TextEditingController();
+  String _ciuCedula = '';
+  final _ciuCedulaCtrl = TextEditingController();
+  String _ciuCelular = '';
+  final _ciuCelularCtrl = TextEditingController();
+  String _ciuLugar = '';
+  final _ciuLugarCtrl = TextEditingController();
+  String _ciuBienesRobados = '';
+  final _ciuBienesRobadosCtrl = TextEditingController();
+  String _ciuValorRobado = '';
+  final _ciuValorRobadoCtrl = TextEditingController();
+  String _ciuBienesPerdidos = '';
+  final _ciuBienesPerdidosCtrl = TextEditingController();
+  String _ciuValorPerdido = '';
+  final _ciuValorPerdidoCtrl = TextEditingController();
+  String _ciuNombreLocal = '';
+  final _ciuNombreLocalCtrl = TextEditingController();
+  String _ciuReferenciaLocal = '';
+  final _ciuReferenciaLocalCtrl = TextEditingController();
+  String _ciuMotivoExtorsion = '';
+  final _ciuMotivoExtorsionCtrl = TextEditingController();
+  String _ciuNombreAmenazante = '';
+  final _ciuNombreAmenazanteCtrl = TextEditingController();
+  String _ciuCedulaAmenazante = '';
+  final _ciuCedulaAmenazanteCtrl = TextEditingController();
+  String _ciuTextoAmenaza = '';
+  final _ciuTextoAmenazaCtrl = TextEditingController();
+  String _ciuNombreDesaparecido = '';
+  final _ciuNombreDesaparecidoCtrl = TextEditingController();
+  String _ciuUltimaUbicacion = '';
+  final _ciuUltimaUbicacionCtrl = TextEditingController();
+  String _ciuCedulaDesaparecido = '';
+  final _ciuCedulaDesaparecidoCtrl = TextEditingController();
+  String _ciuVestimenta = '';
+  final _ciuVestimentaCtrl = TextEditingController();
+  String _ciuAntecedente = '';
+  final _ciuAntecedenteCtrl = TextEditingController();
+  String _ciuMotivoConflictivo = '';
+  final _ciuMotivoConflictivoCtrl = TextEditingController();
+  String _ciuRequerimientoCiudadano = '';
+  final _ciuRequerimientoCiudadanoCtrl = TextEditingController();
+  String _ciuNombreAgresor = '';
+  final _ciuNombreAgresorCtrl = TextEditingController();
+  String _ciuObjetoAgresion = '';
+  final _ciuObjetoAgresionCtrl = TextEditingController();
+  String _ciuDetalleHerida = '';
+  final _ciuDetalleHeridaCtrl = TextEditingController();
+  String _ciuMotivoCamaras = '';
+  final _ciuMotivoCamarasCtrl = TextEditingController();
+  String _ciuNombreEvento = '';
+  final _ciuNombreEventoCtrl = TextEditingController();
+  String _ciuHoraEvento = '';
+  final _ciuHoraEventoCtrl = TextEditingController();
+  String _ciuFechaEvento = '';
+  final _ciuFechaEventoCtrl = TextEditingController();
+  String _ciuMotivoEvento = '';
+  final _ciuMotivoEventoCtrl = TextEditingController();
+  String _ciuMotivoResguardo = '';
+  final _ciuMotivoResguardoCtrl = TextEditingController();
+  String _ciuMotivoAtm = '';
+  final _ciuMotivoAtmCtrl = TextEditingController();
+  bool _ciuGuardando = false;
+
+  bool _ezCargando = false;
+  int _ezSection = 0;
+  String _ezJp = '';
+  String _ezCp = '';
+  String _ezCpGuardado = '';
+  int? _ezPoliciaId;
+  String _ezPoliciaNombre = '';
+  bool _ezPoliciaOtro = false;
+  final _ezPoliciaCtrl = TextEditingController();
+  final _ezJpCtrl = TextEditingController();
+  final _ezCpCtrl = TextEditingController();
+  String _ezDireccion = '';
+  bool _ezDireccionOtro = false;
+  List<Map<String, dynamic>> _ezServidoresPoliciales = [];
+  List<Map<String, dynamic>> _ezDirecciones = [];
+  String _ezAux1 = '';
+  final _ezAux1Ctrl = TextEditingController();
+  String _ezAux2 = '';
+  final _ezAux2Ctrl = TextEditingController();
+  bool _ezGuardando = false;
+
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
 
@@ -197,11 +304,25 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.requerimiento;
 
-  bool get _isEasCustomCardFlow {
+  bool get _isColaboracionCiudadanaFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.colaboracionEventos;
+
+  bool get _isGenericEasWizardFlow {
     if (modulo != TipoModuloCartilla.eas) return false;
     return [
-      TipoCartilla.colaboracionEventos,
+      TipoCartilla.presenciaAgenteControl,
+      TipoCartilla.operativoConjunto,
       TipoCartilla.permisoAusentismo,
+      TipoCartilla.roboManoArmada,
+      TipoCartilla.perdidaBienInmueble,
+      TipoCartilla.extorsion,
+      TipoCartilla.amenazas,
+      TipoCartilla.desaparicionPersona,
+      TipoCartilla.agresion,
+      TipoCartilla.visualizacionCamaras,
+      TipoCartilla.resguardoPersonal,
+      TipoCartilla.colaboracionAtm,
     ].contains(tipo);
   }
 
@@ -243,6 +364,47 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _reqAux1Ctrl.dispose();
     _reqAux2Ctrl.dispose();
     _reqSolicitanteOtroCtrl.dispose();
+    _ciuPoliciaCtrl.dispose();
+    _ciuJpCtrl.dispose();
+    _ciuCpCtrl.dispose();
+    _ciuAux1Ctrl.dispose();
+    _ciuAux2Ctrl.dispose();
+    _ciuNombreCiudadanoCtrl.dispose();
+    _ciuCedulaCtrl.dispose();
+    _ciuCelularCtrl.dispose();
+    _ciuLugarCtrl.dispose();
+    _ciuBienesRobadosCtrl.dispose();
+    _ciuValorRobadoCtrl.dispose();
+    _ciuBienesPerdidosCtrl.dispose();
+    _ciuValorPerdidoCtrl.dispose();
+    _ciuNombreLocalCtrl.dispose();
+    _ciuReferenciaLocalCtrl.dispose();
+    _ciuMotivoExtorsionCtrl.dispose();
+    _ciuNombreAmenazanteCtrl.dispose();
+    _ciuCedulaAmenazanteCtrl.dispose();
+    _ciuTextoAmenazaCtrl.dispose();
+    _ciuNombreDesaparecidoCtrl.dispose();
+    _ciuUltimaUbicacionCtrl.dispose();
+    _ciuCedulaDesaparecidoCtrl.dispose();
+    _ciuVestimentaCtrl.dispose();
+    _ciuAntecedenteCtrl.dispose();
+    _ciuMotivoConflictivoCtrl.dispose();
+    _ciuRequerimientoCiudadanoCtrl.dispose();
+    _ciuNombreAgresorCtrl.dispose();
+    _ciuObjetoAgresionCtrl.dispose();
+    _ciuDetalleHeridaCtrl.dispose();
+    _ciuMotivoCamarasCtrl.dispose();
+    _ciuNombreEventoCtrl.dispose();
+    _ciuHoraEventoCtrl.dispose();
+    _ciuFechaEventoCtrl.dispose();
+    _ciuMotivoEventoCtrl.dispose();
+    _ciuMotivoResguardoCtrl.dispose();
+    _ciuMotivoAtmCtrl.dispose();
+    _ezPoliciaCtrl.dispose();
+    _ezJpCtrl.dispose();
+    _ezCpCtrl.dispose();
+    _ezAux1Ctrl.dispose();
+    _ezAux2Ctrl.dispose();
     super.dispose();
   }
 
@@ -309,7 +471,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         else if (_isRetiroTemporalFlow) _buildRetiroTemporalWizard()
         else if (_isColaboracionFlow) _buildColaboracionWizard()
         else if (_isRequerimientoFlow) _buildRequerimientoWizard()
-        else if (_isEasCustomCardFlow) _buildEasCustomForm()
+        else if (_isColaboracionCiudadanaFlow) _buildColCiudadanaWizard()
+        else if (_isGenericEasWizardFlow) _buildGenericEasWizard()
         else _formPanel(),
       ],
     );
@@ -693,130 +856,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _desaAux = value;
                 setState(() {});
               },
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEasCustomForm() {
-    final titulo = switch (tipo) {
-      TipoCartilla.retiroTemporal => 'Retiro temporal',
-      TipoCartilla.requerimiento => 'Requerimiento',
-      TipoCartilla.colaboracionEntidades => 'Colaboración con otras entidades',
-      TipoCartilla.colaboracionEventos => 'Colaboración ciudadana',
-      TipoCartilla.permisoAusentismo => 'Permiso de ausentismo',
-      _ => '',
-    };
-    final icono = switch (tipo) {
-      TipoCartilla.retiroTemporal => Icons.backup_outlined,
-      TipoCartilla.requerimiento => Icons.receipt_long_outlined,
-      TipoCartilla.colaboracionEntidades => Icons.groups_outlined,
-      TipoCartilla.colaboracionEventos => Icons.people_outlined,
-      TipoCartilla.permisoAusentismo => Icons.logout_outlined,
-      _ => Icons.article_outlined,
-    };
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icono, color: AppThm.secClr),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  titulo,
-                  style: const TextStyle(
-                    color: AppThm.priClr,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          TextField(
-            controller: _desaCpCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Nombre del conductor CP',
-              prefixIcon: Icon(Icons.person_outline),
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              _desaCp = value;
-              setState(() {});
-            },
-          ),
-          if (_desaCpGuardado.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Último registro: $_desaCpGuardado',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppThm.secClr,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ),
-          const SizedBox(height: 14),
-          TextFormField(
-            controller: _desaJpCtrl,
-            decoration: InputDecoration(
-              labelText: _hasPolicia ? 'Aux.:' : 'Nombre del agente JP',
-              prefixIcon: const Icon(Icons.badge_outlined),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              _desaJp = value;
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _desaDireccionCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Dirección',
-              prefixIcon: Icon(Icons.place_outlined),
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              _desaDireccion = value;
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 14),
-          _buildPoliciaSection(),
-          if (_hasPolicia) ...[
-            const SizedBox(height: 14),
-            TextField(
-              controller: _desaAuxCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Aux.: (opcional)',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (value) {
-                _desaAux = value;
-                setState(() {});
-              },
-            ),
-          ],
-          if (tipo == TipoCartilla.colaboracionEntidades) ...[
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ezDetalleCtrl,
-              decoration: const InputDecoration(
-                labelText:
-                    'Detalle (accidente ocurrido, actividades realizadas, etc.)',
-                prefixIcon: Icon(Icons.description_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (_) => setState(() {}),
             ),
           ],
         ],
@@ -1429,12 +1468,48 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           if (_isRequerimientoFlow) {
             _reqDirecciones = direcciones;
           }
+          if (_isColaboracionCiudadanaFlow) {
+            _ciuDirecciones = direcciones;
+          }
+          if (_isGenericEasWizardFlow) {
+            _ezDirecciones = direcciones;
+          }
         });
       }
       return direcciones;
     } catch (_) {
       return [];
     }
+  }
+
+  Future<void> _cargarDatosGenerico() async {
+    setState(() => _ezCargando = true);
+    try {
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(_easDbId),
+        _cargarDirecciones(),
+      ]);
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+      setState(() {
+        _ezCpGuardado = cpGuardado ?? '';
+        if (_ezCpGuardado.isNotEmpty) {
+          _ezCpCtrl.text = _ezCpGuardado;
+          _ezCp = _ezCpGuardado;
+        }
+        _ezServidoresPoliciales = servidores;
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _ezPoliciaId = pid;
+          _ezPoliciaNombre =
+              policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {}
+    finally { if (mounted) setState(() => _ezCargando = false); }
   }
 
   Widget _buildRetiroTemporalWizard() {
@@ -1941,6 +2016,420 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     } finally {
       if (mounted) setState(() => _rtGuardando = false);
     }
+  }
+
+  Widget _buildGenericEasWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.assignment_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  tipo.label,
+                  style: const TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_ezCargando)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildGenericEasStepContent(),
+          const SizedBox(height: 24),
+          _buildGenericEasNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGenericEasStepContent() {
+    if (_ezCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (_ezSection == 0) return _buildGenericEasSection1();
+    return _buildGenericEasSection2();
+  }
+
+  Widget _buildGenericEasSection1() {
+    final dirOptions = [
+      ..._ezDirecciones.map((d) => d),
+      const {'id': -1, 'direccion': 'Otra dirección'},
+    ];
+    final dirValue = _ezDireccionOtro
+        ? dirOptions.last
+        : (_ezDireccion.isNotEmpty
+            ? dirOptions.firstWhere(
+                (d) => d['direccion'] == _ezDireccion,
+                orElse: () => dirOptions.last,
+              )
+            : null);
+
+    return Column(
+      children: [
+        if (rolMovil != RolMovil.jp)
+          _StepCard(
+            step: 1,
+            title: 'Nombre del agente JP',
+            child: TextFormField(
+              controller: _ezJpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del agente JP',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ezJp = v; setState(() {}); },
+            ),
+          ),
+        if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
+        _StepCard(
+          step: 2,
+          title: 'Nombre del conductor CP',
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _ezCpCtrl,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre del conductor CP',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) { _ezCp = v; setState(() {}); },
+              ),
+              if (_ezCpGuardado.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    'Último registro: $_ezCpGuardado',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppThm.secClr,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 3,
+          title: 'Servidor policial',
+          child: Column(
+            children: [
+              DropdownButtonFormField<int?>(
+                initialValue: _ezPoliciaId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Servidor policial',
+                  prefixIcon: Icon(Icons.local_police_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+                  ..._ezServidoresPoliciales.map((sp) {
+                    final id = sp['id'] as int?;
+                    final nombre = sp['nombre'] as String? ?? '';
+                    return DropdownMenuItem(value: id, child: Text(nombre));
+                  }),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _ezPoliciaId = value;
+                    if (value != null) {
+                      _ezPoliciaOtro = false;
+                      _ezPoliciaNombre = _ezServidoresPoliciales
+                              .firstWhere(
+                                (sp) => sp['id'] == value,
+                                orElse: () => <String, dynamic>{},
+                              )['nombre'] as String? ?? '';
+                    } else {
+                      _ezPoliciaNombre = '';
+                    }
+                    _ezPoliciaCtrl.clear();
+                  });
+                },
+              ),
+              if (_ezPoliciaOtro || (_ezPoliciaId == null && _ezPoliciaNombre.isNotEmpty && !_ezPoliciaOtro))
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: _ezPoliciaCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre del servidor policial',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) { _ezPoliciaNombre = v; setState(() {}); },
+                  ),
+                ),
+              if (!_ezPoliciaOtro && _ezPoliciaId == null && _ezPoliciaNombre.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: InkWell(
+                    onTap: () => setState(() { _ezPoliciaOtro = true; _ezPoliciaId = null; }),
+                    child: const Text(
+                      'Ingresar otro servidor policial',
+                      style: TextStyle(
+                        color: AppThm.secClr,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 4,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  final id = d['id'];
+                  return DropdownMenuItem(
+                    value: d,
+                    child: Text(id is int && id == -1 ? nombre : nombre),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'];
+                  if (id is int && id == -1) {
+                    setState(() { _ezDireccionOtro = true; _ezDireccion = ''; });
+                  } else {
+                    setState(() {
+                      _ezDireccionOtro = false;
+                      _ezDireccion = value['direccion'] as String? ?? '';
+                    });
+                  }
+                },
+              ),
+              if (_ezDireccionOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    controller: TextEditingController.fromValue(
+                      TextEditingValue(text: _ezDireccion),
+                    ),
+                    decoration: const InputDecoration(
+                      labelText: 'Dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) { _ezDireccion = v; setState(() {}); },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 5,
+          title: 'Personal auxiliar',
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _ezAux1Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 1',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) { _ezAux1 = v; setState(() {}); },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _ezAux2Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 2',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) { _ezAux2 = v; setState(() {}); },
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGenericEasSection2() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final field in activeFields) ...[
+          _Field(
+            controller: _controller(field.key),
+            label: field.label,
+            icon: _iconFor(field.key),
+            minLines: field.minLines,
+            required: field.required,
+            onChanged: () => setState(() {}),
+          ),
+          const SizedBox(height: 14),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGenericEasNavButtons() {
+    final isLast = _ezSection == 1;
+    final isFirst = _ezSection == 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _ezSection--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: _ezGuardando ? null : () => _generarGenericEas(),
+            icon: _ezGuardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(_ezGuardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _ezIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  void _ezIrSiguiente() async {
+    final saves = <Future<void>>[];
+    if (_ezCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_ezCp.trim()).catchError((_) {}));
+    }
+    if (_ezPoliciaOtro && _ezPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi
+          .crearServidorPolicial(_easDbId, _ezPoliciaNombre.trim())
+          .catchError((_) {}));
+    } else if (_ezPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_ezPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+
+    if (_ezPoliciaOtro && _ezPoliciaNombre.trim().isNotEmpty) {
+      _ezPoliciaOtro = false;
+      _ezPoliciaCtrl.clear();
+      try {
+        _ezServidoresPoliciales =
+            await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo =
+            _ezServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) {
+          _ezPoliciaId = nuevo['id'] as int?;
+          _ezPoliciaNombre = nuevo['nombre'] as String? ?? '';
+        }
+      } catch (_) {}
+    }
+    if (_ezDireccionOtro && _ezDireccion.trim().isNotEmpty) {
+      try {
+        await crtApi.crearDireccion(_easDbId, _ezDireccion.trim());
+        _ezDirecciones = await crtApi.getDirecciones(_easDbId);
+        _ezDireccionOtro = false;
+      } catch (_) {}
+    }
+    setState(() => _ezSection = 1);
+  }
+
+  Future<void> _generarGenericEas() async {
+    setState(() => _ezGuardando = true);
+    try {
+      final value = _buildGenericEasText();
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _ezGuardando = false);
+    }
+  }
+
+  String _buildGenericEasText() {
+    final now = DateTime.now();
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: tipo,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        movil: movil,
+        rolMovil: rolMovil,
+        dotacion: _dotacionSeleccionada.integrantes,
+        values: {
+          '_ez_jp': _ezJp,
+          '_ez_cp': _ezCp,
+          '_ez_aux1': _ezAux1,
+          '_ez_aux2': _ezAux2,
+          '_ez_policia': _ezPoliciaNombre,
+          '_ez_direccion': _ezDireccion,
+          '_ez_userNombre': widget.user?.nombreCompleto ?? '',
+          '_ez_movil': movil,
+          for (final entry in controllers.entries) entry.key: entry.value.text,
+        },
+      ),
+    );
   }
 
   String _buildRetiroTemporalText() {
@@ -3358,6 +3847,795 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  Future<void> _cargarDatosColCiudadana() async {
+    setState(() => _ciuCargando = true);
+    try {
+      final easId = _easDbId;
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(easId),
+        _cargarDirecciones(),
+      ]);
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+      setState(() {
+        _ciuCpGuardado = cpGuardado ?? '';
+        if (_ciuCpGuardado.isNotEmpty) {
+          _ciuCpCtrl.text = _ciuCpGuardado;
+          _ciuCp = _ciuCpGuardado;
+        }
+        _ciuServidoresPoliciales = servidores;
+        _ciuMovil = _moviles.first.movil;
+        _ciuTipoGeneral = 'denuncia';
+        _ciuTipoEspecifico = '';
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _ciuPoliciaId = pid;
+          _ciuPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {
+      // Silently fail on temp data load
+    } finally {
+      if (mounted) setState(() => _ciuCargando = false);
+    }
+  }
+
+  Widget _buildColCiudadanaWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.people_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Colaboración ciudadana',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_ciuCargando)
+                const SizedBox(
+                  width: 18, height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildColCiudadanaStepContent(),
+          const SizedBox(height: 24),
+          _buildCiuNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColCiudadanaStepContent() {
+    if (_ciuCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (_ciuSection == 0) return _buildCiuSection1();
+    return _buildCiuSection2();
+  }
+
+  Widget _buildCiuSection1() {
+    final dirOptions = [
+      ..._ciuDirecciones.map((d) => d),
+      const {'id': -1, 'direccion': 'Otra dirección'},
+    ];
+    final dirValue = _ciuDireccionOtro
+        ? dirOptions.last
+        : (_ciuDireccion.isNotEmpty
+            ? dirOptions.firstWhere(
+                (d) => d['direccion'] == _ciuDireccion,
+                orElse: () => dirOptions.last,
+              )
+            : null);
+
+    return Column(
+      children: [
+        if (rolMovil != RolMovil.jp)
+          _StepCard(step: 1, title: 'Nombre del JP',
+            child: TextFormField(
+              controller: _ciuJpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del agente JP',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuJp = v; setState(() {}); },
+            ),
+          ),
+        if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
+        if (rolMovil != RolMovil.conductor)
+          _StepCard(step: 2, title: 'Nombre del CP',
+            child: TextFormField(
+              controller: _ciuCpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del conductor CP',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuCp = v; setState(() {}); },
+            ),
+          ),
+        if (rolMovil != RolMovil.conductor) const SizedBox(height: 20),
+        _StepCard(step: 3, title: 'Servidor policial',
+          child: DropdownButtonFormField<int?>(
+            initialValue: _ciuPoliciaId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Servidor policial',
+              prefixIcon: Icon(Icons.local_police_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              ..._ciuServidoresPoliciales.map((sp) {
+                final id = sp['id'] as int?;
+                final nombre = sp['nombre'] as String? ?? '';
+                return DropdownMenuItem(value: id, child: Text(nombre));
+              }),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _ciuPoliciaId = value;
+                if (value != null) {
+                  _ciuPoliciaOtro = false;
+                  _ciuPoliciaNombre = _ciuServidoresPoliciales
+                      .firstWhere((sp) => sp['id'] == value, orElse: () => <String, dynamic>{})['nombre'] as String? ?? '';
+                } else { _ciuPoliciaNombre = ''; }
+                _ciuPoliciaCtrl.clear();
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(step: 4, title: 'Dirección',
+          child: Column(children: [
+            DropdownButtonFormField<Map<String, dynamic>>(
+              initialValue: dirValue, isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Dirección', prefixIcon: Icon(Icons.place_outlined),
+                border: OutlineInputBorder(),
+              ),
+              items: dirOptions.map((d) {
+                final nombre = d['direccion'] as String? ?? '';
+                return DropdownMenuItem(value: d, child: Text(nombre));
+              }).toList(),
+              onChanged: (value) {
+                if (value == null) return;
+                final id = value['id'] as int?;
+                setState(() {
+                  if (id == -1) { _ciuDireccionOtro = true; _ciuDireccion = ''; }
+                  else { _ciuDireccionOtro = false; _ciuDireccion = value['direccion'] as String? ?? ''; }
+                });
+              },
+            ),
+            if (_ciuDireccionOtro)
+              Padding(padding: const EdgeInsets.only(top: 14),
+                child: TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nueva dirección', prefixIcon: Icon(Icons.edit_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) { _ciuDireccion = v; setState(() {}); },
+                ),
+              ),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(step: 5, title: 'Auxiliares',
+          child: Column(children: [
+            TextField(
+              controller: _ciuAux1Ctrl,
+              decoration: const InputDecoration(
+                labelText: 'Auxiliar 1 (opcional)', prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuAux1 = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuAux2Ctrl,
+              decoration: const InputDecoration(
+                labelText: 'Auxiliar 2 (opcional)', prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuAux2 = v; setState(() {}); },
+            ),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(step: 6, title: 'Tipo de colaboración',
+          child: Column(children: [
+            DropdownButtonFormField<String>(
+              initialValue: _ciuTipoGeneral,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Seleccione el tipo',
+                prefixIcon: Icon(Icons.category_outlined),
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'denuncia', child: Text('Denuncias Ciudadanas')),
+                DropdownMenuItem(value: 'requerimiento', child: Text('Requerimientos Ciudadanos')),
+              ],
+              onChanged: (value) {
+                if (value != null) setState(() { _ciuTipoGeneral = value; _ciuTipoEspecifico = ''; });
+              },
+            ),
+          ]),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCiuSection2() {
+    if (_ciuTipoGeneral == 'denuncia') return _buildCiuDenunciaForm();
+    return _buildCiuRequerimientoForm();
+  }
+
+  Widget _buildCiuCitizenFields() {
+    return Column(children: [
+      TextField(
+        controller: _ciuNombreCiudadanoCtrl,
+        decoration: const InputDecoration(
+          labelText: 'Nombre del ciudadano', prefixIcon: Icon(Icons.person_outline),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) { _ciuNombreCiudadano = v; setState(() {}); },
+      ),
+      const SizedBox(height: 14),
+      TextField(
+        controller: _ciuCedulaCtrl,
+        decoration: const InputDecoration(
+          labelText: 'Número de cédula', prefixIcon: Icon(Icons.credit_card_outlined),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) { _ciuCedula = v; setState(() {}); },
+      ),
+      const SizedBox(height: 14),
+      TextField(
+        controller: _ciuCelularCtrl,
+        decoration: const InputDecoration(
+          labelText: 'Número de celular', prefixIcon: Icon(Icons.phone_outlined),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) { _ciuCelular = v; setState(() {}); },
+      ),
+      const SizedBox(height: 14),
+      TextField(
+        controller: _ciuLugarCtrl,
+        decoration: const InputDecoration(
+          labelText: 'Lugar de la novedad', prefixIcon: Icon(Icons.place_outlined),
+          border: OutlineInputBorder(),
+        ),
+        onChanged: (v) { _ciuLugar = v; setState(() {}); },
+      ),
+    ]);
+  }
+
+  Widget _buildCiuDenunciaForm() {
+    return Column(children: [
+      _StepCard(step: 7, title: 'Tipo de denuncia',
+        child: DropdownButtonFormField<String>(
+          initialValue: _ciuTipoEspecifico.isNotEmpty ? _ciuTipoEspecifico : null,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Tipo de denuncia ciudadana',
+            prefixIcon: Icon(Icons.warning_outlined),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Robo a mano armada', child: Text('Robo a mano armada')),
+            DropdownMenuItem(value: 'Pérdida de bien inmueble', child: Text('Pérdida de bien inmueble')),
+            DropdownMenuItem(value: 'Extorsión a local', child: Text('Extorsión a local')),
+            DropdownMenuItem(value: 'Amenazas', child: Text('Amenazas')),
+            DropdownMenuItem(value: 'Desaparición de persona', child: Text('Desaparición de persona')),
+            DropdownMenuItem(value: 'Sector o nicho conflictivo', child: Text('Sector o nicho conflictivo')),
+            DropdownMenuItem(value: 'Agresión', child: Text('Agresión')),
+          ],
+          onChanged: (value) { if (value != null) setState(() => _ciuTipoEspecifico = value); },
+        ),
+      ),
+      const SizedBox(height: 20),
+      _StepCard(step: 8, title: 'Datos del ciudadano',
+        child: _buildCiuCitizenFields(),
+      ),
+      const SizedBox(height: 20),
+      if (_ciuTipoEspecifico == 'Robo a mano armada')
+        _StepCard(step: 9, title: 'Robo a mano armada',
+          child: Column(children: [
+            TextField(
+              controller: _ciuBienesRobadosCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Bienes robados', prefixIcon: Icon(Icons.inventory_2_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuBienesRobados = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuValorRobadoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuValorRobado = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Pérdida de bien inmueble')
+        _StepCard(step: 9, title: 'Pérdida de bien inmueble',
+          child: Column(children: [
+            TextField(
+              controller: _ciuBienesPerdidosCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Bienes perdidos', prefixIcon: Icon(Icons.inventory_2_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuBienesPerdidos = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuValorPerdidoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuValorPerdido = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Extorsión a local')
+        _StepCard(step: 9, title: 'Extorsión a local',
+          child: Column(children: [
+            TextField(
+              controller: _ciuNombreLocalCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del local comercial', prefixIcon: Icon(Icons.store_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuNombreLocal = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuReferenciaLocalCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Referencia del local', prefixIcon: Icon(Icons.edit_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuReferenciaLocal = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuMotivoExtorsionCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Motivo de la extorsión', prefixIcon: Icon(Icons.description_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuMotivoExtorsion = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Amenazas')
+        _StepCard(step: 9, title: 'Amenazas',
+          child: Column(children: [
+            TextField(
+              controller: _ciuNombreAmenazanteCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre de la persona que amenaza', prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuNombreAmenazante = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuCedulaAmenazanteCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Cédula de la persona que amenaza', prefixIcon: Icon(Icons.credit_card_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuCedulaAmenazante = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuTextoAmenazaCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Frase o texto de la amenaza', prefixIcon: Icon(Icons.notes_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuTextoAmenaza = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Desaparición de persona')
+        _StepCard(step: 9, title: 'Desaparición de persona',
+          child: Column(children: [
+            TextField(
+              controller: _ciuNombreDesaparecidoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre de la persona desaparecida', prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuNombreDesaparecido = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuCedulaDesaparecidoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Cédula de la persona desaparecida', prefixIcon: Icon(Icons.credit_card_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuCedulaDesaparecido = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuUltimaUbicacionCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Ubicación donde fue vista por última vez', prefixIcon: Icon(Icons.place_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuUltimaUbicacion = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuVestimentaCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Vestimenta o accesorios que llevaba', prefixIcon: Icon(Icons.checkroom_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuVestimenta = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuAntecedenteCtrl,
+              decoration: const InputDecoration(
+                labelText: '¿Antecedente de amenaza anterior?', prefixIcon: Icon(Icons.warning_amber_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuAntecedente = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Sector o nicho conflictivo')
+        _StepCard(step: 9, title: 'Sector o nicho conflictivo',
+          child: Column(children: [
+            TextField(
+              controller: _ciuMotivoConflictivoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Motivo por el cual el sector es conflictivo', prefixIcon: Icon(Icons.report_problem_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuMotivoConflictivo = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuRequerimientoCiudadanoCtrl,
+              decoration: const InputDecoration(
+                labelText: '¿Qué requiere el ciudadano denunciante?', prefixIcon: Icon(Icons.edit_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuRequerimientoCiudadano = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Agresión')
+        _StepCard(step: 9, title: 'Agresión',
+          child: Column(children: [
+            TextField(
+              controller: _ciuNombreAgresorCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del agresor', prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuNombreAgresor = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuObjetoAgresionCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Objeto con el que agredió', prefixIcon: Icon(Icons.gavel_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuObjetoAgresion = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuDetalleHeridaCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Detalle de cómo se produjo la herida', prefixIcon: Icon(Icons.description_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuDetalleHerida = v; setState(() {}); },
+            ),
+          ]),
+        ),
+    ]);
+  }
+
+  Widget _buildCiuRequerimientoForm() {
+    return Column(children: [
+      _StepCard(step: 7, title: 'Tipo de requerimiento',
+        child: DropdownButtonFormField<String>(
+          initialValue: _ciuTipoEspecifico.isNotEmpty ? _ciuTipoEspecifico : null,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Tipo de requerimiento ciudadano',
+            prefixIcon: Icon(Icons.description_outlined),
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(value: 'Visualizar cámaras', child: Text('Visualizar cámaras')),
+            DropdownMenuItem(value: 'Colaboración en evento', child: Text('Colaboración en evento')),
+            DropdownMenuItem(value: 'Resguardo de personal', child: Text('Resguardo de personal')),
+            DropdownMenuItem(value: 'Colaboración de ATM', child: Text('Colaboración de ATM')),
+          ],
+          onChanged: (value) { if (value != null) setState(() => _ciuTipoEspecifico = value); },
+        ),
+      ),
+      const SizedBox(height: 20),
+      _StepCard(step: 8, title: 'Datos del ciudadano',
+        child: _buildCiuCitizenFields(),
+      ),
+      const SizedBox(height: 20),
+      if (_ciuTipoEspecifico == 'Visualizar cámaras')
+        _StepCard(step: 9, title: 'Visualizar cámaras',
+          child: TextField(
+            controller: _ciuMotivoCamarasCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Motivo de la visualización de cámaras', prefixIcon: Icon(Icons.videocam_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onChanged: (v) { _ciuMotivoCamaras = v; setState(() {}); },
+          ),
+        ),
+      if (_ciuTipoEspecifico == 'Colaboración en evento')
+        _StepCard(step: 9, title: 'Colaboración en evento',
+          child: Column(children: [
+            TextField(
+              controller: _ciuNombreEventoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del evento', prefixIcon: Icon(Icons.event_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuNombreEvento = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuFechaEventoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Fecha del evento', prefixIcon: Icon(Icons.calendar_today_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuFechaEvento = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuHoraEventoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Hora del evento', prefixIcon: Icon(Icons.access_time_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (v) { _ciuHoraEvento = v; setState(() {}); },
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _ciuMotivoEventoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Motivo de la colaboración', prefixIcon: Icon(Icons.description_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) { _ciuMotivoEvento = v; setState(() {}); },
+            ),
+          ]),
+        ),
+      if (_ciuTipoEspecifico == 'Resguardo de personal')
+        _StepCard(step: 9, title: 'Resguardo de personal',
+          child: TextField(
+            controller: _ciuMotivoResguardoCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Motivo del resguardo', prefixIcon: Icon(Icons.shield_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onChanged: (v) { _ciuMotivoResguardo = v; setState(() {}); },
+          ),
+        ),
+      if (_ciuTipoEspecifico == 'Colaboración de ATM')
+        _StepCard(step: 9, title: 'Colaboración de ATM',
+          child: TextField(
+            controller: _ciuMotivoAtmCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Motivo de la presencia de ATM', prefixIcon: Icon(Icons.account_balance_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onChanged: (v) { _ciuMotivoAtm = v; setState(() {}); },
+          ),
+        ),
+    ]);
+  }
+
+  Widget _buildCiuNavButtons() {
+    final isLast = _ciuSection == 1;
+    final isFirst = _ciuSection == 0;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _ciuSection--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: _ciuGuardando ? null : () => _generarColCiudadana(),
+            icon: _ciuGuardando
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : const Icon(Icons.check),
+            label: Text(_ciuGuardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _ciuIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  void _ciuIrSiguiente() async {
+    final saves = <Future<void>>[];
+    if (_ciuCp.trim().isNotEmpty) saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+    if (_ciuPoliciaOtro && _ciuPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi.crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim()).catchError((_) {}));
+    } else if (_ciuPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_ciuPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+    if (_ciuPoliciaOtro && _ciuPoliciaNombre.trim().isNotEmpty) {
+      _ciuPoliciaOtro = false;
+      _ciuPoliciaCtrl.clear();
+      try {
+        _ciuServidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo = _ciuServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) _ciuPoliciaId = nuevo['id'] as int?;
+      } catch (_) {}
+    }
+    if (_ciuDireccionOtro && _ciuDireccion.trim().isNotEmpty) {
+      _ciuDireccionOtro = false;
+      try {
+        await crtApi.crearDireccion(_easDbId, _ciuDireccion.trim());
+        _ciuDirecciones = await crtApi.getDirecciones(_easDbId);
+        _ciuDireccion = _ciuDireccion.trim();
+      } catch (_) {
+        _ciuDirecciones = await crtApi.getDirecciones(_easDbId);
+      }
+    }
+    if (mounted) setState(() => _ciuSection++);
+  }
+
+  Future<void> _generarColCiudadana() async {
+    if (widget.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Inicie sesion para generar cartillas')));
+      return;
+    }
+    setState(() => _ciuGuardando = true);
+    try {
+      final saves = <Future<void>>[];
+      if (_ciuCp.trim().isNotEmpty) saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+      if (_ciuPoliciaOtro && _ciuPoliciaNombre.trim().isNotEmpty) {
+        saves.add(crtApi.crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim()).catchError((_) {}));
+      } else if (_ciuPoliciaId != null) {
+        saves.add(crtApi.savePolicia(_ciuPoliciaId).catchError((_) {}));
+      }
+      if (_ciuDireccionOtro && _ciuDireccion.trim().isNotEmpty) {
+        saves.add(crtApi.crearDireccion(_easDbId, _ciuDireccion.trim()).catchError((_) {}));
+      }
+      await Future.wait(saves);
+      if (_ciuDireccionOtro) _ciuDireccionOtro = false;
+
+      final value = _buildColCiudadanaText();
+      final result = await InsApi().registrarCartilla(contenido: value, causa: '${modulo.label} - ${tipo.label}');
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cartilla generada. Total: ${result.totalCartillasGeneradas}')));
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo generar la cartilla: $error')));
+    } finally {
+      if (mounted) setState(() => _ciuGuardando = false);
+    }
+  }
+
+  String _buildColCiudadanaText() {
+    final now = DateTime.now();
+    final movilValue = _ciuMovil.isNotEmpty ? _ciuMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.colaboracionEventos,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        rolMovil: rolMovil,
+        values: {
+          '_ciu_jp': _ciuJp.isNotEmpty ? _ciuJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_ciu_movil': movilValue,
+          '_ciu_cp': _ciuCp.isNotEmpty ? _ciuCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_ciu_policia': _ciuPoliciaNombre,
+          '_ciu_direccion': _ciuDireccion,
+          '_ciu_aux1': _ciuAux1,
+          '_ciu_aux2': _ciuAux2,
+          '_ciu_userNombre': widget.user?.nombreCompleto ?? '',
+          '_ciu_tipoGeneral': _ciuTipoGeneral,
+          '_ciu_tipoEspecifico': _ciuTipoEspecifico,
+          '_ciu_nombreCiudadano': _ciuNombreCiudadano,
+          '_ciu_cedula': _ciuCedula,
+          '_ciu_celular': _ciuCelular,
+          '_ciu_lugar': _ciuLugar,
+          '_ciu_bienesRobados': _ciuBienesRobados,
+          '_ciu_valorRobado': _ciuValorRobado,
+          '_ciu_bienesPerdidos': _ciuBienesPerdidos,
+          '_ciu_valorPerdido': _ciuValorPerdido,
+          '_ciu_nombreLocal': _ciuNombreLocal,
+          '_ciu_referenciaLocal': _ciuReferenciaLocal,
+          '_ciu_motivoExtorsion': _ciuMotivoExtorsion,
+          '_ciu_nombreAmenazante': _ciuNombreAmenazante,
+          '_ciu_cedulaAmenazante': _ciuCedulaAmenazante,
+          '_ciu_textoAmenaza': _ciuTextoAmenaza,
+          '_ciu_nombreDesaparecido': _ciuNombreDesaparecido,
+          '_ciu_ultimaUbicacion': _ciuUltimaUbicacion,
+          '_ciu_cedulaDesaparecido': _ciuCedulaDesaparecido,
+          '_ciu_vestimenta': _ciuVestimenta,
+          '_ciu_antecedente': _ciuAntecedente,
+          '_ciu_motivoConflictivo': _ciuMotivoConflictivo,
+          '_ciu_requerimientoCiudadano': _ciuRequerimientoCiudadano,
+          '_ciu_nombreAgresor': _ciuNombreAgresor,
+          '_ciu_objetoAgresion': _ciuObjetoAgresion,
+          '_ciu_detalleHerida': _ciuDetalleHerida,
+          '_ciu_motivoCamaras': _ciuMotivoCamaras,
+          '_ciu_nombreEvento': _ciuNombreEvento,
+          '_ciu_horaEvento': _ciuHoraEvento,
+          '_ciu_fechaEvento': _ciuFechaEvento,
+          '_ciu_motivoEvento': _ciuMotivoEvento,
+          '_ciu_motivoResguardo': _ciuMotivoResguardo,
+          '_ciu_motivoAtm': _ciuMotivoAtm,
+        },
+      ),
+    );
+  }
+
   Widget _formPanel() {
     return _Panel(
       child: Form(
@@ -3552,8 +4830,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isRequerimientoFlow) {
       return _buildRequerimientoText();
     }
-    if (_isEasCustomCardFlow) {
-      return _buildEasCustomText();
+    if (_isColaboracionCiudadanaFlow) {
+      return _buildColCiudadanaText();
+    }
+    if (_isGenericEasWizardFlow) {
+      return _buildGenericEasText();
     }
     final now = DateTime.now();
     return CrtTextGenerator.build(
@@ -3658,33 +4939,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  String _buildEasCustomText() {
-    final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
-    return CrtTextGenerator.build(
-      CrtFormData(
-        modulo: TipoModuloCartilla.eas,
-        tipo: tipo,
-        jornada: CrtCatalog.jornadaActual(now),
-        horario: CrtCatalog.horarioActual(now),
-        fecha: _fmtFecha(now),
-        hora: _fmtHora(now),
-        eas: eas,
-        values: {
-          '_ez_jp': _desaJp.isNotEmpty
-              ? _desaJp
-              : (widget.user?.nombreCompleto ?? ''),
-          '_ez_aux': _desaAux,
-          '_ez_movil': movilValue,
-          '_ez_cp': _desaCp,
-          '_ez_policia': _desaPoliciaNombre,
-          '_ez_direccion': _desaDireccion,
-          '_ez_detalle': _ezDetalleCtrl.text,
-        },
-      ),
-    );
-  }
-
   List<CrtMovilDotacion> get _moviles {
     return CrtCatalog.dotacionEas[eas.nombre] ??
         [
@@ -3727,10 +4981,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _cargarDatosColaboracion();
     } else if (_isRequerimientoFlow) {
       _cargarDatosRequerimiento();
+    } else if (_isColaboracionCiudadanaFlow) {
+      _cargarDatosColCiudadana();
+    } else if (_isGenericEasWizardFlow) {
+      _cargarDatosGenerico();
     } else if (_isDesalojoFlow ||
         _isPuntoMartilloFlow ||
-        _isRondasDisuasivasFlow ||
-        _isEasCustomCardFlow) {
+        _isRondasDisuasivasFlow) {
       _cargarDatosDesalojo();
     }
   }
@@ -3749,24 +5006,36 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _reqCpCtrl.text = '';
     _reqJpCtrl.text = '';
     _reqAux1Ctrl.text = '';
+    _ciuCpCtrl.text = '';
+    _ciuJpCtrl.text = '';
+    _ciuAux1Ctrl.text = '';
+    _ezCpCtrl.text = '';
+    _ezJpCtrl.text = '';
+    _ezAux1Ctrl.text = '';
     switch (rolMovil) {
       case RolMovil.jp:
         _desaJpCtrl.text = name;
         _rtJpCtrl.text = name;
         _colJpCtrl.text = name;
         _reqJpCtrl.text = name;
+        _ciuJpCtrl.text = name;
+        _ezJpCtrl.text = name;
         break;
       case RolMovil.conductor:
         _desaCpCtrl.text = name;
         _rtCpCtrl.text = name;
         _colCpCtrl.text = name;
         _reqCpCtrl.text = name;
+        _ciuCpCtrl.text = name;
+        _ezCpCtrl.text = name;
         break;
       case RolMovil.auxiliar:
         _desaAuxCtrl.text = name;
         _rtAux1Ctrl.text = name;
         _colAux1Ctrl.text = name;
         _reqAux1Ctrl.text = name;
+        _ciuAux1Ctrl.text = name;
+        _ezAux1Ctrl.text = name;
         break;
     }
     _desaJp = _desaJpCtrl.text;
@@ -3781,6 +5050,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _reqJp = _reqJpCtrl.text;
     _reqCp = _reqCpCtrl.text;
     _reqAux1 = _reqAux1Ctrl.text;
+    _ciuJp = _ciuJpCtrl.text;
+    _ciuCp = _ciuCpCtrl.text;
+    _ciuAux1 = _ciuAux1Ctrl.text;
+    _ezJp = _ezJpCtrl.text;
+    _ezCp = _ezCpCtrl.text;
+    _ezAux1 = _ezAux1Ctrl.text;
   }
 
   TextEditingController _controller(String key) {

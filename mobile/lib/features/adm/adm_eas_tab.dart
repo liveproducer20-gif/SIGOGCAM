@@ -2,31 +2,73 @@ import 'package:flutter/material.dart';
 
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
 class EasTab extends AdmCrudTab {
-  const EasTab({super.key, required super.api});
+  final int tabIndex;
+  const EasTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
   State<AdmCrudTab> createState() => _EasState();
 }
 
-class _EasState extends State<AdmCrudTab> {
-  late Future<List<Map<String, dynamic>>> future;
+class _EasState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
+
   @override
   void initState() {
     super.initState();
-    future = widget.api.getEas();
+    _future = Future.value([]);
+    initLazy((widget as EasTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getEas(page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
+  }
+
+  void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
+    setState(() {
+      _search = value;
+      _page = 1;
+    });
+    _load();
   }
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
         title: 'EAS',
         subtitle: 'Estaciones de Accion Segura disponibles para servicios.',
-        future: future,
+        future: _future,
         columns: const ['Código', 'Nombre', 'Distrito', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
+        total: _total,
+        currentPage: _page,
+        totalPages: _totalPages,
+        onPageChanged: _onPageChanged,
+        onSearch: _onSearch,
+        searchHint: 'Buscar EAS...',
         rowBuilder: (item) => [
           admText(item['codigo']),
           admText(item['nombre']),
@@ -44,12 +86,6 @@ class _EasState extends State<AdmCrudTab> {
           ),
         ],
       );
-
-  void _reload() {
-    setState(() {
-      future = widget.api.getEas();
-    });
-  }
   Future<void> _edit(Map<String, dynamic>? item) async {
     final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
     if (!mounted) return;

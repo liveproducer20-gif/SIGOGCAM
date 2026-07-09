@@ -51,9 +51,9 @@ class _AsignacionState extends State<AdmCrudTab> {
   }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final eas = await widget.api.getEas();
-    final moviles = await widget.api.getMoviles();
-    final estados = await widget.api.getCatalogo('ESTADOS_ASIGNACION_MOVIL');
+    final eas = await widget.api.getEasList();
+    final moviles = await widget.api.getMovilesList();
+    final estados = (await widget.api.getCatalogo('ESTADOS_ASIGNACION_MOVIL', limit: 200)).datos;
     if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,

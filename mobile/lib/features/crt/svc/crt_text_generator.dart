@@ -70,6 +70,12 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.requerimiento) {
       return _buildEasRequerimiento(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.colaboracionEventos) {
+      return _buildEasColaboracionCiudadana(data, circuito, causa, direccion);
+    }
+    if (_isGenericWizardTipo(data.tipo)) {
+      return _buildEasDefaultWizard(data, circuito, causa, direccion);
+    }
     if (_isCardTipo(data.tipo)) {
       return _buildEasGeneric(data, circuito, causa, direccion);
     }
@@ -677,9 +683,158 @@ ${reporta.toString().trimRight()}
 Adjunto fotografía''';
   }
 
+  static String _buildEasColaboracionCiudadana(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final dir = _v(data, '_ciu_direccion');
+    final direccionFinal = dir.isNotEmpty ? dir : direccion;
+    final movilStr = _v(data, '_ciu_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_ciu_jp');
+    final cp = _v(data, '_ciu_cp');
+    final aux1 = _v(data, '_ciu_aux1');
+    final aux2 = _v(data, '_ciu_aux2');
+    final policia = _v(data, '_ciu_policia');
+    final tipoGeneral = _v(data, '_ciu_tipoGeneral');
+    final tipoEsp = _v(data, '_ciu_tipoEspecifico');
+    final nombre = _v(data, '_ciu_nombreCiudadano');
+    final cedula = _v(data, '_ciu_cedula');
+    final celular = _v(data, '_ciu_celular');
+    final lugar = _v(data, '_ciu_lugar');
+    final saludo = _saludoFormal(DateTime.now());
+
+    String procedimiento;
+    if (tipoGeneral == 'denuncia') {
+      procedimiento = _buildCiuDenuncia(saludo, nombre, cedula, celular, lugar, tipoEsp, data);
+    } else {
+      procedimiento = _buildCiuRequerimiento(saludo, nombre, cedula, celular, lugar, tipoEsp, data);
+    }
+
+    final causaLabel = 'Colaboración ciudadana - $tipoEsp';
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final un = _v(data, '_ciu_userNombre');
+      if (un.isNotEmpty) auxNames.add(un);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) auxNames.add(jp);
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uAux = auxNames.toSet().toList();
+
+    final rp = StringBuffer();
+    rp.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      rp.writeln('*JP:* $policia');
+    } else {
+      rp.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final a in uAux) {
+      rp.writeln('*Aux.:* $a');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $direccionFinal
+
+*CAUSA:* $causaLabel
+
+*PROCEDIMIENTO*:
+
+$procedimiento
+
+Así mismo, se le informó a la Central para que registre la novedad.
+
+Información puesta en conocimiento para los fines pertinentes.
+
+$movil
+
+*REPORTA*:
+${rp.toString().trimRight()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
+  }
+
+  static String _buildCiuDenuncia(
+    String saludo, String nombre, String cedula, String celular, String lugar,
+    String tipo, CrtFormData data,
+  ) {
+    switch (tipo) {
+      case 'Robo a mano armada':
+        final bienes = _v(data, '_ciu_bienesRobados');
+        final valor = _v(data, '_ciu_valorRobado');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a un caso de robo a mano armada suscitado en $lugar.\n\nEl ciudadano manifiesta que le fueron sustraídos los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes robados asciende a $valor.';
+      case 'Pérdida de bien inmueble':
+        final bienes = _v(data, '_ciu_bienesPerdidos');
+        final valor = _v(data, '_ciu_valorPerdido');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la pérdida de bienes ocurrida en $lugar.\n\nEl ciudadano manifiesta haber extraviado los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes perdidos asciende a $valor.';
+      case 'Extorsión a local':
+        final local = _v(data, '_ciu_nombreLocal');
+        final ref = _v(data, '_ciu_referenciaLocal');
+        final motivo = _v(data, '_ciu_motivoExtorsion');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta extorsión a local comercial, suscitada en $lugar.\n\nEl ciudadano manifiesta que el local comercial denominado $local, ubicado como referencia en $ref, estaría siendo objeto de presunta extorsión por el siguiente motivo: $motivo.';
+      case 'Amenazas':
+        final nA = _v(data, '_ciu_nombreAmenazante');
+        final cA = _v(data, '_ciu_cedulaAmenazante');
+        final tA = _v(data, '_ciu_textoAmenaza');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta amenaza suscitada en $lugar.\n\nEl ciudadano manifiesta estar siendo víctima de amenazas por parte de $nA, portador de la cédula de ciudadanía No. $cA, quien presuntamente habría expresado el siguiente texto o frase intimidatoria:\n\n"$tA"\n\nPor lo expuesto, el ciudadano solicita que se deje constancia de lo manifestado para los fines correspondientes.';
+      case 'Desaparición de persona':
+        final nD = _v(data, '_ciu_nombreDesaparecido');
+        final uU = _v(data, '_ciu_ultimaUbicacion');
+        final cD = _v(data, '_ciu_cedulaDesaparecido');
+        final vest = _v(data, '_ciu_vestimenta');
+        final ant = _v(data, '_ciu_antecedente');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la desaparición de una persona.\n\nEl ciudadano manifiesta que la persona desaparecida responde a los nombres de $nD, con cédula de ciudadanía No. $cD, quien fue vista por última vez en $uU. Asimismo, indica que al momento de su desaparición vestía o portaba lo siguiente: $vest.\n\nRespecto a antecedentes de amenazas anteriores, el ciudadano indica: $ant.';
+      case 'Sector o nicho conflictivo':
+        final mC = _v(data, '_ciu_motivoConflictivo');
+        final rC = _v(data, '_ciu_requerimientoCiudadano');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para informar una novedad relacionada con un sector conflictivo ubicado en $lugar.\n\nEl ciudadano manifiesta que el sector presenta la siguiente problemática: $mC.\n\nAsimismo, solicita lo siguiente por parte de las autoridades competentes: $rC.';
+      case 'Agresión':
+        final nAg = _v(data, '_ciu_nombreAgresor');
+        final obj = _v(data, '_ciu_objetoAgresion');
+        final det = _v(data, '_ciu_detalleHerida');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta agresión suscitada en $lugar.\n\nEl ciudadano manifiesta que fue agredido por $nAg, quien habría utilizado $obj para ocasionar la lesión.\n\nDe acuerdo con lo manifestado, la agresión se produjo de la siguiente manera: $det.';
+      default:
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para reportar una novedad en $lugar.';
+    }
+  }
+
+  static String _buildCiuRequerimiento(
+    String saludo, String nombre, String cedula, String celular, String lugar,
+    String tipo, CrtFormData data,
+  ) {
+    switch (tipo) {
+      case 'Visualizar cámaras':
+        final motivo = _v(data, '_ciu_motivoCamaras');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando la visualización de cámaras por una novedad suscitada en $lugar.\n\nEl ciudadano manifiesta que requiere la revisión del sistema de videovigilancia debido a lo siguiente: $motivo.';
+      case 'Colaboración en evento':
+        final nEv = _v(data, '_ciu_nombreEvento');
+        final hEv = _v(data, '_ciu_horaEvento');
+        final fEv = _v(data, '_ciu_fechaEvento');
+        final mEv = _v(data, '_ciu_motivoEvento');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración institucional para un evento a desarrollarse en $lugar.\n\nEl ciudadano informa que el evento denominado $nEv se llevará a cabo el día $fEv a las $hEv, indicando que la colaboración es requerida debido a: $mEv.';
+      case 'Resguardo de personal':
+        final motivo = _v(data, '_ciu_motivoResguardo');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando resguardo de personal en $lugar.\n\nEl ciudadano manifiesta que requiere el acompañamiento o resguardo respectivo debido a: $motivo.';
+      case 'Colaboración de ATM':
+        final motivo = _v(data, '_ciu_motivoAtm');
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración de ATM en $lugar.\n\nEl ciudadano manifiesta que requiere la presencia de personal de ATM debido a: $motivo.';
+      default:
+        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para solicitar un requerimiento en $lugar.';
+    }
+  }
+
   static bool _isCardTipo(TipoCartilla tipo) {
     return [
-      TipoCartilla.colaboracionEventos,
       TipoCartilla.permisoAusentismo,
     ].contains(tipo);
   }
@@ -751,6 +906,89 @@ $movil
 
 *REPORTA*:
 ${reporta.toString()}
+
+*"Lealtad, Valor y Orden"*
+
+Adjunto fotografía''';
+  }
+
+  static bool _isGenericWizardTipo(TipoCartilla tipo) {
+    return [
+      TipoCartilla.presenciaAgenteControl,
+      TipoCartilla.operativoConjunto,
+      TipoCartilla.permisoAusentismo,
+      TipoCartilla.roboManoArmada,
+      TipoCartilla.perdidaBienInmueble,
+      TipoCartilla.extorsion,
+      TipoCartilla.amenazas,
+      TipoCartilla.desaparicionPersona,
+      TipoCartilla.agresion,
+      TipoCartilla.visualizacionCamaras,
+      TipoCartilla.resguardoPersonal,
+      TipoCartilla.colaboracionAtm,
+    ].contains(tipo);
+  }
+
+  static String _buildEasDefaultWizard(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_ez_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_ez_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_ez_jp');
+    final cp = _v(data, '_ez_cp');
+    final aux1 = _v(data, '_ez_aux1');
+    final aux2 = _v(data, '_ez_aux2');
+    final policia = _v(data, '_ez_policia');
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final userNombre = _v(data, '_ez_userNombre');
+      if (userNombre.isNotEmpty) auxNames.add(userNombre);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) {
+      auxNames.add(jp);
+    }
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uniqueAux = auxNames.toSet().toList();
+
+    final rp = StringBuffer();
+    rp.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      rp.writeln('*JP:* $policia');
+    } else {
+      rp.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final a in uniqueAux) {
+      rp.writeln('*Aux.:* $a');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+${_procedimientoEas(data, dir)}
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${rp.toString().trimRight()}
 
 *"Lealtad, Valor y Orden"*
 

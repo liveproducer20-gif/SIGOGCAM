@@ -1,4 +1,5 @@
 const repository = require('../repositories/admin.repository');
+const { validarId, texto, textoOpcional, entero, normalizarCodigo } = require('../validators/common.validator');
 
 const catalogosPermitidos = new Set([
     'AREAS',
@@ -20,8 +21,8 @@ async function listarCatalogos() {
     return repository.listarCatalogos();
 }
 
-async function listarDetalles(codigo, incluirInactivos) {
-    return repository.listarDetalles(validarCatalogo(codigo), incluirInactivos);
+async function listarDetalles(codigo, incluirInactivos, query = {}) {
+    return repository.listarDetalles(validarCatalogo(codigo), incluirInactivos, query);
 }
 
 async function crearDetalle(codigo, data) {
@@ -40,12 +41,15 @@ async function cambiarEstadoDetalle(id, activo) {
     return repository.cambiarEstadoDetalle(validarId(id, 'detalle'), Boolean(activo));
 }
 
-async function listarRoles() {
-    const roles = await repository.listarRoles();
-    return roles.map((rol) => ({
-        ...rol,
-        permisos: rol.permisos ? rol.permisos.split(',') : []
-    }));
+async function listarRoles(query = {}) {
+    const result = await repository.listarRoles(query);
+    if (result.datos) {
+        result.datos = result.datos.map((rol) => ({
+            ...rol,
+            permisos: rol.permisos ? rol.permisos.split(',') : []
+        }));
+    }
+    return result;
 }
 
 async function crearRol(data) {
@@ -66,8 +70,8 @@ async function listarPermisos() {
     return repository.listarPermisos();
 }
 
-async function listarLugares() {
-    return repository.listarLugares();
+async function listarLugares(query = {}) {
+    return repository.listarLugares(query);
 }
 
 async function crearLugar(data) {
@@ -82,8 +86,8 @@ async function cambiarEstadoLugar(id, activo) {
     return repository.cambiarEstadoLugar(validarId(id, 'lugar'), Boolean(activo));
 }
 
-async function listarEas() {
-    return repository.listarEas();
+async function listarEas(query = {}) {
+    return repository.listarEas(query);
 }
 
 async function crearEas(data) {
@@ -122,8 +126,8 @@ async function eliminarRuta(id) {
     return repository.eliminarRuta(validarId(id, 'ruta'));
 }
 
-async function listarMoviles() {
-    return repository.listarMoviles();
+async function listarMoviles(query = {}) {
+    return repository.listarMoviles(query);
 }
 
 async function crearMovil(data) {
@@ -281,44 +285,7 @@ function validarAsignacion(data) {
     };
 }
 
-function validarId(value, label) {
-    const id = Number(value);
-    if (!Number.isInteger(id) || id <= 0) {
-        throw new Error(`El id de ${label} no es válido`);
-    }
-    return id;
-}
 
-function texto(value, label) {
-    const clean = (value || '').toString().trim();
-    if (!clean) {
-        throw new Error(`El campo ${label} es obligatorio`);
-    }
-    return clean;
-}
-
-function textoOpcional(value) {
-    const clean = (value || '').toString().trim();
-    return clean || null;
-}
-
-function entero(value, defaultValue) {
-    if (value === undefined || value === null || value === '') return defaultValue;
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed)) {
-        throw new Error('Ingrese un número entero válido');
-    }
-    return parsed;
-}
-
-function normalizarCodigo(value) {
-    return value
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^a-zA-Z0-9]+/g, '_')
-        .replace(/^_+|_+$/g, '')
-        .toUpperCase();
-}
 
 module.exports = {
     listarCatalogos,

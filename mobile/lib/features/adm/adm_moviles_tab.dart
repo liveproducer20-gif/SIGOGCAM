@@ -15,28 +15,61 @@ class MovilesTab extends AdmCrudTab {
 }
 
 class _MovilState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
-  late Future<List<Map<String, dynamic>>> future;
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
+
   @override
   void initState() {
     super.initState();
-    future = Future.value([]);
-    initLazy((widget as MovilesTab).tabIndex, () => future = widget.api.getMoviles());
+    _future = Future.value([]);
+    initLazy((widget as MovilesTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getMoviles(page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
   }
 
   void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
     setState(() {
-      future = widget.api.getMoviles();
+      _search = value;
+      _page = 1;
     });
+    _load();
   }
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
         title: 'Moviles',
         subtitle: 'Unidades, kilometraje y mantenimiento preventivo.',
-        future: future,
+        future: _future,
         columns: const ['Movil', 'Tipo', 'Km', 'Prox. mant.', 'Alerta', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
+        total: _total,
+        currentPage: _page,
+        totalPages: _totalPages,
+        onPageChanged: _onPageChanged,
+        onSearch: _onSearch,
+        searchHint: 'Buscar movil, placa, tipo o estado...',
         rowBuilder: (item) => [
           admText('${item['numero_movil'] ?? ''} ${item['placa'] ?? ''}'.trim()),
           admText(item['tipo']),

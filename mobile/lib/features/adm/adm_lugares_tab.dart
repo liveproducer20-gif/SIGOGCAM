@@ -3,31 +3,73 @@ import 'package:flutter/material.dart';
 import 'adm_api.dart';
 import 'adm_crud_tab.dart';
 import 'adm_helpers.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
 
 class LugaresTab extends AdmCrudTab {
-  const LugaresTab({super.key, required super.api});
+  final int tabIndex;
+  const LugaresTab({super.key, required super.api, this.tabIndex = 0});
 
   @override
   State<AdmCrudTab> createState() => _LugarState();
 }
 
-class _LugarState extends State<AdmCrudTab> {
-  late Future<List<Map<String, dynamic>>> future;
+class _LugarState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
+  int _page = 1;
+  int _total = 0;
+  int _totalPages = 1;
+  String _search = '';
+  late Future<List<Map<String, dynamic>>> _future;
+
   @override
   void initState() {
     super.initState();
-    future = widget.api.getLugares();
+    _future = Future.value([]);
+    initLazy((widget as LugaresTab).tabIndex, _load);
+  }
+
+  Future<void> _load() async {
+    final result = await widget.api.getLugares(page: _page, search: _search);
+    if (!mounted) return;
+    setState(() {
+      _future = Future.value(result.datos);
+      _total = result.total;
+      _totalPages = result.totalPages;
+    });
+  }
+
+  void _reload() {
+    setState(() { _page = 1; });
+    _load();
+  }
+
+  void _onPageChanged(int page) {
+    setState(() { _page = page; });
+    _load();
+  }
+
+  void _onSearch(String value) {
+    setState(() {
+      _search = value;
+      _page = 1;
+    });
+    _load();
   }
 
   @override
   Widget build(BuildContext context) => AdmAsyncTable(
         title: 'Lugares de servicio',
         subtitle: 'Puntos operativos organizados por ruta y distrito.',
-        future: future,
+        future: _future,
         columns: const ['Ruta', 'Ubicacion', 'Distrito', 'Estado', 'Acciones'],
         onRefresh: _reload,
         onCreate: () => _edit(null),
+        total: _total,
+        currentPage: _page,
+        totalPages: _totalPages,
+        onPageChanged: _onPageChanged,
+        onSearch: _onSearch,
+        searchHint: 'Buscar lugar...',
         header: OutlinedButton.icon(
           onPressed: _showRutasManager,
           icon: const Icon(Icons.map_outlined, size: 18),
@@ -50,12 +92,6 @@ class _LugarState extends State<AdmCrudTab> {
           ),
         ],
       );
-
-  void _reload() {
-    setState(() {
-      future = widget.api.getLugares();
-    });
-  }
 
   void _showRutasManager() {
     showDialog(

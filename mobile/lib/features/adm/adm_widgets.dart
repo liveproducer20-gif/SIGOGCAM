@@ -13,11 +13,6 @@ int admId(Map<String, dynamic> item) {
   return id;
 }
 
-List<Map<String, dynamic>> admParseList(Object? value) {
-  final list = value as List<dynamic>? ?? [];
-  return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
-}
-
 bool admIsActive(Map<String, dynamic> item, {String key = 'activo'}) {
   final value = item[key];
   return value == true || value == 1 || value?.toString() == '1';
@@ -74,7 +69,7 @@ Widget admDropdown(
   );
 }
 
-class AdmAsyncTable extends StatelessWidget {
+class AdmAsyncTable extends StatefulWidget {
   final String title;
   final String subtitle;
   final Future<List<Map<String, dynamic>>> future;
@@ -83,6 +78,12 @@ class AdmAsyncTable extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onCreate;
   final Widget? header;
+  final int? total;
+  final int? currentPage;
+  final int? totalPages;
+  final ValueChanged<int>? onPageChanged;
+  final ValueChanged<String>? onSearch;
+  final String? searchHint;
 
   const AdmAsyncTable({
     super.key,
@@ -94,41 +95,89 @@ class AdmAsyncTable extends StatelessWidget {
     required this.onRefresh,
     required this.onCreate,
     this.header,
+    this.total,
+    this.currentPage,
+    this.totalPages,
+    this.onPageChanged,
+    this.onSearch,
+    this.searchHint,
   });
+
+  @override
+  State<AdmAsyncTable> createState() => _AdmAsyncTableState();
+}
+
+class _AdmAsyncTableState extends State<AdmAsyncTable> {
+  final _searchCtl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Map<String, dynamic>>>(
-      future: future,
+      future: widget.future,
       builder: (context, snapshot) {
         final items = snapshot.data ?? [];
+        final isLoading = snapshot.connectionState == ConnectionState.waiting;
         return ListView(
           padding: const EdgeInsets.all(22),
           children: [
             Row(
               children: [
-                Expanded(child: PageTtlWdg(ttl: title, sub: subtitle)),
+                Expanded(child: PageTtlWdg(ttl: widget.title, sub: widget.subtitle)),
                 IconButton.filledTonal(
-                  onPressed: onRefresh,
+                  onPressed: widget.onRefresh,
                   icon: const Icon(Icons.refresh),
                   tooltip: 'Actualizar',
                 ),
                 const SizedBox(width: 8),
                 FilledButton.icon(
-                  onPressed: onCreate,
+                  onPressed: widget.onCreate,
                   icon: const Icon(Icons.add),
                   label: const Text('Nuevo'),
                 ),
               ],
             ),
-            if (header != null) ...[
+            const SizedBox(height: 8),
+            if (widget.onSearch != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  width: 360,
+                  child: TextField(
+                    controller: _searchCtl,
+                    decoration: InputDecoration(
+                      hintText: widget.searchHint ?? 'Buscar...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchCtl.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchCtl.clear();
+                                widget.onSearch!('');
+                              },
+                            )
+                          : null,
+                      border: const OutlineInputBorder(),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (v) => widget.onSearch!(v),
+                  ),
+                ),
+              ),
+            if (widget.header != null) ...[
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 420),
-                child: header!,
+                child: widget.header!,
               ),
               const SizedBox(height: 12),
             ],
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (isLoading)
               const SizedBox(height: 260, child: Center(child: CircularProgressIndicator()))
             else if (snapshot.hasError)
               SizedBox(height: 260, child: Center(child: Text('${snapshot.error}')))
@@ -137,16 +186,58 @@ class AdmAsyncTable extends StatelessWidget {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
+                    headingRowHeight: 44,
+                    dataRowMinHeight: 40,
+                    dataRowMaxHeight: 56,
                     columns: [
-                      for (final column in columns) DataColumn(label: Text(column)),
+                      for (final column in widget.columns) DataColumn(label: Text(column, style: const TextStyle(fontWeight: FontWeight.bold))),
                     ],
-                    rows: [
-                      for (final item in items)
-                        DataRow(cells: [
-                          for (final cell in rowBuilder(item)) DataCell(cell),
-                        ]),
-                    ],
+                    rows: items.isEmpty
+                        ? [
+                            DataRow(cells: [
+                              DataCell(SizedBox(
+                                width: 600,
+                                child: Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(24),
+                                    child: Text(widget.total != null && widget.total! > 0 ? 'Sin resultados para esta busqueda' : 'Sin registros'),
+                                  ),
+                                ),
+                              )),
+                              for (int i = 1; i < widget.columns.length; i++) const DataCell(SizedBox.shrink()),
+                            ]),
+                          ]
+                        : [
+                            for (final item in items)
+                              DataRow(cells: [
+                                for (final cell in widget.rowBuilder(item)) DataCell(cell),
+                              ]),
+                          ],
                   ),
+                ),
+              ),
+            if (widget.totalPages != null && widget.totalPages! > 1)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: widget.currentPage! > 1 && widget.onPageChanged != null
+                          ? () => widget.onPageChanged!(widget.currentPage! - 1)
+                          : null,
+                      tooltip: 'Anterior',
+                    ),
+                    Text('Pagina ${widget.currentPage ?? 1} de ${widget.totalPages ?? 1}  (${widget.total ?? 0} registros)'),
+                    IconButton(
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: widget.currentPage! < widget.totalPages! && widget.onPageChanged != null
+                          ? () => widget.onPageChanged!(widget.currentPage! + 1)
+                          : null,
+                      tooltip: 'Siguiente',
+                    ),
+                  ],
                 ),
               ),
           ],

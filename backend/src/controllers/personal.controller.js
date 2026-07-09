@@ -6,7 +6,15 @@ const responder = (res, datos, status = 200) => {
 };
 
 const obtenerTodo = asyncHandler(async (req, res) => {
-    responder(res, await service.obtenerTodo());
+    const result = await service.obtenerTodo(req.query);
+    if (result && typeof result === 'object' && !Array.isArray(result) && result.datos !== undefined) {
+        const body = { ok: true, datos: result.datos };
+        if (result.total !== null && result.total !== undefined) body.total = result.total;
+        if (result.page !== null && result.page !== undefined) body.page = result.page;
+        res.json(body);
+    } else {
+        responder(res, result);
+    }
 });
 
 const obtenerOperativos = asyncHandler(async (req, res) => {

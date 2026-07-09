@@ -10,6 +10,16 @@ async function withConnection(callback) {
     }
 }
 
+function parsePaginacion(query) {
+    const rawPage = query.page ? parseInt(query.page, 10) : NaN;
+    const hasPaginacion = !isNaN(rawPage) && rawPage > 0;
+    const page = hasPaginacion ? rawPage : 1;
+    const limit = hasPaginacion ? Math.min(500, Math.max(1, parseInt(query.limit, 10) || 50)) : 0;
+    const offset = (page - 1) * (limit || 1);
+    const search = (query.search || '').trim();
+    return { paginate: hasPaginacion, page, limit, offset, search };
+}
+
 async function listarCatalogos() {
     return withConnection((conexion) => conexion.query(`
         SELECT c.id, c.codigo, c.nombre, c.descripcion, c.estado,
@@ -21,12 +31,39 @@ async function listarCatalogos() {
     `));
 }
 
-async function listarDetalles(codigo, incluirInactivos = false) {
-    return withConnection((conexion) => listarDetallesConConexion(
-        conexion,
-        codigo,
-        incluirInactivos
-    ));
+async function listarDetalles(codigo, incluirInactivos = false, query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const params = [codigo];
+    let searchClause = '';
+    if (search) {
+        searchClause = ' AND (d.nombre LIKE ? OR d.codigo LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s);
+    }
+    const estadoClause = incluirInactivos ? '' : 'AND d.estado = 1';
+    return withConnection(async (conexion) => {
+        let total = null;
+        if (paginate || search) {
+            const countResult = await conexion.query(`
+                SELECT COUNT(*) AS total
+                FROM dbo.catalogo_detalles d
+                INNER JOIN dbo.catalogos c ON c.id = d.catalogo_id
+                WHERE c.codigo = ? ${estadoClause}${searchClause}
+            `, params);
+            total = countResult[0]?.total ?? 0;
+        }
+        const baseSql = `
+            SELECT d.id, d.codigo, d.nombre, d.descripcion, d.orden, d.estado
+            FROM dbo.catalogo_detalles d
+            INNER JOIN dbo.catalogos c ON c.id = d.catalogo_id
+            WHERE c.codigo = ? ${estadoClause}${searchClause}
+            ORDER BY d.orden, d.nombre`;
+        const sql = paginate ? `${baseSql} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY` : baseSql;
+        const datos = paginate
+            ? await conexion.query(sql, [...params, offset, limit])
+            : await conexion.query(sql, params);
+        return { datos, total, page: paginate ? Math.max(1, parseInt(query.page, 10)) : null };
+    });
 }
 
 async function listarDetallesConConexion(conexion, codigo, incluirInactivos = false) {
@@ -90,20 +127,41 @@ async function cambiarEstadoDetalle(id, estado) {
     });
 }
 
-async function listarRoles() {
-    return withConnection((conexion) => conexion.query(`
-        SELECT r.id, r.nombre, r.descripcion, r.activo,
-               STUFF((
-                   SELECT ',' + p.codigo
-                   FROM dbo.rol_permiso rp
-                   INNER JOIN dbo.permisos p ON p.id = rp.permiso_id
-                   WHERE rp.rol_id = r.id
-                   ORDER BY p.codigo
-                   FOR XML PATH(''), TYPE
-               ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS permisos
-        FROM dbo.roles r
-        ORDER BY r.nombre
-    `));
+async function listarRoles(query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const params = [];
+    let where = '';
+    if (search) {
+        where = ' WHERE (r.nombre LIKE ? OR r.descripcion LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s);
+    }
+    return withConnection(async (conexion) => {
+        let total = null;
+        if (paginate || search) {
+            const countResult = await conexion.query(`
+                SELECT COUNT(*) AS total FROM dbo.roles r${where}
+            `, params);
+            total = countResult[0]?.total ?? 0;
+        }
+        const baseSql = `
+            SELECT r.id, r.nombre, r.descripcion, r.activo,
+                   STUFF((
+                       SELECT ',' + p.codigo
+                       FROM dbo.rol_permiso rp
+                       INNER JOIN dbo.permisos p ON p.id = rp.permiso_id
+                       WHERE rp.rol_id = r.id
+                       ORDER BY p.codigo
+                       FOR XML PATH(''), TYPE
+                   ).value('.', 'NVARCHAR(MAX)'), 1, 1, '') AS permisos
+            FROM dbo.roles r${where}
+            ORDER BY r.nombre`;
+        const sql = paginate ? `${baseSql} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY` : baseSql;
+        const datos = paginate
+            ? await conexion.query(sql, [...params, offset, limit])
+            : await conexion.query(sql, params);
+        return { datos, total, page: paginate ? Math.max(1, parseInt(query.page, 10)) : null };
+    });
 }
 
 async function crearRol(data) {
@@ -153,17 +211,52 @@ async function listarPermisos() {
     `));
 }
 
-async function listarLugares() {
-    return withConnection((conexion) => conexion.query(`
-        SELECT l.id, l.ruta_id, ruta.nombre AS ruta, l.direccion,
-               l.distrito_id, distrito.nombre AS distrito,
-               l.hora_entrada, l.hora_salida, l.consignas,
-               l.activo
-        FROM dbo.lugares_servicio l
-        INNER JOIN dbo.rutas ruta ON ruta.id = l.ruta_id
-        INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
-        ORDER BY ruta.nombre, l.direccion
-    `));
+async function listarLugares(query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const params = [];
+    let where = '';
+    if (search) {
+        where = ' AND (l.direccion LIKE ? OR ruta.nombre LIKE ? OR distrito.nombre LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s, s);
+    }
+    return withConnection(async (conexion) => {
+        let total = null;
+        if (paginate || search) {
+            const countResult = await conexion.query(`
+                SELECT COUNT(*) AS total
+                FROM dbo.lugares_servicio l
+                INNER JOIN dbo.rutas ruta ON ruta.id = l.ruta_id
+                INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
+                WHERE 1=1${where}
+            `, params);
+            total = countResult[0]?.total ?? 0;
+        }
+        const sql = paginate
+            ? `SELECT l.id, l.ruta_id, ruta.nombre AS ruta, l.direccion,
+                      l.distrito_id, distrito.nombre AS distrito,
+                      l.hora_entrada, l.hora_salida, l.consignas,
+                      l.activo
+               FROM dbo.lugares_servicio l
+               INNER JOIN dbo.rutas ruta ON ruta.id = l.ruta_id
+               INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
+               WHERE 1=1${where}
+               ORDER BY ruta.nombre, l.direccion
+               OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`
+            : `SELECT l.id, l.ruta_id, ruta.nombre AS ruta, l.direccion,
+                      l.distrito_id, distrito.nombre AS distrito,
+                      l.hora_entrada, l.hora_salida, l.consignas,
+                      l.activo
+               FROM dbo.lugares_servicio l
+               INNER JOIN dbo.rutas ruta ON ruta.id = l.ruta_id
+               INNER JOIN dbo.catalogo_detalles distrito ON distrito.id = l.distrito_id
+               WHERE 1=1${where}
+               ORDER BY ruta.nombre, l.direccion`;
+        const datos = paginate
+            ? await conexion.query(sql, [...params, offset, limit])
+            : await conexion.query(sql, params);
+        return { datos, total, page: paginate ? Math.max(1, parseInt(query.page, 10)) : null };
+    });
 }
 
 async function crearLugar(data) {
@@ -203,15 +296,39 @@ async function cambiarEstadoLugar(id, activo) {
     return cambiarActivo('dbo.lugares_servicio', id, activo);
 }
 
-async function listarEas() {
-    return withConnection((conexion) => conexion.query(`
-        SELECT e.id, e.codigo, e.nombre, e.direccion, e.distrito_id,
-               d.nombre AS distrito,
-               e.activo
-        FROM dbo.eas_estaciones e
-        LEFT JOIN dbo.catalogo_detalles d ON d.id = e.distrito_id
-        ORDER BY e.codigo, e.nombre
-    `));
+async function listarEas(query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const params = [];
+    let where = '';
+    if (search) {
+        where = ' AND (e.codigo LIKE ? OR e.nombre LIKE ? OR e.direccion LIKE ? OR d.nombre LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s, s, s);
+    }
+    return withConnection(async (conexion) => {
+        let total = null;
+        if (paginate || search) {
+            const countResult = await conexion.query(`
+                SELECT COUNT(*) AS total
+                FROM dbo.eas_estaciones e
+                LEFT JOIN dbo.catalogo_detalles d ON d.id = e.distrito_id
+                WHERE 1=1${where}
+            `, params);
+            total = countResult[0]?.total ?? 0;
+        }
+        const baseSql = `
+            SELECT e.id, e.codigo, e.nombre, e.direccion, e.distrito_id,
+                   d.nombre AS distrito, e.activo
+            FROM dbo.eas_estaciones e
+            LEFT JOIN dbo.catalogo_detalles d ON d.id = e.distrito_id
+            WHERE 1=1${where}
+            ORDER BY e.codigo, e.nombre`;
+        const sql = paginate ? `${baseSql} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY` : baseSql;
+        const datos = paginate
+            ? await conexion.query(sql, [...params, offset, limit])
+            : await conexion.query(sql, params);
+        return { datos, total, page: paginate ? Math.max(1, parseInt(query.page, 10)) : null };
+    });
 }
 
 async function crearEas(data) {
@@ -278,29 +395,51 @@ async function eliminarRuta(id) {
     return withConnection((conexion) => conexion.query('DELETE FROM dbo.rutas WHERE id = ?', [id]));
 }
 
-async function listarMoviles() {
-    return withConnection((conexion) => conexion.query(`
-        SELECT m.id, m.numero_movil, m.placa, m.tipo_movil_id,
-               tipo.nombre AS tipo,
-               m.kilometraje_actual,
-               m.kilometraje_ultimo_mantenimiento,
-               m.proximo_mantenimiento,
-               (m.proximo_mantenimiento - m.kilometraje_actual) AS kilometros_restantes,
-               CASE
-                   WHEN m.kilometraje_actual > m.proximo_mantenimiento THEN N'KILOMETRAJE_EXCEDIDO'
-                   WHEN (m.proximo_mantenimiento - m.kilometraje_actual) <= 500 THEN N'EN_ESPERA'
-                   ELSE N'MANTENIMIENTO_COMPLETADO'
-               END AS estado_mantenimiento,
-               m.estado_movil_id,
-               estado.nombre AS estado,
-               m.observacion,
-               m.observacion_estado,
-               m.activo
-        FROM dbo.moviles m
-        INNER JOIN dbo.catalogo_detalles tipo ON tipo.id = m.tipo_movil_id
-        INNER JOIN dbo.catalogo_detalles estado ON estado.id = m.estado_movil_id
-        ORDER BY m.numero_movil
-    `));
+async function listarMoviles(query = {}) {
+    const { paginate, limit, offset, search } = parsePaginacion(query);
+    const params = [];
+    let where = '';
+    if (search) {
+        where = ' AND (m.numero_movil LIKE ? OR m.placa LIKE ? OR tipo.nombre LIKE ? OR estado.nombre LIKE ?)';
+        const s = `%${search}%`;
+        params.push(s, s, s, s);
+    }
+    return withConnection(async (conexion) => {
+        let total = null;
+        if (paginate || search) {
+            const countResult = await conexion.query(`
+                SELECT COUNT(*) AS total
+                FROM dbo.moviles m
+                INNER JOIN dbo.catalogo_detalles tipo ON tipo.id = m.tipo_movil_id
+                INNER JOIN dbo.catalogo_detalles estado ON estado.id = m.estado_movil_id
+                WHERE 1=1${where}
+            `, params);
+            total = countResult[0]?.total ?? 0;
+        }
+        const baseSql = `
+            SELECT m.id, m.numero_movil, m.placa, m.tipo_movil_id,
+                   tipo.nombre AS tipo,
+                   m.kilometraje_actual, m.kilometraje_ultimo_mantenimiento,
+                   m.proximo_mantenimiento,
+                   (m.proximo_mantenimiento - m.kilometraje_actual) AS kilometros_restantes,
+                   CASE
+                       WHEN m.kilometraje_actual > m.proximo_mantenimiento THEN N'KILOMETRAJE_EXCEDIDO'
+                       WHEN (m.proximo_mantenimiento - m.kilometraje_actual) <= 500 THEN N'EN_ESPERA'
+                       ELSE N'MANTENIMIENTO_COMPLETADO'
+                   END AS estado_mantenimiento,
+                   m.estado_movil_id, estado.nombre AS estado,
+                   m.observacion, m.observacion_estado, m.activo
+            FROM dbo.moviles m
+            INNER JOIN dbo.catalogo_detalles tipo ON tipo.id = m.tipo_movil_id
+            INNER JOIN dbo.catalogo_detalles estado ON estado.id = m.estado_movil_id
+            WHERE 1=1${where}
+            ORDER BY m.numero_movil`;
+        const sql = paginate ? `${baseSql} OFFSET ? ROWS FETCH NEXT ? ROWS ONLY` : baseSql;
+        const datos = paginate
+            ? await conexion.query(sql, [...params, offset, limit])
+            : await conexion.query(sql, params);
+        return { datos, total, page: paginate ? Math.max(1, parseInt(query.page, 10)) : null };
+    });
 }
 
 async function crearMovil(data) {
@@ -523,6 +662,23 @@ async function guardarPermisosRol(conexion, rolId, permisos) {
             WHERE codigo = ?
         `, [rolId, codigo]);
     }
+}
+
+async function listarAsignaciones() {
+    return withConnection((conexion) => conexion.query(`
+        SELECT a.id, a.eas_id, e.codigo AS eas_codigo, e.nombre AS eas,
+               a.movil_id, m.numero_movil, m.placa,
+               a.fecha_asignacion,
+               a.estado_asignacion_id,
+               estado.nombre AS estado,
+               a.observacion,
+               a.activo
+        FROM dbo.movil_eas_asignaciones a
+        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
+        INNER JOIN dbo.moviles m ON m.id = a.movil_id
+        INNER JOIN dbo.catalogo_detalles estado ON estado.id = a.estado_asignacion_id
+        ORDER BY a.fecha_asignacion DESC, a.id DESC
+    `));
 }
 
 const TABLAS_PERMITIDAS = new Set([
