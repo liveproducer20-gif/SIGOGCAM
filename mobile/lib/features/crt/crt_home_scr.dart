@@ -98,6 +98,51 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final _rtCantidadCtrl = TextEditingController();
   bool _rtGuardando = false;
 
+  bool _colCargando = false;
+  int _colSection = 0;
+  String _colJp = '';
+  String _colMovil = '';
+  String _colCp = '';
+  String _colCpGuardado = '';
+  int? _colPoliciaId;
+  String _colPoliciaNombre = '';
+  bool _colPoliciaOtro = false;
+  final _colPoliciaCtrl = TextEditingController();
+  final _colJpCtrl = TextEditingController();
+  final _colCpCtrl = TextEditingController();
+  String _colDireccion = '';
+  bool _colDireccionOtro = false;
+  List<Map<String, dynamic>> _colServidoresPoliciales = [];
+  List<Map<String, dynamic>> _colDirecciones = [];
+  String _colAux1 = '';
+  final _colAux1Ctrl = TextEditingController();
+  String _colAux2 = '';
+  final _colAux2Ctrl = TextEditingController();
+  String _colSubtype = 'entidad';
+  String _colEntidad = '';
+  String _colMotivo = '';
+  String _colTipoAccidente = '';
+  String _colNumHeridos = '';
+  String _colNombresHeridos = '';
+  bool _colHuboFallecidos = false;
+  String _colNumFallecidos = '';
+  String _colNombresFallecidos = '';
+  String _colCriminalistica = 'No intervino';
+  String _colCriminalisticaNombre = '';
+  String _colAtm = 'No estuvo presente';
+  String _colAtmNombre = '';
+  String _colAtmMovil = '';
+  String _colAmbulancia = 'No estuvo presente';
+  String _colAmbulanciaNombre = '';
+  String _colPlacas = '';
+  String _colConductores = '';
+  String _colDanios = '';
+  bool _colCierreVial = false;
+  String _colCierreVialDesc = '';
+  bool _colTraslado = false;
+  String _colCasaSalud = '';
+  bool _colGuardando = false;
+
   CrtModuleConfig get config => CrtCatalog.configFor(modulo);
   List<CrtFieldConfig> get activeFields => CrtCatalog.fieldsFor(modulo, tipo);
 
@@ -117,11 +162,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.retiroTemporal;
 
+  bool get _isColaboracionFlow =>
+      modulo == TipoModuloCartilla.eas &&
+      tipo == TipoCartilla.colaboracionEntidades;
+
   bool get _isEasCustomCardFlow {
     if (modulo != TipoModuloCartilla.eas) return false;
     return [
       TipoCartilla.requerimiento,
-      TipoCartilla.colaboracionEntidades,
       TipoCartilla.colaboracionEventos,
       TipoCartilla.permisoAusentismo,
     ].contains(tipo);
@@ -154,6 +202,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _rtActividadCtrl.dispose();
     _rtElementosCtrl.dispose();
     _rtCantidadCtrl.dispose();
+    _colPoliciaCtrl.dispose();
+    _colJpCtrl.dispose();
+    _colCpCtrl.dispose();
+    _colAux1Ctrl.dispose();
+    _colAux2Ctrl.dispose();
     super.dispose();
   }
 
@@ -218,6 +271,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
         else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
         else if (_isRetiroTemporalFlow) _buildRetiroTemporalWizard()
+        else if (_isColaboracionFlow) _buildColaboracionWizard()
         else if (_isEasCustomCardFlow) _buildEasCustomForm()
         else _formPanel(),
       ],
@@ -1332,6 +1386,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           if (_isRetiroTemporalFlow) {
             _rtDirecciones = direcciones;
           }
+          if (_isColaboracionFlow) {
+            _colDirecciones = direcciones;
+          }
         });
       }
       return direcciones;
@@ -1412,27 +1469,28 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
     return Column(
       children: [
-        _StepCard(
-          step: 1,
-          title: 'Datos del personal',
-          child: Column(
-            children: [
-              TextFormField(
-                controller: _rtJpCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del agente JP',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
+        if (rolMovil != RolMovil.jp)
+          _StepCard(
+            step: 1,
+            title: 'Datos del personal',
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _rtJpCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del agente JP',
+                    prefixIcon: Icon(Icons.badge_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _rtJp = value;
+                    setState(() {});
+                  },
                 ),
-                onChanged: (value) {
-                  _rtJp = value;
-                  setState(() {});
-                },
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: 20),
+        if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
         _StepCard(
           step: 2,
           title: 'Seleccione móvil',
@@ -1452,40 +1510,42 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             },
           ),
         ),
-        const SizedBox(height: 20),
-        _StepCard(
-          step: 3,
-          title: 'Datos del conductor',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _rtCpCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre del conductor CP',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+        if (rolMovil != RolMovil.conductor) ...[
+          const SizedBox(height: 20),
+          _StepCard(
+            step: 3,
+            title: 'Datos del conductor',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: _rtCpCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del conductor CP',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _rtCp = value;
+                    setState(() {});
+                  },
                 ),
-                onChanged: (value) {
-                  _rtCp = value;
-                  setState(() {});
-                },
-              ),
-              if (_rtCpGuardado.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    'Último registro: $_rtCpGuardado',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppThm.secClr,
-                      fontStyle: FontStyle.italic,
+                if (_rtCpGuardado.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Último registro: $_rtCpGuardado',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppThm.secClr,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 20),
         _StepCard(
           step: 4,
@@ -1855,10 +1915,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         fecha: _fmtFecha(now),
         hora: _fmtHora(now),
         eas: eas,
+        rolMovil: rolMovil,
         values: {
-          '_rt_jp': _rtJp,
+          '_rt_jp': _rtJp.isNotEmpty ? _rtJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
           '_rt_movil': movilValue,
-          '_rt_cp': _rtCp,
+          '_rt_cp': _rtCp.isNotEmpty ? _rtCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
           '_rt_policia': _rtPoliciaNombre,
           '_rt_direccion': _rtDireccion,
           '_rt_aux1': _rtAux1,
@@ -1866,6 +1927,874 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           '_rt_actividad': _rtActividad,
           '_rt_elementos': _rtElementos,
           '_rt_cantidad': _rtCantidad,
+          '_rt_userNombre': widget.user?.nombreCompleto ?? '',
+        },
+      ),
+    );
+  }
+
+  Future<void> _cargarDatosColaboracion() async {
+    setState(() => _colCargando = true);
+    try {
+      final easId = _easDbId;
+      final results = await Future.wait([
+        crtApi.getCp(),
+        crtApi.getPolicia(),
+        crtApi.getServidoresPoliciales(easId),
+        _cargarDirecciones(),
+      ]);
+      final cpGuardado = results[0] as String?;
+      final policiaData = results[1] as Map<String, dynamic>?;
+      final servidores = results[2] as List<Map<String, dynamic>>;
+      setState(() {
+        _colCpGuardado = cpGuardado ?? '';
+        if (_colCpGuardado.isNotEmpty) {
+          _colCpCtrl.text = _colCpGuardado;
+          _colCp = _colCpGuardado;
+        }
+        _colServidoresPoliciales = servidores;
+        _colMovil = _moviles.first.movil;
+        _colSubtype = 'entidad';
+        final pid = policiaData?['servidorPolicialId'] as int?;
+        if (pid != null && pid > 0) {
+          _colPoliciaId = pid;
+          _colPoliciaNombre =
+              policiaData?['servidorNombre'] as String? ?? '';
+        }
+      });
+    } catch (_) {
+      // Silently fail on temp data load
+    } finally {
+      if (mounted) setState(() => _colCargando = false);
+    }
+  }
+
+  Widget _buildColaboracionWizard() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.groups_outlined, color: AppThm.secClr),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Colaboración con otras entidades',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_colCargando)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildColaboracionStepContent(),
+          const SizedBox(height: 24),
+          _buildColNavButtons(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildColaboracionStepContent() {
+    if (_colCargando) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    if (_colSection == 0) return _buildColSection1();
+    return _buildColSection2();
+  }
+
+  Widget _buildColSection1() {
+    final dirOptions = [
+      ..._colDirecciones.map((d) => d),
+      const {'id': -1, 'direccion': 'Otra dirección'},
+    ];
+    final dirValue = _colDireccionOtro
+        ? dirOptions.last
+        : (_colDireccion.isNotEmpty
+            ? dirOptions.firstWhere(
+                (d) => d['direccion'] == _colDireccion,
+                orElse: () => dirOptions.last,
+              )
+            : null);
+
+    return Column(
+      children: [
+        if (rolMovil != RolMovil.jp)
+          _StepCard(
+            step: 1,
+            title: 'Nombre del JP',
+            child: TextFormField(
+              controller: _colJpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del agente JP',
+                prefixIcon: Icon(Icons.badge_outlined),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _colJp = value;
+                setState(() {});
+              },
+            ),
+          ),
+        if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
+        if (rolMovil != RolMovil.conductor)
+          _StepCard(
+            step: 2,
+            title: 'Nombre del conductor CP',
+            child: TextFormField(
+              controller: _colCpCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del conductor CP',
+                prefixIcon: Icon(Icons.person_outline),
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (value) {
+                _colCp = value;
+                setState(() {});
+              },
+            ),
+          ),
+        if (rolMovil != RolMovil.conductor) const SizedBox(height: 20),
+        _StepCard(
+          step: 3,
+          title: 'Servidor policial',
+          child: DropdownButtonFormField<int?>(
+            initialValue: _colPoliciaId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Servidor policial',
+              prefixIcon: Icon(Icons.local_police_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              ..._colServidoresPoliciales.map((sp) {
+                final id = sp['id'] as int?;
+                final nombre = sp['nombre'] as String? ?? '';
+                return DropdownMenuItem(value: id, child: Text(nombre));
+              }),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _colPoliciaId = value;
+                if (value != null) {
+                  _colPoliciaOtro = false;
+                  _colPoliciaNombre = _colServidoresPoliciales
+                      .firstWhere(
+                        (sp) => sp['id'] == value,
+                        orElse: () => <String, dynamic>{},
+                      )['nombre'] as String? ?? '';
+                } else {
+                  _colPoliciaNombre = '';
+                }
+                _colPoliciaCtrl.clear();
+              });
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 4,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  return DropdownMenuItem(value: d, child: Text(nombre));
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'] as int?;
+                  setState(() {
+                    if (id == -1) {
+                      _colDireccionOtro = true;
+                      _colDireccion = '';
+                    } else {
+                      _colDireccionOtro = false;
+                      _colDireccion = value['direccion'] as String? ?? '';
+                    }
+                  });
+                },
+              ),
+              if (_colDireccionOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (value) {
+                      _colDireccion = value;
+                      setState(() {});
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 5,
+          title: 'Auxiliares',
+          child: Column(
+            children: [
+              TextField(
+                controller: _colAux1Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 1 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colAux1 = value;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _colAux2Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 2 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colAux2 = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 6,
+          title: 'Tipo',
+          child: DropdownButtonFormField<String>(
+            initialValue: _colSubtype,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Seleccione el tipo',
+              prefixIcon: Icon(Icons.category_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'entidad', child: Text('Entidades de colaboración')),
+              DropdownMenuItem(value: 'accidente', child: Text('Hecho o Accidente')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _colSubtype = value);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColSection2() {
+    if (_colSubtype == 'accidente') {
+      return _buildColAccidenteForm();
+    }
+    return _buildColEntidadForm();
+  }
+
+  Widget _buildColEntidadForm() {
+    return Column(
+      children: [
+        _StepCard(
+          step: 7,
+          title: 'Entidad',
+          child: DropdownButtonFormField<String>(
+            initialValue: _colEntidad.isNotEmpty ? _colEntidad : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Entidad',
+              prefixIcon: Icon(Icons.business_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Policía', child: Text('Policía')),
+              DropdownMenuItem(value: 'ATM', child: Text('ATM')),
+              DropdownMenuItem(value: 'CTE', child: Text('CTE')),
+              DropdownMenuItem(value: 'Bomberos', child: Text('Bomberos')),
+              DropdownMenuItem(value: 'Paramédicos', child: Text('Paramédicos')),
+              DropdownMenuItem(value: 'Fuerzas Armadas', child: Text('Fuerzas Armadas')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _colEntidad = value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Motivo',
+          child: TextField(
+            decoration: const InputDecoration(
+              labelText: 'Motivo de la colaboración',
+              prefixIcon: Icon(Icons.description_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 4,
+            onChanged: (value) {
+              _colMotivo = value;
+              setState(() {});
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColAccidenteForm() {
+    return Column(
+      children: [
+        _StepCard(
+          step: 7,
+          title: 'Tipo de accidente',
+          child: DropdownButtonFormField<String>(
+            initialValue: _colTipoAccidente.isNotEmpty ? _colTipoAccidente : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Tipo de accidente',
+              prefixIcon: Icon(Icons.car_crash_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'Accidente entre dos vehículos', child: Text('Accidente entre dos vehículos')),
+              DropdownMenuItem(value: 'Accidente múltiple', child: Text('Accidente múltiple')),
+              DropdownMenuItem(value: 'Choque y daño al espacio y vía pública', child: Text('Choque y daño al espacio y vía pública')),
+              DropdownMenuItem(value: 'Accidente entre vehículo y persona', child: Text('Accidente entre vehículo y persona')),
+            ],
+            onChanged: (value) {
+              if (value != null) setState(() => _colTipoAccidente = value);
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Heridos',
+          child: Column(
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Número de heridos',
+                  prefixIcon: Icon(Icons.numbers_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colNumHeridos = value;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Nombre(s) de los heridos',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colNombresHeridos = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 9,
+          title: 'Fallecidos',
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _colHuboFallecidos ? 'si' : 'no',
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: '¿Hubo fallecidos?',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'no', child: Text('No')),
+                  DropdownMenuItem(value: 'si', child: Text('Sí')),
+                ],
+                onChanged: (value) {
+                  setState(() => _colHuboFallecidos = value == 'si');
+                },
+              ),
+              if (_colHuboFallecidos) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Número de fallecidos',
+                    prefixIcon: Icon(Icons.numbers_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colNumFallecidos = value;
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre(s) de los fallecidos',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colNombresFallecidos = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 10,
+          title: 'Instituciones',
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _colCriminalistica,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Criminalística',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'No intervino', child: Text('No intervino')),
+                  DropdownMenuItem(value: 'Presente', child: Text('Presente')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _colCriminalistica = value);
+                },
+              ),
+              if (_colCriminalistica == 'Presente') ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del personal',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colCriminalisticaNombre = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: _colAtm,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'ATM',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'No estuvo presente', child: Text('No estuvo presente')),
+                  DropdownMenuItem(value: 'Presente', child: Text('Presente')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _colAtm = value);
+                },
+              ),
+              if (_colAtm == 'Presente') ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del agente',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colAtmNombre = value;
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Móvil',
+                    prefixIcon: Icon(Icons.directions_car_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colAtmMovil = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: _colAmbulancia,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Ambulancia',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'No estuvo presente', child: Text('No estuvo presente')),
+                  DropdownMenuItem(value: 'Presente', child: Text('Presente')),
+                ],
+                onChanged: (value) {
+                  if (value != null) setState(() => _colAmbulancia = value);
+                },
+              ),
+              if (_colAmbulancia == 'Presente') ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del paramédico',
+                    prefixIcon: Icon(Icons.medical_services_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colAmbulanciaNombre = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 11,
+          title: 'Vehículos',
+          child: Column(
+            children: [
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Placas',
+                  prefixIcon: Icon(Icons.directions_car_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colPlacas = value;
+                  setState(() {});
+                },
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Conductores',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (value) {
+                  _colConductores = value;
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 12,
+          title: 'Daños observados',
+          child: TextField(
+            decoration: const InputDecoration(
+              labelText: 'Daños observados',
+              prefixIcon: Icon(Icons.warning_amber_outlined),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+            onChanged: (value) {
+              _colDanios = value;
+              setState(() {});
+            },
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 13,
+          title: 'Cierre vial',
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _colCierreVial ? 'si' : 'no',
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: '¿Hubo cierre vial?',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'no', child: Text('No')),
+                  DropdownMenuItem(value: 'si', child: Text('Sí')),
+                ],
+                onChanged: (value) {
+                  setState(() => _colCierreVial = value == 'si');
+                },
+              ),
+              if (_colCierreVial) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Describir cierre vial',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (value) {
+                    _colCierreVialDesc = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 14,
+          title: 'Traslado hospitalario',
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _colTraslado ? 'si' : 'no',
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: '¿Hubo traslado hospitalario?',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'no', child: Text('No')),
+                  DropdownMenuItem(value: 'si', child: Text('Sí')),
+                ],
+                onChanged: (value) {
+                  setState(() => _colTraslado = value == 'si');
+                },
+              ),
+              if (_colTraslado) ...[
+                const SizedBox(height: 14),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Casa de salud',
+                    prefixIcon: Icon(Icons.local_hospital_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (value) {
+                    _colCasaSalud = value;
+                    setState(() {});
+                  },
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildColNavButtons() {
+    final isLast = _colSection == 1;
+    final isFirst = _colSection == 0;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        if (!isFirst)
+          OutlinedButton.icon(
+            onPressed: () => setState(() => _colSection--),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Anterior'),
+          )
+        else
+          const SizedBox(),
+        if (isLast)
+          FilledButton.icon(
+            onPressed: _colGuardando ? null : () => _generarColaboracion(),
+            icon: _colGuardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check),
+            label: Text(_colGuardando ? 'Generando' : 'Generar cartilla'),
+          )
+        else
+          FilledButton.icon(
+            onPressed: () => _colIrSiguiente(),
+            icon: const Icon(Icons.arrow_forward),
+            label: const Text('Siguiente'),
+          ),
+      ],
+    );
+  }
+
+  void _colIrSiguiente() async {
+    final saves = <Future<void>>[];
+    if (_colCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_colCp.trim()).catchError((_) {}));
+    }
+    if (_colPoliciaOtro && _colPoliciaNombre.trim().isNotEmpty) {
+      saves.add(crtApi
+          .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
+          .catchError((_) {}));
+    } else if (_colPoliciaId != null) {
+      saves.add(crtApi.savePolicia(_colPoliciaId).catchError((_) {}));
+    }
+    await Future.wait(saves);
+
+    if (_colPoliciaOtro && _colPoliciaNombre.trim().isNotEmpty) {
+      _colPoliciaOtro = false;
+      _colPoliciaCtrl.clear();
+      try {
+        _colServidoresPoliciales =
+            await crtApi.getServidoresPoliciales(_easDbId);
+        final nuevo =
+            _colServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        if (nuevo != null) {
+          _colPoliciaId = nuevo['id'] as int?;
+        }
+      } catch (_) {}
+    }
+    if (_colDireccionOtro && _colDireccion.trim().isNotEmpty) {
+      _colDireccionOtro = false;
+      try {
+        await crtApi.crearDireccion(_easDbId, _colDireccion.trim());
+        _colDirecciones = await crtApi.getDirecciones(_easDbId);
+        _colDireccion = _colDireccion.trim();
+      } catch (_) {
+        _colDirecciones = await crtApi.getDirecciones(_easDbId);
+      }
+    }
+    if (mounted) setState(() => _colSection++);
+  }
+
+  Future<void> _generarColaboracion() async {
+    if (widget.user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicie sesion para generar cartillas')),
+      );
+      return;
+    }
+    setState(() => _colGuardando = true);
+    try {
+      final saves = <Future<void>>[];
+      if (_colCp.trim().isNotEmpty) {
+        saves.add(crtApi.saveCp(_colCp.trim()).catchError((_) {}));
+      }
+      if (_colPoliciaOtro && _colPoliciaNombre.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
+            .catchError((_) {}));
+      } else if (_colPoliciaId != null) {
+        saves.add(crtApi.savePolicia(_colPoliciaId).catchError((_) {}));
+      }
+      if (_colDireccionOtro && _colDireccion.trim().isNotEmpty) {
+        saves.add(crtApi
+            .crearDireccion(_easDbId, _colDireccion.trim())
+            .catchError((_) {}));
+      }
+      await Future.wait(saves);
+      if (_colDireccionOtro) _colDireccionOtro = false;
+
+      final value = _buildColaboracionText();
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
+      await Clipboard.setData(ClipboardData(text: value));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) await _showBadgeDialog(insignia);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
+    } finally {
+      if (mounted) setState(() => _colGuardando = false);
+    }
+  }
+
+  String _buildColaboracionText() {
+    final now = DateTime.now();
+    final movilValue = _colMovil.isNotEmpty ? _colMovil : _moviles.first.movil;
+    return CrtTextGenerator.build(
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: TipoCartilla.colaboracionEntidades,
+        jornada: CrtCatalog.jornadaActual(now),
+        horario: CrtCatalog.horarioActual(now),
+        fecha: _fmtFecha(now),
+        hora: _fmtHora(now),
+        eas: eas,
+        rolMovil: rolMovil,
+        values: {
+          '_col_subtype': _colSubtype,
+          '_col_jp': _colJp.isNotEmpty ? _colJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_col_movil': movilValue,
+          '_col_cp': _colCp.isNotEmpty ? _colCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_col_policia': _colPoliciaNombre,
+          '_col_direccion': _colDireccion,
+          '_col_aux1': _colAux1,
+          '_col_aux2': _colAux2,
+          '_col_userNombre': widget.user?.nombreCompleto ?? '',
+          '_col_entidad': _colEntidad,
+          '_col_motivo': _colMotivo,
+          '_col_tipoAccidente': _colTipoAccidente,
+          '_col_numHeridos': _colNumHeridos,
+          '_col_nombresHeridos': _colNombresHeridos,
+          '_col_huboFallecidos': _colHuboFallecidos ? 'si' : 'no',
+          '_col_numFallecidos': _colNumFallecidos,
+          '_col_nombresFallecidos': _colNombresFallecidos,
+          '_col_criminalistica': _colCriminalistica,
+          '_col_criminalisticaNombre': _colCriminalisticaNombre,
+          '_col_atm': _colAtm,
+          '_col_atmNombre': _colAtmNombre,
+          '_col_atmMovil': _colAtmMovil,
+          '_col_ambulancia': _colAmbulancia,
+          '_col_ambulanciaNombre': _colAmbulanciaNombre,
+          '_col_placas': _colPlacas,
+          '_col_conductores': _colConductores,
+          '_col_danios': _colDanios,
+          '_col_cierreVial': _colCierreVial ? 'si' : 'no',
+          '_col_cierreVialDesc': _colCierreVialDesc,
+          '_col_traslado': _colTraslado ? 'si' : 'no',
+          '_col_casaSalud': _colCasaSalud,
         },
       ),
     );
@@ -2059,6 +2988,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_isRetiroTemporalFlow) {
       return _buildRetiroTemporalText();
     }
+    if (_isColaboracionFlow) {
+      return _buildColaboracionText();
+    }
     if (_isEasCustomCardFlow) {
       return _buildEasCustomText();
     }
@@ -2230,6 +3162,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
     if (_isRetiroTemporalFlow) {
       _cargarDatosRetiroTemporal();
+    } else if (_isColaboracionFlow) {
+      _cargarDatosColaboracion();
     } else if (_isDesalojoFlow ||
         _isPuntoMartilloFlow ||
         _isRondasDisuasivasFlow ||
@@ -2243,20 +3177,38 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _desaAuxCtrl.text = '';
     _desaCpCtrl.text = '';
     _desaJpCtrl.text = '';
+    _rtCpCtrl.text = '';
+    _rtJpCtrl.text = '';
+    _rtAux1Ctrl.text = '';
+    _colCpCtrl.text = '';
+    _colJpCtrl.text = '';
+    _colAux1Ctrl.text = '';
     switch (rolMovil) {
       case RolMovil.jp:
         _desaJpCtrl.text = name;
+        _rtJpCtrl.text = name;
+        _colJpCtrl.text = name;
         break;
       case RolMovil.conductor:
         _desaCpCtrl.text = name;
+        _rtCpCtrl.text = name;
+        _colCpCtrl.text = name;
         break;
       case RolMovil.auxiliar:
         _desaAuxCtrl.text = name;
+        _rtAux1Ctrl.text = name;
+        _colAux1Ctrl.text = name;
         break;
     }
     _desaJp = _desaJpCtrl.text;
     _desaCp = _desaCpCtrl.text;
     _desaAux = _desaAuxCtrl.text;
+    _rtJp = _rtJpCtrl.text;
+    _rtCp = _rtCpCtrl.text;
+    _rtAux1 = _rtAux1Ctrl.text;
+    _colJp = _colJpCtrl.text;
+    _colCp = _colCpCtrl.text;
+    _colAux1 = _colAux1Ctrl.text;
   }
 
   TextEditingController _controller(String key) {

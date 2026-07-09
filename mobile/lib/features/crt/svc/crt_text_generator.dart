@@ -61,6 +61,12 @@ ${_reporta(data)}
     if (data.tipo == TipoCartilla.retiroTemporal) {
       return _buildEasRetiroTemporal(data, circuito, causa, direccion);
     }
+    if (data.tipo == TipoCartilla.colaboracionEntidades) {
+      if (_v(data, '_col_subtype') == 'accidente') {
+        return _buildEasColaboracionAccidente(data, circuito, causa, direccion);
+      }
+      return _buildEasColaboracionEntidad(data, circuito, causa, direccion);
+    }
     if (_isCardTipo(data.tipo)) {
       return _buildEasGeneric(data, circuito, causa, direccion);
     }
@@ -299,36 +305,47 @@ Adjunto fotografía''';
     final saludo = _saludoFormal(DateTime.now());
 
     final procedimiento = StringBuffer()
-      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con retiro temporal, manteniendo el orden y la seguridad ciudadana.');
-    if (actividad.isNotEmpty || elementos.isNotEmpty || cantidad.isNotEmpty) {
+      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" mediante operativo conjunto con móviles que se encontraban realizando recorridos dentro del circuito $circuito, se procedió a ejecutar acciones de control sobre vendedores autónomos no regularizados que se encontraban ocupando el espacio público.');
+    if (actividad.isNotEmpty) {
       procedimiento.writeln();
       procedimiento.writeln();
-      procedimiento.write('Se retiraron ${elementos.isEmpty ? "elementos" : elementos} (cantidad aproximada: ${cantidad.isEmpty ? "no determinada" : cantidad})${actividad.isEmpty ? "." : " relacionados con actividad comercial de $actividad."}');
+      procedimiento.write('Durante el procedimiento se identificó a un comerciante dedicado a la actividad de "$actividad", quien se negaba a retirarse voluntariamente del lugar pese a las indicaciones emitidas por el personal operativo.');
     }
+    if (elementos.isNotEmpty || cantidad.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('En cumplimiento de las ordenanzas municipales referentes al uso adecuado del espacio y la vía pública, se procedió a realizar el retiro temporal de mercadería, detallándose los siguientes elementos:');
+      if (elementos.isNotEmpty) {
+        procedimiento.writeln();
+        procedimiento.writeln();
+        procedimiento.write(elementos);
+      }
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('Cantidad aproximada de elementos retirados temporalmente: ${cantidad.isEmpty ? "no determinada" : cantidad}.');
+    }
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final userNombre = _v(data, '_rt_userNombre');
+      if (userNombre.isNotEmpty) auxNames.add(userNombre);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) {
+      auxNames.add(jp);
+    }
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uniqueAux = auxNames.toSet().toList();
 
     final reporta = StringBuffer();
     reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
     if (policia.isNotEmpty) {
-      if (jp.isNotEmpty) {
-        reporta.writeln('*Aux.:* $jp');
-      }
-      if (aux1.isNotEmpty) {
-        reporta.writeln('*Aux.:* $aux1');
-      }
-      if (aux2.isNotEmpty) {
-        reporta.writeln('*Aux.:* $aux2');
-      }
-      reporta.write('*POLICÍA:* $policia');
+      reporta.writeln('*JP:* $policia');
     } else {
-      reporta.write('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
-      if (aux1.isNotEmpty) {
-        reporta.writeln();
-        reporta.write('*Aux.:* $aux1');
-      }
-      if (aux2.isNotEmpty) {
-        reporta.writeln();
-        reporta.write('*Aux.:* $aux2');
-      }
+      reporta.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final aux in uniqueAux) {
+      reporta.writeln('*Aux.:* $aux');
     }
 
     return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
@@ -351,7 +368,219 @@ Notifico novedades para fines correspondientes.
 $movil
 
 *REPORTA*:
-${reporta.toString()}
+${reporta.toString().trimRight()}
+
+*"Lealtad, Valor y Orden"
+
+Adjunto fotografía''';
+  }
+
+  static String _buildEasColaboracionEntidad(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final entidad = _v(data, '_col_entidad');
+    final motivo = _v(data, '_col_motivo');
+    final direcValue = _v(data, '_col_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_col_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_col_jp');
+    final cp = _v(data, '_col_cp');
+    final aux1 = _v(data, '_col_aux1');
+    final aux2 = _v(data, '_col_aux2');
+    final policia = _v(data, '_col_policia');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final procedimiento = '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con la colaboración a los señores de $entidad${motivo.isEmpty ? "." : " debido a $motivo."}';
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final userNombre = _v(data, '_col_userNombre');
+      if (userNombre.isNotEmpty) auxNames.add(userNombre);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) {
+      auxNames.add(jp);
+    }
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uniqueAux = auxNames.toSet().toList();
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      reporta.writeln('*JP:* $policia');
+    } else {
+      reporta.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final aux in uniqueAux) {
+      reporta.writeln('*Aux.:* $aux');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+$procedimiento
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString().trimRight()}
+
+*"Lealtad, Valor y Orden"
+
+Adjunto fotografía''';
+  }
+
+  static String _buildEasColaboracionAccidente(
+    CrtFormData data,
+    String circuito,
+    String causa,
+    String direccion,
+  ) {
+    final direcValue = _v(data, '_col_direccion');
+    final dir = direcValue.isNotEmpty ? direcValue : direccion;
+    final movilStr = _v(data, '_col_movil');
+    final movil = movilStr.isEmpty ? 'Móvil' : 'MOVIL $movilStr';
+    final jp = _v(data, '_col_jp');
+    final cp = _v(data, '_col_cp');
+    final aux1 = _v(data, '_col_aux1');
+    final aux2 = _v(data, '_col_aux2');
+    final policia = _v(data, '_col_policia');
+    final saludo = _saludoFormal(DateTime.now());
+
+    final tipoAcc = _v(data, '_col_tipoAccidente');
+    final numHeridos = _v(data, '_col_numHeridos');
+    final nombresHeridos = _v(data, '_col_nombresHeridos');
+    final huboFallecidos = _v(data, '_col_huboFallecidos');
+    final numFallecidos = _v(data, '_col_numFallecidos');
+    final nombresFallecidos = _v(data, '_col_nombresFallecidos');
+    final criminalistica = _v(data, '_col_criminalistica');
+    final criminalisticaNombre = _v(data, '_col_criminalisticaNombre');
+    final atm = _v(data, '_col_atm');
+    final atmNombre = _v(data, '_col_atmNombre');
+    final atmMovil = _v(data, '_col_atmMovil');
+    final ambulancia = _v(data, '_col_ambulancia');
+    final ambulanciaNombre = _v(data, '_col_ambulanciaNombre');
+    final placas = _v(data, '_col_placas');
+    final conductores = _v(data, '_col_conductores');
+    final danios = _v(data, '_col_danios');
+    final cierreVial = _v(data, '_col_cierreVial');
+    final cierreVialDesc = _v(data, '_col_cierreVialDesc');
+    final traslado = _v(data, '_col_traslado');
+    final casaSalud = _v(data, '_col_casaSalud');
+
+    final heridosStr = '$numHeridos herido(s)${nombresHeridos.isEmpty ? '' : ': $nombresHeridos'}';
+    final fallecidosStr = huboFallecidos == 'si'
+        ? '$numFallecidos fallecido(s)${nombresFallecidos.isEmpty ? '' : ': $nombresFallecidos'}'
+        : '0 fallecidos';
+
+    final colaboracionStr = StringBuffer();
+    colaboracionStr.write(criminalistica == 'Presente'
+        ? 'Criminalística: $criminalisticaNombre'
+        : 'Criminalística: No intervino');
+    colaboracionStr.write('; ');
+    colaboracionStr.write(atm == 'Presente'
+        ? 'ATM: $atmNombre${atmMovil.isEmpty ? '' : ' ($atmMovil)'}'
+        : 'ATM: No intervino');
+    colaboracionStr.write('; ');
+    colaboracionStr.write(ambulancia == 'Presente'
+        ? 'Ambulancia: $ambulanciaNombre'
+        : 'Ambulancia: No intervino');
+
+    final cierreStr = cierreVial == 'si'
+        ? cierreVialDesc
+        : 'No hubo cierre vial.';
+
+    final trasladoStr = traslado == 'si' && casaSalud.isNotEmpty
+        ? '\n\nDebido a las lesiones presentadas, se efectuó el traslado de la persona afectada hacia $casaSalud para su respectiva valoración y atención médica.'
+        : '';
+
+    final procedimiento = StringBuffer()
+      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me permito informar que se registró un $tipoAcc en el sector asignado.')
+      ..writeln();
+    if (numHeridos.isNotEmpty || huboFallecidos.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.write('Como resultado del incidente se reportó $heridosStr y $fallecidosStr.');
+    }
+    procedimiento.writeln();
+    procedimiento.writeln();
+    procedimiento.write('Durante la atención de la emergencia se contó con la siguiente colaboración institucional: $colaboracionStr.');
+    if (placas.isNotEmpty || conductores.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('Los vehículos involucrados corresponden a las placas $placas, siendo sus conductores $conductores.');
+    }
+    if (danios.isNotEmpty) {
+      procedimiento.writeln();
+      procedimiento.writeln();
+      procedimiento.write('Entre los daños observados se registró: $danios.');
+    }
+    procedimiento.writeln();
+    procedimiento.writeln();
+    procedimiento.write('Así mismo, $cierreStr.');
+    if (trasladoStr.isNotEmpty) {
+      procedimiento.write(trasladoStr);
+    }
+
+    final auxNames = <String>[];
+    if (data.rolMovil == RolMovil.auxiliar) {
+      final userNombre = _v(data, '_col_userNombre');
+      if (userNombre.isNotEmpty) auxNames.add(userNombre);
+    }
+    if (policia.isNotEmpty && jp.isNotEmpty) {
+      auxNames.add(jp);
+    }
+    if (aux1.isNotEmpty) auxNames.add(aux1);
+    if (aux2.isNotEmpty) auxNames.add(aux2);
+    final uniqueAux = auxNames.toSet().toList();
+
+    final reporta = StringBuffer();
+    reporta.writeln('*CP:* ${cp.isEmpty ? "[CP asignado]" : cp}');
+    if (policia.isNotEmpty) {
+      reporta.writeln('*JP:* $policia');
+    } else {
+      reporta.writeln('*JP:* ${jp.isEmpty ? "[JP asignado]" : jp}');
+    }
+    for (final aux in uniqueAux) {
+      reporta.writeln('*Aux.:* $aux');
+    }
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+
+*DISTRITO:* MODELO
+*CIRCUITO:* $circuito
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCION:* $dir
+
+*CAUSA:* $causa
+
+*PROCEDIMIENTO:*
+
+${procedimiento.toString()}
+
+Notifico novedades para fines correspondientes.
+
+$movil
+
+*REPORTA*:
+${reporta.toString().trimRight()}
 
 *"Lealtad, Valor y Orden"
 
@@ -361,7 +590,6 @@ Adjunto fotografía''';
   static bool _isCardTipo(TipoCartilla tipo) {
     return [
       TipoCartilla.requerimiento,
-      TipoCartilla.colaboracionEntidades,
       TipoCartilla.colaboracionEventos,
       TipoCartilla.permisoAusentismo,
     ].contains(tipo);
