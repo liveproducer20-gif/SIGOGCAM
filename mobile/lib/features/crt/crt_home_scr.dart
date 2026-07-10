@@ -5526,7 +5526,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   void _doPreview() {
     _previewText = _buildText();
-    _invalidatePreview(); setState(() {});
+    setState(() {});
   }
 
   Future<void> _generar(String value) async {
