@@ -157,13 +157,23 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Bienvenido Agente',
-                  style: TextStyle(
-                    color: AppThm.priClr,
-                    fontSize: 38,
-                    fontWeight: FontWeight.bold,
-                  ),
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/img/logo_sigo_gcam.png',
+                      height: 42,
+                      width: 42,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Bienvenido Agente',
+                      style: TextStyle(
+                        color: AppThm.priClr,
+                        fontSize: 38,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -256,6 +266,14 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 const SizedBox(height: 42),
                 const Divider(),
                 const SizedBox(height: 28),
+                Center(
+                  child: Image.asset(
+                    'assets/img/sigo_gcam.png',
+                    height: 40,
+                    width: 40,
+                  ),
+                ),
+                const SizedBox(height: 8),
                 const Center(
                   child: Text(
                     'Versión ${AppCnst.appVer}',

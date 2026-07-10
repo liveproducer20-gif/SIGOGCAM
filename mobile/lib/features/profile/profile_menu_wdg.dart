@@ -110,37 +110,48 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
           future: _notifCountFuture,
           builder: (context, snapshot) {
             final count = snapshot.data ?? 0;
-            return Stack(
-              clipBehavior: Clip.none,
+            return Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _ProfileAvatar(
-                  imageUrl: widget.user.fotoPerfilUrl,
-                  initials: _initials(widget.user),
-                  radius: 21,
+                Image.asset(
+                  'assets/img/sigo_gcam.png',
+                  height: 32,
+                  width: 32,
                 ),
-                if (count > 0)
-                  Positioned(
-                    right: -4,
-                    top: -6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        count > 99 ? '99+' : '$count',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+                const SizedBox(width: 8),
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    _ProfileAvatar(
+                      imageUrl: widget.user.fotoPerfilUrl,
+                      initials: _initials(widget.user),
+                      radius: 21,
+                    ),
+                    if (count > 0)
+                      Positioned(
+                        right: -4,
+                        top: -6,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : '$count',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                  ],
+                ),
               ],
             );
           },

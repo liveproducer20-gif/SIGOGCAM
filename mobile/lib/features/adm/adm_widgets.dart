@@ -109,10 +109,12 @@ class AdmAsyncTable extends StatefulWidget {
 
 class _AdmAsyncTableState extends State<AdmAsyncTable> {
   final _searchCtl = TextEditingController();
+  Timer? _debounce;
 
   @override
   void dispose() {
     _searchCtl.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -158,6 +160,7 @@ class _AdmAsyncTableState extends State<AdmAsyncTable> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 _searchCtl.clear();
+                                _debounce?.cancel();
                                 widget.onSearch!('');
                               },
                             )
@@ -166,7 +169,12 @@ class _AdmAsyncTableState extends State<AdmAsyncTable> {
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
-                    onChanged: (v) => widget.onSearch!(v),
+                    onChanged: (v) {
+                      _debounce?.cancel();
+                      _debounce = Timer(const Duration(milliseconds: 300), () {
+                        widget.onSearch!(v);
+                      });
+                    },
                   ),
                 ),
               ),
