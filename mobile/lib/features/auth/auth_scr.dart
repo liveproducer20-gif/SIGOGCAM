@@ -161,16 +161,22 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                   children: [
                     Image.asset(
                       'assets/img/logo_sigo_gcam.png',
-                      height: 42,
-                      width: 42,
+                      height: 56,
+                      width: 56,
                     ),
                     const SizedBox(width: 12),
-                    const Text(
-                      'Bienvenido Agente',
-                      style: TextStyle(
-                        color: AppThm.priClr,
-                        fontSize: 38,
-                        fontWeight: FontWeight.bold,
+                    const Expanded(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Bienvenido Agente',
+                          style: TextStyle(
+                            color: AppThm.priClr,
+                            fontSize: 38,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -269,8 +275,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 Center(
                   child: Image.asset(
                     'assets/img/sigo_gcam.png',
-                    height: 40,
-                    width: 40,
+                    height: 52,
+                    width: 52,
                   ),
                 ),
                 const SizedBox(height: 8),
