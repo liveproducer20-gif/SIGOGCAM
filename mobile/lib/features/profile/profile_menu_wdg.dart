@@ -115,8 +115,8 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
               children: [
                 Image.asset(
                   'assets/img/sigo_gcam.png',
-                  height: 42,
-                  width: 42,
+                  height: 240,
+                  width: 240,
                 ),
                 const SizedBox(width: 8),
                 Stack(
