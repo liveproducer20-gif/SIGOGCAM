@@ -372,6 +372,29 @@ async function listarGrados() {
     `));
 }
 
+async function crearGrado(data) {
+    return insertarBasico('dbo.grados', [
+        ['nombre', data.nombre]
+    ]);
+}
+
+async function actualizarGrado(id, data) {
+    return withConnection((conexion) => conexion.query(`
+        UPDATE dbo.grados
+        SET nombre = ?,
+            fecha_actualizacion = SYSDATETIME()
+        WHERE id = ?
+    `, [data.nombre, id]));
+}
+
+async function cambiarEstadoGrado(id, activo) {
+    return cambiarActivo('dbo.grados', id, activo);
+}
+
+async function eliminarGrado(id) {
+    return withConnection((conexion) => conexion.query('DELETE FROM dbo.grados WHERE id = ?', [id]));
+}
+
 async function crearRuta(data) {
     return insertarBasico('dbo.rutas', [
         ['nombre', data.nombre]
@@ -704,6 +727,7 @@ const TABLAS_PERMITIDAS = new Set([
     'dbo.eas_estaciones',
     'dbo.moviles',
     'dbo.rutas',
+    'dbo.grados',
 ]);
 
 function validarTabla(tabla) {
@@ -795,6 +819,10 @@ module.exports = {
     cambiarEstadoRuta,
     eliminarRuta,
     listarGrados,
+    crearGrado,
+    actualizarGrado,
+    cambiarEstadoGrado,
+    eliminarGrado,
     listarMoviles,
     crearMovil,
     actualizarMovil,

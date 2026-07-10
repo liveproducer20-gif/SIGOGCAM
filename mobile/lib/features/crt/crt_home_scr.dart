@@ -2,6 +2,7 @@
 import 'package:flutter/services.dart';
 
 import '../../core/auth/app_user.dart';
+import 'wdg/cartilla_type_card.dart';
 import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../dash/wdg/top_bar_wdg.dart';
@@ -630,119 +631,60 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildEasTypeButtons() {
+    const gap = 12.0;
+
+    final items = [
+      (icon: Icons.storefront_outlined, title: 'Desalojo de vendedores\nautónomos no regularizados', tipo: TipoCartilla.desalojoVendedores),
+      (icon: Icons.gavel_outlined, title: 'Punto martillo', tipo: TipoCartilla.puntoMartillo),
+      (icon: Icons.directions_walk_outlined, title: 'Rondas disuasivas', tipo: TipoCartilla.rondasDisuasivas),
+      (icon: Icons.backup_outlined, title: 'Retiro temporal', tipo: TipoCartilla.retiroTemporal),
+      (icon: Icons.receipt_long_outlined, title: 'Requerimiento', tipo: TipoCartilla.requerimiento),
+      (icon: Icons.groups_outlined, title: 'Colaboración con\notras entidades', tipo: TipoCartilla.colaboracionEntidades),
+      (icon: Icons.people_outlined, title: 'Colaboración\nciudadana', tipo: TipoCartilla.colaboracionEventos),
+      (icon: Icons.logout_outlined, title: 'Permiso de\nausentismo', tipo: TipoCartilla.permisoAusentismo),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Tipo de cartilla:',
+          'Tipo de cartilla',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w600,
             color: AppThm.priClr,
           ),
         ),
-        const SizedBox(height: 10),
-        Wrap(
-          spacing: 12,
-          runSpacing: 10,
-          children: [
-            _EasTypeCard(
-              icon: Icons.storefront_outlined,
-              title: 'Desalojo de vendedores\nautónomos no regularizados',
-              selected: tipo == TipoCartilla.desalojoVendedores,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.desalojoVendedores;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.gavel_outlined,
-              title: 'Punto martillo',
-              selected: tipo == TipoCartilla.puntoMartillo,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.puntoMartillo;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.directions_walk_outlined,
-              title: 'Rondas disuasivas',
-              selected: tipo == TipoCartilla.rondasDisuasivas,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.rondasDisuasivas;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.backup_outlined,
-              title: 'Retiro temporal',
-              selected: tipo == TipoCartilla.retiroTemporal,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.retiroTemporal;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.receipt_long_outlined,
-              title: 'Requerimiento',
-              selected: tipo == TipoCartilla.requerimiento,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.requerimiento;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.groups_outlined,
-              title: 'Colaboración con\notras entidades',
-              selected: tipo == TipoCartilla.colaboracionEntidades,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.colaboracionEntidades;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.people_outlined,
-              title: 'Colaboración\nciudadana',
-              selected: tipo == TipoCartilla.colaboracionEventos,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.colaboracionEventos;
-                  _syncFields();
-                });
-              },
-            ),
-            _EasTypeCard(
-              icon: Icons.logout_outlined,
-              title: 'Permiso de\nausentismo',
-              selected: tipo == TipoCartilla.permisoAusentismo,
-              onTap: () {
-                _invalidatePreview();
-                setState(() {
-                  tipo = TipoCartilla.permisoAusentismo;
-                  _syncFields();
-                });
-              },
-            ),
-          ],
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final maxWidth = constraints.maxWidth;
+            final cols = maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1);
+            final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
+
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                for (final item in items)
+                  SizedBox(
+                    width: cardWidth,
+                    child: CartillaTypeCard(
+                      icon: item.icon,
+                      title: item.title,
+                      selected: tipo == item.tipo,
+                      onTap: () {
+                        _invalidatePreview();
+                        setState(() {
+                          tipo = item.tipo;
+                          _syncFields();
+                        });
+                      },
+                    ),
+                  ),
+              ],
+            );
+          },
         ),
       ],
     );
@@ -6092,53 +6034,6 @@ class _StepCard extends StatelessWidget {
         const SizedBox(height: 16),
         child,
       ],
-    );
-  }
-}
-
-class _EasTypeCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _EasTypeCard({
-    required this.icon,
-    required this.title,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: selected ? AppThm.accClr : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppThm.secClr : Colors.black26,
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 28, color: selected ? AppThm.priClr : AppThm.txtClr),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: selected ? AppThm.priClr : AppThm.txtClr,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

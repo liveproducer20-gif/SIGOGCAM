@@ -7,6 +7,7 @@ import 'adm_api.dart';
 import 'adm_asignaciones_tab.dart';
 import 'adm_catalogos_tab.dart';
 import 'adm_eas_tab.dart';
+import 'adm_grados_tab.dart';
 import 'adm_lugares_tab.dart';
 import 'adm_moviles_tab.dart';
 import 'adm_personal_tab.dart';
@@ -67,6 +68,12 @@ class _AdmHomeScrState extends State<AdmHomeScr> {
       list.add(_TabDef(
         icon: Icons.map_outlined, label: 'Rutas',
         child: RutasTab(api: api),
+      ));
+    }
+    if (widget.user.hasPermission('personal.ver')) {
+      list.add(_TabDef(
+        icon: Icons.school_outlined, label: 'Grados',
+        child: GradosTab(api: api),
       ));
     }
     if (widget.user.hasPermission('eas.ver')) {

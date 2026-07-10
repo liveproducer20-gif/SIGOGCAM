@@ -110,6 +110,22 @@ async function listarGrados() {
     return repository.listarGrados();
 }
 
+async function crearGrado(data) {
+    return repository.crearGrado(validarGrado(data));
+}
+
+async function actualizarGrado(id, data) {
+    return repository.actualizarGrado(validarId(id, 'grado'), validarGrado(data));
+}
+
+async function cambiarEstadoGrado(id, activo) {
+    return repository.cambiarEstadoGrado(validarId(id, 'grado'), Boolean(activo));
+}
+
+async function eliminarGrado(id) {
+    return repository.eliminarGrado(validarId(id, 'grado'));
+}
+
 async function crearRuta(data) {
     return repository.crearRuta(validarRuta(data));
 }
@@ -256,6 +272,12 @@ function validarRuta(data) {
     };
 }
 
+function validarGrado(data) {
+    return {
+        nombre: texto(data.nombre, 'nombre')
+    };
+}
+
 function validarMovil(data) {
     const kilometrajeActual = entero(data.kilometrajeActual, 0);
     const kilometrajeUltimoMantenimiento = entero(data.kilometrajeUltimoMantenimiento, 0);
@@ -313,6 +335,10 @@ module.exports = {
     cambiarEstadoRuta,
     eliminarRuta,
     listarGrados,
+    crearGrado,
+    actualizarGrado,
+    cambiarEstadoGrado,
+    eliminarGrado,
     listarMoviles,
     crearMovil,
     actualizarMovil,

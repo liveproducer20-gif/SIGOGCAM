@@ -126,6 +126,30 @@ router.delete(
 router.get('/rutas', requirePermission('rutas.ver'), controller.listarRutas);
 router.get('/grados', requirePermission('personal.ver'), controller.listarGrados);
 router.post(
+    '/grados',
+    requirePermission('personal.ver'),
+    auditAction({ accion: 'crear', modulo: 'administracion', tabla: 'grados' }),
+    controller.crearGrado
+);
+router.put(
+    '/grados/:id',
+    requirePermission('personal.ver'),
+    auditAction({ accion: 'editar', modulo: 'administracion', tabla: 'grados' }),
+    controller.actualizarGrado
+);
+router.put(
+    '/grados/:id/estado',
+    requirePermission('personal.ver'),
+    auditAction({ accion: 'estado', modulo: 'administracion', tabla: 'grados' }),
+    controller.cambiarEstadoGrado
+);
+router.delete(
+    '/grados/:id',
+    requirePermission('personal.ver'),
+    auditAction({ accion: 'eliminar', modulo: 'administracion', tabla: 'grados' }),
+    controller.eliminarGrado
+);
+router.post(
     '/rutas',
     requirePermission('eas.crear'),
     auditAction({ accion: 'crear', modulo: 'administracion', tabla: 'rutas' }),
