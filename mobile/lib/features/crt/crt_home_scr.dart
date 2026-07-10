@@ -42,6 +42,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String movil = '187';
   RolMovil rolMovil = RolMovil.jp;
   bool guardando = false;
+  String? _previewText;
 
   final crtApi = CrtApi();
 
@@ -455,7 +456,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 1050;
-    final preview = _buildText();
+    final preview = _previewText;
 
     return Scaffold(
       backgroundColor: AppThm.bgClr,
@@ -503,7 +504,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Widget _buildEasLayout(bool isWide, String preview) {
+  Widget _buildEasLayout(bool isWide, String? preview) {
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -560,6 +561,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             items: TipoModuloCartilla.values,
             itemText: (value) => value.label,
             onChanged: (value) {
+              _invalidatePreview();
               setState(() {
                 modulo = value;
                 final tipos = CrtCatalog.configFor(modulo).tipos;
@@ -581,6 +583,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             items: CrtCatalog.easStations,
             itemText: (value) => '${value.codigo} - ${value.nombre}',
             onChanged: (value) {
+              _invalidatePreview();
               setState(() {
                 eas = value;
                 movil = _moviles.first.movil;
@@ -604,7 +607,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             icon: Icons.directions_car_outlined,
             items: _moviles.map((item) => item.movil).toList(),
             itemText: (value) => 'Móvil $value',
-            onChanged: (value) => setState(() => movil = value),
+            onChanged: (value) { _invalidatePreview(); setState(() => movil = value); },
           ),
           const SizedBox(height: 14),
           _Drop<RolMovil>(
@@ -614,6 +617,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             items: RolMovil.values,
             itemText: (value) => value.label,
             onChanged: (value) {
+              _invalidatePreview();
               setState(() {
                 rolMovil = value;
                 _autoFillByRole();
@@ -646,73 +650,97 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               icon: Icons.storefront_outlined,
               title: 'Desalojo de vendedores\nautónomos no regularizados',
               selected: tipo == TipoCartilla.desalojoVendedores,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.desalojoVendedores;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.desalojoVendedores;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.gavel_outlined,
               title: 'Punto martillo',
               selected: tipo == TipoCartilla.puntoMartillo,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.puntoMartillo;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.puntoMartillo;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.directions_walk_outlined,
               title: 'Rondas disuasivas',
               selected: tipo == TipoCartilla.rondasDisuasivas,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.rondasDisuasivas;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.rondasDisuasivas;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.backup_outlined,
               title: 'Retiro temporal',
               selected: tipo == TipoCartilla.retiroTemporal,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.retiroTemporal;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.retiroTemporal;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.receipt_long_outlined,
               title: 'Requerimiento',
               selected: tipo == TipoCartilla.requerimiento,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.requerimiento;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.requerimiento;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.groups_outlined,
               title: 'Colaboración con\notras entidades',
               selected: tipo == TipoCartilla.colaboracionEntidades,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.colaboracionEntidades;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.colaboracionEntidades;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.people_outlined,
               title: 'Colaboración\nciudadana',
               selected: tipo == TipoCartilla.colaboracionEventos,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.colaboracionEventos;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.colaboracionEventos;
+                  _syncFields();
+                });
+              },
             ),
             _EasTypeCard(
               icon: Icons.logout_outlined,
               title: 'Permiso de\nausentismo',
               selected: tipo == TipoCartilla.permisoAusentismo,
-              onTap: () => setState(() {
-                tipo = TipoCartilla.permisoAusentismo;
-                _syncFields();
-              }),
+              onTap: () {
+                _invalidatePreview();
+                setState(() {
+                  tipo = TipoCartilla.permisoAusentismo;
+                  _syncFields();
+                });
+              },
             ),
           ],
         ),
@@ -751,7 +779,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaCp = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           if (_desaCpGuardado.isNotEmpty)
@@ -776,7 +804,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaJp = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -789,7 +817,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaDireccion = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -805,7 +833,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _desaAux = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ],
@@ -845,7 +873,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaCp = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           if (_desaCpGuardado.isNotEmpty)
@@ -870,7 +898,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaJp = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -883,7 +911,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaDireccion = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -899,7 +927,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _desaAux = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ],
@@ -981,7 +1009,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaJp = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               if (!_hasPolicia) ...[
@@ -995,7 +1023,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _desaAux = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -1018,7 +1046,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
                 .toList(),
             onChanged: (value) {
-              if (value != null) setState(() => _desaMovil = value);
+              if (value != null) { _invalidatePreview(); setState(() => _desaMovil = value); }
             },
           ),
         ),
@@ -1038,7 +1066,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaCp = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               if (_desaCpGuardado.isNotEmpty)
@@ -1101,6 +1129,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             onChanged: (value) {
               if (value == null) return;
               final id = value['id'] as int?;
+              _invalidatePreview();
               setState(() {
                 if (id == -1) {
                   _desaPoliciaOtro = true;
@@ -1130,7 +1159,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaPoliciaNombre = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ),
@@ -1177,6 +1206,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'] as int?;
+                  _invalidatePreview();
                   setState(() {
                     if (id == -1) {
                       _desaDireccionOtro = true;
@@ -1201,7 +1231,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _desaDireccion = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -1240,7 +1270,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   selected: _desaAgresivo,
                   label: 'Sí',
                   icon: Icons.warning_amber_rounded,
-                  onTap: () => setState(() => _desaAgresivo = true),
+                  onTap: () { _invalidatePreview(); setState(() => _desaAgresivo = true); },
                 ),
               ),
               const SizedBox(width: 12),
@@ -1249,7 +1279,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   selected: !_desaAgresivo,
                   label: 'No',
                   icon: Icons.check_circle_outline,
-                  onTap: () => setState(() => _desaAgresivo = false),
+                  onTap: () { _invalidatePreview(); setState(() => _desaAgresivo = false); },
                 ),
               ),
             ],
@@ -1267,7 +1297,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     selected: _desaColaboracion,
                     label: 'Sí',
                     icon: Icons.groups_outlined,
-                    onTap: () => setState(() => _desaColaboracion = true),
+                    onTap: () { _invalidatePreview(); setState(() => _desaColaboracion = true); },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1276,7 +1306,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     selected: !_desaColaboracion,
                     label: 'No',
                     icon: Icons.do_not_disturb_alt_outlined,
-                    onTap: () => setState(() => _desaColaboracion = false),
+                    onTap: () { _invalidatePreview(); setState(() => _desaColaboracion = false); },
                   ),
                 ),
               ],
@@ -1296,7 +1326,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _desaSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _desaSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -1647,7 +1677,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _rtJp = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -1669,7 +1699,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
                 .toList(),
             onChanged: (value) {
-              if (value != null) setState(() => _rtMovil = value);
+              if (value != null) { _invalidatePreview(); setState(() => _rtMovil = value); }
             },
           ),
         ),
@@ -1690,7 +1720,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _rtCp = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
                 if (_rtCpGuardado.isNotEmpty)
@@ -1761,7 +1791,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _rtPoliciaNombre = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -1769,10 +1799,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
-                    onTap: () => setState(() {
-                      _rtPoliciaOtro = true;
-                      _rtPoliciaId = null;
-                    }),
+                    onTap: () {
+                      _invalidatePreview();
+                      setState(() {
+                        _rtPoliciaOtro = true;
+                        _rtPoliciaId = null;
+                      });
+                    },
                     child: const Text(
                       'Ingresar otro servidor policial',
                       style: TextStyle(
@@ -1806,6 +1839,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'] as int?;
+                  _invalidatePreview();
                   setState(() {
                     if (id == -1) {
                       _rtDireccionOtro = true;
@@ -1828,7 +1862,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _rtDireccion = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -1850,7 +1884,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _rtAux1 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -1863,7 +1897,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _rtAux2 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ],
@@ -1888,7 +1922,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _rtActividad = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -1906,7 +1940,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 3,
             onChanged: (value) {
               _rtElementos = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -1923,7 +1957,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _rtCantidad = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -1940,7 +1974,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _rtSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _rtSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -2142,7 +2176,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ezJp = v; setState(() {}); },
+              onChanged: (v) { _ezJp = v; _invalidatePreview(); setState(() {}); },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
@@ -2158,7 +2192,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezCp = v; setState(() {}); },
+                onChanged: (v) { _ezCp = v; _invalidatePreview(); setState(() {}); },
               ),
               if (_ezCpGuardado.isNotEmpty)
                 Padding(
@@ -2224,14 +2258,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ezPoliciaNombre = v; setState(() {}); },
+                    onChanged: (v) { _ezPoliciaNombre = v; _invalidatePreview(); setState(() {}); },
                   ),
                 ),
               if (!_ezPoliciaOtro && _ezPoliciaId == null && _ezPoliciaNombre.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
-                    onTap: () => setState(() { _ezPoliciaOtro = true; _ezPoliciaId = null; }),
+                    onTap: () { _invalidatePreview(); setState(() { _ezPoliciaOtro = true; _ezPoliciaId = null; }); },
                     child: const Text(
                       'Ingresar otro servidor policial',
                       style: TextStyle(
@@ -2269,6 +2303,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'];
+                  _invalidatePreview();
                   if (id is int && id == -1) {
                     setState(() { _ezDireccionOtro = true; _ezDireccion = ''; });
                   } else {
@@ -2291,7 +2326,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ezDireccion = v; setState(() {}); },
+                    onChanged: (v) { _ezDireccion = v; _invalidatePreview(); setState(() {}); },
                   ),
                 ),
             ],
@@ -2310,7 +2345,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezAux1 = v; setState(() {}); },
+                onChanged: (v) { _ezAux1 = v; _invalidatePreview(); setState(() {}); },
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -2320,7 +2355,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezAux2 = v; setState(() {}); },
+                onChanged: (v) { _ezAux2 = v; _invalidatePreview(); setState(() {}); },
               ),
             ],
           ),
@@ -2340,7 +2375,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             icon: _iconFor(field.key),
             minLines: field.minLines,
             required: field.required,
-            onChanged: () => setState(() {}),
+            onChanged: () { _invalidatePreview(); setState(() {}); },
           ),
           const SizedBox(height: 14),
         ],
@@ -2356,7 +2391,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _ezSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _ezSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -2588,7 +2623,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ausJp = v; setState(() {}); },
+              onChanged: (v) { _ausJp = v; _invalidatePreview(); setState(() {}); },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
@@ -2604,7 +2639,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausCp = v; setState(() {}); },
+                onChanged: (v) { _ausCp = v; _invalidatePreview(); setState(() {}); },
               ),
               if (_ausCpGuardado.isNotEmpty)
                 Padding(
@@ -2670,14 +2705,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ausPoliciaNombre = v; setState(() {}); },
+                    onChanged: (v) { _ausPoliciaNombre = v; _invalidatePreview(); setState(() {}); },
                   ),
                 ),
               if (!_ausPoliciaOtro && _ausPoliciaId == null && _ausPoliciaNombre.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
-                    onTap: () => setState(() { _ausPoliciaOtro = true; _ausPoliciaId = null; }),
+                    onTap: () { _invalidatePreview(); setState(() { _ausPoliciaOtro = true; _ausPoliciaId = null; }); },
                     child: const Text(
                       'Ingresar otro servidor policial',
                       style: TextStyle(
@@ -2715,6 +2750,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'];
+                  _invalidatePreview();
                   if (id is int && id == -1) {
                     setState(() { _ausDireccionOtro = true; _ausDireccion = ''; });
                   } else {
@@ -2734,7 +2770,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ausDireccion = v; setState(() {}); },
+                    onChanged: (v) { _ausDireccion = v; _invalidatePreview(); setState(() {}); },
                   ),
                 ),
             ],
@@ -2753,7 +2789,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausAux1 = v; setState(() {}); },
+                onChanged: (v) { _ausAux1 = v; _invalidatePreview(); setState(() {}); },
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -2763,7 +2799,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausAux2 = v; setState(() {}); },
+                onChanged: (v) { _ausAux2 = v; _invalidatePreview(); setState(() {}); },
               ),
             ],
           ),
@@ -2802,7 +2838,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'Permiso por horas', child: Text('Permiso por horas')),
               DropdownMenuItem(value: 'Permiso por días', child: Text('Permiso por días')),
             ],
-            onChanged: (v) { if (v != null) setState(() => _ausTipoPermiso = v); },
+            onChanged: (v) { if (v != null) { _invalidatePreview(); setState(() => _ausTipoPermiso = v); } },
           ),
         ),
         const SizedBox(height: 20),
@@ -2816,7 +2852,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   context: context,
                   initialTime: _ausHoraSalida,
                 );
-                if (picked != null) setState(() => _ausHoraSalida = picked);
+                if (picked != null) { _invalidatePreview(); setState(() => _ausHoraSalida = picked); }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2837,7 +2873,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   context: context,
                   initialTime: _ausHoraRetorno,
                 );
-                if (picked != null) setState(() => _ausHoraRetorno = picked);
+                if (picked != null) { _invalidatePreview(); setState(() => _ausHoraRetorno = picked); }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2861,7 +2897,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   firstDate: DateTime.now().subtract(const Duration(days: 30)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                 );
-                if (picked != null) setState(() => _ausFechaInicio = picked);
+                if (picked != null) { _invalidatePreview(); setState(() => _ausFechaInicio = picked); }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2884,7 +2920,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   firstDate: DateTime.now().subtract(const Duration(days: 30)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                 );
-                if (picked != null) setState(() => _ausFechaFin = picked);
+                if (picked != null) { _invalidatePreview(); setState(() => _ausFechaFin = picked); }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2917,7 +2953,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 DropdownMenuItem(value: 'Calamidad doméstica', child: Text('Calamidad doméstica')),
                 DropdownMenuItem(value: 'Otro', child: Text('Otro')),
               ],
-              onChanged: (v) { if (v != null) setState(() { _ausMotivo = v; _ausLugar = ''; _ausDetalle = ''; _ausLugarCtrl.clear(); _ausDetalleCtrl.clear(); }); },
+              onChanged: (v) { if (v != null) { _invalidatePreview(); setState(() { _ausMotivo = v; _ausLugar = ''; _ausDetalle = ''; _ausLugarCtrl.clear(); _ausDetalleCtrl.clear(); }); } },
             ),
           ),
           if (requiereLugar) ...[
@@ -2931,7 +2967,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.place_outlined),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausLugar = v; setState(() {}); },
+                onChanged: (v) { _ausLugar = v; _invalidatePreview(); setState(() {}); },
               ),
             ),
           ],
@@ -2948,7 +2984,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 minLines: 3,
                 maxLines: 5,
-                onChanged: (v) { _ausDetalle = v; setState(() {}); },
+                onChanged: (v) { _ausDetalle = v; _invalidatePreview(); setState(() {}); },
               ),
             ),
           ],
@@ -2964,7 +3000,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               minLines: 3,
               maxLines: 5,
-              onChanged: (v) { _ausInfoAdicional = v; setState(() {}); },
+              onChanged: (v) { _ausInfoAdicional = v; _invalidatePreview(); setState(() {}); },
             ),
           ),
         ],
@@ -2980,7 +3016,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _ausSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _ausSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -3256,7 +3292,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _colJp = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ),
@@ -3274,7 +3310,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _colCp = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ),
@@ -3337,6 +3373,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'] as int?;
+                  _invalidatePreview();
                   setState(() {
                     if (id == -1) {
                       _colDireccionOtro = true;
@@ -3359,7 +3396,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _colDireccion = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -3381,7 +3418,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colAux1 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3394,7 +3431,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colAux2 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ],
@@ -3417,7 +3454,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'accidente', child: Text('Hecho o Accidente')),
             ],
             onChanged: (value) {
-              if (value != null) setState(() => _colSubtype = value);
+              if (value != null) { _invalidatePreview(); setState(() => _colSubtype = value); }
             },
           ),
         ),
@@ -3455,7 +3492,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'Fuerzas Armadas', child: Text('Fuerzas Armadas')),
             ],
             onChanged: (value) {
-              if (value != null) setState(() => _colEntidad = value);
+              if (value != null) { _invalidatePreview(); setState(() => _colEntidad = value); }
             },
           ),
         ),
@@ -3472,7 +3509,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 4,
             onChanged: (value) {
               _colMotivo = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -3501,7 +3538,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'Accidente entre vehículo y persona', child: Text('Accidente entre vehículo y persona')),
             ],
             onChanged: (value) {
-              if (value != null) setState(() => _colTipoAccidente = value);
+              if (value != null) { _invalidatePreview(); setState(() => _colTipoAccidente = value); }
             },
           ),
         ),
@@ -3519,7 +3556,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colNumHeridos = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3531,7 +3568,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colNombresHeridos = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ],
@@ -3568,7 +3605,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colNumFallecidos = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
                 const SizedBox(height: 14),
@@ -3580,7 +3617,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colNombresFallecidos = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3605,7 +3642,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _colCriminalistica = value);
+                  if (value != null) { _invalidatePreview(); setState(() => _colCriminalistica = value); }
                 },
               ),
               if (_colCriminalistica == 'Presente') ...[
@@ -3618,7 +3655,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colCriminalisticaNombre = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3635,7 +3672,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _colAtm = value);
+                  if (value != null) { _invalidatePreview(); setState(() => _colAtm = value); }
                 },
               ),
               if (_colAtm == 'Presente') ...[
@@ -3648,7 +3685,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAtmNombre = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
                 const SizedBox(height: 14),
@@ -3660,7 +3697,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAtmMovil = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3677,7 +3714,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _colAmbulancia = value);
+                  if (value != null) { _invalidatePreview(); setState(() => _colAmbulancia = value); }
                 },
               ),
               if (_colAmbulancia == 'Presente') ...[
@@ -3690,7 +3727,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAmbulanciaNombre = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3711,7 +3748,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colPlacas = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3723,7 +3760,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colConductores = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ],
@@ -3742,7 +3779,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 3,
             onChanged: (value) {
               _colDanios = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -3778,7 +3815,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   maxLines: 3,
                   onChanged: (value) {
                     _colCierreVialDesc = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3816,7 +3853,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colCasaSalud = value;
-                    setState(() {});
+                    _invalidatePreview(); setState(() {});
                   },
                 ),
               ],
@@ -3836,7 +3873,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _colSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _colSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -4122,7 +4159,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _reqJp = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ),
@@ -4140,7 +4177,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _reqCp = value;
-                setState(() {});
+                _invalidatePreview(); setState(() {});
               },
             ),
           ),
@@ -4203,6 +4240,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 onChanged: (value) {
                   if (value == null) return;
                   final id = value['id'] as int?;
+                  _invalidatePreview();
                   setState(() {
                     if (id == -1) {
                       _reqDireccionOtro = true;
@@ -4225,7 +4263,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _reqDireccion = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -4247,7 +4285,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _reqAux1 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -4260,7 +4298,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _reqAux2 = value;
-                  setState(() {});
+                  _invalidatePreview(); setState(() {});
                 },
               ),
             ],
@@ -4298,7 +4336,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   DropdownMenuItem(value: 'Otro', child: Text('Otro')),
                 ],
                 onChanged: (value) {
-                  if (value != null) setState(() => _reqSolicitante = value);
+                  if (value != null) { _invalidatePreview(); setState(() => _reqSolicitante = value); }
                 },
               ),
               if (_reqSolicitante == 'Otro')
@@ -4313,7 +4351,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _reqSolicitanteOtro = value;
-                      setState(() {});
+                      _invalidatePreview(); setState(() {});
                     },
                   ),
                 ),
@@ -4340,7 +4378,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'Operativo en conjunto', child: Text('Operativo en conjunto')),
             ],
             onChanged: (value) {
-              if (value != null) setState(() => _reqTipo = value);
+              if (value != null) { _invalidatePreview(); setState(() => _reqTipo = value); }
             },
           ),
         ),
@@ -4357,7 +4395,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 5,
             onChanged: (value) {
               _reqInfoAdicional = value;
-              setState(() {});
+              _invalidatePreview(); setState(() {});
             },
           ),
         ),
@@ -4374,7 +4412,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _reqSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _reqSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -4636,7 +4674,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuJp = v; setState(() {}); },
+              onChanged: (v) { _ciuJp = v; _invalidatePreview(); setState(() {}); },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
@@ -4649,7 +4687,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuCp = v; setState(() {}); },
+              onChanged: (v) { _ciuCp = v; _invalidatePreview(); setState(() {}); },
             ),
           ),
         if (rolMovil != RolMovil.conductor) const SizedBox(height: 20),
@@ -4699,6 +4737,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               onChanged: (value) {
                 if (value == null) return;
                 final id = value['id'] as int?;
+                _invalidatePreview();
                 setState(() {
                   if (id == -1) { _ciuDireccionOtro = true; _ciuDireccion = ''; }
                   else { _ciuDireccionOtro = false; _ciuDireccion = value['direccion'] as String? ?? ''; }
@@ -4712,7 +4751,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     labelText: 'Nueva dirección', prefixIcon: Icon(Icons.edit_outlined),
                     border: OutlineInputBorder(),
                   ),
-                  onChanged: (v) { _ciuDireccion = v; setState(() {}); },
+                  onChanged: (v) { _ciuDireccion = v; _invalidatePreview(); setState(() {}); },
                 ),
               ),
           ]),
@@ -4726,7 +4765,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Auxiliar 1 (opcional)', prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuAux1 = v; setState(() {}); },
+              onChanged: (v) { _ciuAux1 = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4735,7 +4774,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Auxiliar 2 (opcional)', prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuAux2 = v; setState(() {}); },
+              onChanged: (v) { _ciuAux2 = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -4755,7 +4794,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 DropdownMenuItem(value: 'requerimiento', child: Text('Requerimientos Ciudadanos')),
               ],
               onChanged: (value) {
-                if (value != null) setState(() { _ciuTipoGeneral = value; _ciuTipoEspecifico = ''; });
+                if (value != null) { _invalidatePreview(); setState(() { _ciuTipoGeneral = value; _ciuTipoEspecifico = ''; }); }
               },
             ),
           ]),
@@ -4777,7 +4816,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           labelText: 'Nombre del ciudadano', prefixIcon: Icon(Icons.person_outline),
           border: OutlineInputBorder(),
         ),
-        onChanged: (v) { _ciuNombreCiudadano = v; setState(() {}); },
+        onChanged: (v) { _ciuNombreCiudadano = v; _invalidatePreview(); setState(() {}); },
       ),
       const SizedBox(height: 14),
       TextField(
@@ -4786,7 +4825,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           labelText: 'Número de cédula', prefixIcon: Icon(Icons.credit_card_outlined),
           border: OutlineInputBorder(),
         ),
-        onChanged: (v) { _ciuCedula = v; setState(() {}); },
+        onChanged: (v) { _ciuCedula = v; _invalidatePreview(); setState(() {}); },
       ),
       const SizedBox(height: 14),
       TextField(
@@ -4795,7 +4834,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           labelText: 'Número de celular', prefixIcon: Icon(Icons.phone_outlined),
           border: OutlineInputBorder(),
         ),
-        onChanged: (v) { _ciuCelular = v; setState(() {}); },
+        onChanged: (v) { _ciuCelular = v; _invalidatePreview(); setState(() {}); },
       ),
       const SizedBox(height: 14),
       TextField(
@@ -4804,7 +4843,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           labelText: 'Lugar de la novedad', prefixIcon: Icon(Icons.place_outlined),
           border: OutlineInputBorder(),
         ),
-        onChanged: (v) { _ciuLugar = v; setState(() {}); },
+        onChanged: (v) { _ciuLugar = v; _invalidatePreview(); setState(() {}); },
       ),
     ]);
   }
@@ -4829,7 +4868,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             DropdownMenuItem(value: 'Sector o nicho conflictivo', child: Text('Sector o nicho conflictivo')),
             DropdownMenuItem(value: 'Agresión', child: Text('Agresión')),
           ],
-          onChanged: (value) { if (value != null) setState(() => _ciuTipoEspecifico = value); },
+          onChanged: (value) { if (value != null) { _invalidatePreview(); setState(() => _ciuTipoEspecifico = value); } },
         ),
       ),
       const SizedBox(height: 20),
@@ -4846,7 +4885,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Bienes robados', prefixIcon: Icon(Icons.inventory_2_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuBienesRobados = v; setState(() {}); },
+              onChanged: (v) { _ciuBienesRobados = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4855,7 +4894,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuValorRobado = v; setState(() {}); },
+              onChanged: (v) { _ciuValorRobado = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -4868,7 +4907,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Bienes perdidos', prefixIcon: Icon(Icons.inventory_2_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuBienesPerdidos = v; setState(() {}); },
+              onChanged: (v) { _ciuBienesPerdidos = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4877,7 +4916,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuValorPerdido = v; setState(() {}); },
+              onChanged: (v) { _ciuValorPerdido = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -4890,7 +4929,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Nombre del local comercial', prefixIcon: Icon(Icons.store_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuNombreLocal = v; setState(() {}); },
+              onChanged: (v) { _ciuNombreLocal = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4899,7 +4938,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Referencia del local', prefixIcon: Icon(Icons.edit_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuReferenciaLocal = v; setState(() {}); },
+              onChanged: (v) { _ciuReferenciaLocal = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4909,7 +4948,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuMotivoExtorsion = v; setState(() {}); },
+              onChanged: (v) { _ciuMotivoExtorsion = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -4922,7 +4961,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Nombre de la persona que amenaza', prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuNombreAmenazante = v; setState(() {}); },
+              onChanged: (v) { _ciuNombreAmenazante = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4931,7 +4970,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Cédula de la persona que amenaza', prefixIcon: Icon(Icons.credit_card_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuCedulaAmenazante = v; setState(() {}); },
+              onChanged: (v) { _ciuCedulaAmenazante = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4941,7 +4980,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuTextoAmenaza = v; setState(() {}); },
+              onChanged: (v) { _ciuTextoAmenaza = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -4954,7 +4993,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Nombre de la persona desaparecida', prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuNombreDesaparecido = v; setState(() {}); },
+              onChanged: (v) { _ciuNombreDesaparecido = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4963,7 +5002,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Cédula de la persona desaparecida', prefixIcon: Icon(Icons.credit_card_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuCedulaDesaparecido = v; setState(() {}); },
+              onChanged: (v) { _ciuCedulaDesaparecido = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4972,7 +5011,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Ubicación donde fue vista por última vez', prefixIcon: Icon(Icons.place_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuUltimaUbicacion = v; setState(() {}); },
+              onChanged: (v) { _ciuUltimaUbicacion = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4981,7 +5020,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Vestimenta o accesorios que llevaba', prefixIcon: Icon(Icons.checkroom_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuVestimenta = v; setState(() {}); },
+              onChanged: (v) { _ciuVestimenta = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -4990,7 +5029,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: '¿Antecedente de amenaza anterior?', prefixIcon: Icon(Icons.warning_amber_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuAntecedente = v; setState(() {}); },
+              onChanged: (v) { _ciuAntecedente = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -5004,7 +5043,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuMotivoConflictivo = v; setState(() {}); },
+              onChanged: (v) { _ciuMotivoConflictivo = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5014,7 +5053,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuRequerimientoCiudadano = v; setState(() {}); },
+              onChanged: (v) { _ciuRequerimientoCiudadano = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -5027,7 +5066,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Nombre del agresor', prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuNombreAgresor = v; setState(() {}); },
+              onChanged: (v) { _ciuNombreAgresor = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5036,7 +5075,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Objeto con el que agredió', prefixIcon: Icon(Icons.gavel_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuObjetoAgresion = v; setState(() {}); },
+              onChanged: (v) { _ciuObjetoAgresion = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5046,7 +5085,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuDetalleHerida = v; setState(() {}); },
+              onChanged: (v) { _ciuDetalleHerida = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -5070,7 +5109,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             DropdownMenuItem(value: 'Resguardo de personal', child: Text('Resguardo de personal')),
             DropdownMenuItem(value: 'Colaboración de ATM', child: Text('Colaboración de ATM')),
           ],
-          onChanged: (value) { if (value != null) setState(() => _ciuTipoEspecifico = value); },
+          onChanged: (value) { if (value != null) { _invalidatePreview(); setState(() => _ciuTipoEspecifico = value); } },
         ),
       ),
       const SizedBox(height: 20),
@@ -5087,7 +5126,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
-            onChanged: (v) { _ciuMotivoCamaras = v; setState(() {}); },
+            onChanged: (v) { _ciuMotivoCamaras = v; _invalidatePreview(); setState(() {}); },
           ),
         ),
       if (_ciuTipoEspecifico == 'Colaboración en evento')
@@ -5099,7 +5138,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Nombre del evento', prefixIcon: Icon(Icons.event_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuNombreEvento = v; setState(() {}); },
+              onChanged: (v) { _ciuNombreEvento = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5108,7 +5147,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Fecha del evento', prefixIcon: Icon(Icons.calendar_today_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuFechaEvento = v; setState(() {}); },
+              onChanged: (v) { _ciuFechaEvento = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5117,7 +5156,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 labelText: 'Hora del evento', prefixIcon: Icon(Icons.access_time_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuHoraEvento = v; setState(() {}); },
+              onChanged: (v) { _ciuHoraEvento = v; _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             TextField(
@@ -5127,7 +5166,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuMotivoEvento = v; setState(() {}); },
+              onChanged: (v) { _ciuMotivoEvento = v; _invalidatePreview(); setState(() {}); },
             ),
           ]),
         ),
@@ -5140,7 +5179,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
-            onChanged: (v) { _ciuMotivoResguardo = v; setState(() {}); },
+            onChanged: (v) { _ciuMotivoResguardo = v; _invalidatePreview(); setState(() {}); },
           ),
         ),
       if (_ciuTipoEspecifico == 'Colaboración de ATM')
@@ -5152,7 +5191,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
-            onChanged: (v) { _ciuMotivoAtm = v; setState(() {}); },
+            onChanged: (v) { _ciuMotivoAtm = v; _invalidatePreview(); setState(() {}); },
           ),
         ),
     ]);
@@ -5166,7 +5205,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () => setState(() => _ciuSection--),
+            onPressed: () { _invalidatePreview(); setState(() => _ciuSection--); },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -5366,7 +5405,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               label: 'Dirección',
               icon: Icons.place_outlined,
               required: false,
-              onChanged: () => setState(() {}),
+              onChanged: () { _invalidatePreview(); setState(() {}); },
             ),
             const SizedBox(height: 14),
             for (final field in activeFields) ...[
@@ -5376,7 +5415,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 icon: _iconFor(field.key),
                 minLines: field.minLines,
                 required: field.required,
-                onChanged: () => setState(() {}),
+                onChanged: () { _invalidatePreview(); setState(() {}); },
               ),
               const SizedBox(height: 14),
             ],
@@ -5385,7 +5424,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               label: 'Persona que reporta',
               icon: Icons.badge_outlined,
               required: modulo != TipoModuloCartilla.eas,
-              onChanged: () => setState(() {}),
+              onChanged: () { _invalidatePreview(); setState(() {}); },
             ),
           ],
         ),
@@ -5393,7 +5432,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Widget _previewPanel(String value) {
+  Widget _previewPanel(String? value) {
     return _Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -5406,42 +5445,88 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   title: 'Vista previa',
                 ),
               ),
-              FilledButton.icon(
-                onPressed: guardando ? null : () => _generar(value),
-                icon: guardando
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.copy_outlined),
-                label: Text(guardando ? 'Guardando' : 'Generar'),
-              ),
+              if (value != null) ...[
+                FilledButton.icon(
+                  onPressed: guardando ? null : () => _generar(value),
+                  icon: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.copy_outlined),
+                  label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _previewText = null;
+                    _invalidatePreview(); setState(() {});
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Seguir editando'),
+                ),
+              ] else
+                FilledButton.icon(
+                  onPressed: guardando ? null : () => _doPreview(),
+                  icon: const Icon(Icons.visibility_outlined),
+                  label: const Text('Generar vista previa'),
+                ),
             ],
           ),
           const SizedBox(height: 18),
-          Container(
-            width: double.infinity,
-            constraints: const BoxConstraints(minHeight: 560),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF9FAFB),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.black12),
-            ),
-            child: SelectableText(
-              value,
-              style: const TextStyle(
-                color: AppThm.txtClr,
-                height: 1.45,
-                fontFamily: 'monospace',
-                fontSize: 13.5,
+          if (value != null)
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 560),
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: SelectableText(
+                value,
+                style: const TextStyle(
+                  color: AppThm.txtClr,
+                  height: 1.45,
+                  fontFamily: 'monospace',
+                  fontSize: 13.5,
+                ),
+              ),
+            )
+          else
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(minHeight: 560),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    'Complete el formulario y presione "Generar vista previa"',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppThm.secClr, fontSize: 15),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  void _invalidatePreview() {
+    _previewText = null;
+  }
+
+  void _doPreview() {
+    _previewText = _buildText();
+    _invalidatePreview(); setState(() {});
   }
 
   Future<void> _generar(String value) async {
