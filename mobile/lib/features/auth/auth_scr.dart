@@ -161,8 +161,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                   children: [
                     Image.asset(
                       'assets/img/logo_sigo_gcam.png',
-                      height: 64,
-                      width: 64,
+                      height: 100,
+                      width: 100,
                     ),
                     const SizedBox(width: 12),
                     const Expanded(
@@ -275,8 +275,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 Center(
                   child: Image.asset(
                     'assets/img/sigo_gcam.png',
-                    height: 68,
-                    width: 68,
+                    height: 100,
+                    width: 100,
                   ),
                 ),
                 const SizedBox(height: 8),
