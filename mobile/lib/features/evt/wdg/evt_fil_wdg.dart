@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../adm/adm_design_tokens.dart';
+
 class EvtFilWdg extends StatelessWidget {
   final ValueChanged<String> onBuscar;
   final ValueChanged<String> onEstado;
@@ -51,9 +53,12 @@ class EvtFilWdg extends StatelessWidget {
       onChanged: onBuscar,
       decoration: InputDecoration(
         hintText: 'Buscar evento',
-        prefixIcon: const Icon(Icons.search),
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: AdmTokens.grey50,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
     );
@@ -65,8 +70,12 @@ class EvtFilWdg extends StatelessWidget {
       isExpanded: true,
       decoration: InputDecoration(
         labelText: 'Estado',
+        prefixIcon: const Icon(Icons.flag_outlined),
+        filled: true,
+        fillColor: AdmTokens.grey50,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
       items: const [
@@ -95,8 +104,12 @@ class EvtFilWdg extends StatelessWidget {
       isExpanded: true,
       decoration: InputDecoration(
         labelText: 'Tipo',
+        prefixIcon: const Icon(Icons.category_outlined),
+        filled: true,
+        fillColor: AdmTokens.grey50,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
       ),
       items: const [

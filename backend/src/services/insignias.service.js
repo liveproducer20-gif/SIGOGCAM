@@ -20,8 +20,13 @@ async function obtenerProgreso(usuarioId) {
     return await repository.obtenerProgreso(Number(usuarioId));
 }
 
+async function obtenerRanking() {
+    return await repository.obtenerRanking();
+}
+
 module.exports = {
     obtenerTodas,
     obtenerUsuarioInsignias,
-    obtenerProgreso
+    obtenerProgreso,
+    obtenerRanking
 };

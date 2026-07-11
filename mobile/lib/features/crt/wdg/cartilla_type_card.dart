@@ -37,6 +37,8 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
+          width: double.infinity,
+          height: 128,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeInOut,
           padding: const EdgeInsets.all(16),
@@ -47,13 +49,15 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
               color: selected
                   ? _darkBlue
                   : hovered
-                      ? _darkBlue
-                      : _normalBorder,
+                  ? _darkBlue
+                  : _normalBorder,
               width: selected ? 2 : 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: selected || hovered ? 0.12 : 0.06),
+                color: Colors.black.withValues(
+                  alpha: selected || hovered ? 0.12 : 0.06,
+                ),
                 blurRadius: selected || hovered ? 8 : 4,
                 offset: Offset(0, selected || hovered ? 4 : 2),
               ),
@@ -61,22 +65,26 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
           ),
           child: Stack(
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(widget.icon, size: 32, color: _darkBlue),
-                  const SizedBox(height: 10),
-                  Text(
-                    widget.title,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: selected ? _darkBlue : const Color(0xFF1F2937),
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                      fontSize: 13,
-                      height: 1.3,
+              SizedBox.expand(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(widget.icon, size: 32, color: _darkBlue),
+                    const SizedBox(height: 10),
+                    Text(
+                      widget.title,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: selected ? _darkBlue : const Color(0xFF1F2937),
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.w500,
+                        fontSize: 13,
+                        height: 1.3,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               if (selected)
                 Positioned(
@@ -89,7 +97,11 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                       color: _darkBlue,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.check, size: 14, color: Colors.white),
+                    child: const Icon(
+                      Icons.check,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
             ],

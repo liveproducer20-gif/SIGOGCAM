@@ -68,16 +68,26 @@ class _InsHomeScrState extends State<InsHomeScr> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.error_outline, size: 48, color: AdmTokens.grey300),
+                      Icon(
+                        Icons.error_outline,
+                        size: 48,
+                        color: AdmTokens.grey300,
+                      ),
                       const SizedBox(height: 16),
                       Text(
                         'No se pudieron cargar las insignias',
-                        style: TextStyle(fontSize: 16, color: AdmTokens.grey600),
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: AdmTokens.grey600,
+                        ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         '${snapshot.error}',
-                        style: TextStyle(fontSize: 13, color: AdmTokens.grey400),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AdmTokens.grey400,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 24),
@@ -93,10 +103,18 @@ class _InsHomeScrState extends State<InsHomeScr> {
             }
 
             final data = snapshot.data!;
-            final unlocked = data.allBadges.where((b) => b.desbloqueada).toList();
-            final locked = data.allBadges.where((b) => !b.desbloqueada).toList();
+            final unlocked = data.allBadges
+                .where((b) => b.desbloqueada)
+                .toList();
+            final locked = data.allBadges
+                .where((b) => !b.desbloqueada)
+                .toList();
             final inProgress = data.allBadges
-                .where((b) => !b.desbloqueada && b.metaCartillas <= data.progreso.totalCartillasGeneradas)
+                .where(
+                  (b) =>
+                      !b.desbloqueada &&
+                      b.metaCartillas <= data.progreso.totalCartillasGeneradas,
+                )
                 .toList();
 
             final unlockedMetas = unlocked.map((b) => b.metaCartillas).toList();
@@ -136,11 +154,7 @@ class _InsHomeScrState extends State<InsHomeScr> {
                     onShare: () => _shareProgreso(context, data),
                   ),
                   const SizedBox(height: 20),
-                  _DashboardSection(
-                    allBadges: data.allBadges,
-                    progreso: data.progreso,
-                    nombreUsuario: widget.user.nombreCompleto,
-                  ),
+                  _DashboardSection(users: data.ranking),
                   const SizedBox(height: 20),
                   AchievementTabs(
                     allBadges: data.allBadges,
@@ -181,9 +195,8 @@ class _InsHomeScrState extends State<InsHomeScr> {
     final all = await api.obtenerTodas();
     final unlocked = await api.obtenerUsuarioInsignias(widget.user.id);
     final progreso = await api.obtenerProgreso(widget.user.id);
-    final unlockedById = {
-      for (final item in unlocked) item.id: item,
-    };
+    final rankingRows = await api.obtenerRanking();
+    final unlockedById = {for (final item in unlocked) item.id: item};
     final merged = all.map((item) {
       final got = unlockedById[item.id];
       if (got == null) return item;
@@ -194,7 +207,9 @@ class _InsHomeScrState extends State<InsHomeScr> {
       );
     }).toList();
 
-    return _InsData(allBadges: merged, progreso: progreso);
+    final ranking = rankingRows.map(UserRankBuilder.fromRankingRow).toList();
+
+    return _InsData(allBadges: merged, progreso: progreso, ranking: ranking);
   }
 }
 
@@ -247,24 +262,12 @@ class _Header extends StatelessWidget {
 // ──────────────────────────────────────────────
 
 class _DashboardSection extends StatelessWidget {
-  final List<InsMdl> allBadges;
-  final InsProgresoMdl progreso;
-  final String nombreUsuario;
+  final List<UserRankData> users;
 
-  const _DashboardSection({
-    required this.allBadges,
-    required this.progreso,
-    required this.nombreUsuario,
-  });
+  const _DashboardSection({required this.users});
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = UserRankBuilder.fromCurrentUser(
-      nombre: nombreUsuario,
-      allBadges: allBadges,
-      totalCartillas: progreso.totalCartillasGeneradas,
-    );
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final wide = constraints.maxWidth >= 800;
@@ -272,23 +275,17 @@ class _DashboardSection extends StatelessWidget {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                flex: 3,
-                child: TopUsersLeaderboard(users: [currentUser]),
-              ),
+              Expanded(flex: 3, child: TopUsersLeaderboard(users: users)),
               const SizedBox(width: 14),
-              Expanded(
-                flex: 2,
-                child: TopUsersCards(users: [currentUser]),
-              ),
+              Expanded(flex: 2, child: TopUsersCards(users: users)),
             ],
           );
         }
         return Column(
           children: [
-            TopUsersLeaderboard(users: [currentUser]),
+            TopUsersLeaderboard(users: users),
             const SizedBox(height: 14),
-            TopUsersCards(users: [currentUser]),
+            TopUsersCards(users: users),
           ],
         );
       },
@@ -299,9 +296,11 @@ class _DashboardSection extends StatelessWidget {
 class _InsData {
   final List<InsMdl> allBadges;
   final InsProgresoMdl progreso;
+  final List<UserRankData> ranking;
 
   const _InsData({
     required this.allBadges,
     required this.progreso,
+    required this.ranking,
   });
 }

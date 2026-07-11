@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/auth/app_user.dart';
@@ -51,8 +51,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   int _desaSection = 0;
   String _desaJp = '';
   String _desaAux = '';
-  bool get _hasPolicia =>
-      _desaPoliciaOtro || _desaPoliciaId != null;
+  bool get _hasPolicia => _desaPoliciaOtro || _desaPoliciaId != null;
   String _desaMovil = '';
   String _desaCp = '';
   String _desaCpGuardado = '';
@@ -320,24 +319,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       tipo == TipoCartilla.desalojoVendedores;
 
   bool get _isPuntoMartilloFlow =>
-      modulo == TipoModuloCartilla.eas &&
-      tipo == TipoCartilla.puntoMartillo;
+      modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.puntoMartillo;
 
   bool get _isRondasDisuasivasFlow =>
-      modulo == TipoModuloCartilla.eas &&
-      tipo == TipoCartilla.rondasDisuasivas;
+      modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.rondasDisuasivas;
 
   bool get _isRetiroTemporalFlow =>
-      modulo == TipoModuloCartilla.eas &&
-      tipo == TipoCartilla.retiroTemporal;
+      modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.retiroTemporal;
 
   bool get _isColaboracionFlow =>
       modulo == TipoModuloCartilla.eas &&
       tipo == TipoCartilla.colaboracionEntidades;
 
   bool get _isRequerimientoFlow =>
-      modulo == TipoModuloCartilla.eas &&
-      tipo == TipoCartilla.requerimiento;
+      modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.requerimiento;
 
   bool get _isColaboracionCiudadanaFlow =>
       modulo == TipoModuloCartilla.eas &&
@@ -378,7 +373,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       final jefe = await crtApi.getJefeControlMunicipal();
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -483,34 +480,40 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(28),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const PageTtlWdg(
-                ttl: 'Generador de cartillas',
-                sub: 'Seleccione el modulo operativo y complete solo los campos requeridos.',
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1440),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const PageTtlWdg(
+                    ttl: 'Generador de cartillas',
+                    sub:
+                        'Seleccione el modulo operativo y complete solo los campos requeridos.',
+                  ),
+                  const SizedBox(height: 26),
+                  if (modulo == TipoModuloCartilla.eas)
+                    _buildEasLayout(isWide, preview)
+                  else if (isWide)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 6, child: _formPanel()),
+                        const SizedBox(width: 24),
+                        Expanded(flex: 5, child: _previewPanel(preview)),
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        _formPanel(),
+                        const SizedBox(height: 20),
+                        _previewPanel(preview),
+                      ],
+                    ),
+                ],
               ),
-              const SizedBox(height: 26),
-              if (modulo == TipoModuloCartilla.eas)
-                _buildEasLayout(isWide, preview)
-              else if (isWide)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _formPanel()),
-                    const SizedBox(width: 20),
-                    Expanded(child: _previewPanel(preview)),
-                  ],
-                )
-              else
-                Column(
-                  children: [
-                    _formPanel(),
-                    const SizedBox(height: 20),
-                    _previewPanel(preview),
-                  ],
-                ),
-            ],
+            ),
           ),
         ),
       ),
@@ -523,36 +526,42 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         _buildEasConfigPanel(),
         const SizedBox(height: 20),
-        if (_isDesalojoFlow) _buildDesalojoWizard()
-        else if (_isPuntoMartilloFlow) _buildPuntoMartilloForm()
-        else if (_isRondasDisuasivasFlow) _buildRondasDisuasivasForm()
-        else if (_isRetiroTemporalFlow) _buildRetiroTemporalWizard()
-        else if (_isColaboracionFlow) _buildColaboracionWizard()
-        else if (_isRequerimientoFlow) _buildRequerimientoWizard()
-        else if (_isColaboracionCiudadanaFlow) _buildColCiudadanaWizard()
-        else if (_isAusentismoFlow) _buildAusentismoWizard()
-        else if (_isGenericEasWizardFlow) _buildGenericEasWizard()
-        else _formPanel(),
+        if (_isDesalojoFlow)
+          _buildDesalojoWizard()
+        else if (_isPuntoMartilloFlow)
+          _buildPuntoMartilloForm()
+        else if (_isRondasDisuasivasFlow)
+          _buildRondasDisuasivasForm()
+        else if (_isRetiroTemporalFlow)
+          _buildRetiroTemporalWizard()
+        else if (_isColaboracionFlow)
+          _buildColaboracionWizard()
+        else if (_isRequerimientoFlow)
+          _buildRequerimientoWizard()
+        else if (_isColaboracionCiudadanaFlow)
+          _buildColCiudadanaWizard()
+        else if (_isAusentismoFlow)
+          _buildAusentismoWizard()
+        else if (_isGenericEasWizardFlow)
+          _buildGenericEasWizard()
+        else
+          _formPanel(),
       ],
     );
 
     if (!isWide) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          left,
-          const SizedBox(height: 20),
-          _previewPanel(preview),
-        ],
+        children: [left, const SizedBox(height: 20), _previewPanel(preview)],
       );
     }
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(child: left),
-        const SizedBox(width: 20),
-        Expanded(child: _previewPanel(preview)),
+        Expanded(flex: 6, child: left),
+        const SizedBox(width: 24),
+        Expanded(flex: 5, child: _previewPanel(preview)),
       ],
     );
   }
@@ -562,10 +571,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(
-            icon: Icons.tune_outlined,
-            title: 'Configuración',
-          ),
+          const _PanelTitle(icon: Icons.tune_outlined, title: 'Configuración'),
           const SizedBox(height: 18),
           _Drop<TipoModuloCartilla>(
             value: modulo,
@@ -620,7 +626,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             icon: Icons.directions_car_outlined,
             items: _moviles.map((item) => item.movil).toList(),
             itemText: (value) => 'Móvil $value',
-            onChanged: (value) { _invalidatePreview(); setState(() => movil = value); },
+            onChanged: (value) {
+              _invalidatePreview();
+              setState(() => movil = value);
+            },
           ),
           const SizedBox(height: 14),
           _Drop<RolMovil>(
@@ -646,14 +655,46 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     const gap = 12.0;
 
     final items = [
-      (icon: Icons.storefront_outlined, title: 'Desalojo de vendedores\nautónomos no regularizados', tipo: TipoCartilla.desalojoVendedores),
-      (icon: Icons.gavel_outlined, title: 'Punto martillo', tipo: TipoCartilla.puntoMartillo),
-      (icon: Icons.directions_walk_outlined, title: 'Rondas disuasivas', tipo: TipoCartilla.rondasDisuasivas),
-      (icon: Icons.backup_outlined, title: 'Retiro temporal', tipo: TipoCartilla.retiroTemporal),
-      (icon: Icons.receipt_long_outlined, title: 'Requerimiento', tipo: TipoCartilla.requerimiento),
-      (icon: Icons.groups_outlined, title: 'Colaboración con\notras entidades', tipo: TipoCartilla.colaboracionEntidades),
-      (icon: Icons.people_outlined, title: 'Colaboración\nciudadana', tipo: TipoCartilla.colaboracionEventos),
-      (icon: Icons.logout_outlined, title: 'Permiso de\nausentismo', tipo: TipoCartilla.permisoAusentismo),
+      (
+        icon: Icons.storefront_outlined,
+        title: 'Desalojo de vendedores\nautónomos no regularizados',
+        tipo: TipoCartilla.desalojoVendedores,
+      ),
+      (
+        icon: Icons.gavel_outlined,
+        title: 'Punto martillo',
+        tipo: TipoCartilla.puntoMartillo,
+      ),
+      (
+        icon: Icons.directions_walk_outlined,
+        title: 'Rondas disuasivas',
+        tipo: TipoCartilla.rondasDisuasivas,
+      ),
+      (
+        icon: Icons.backup_outlined,
+        title: 'Retiro temporal',
+        tipo: TipoCartilla.retiroTemporal,
+      ),
+      (
+        icon: Icons.receipt_long_outlined,
+        title: 'Requerimiento',
+        tipo: TipoCartilla.requerimiento,
+      ),
+      (
+        icon: Icons.groups_outlined,
+        title: 'Colaboración con\notras entidades',
+        tipo: TipoCartilla.colaboracionEntidades,
+      ),
+      (
+        icon: Icons.people_outlined,
+        title: 'Colaboración\nciudadana',
+        tipo: TipoCartilla.colaboracionEventos,
+      ),
+      (
+        icon: Icons.logout_outlined,
+        title: 'Permiso de\nausentismo',
+        tipo: TipoCartilla.permisoAusentismo,
+      ),
     ];
 
     return Column(
@@ -733,7 +774,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaCp = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           if (_desaCpGuardado.isNotEmpty)
@@ -758,7 +800,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaJp = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -771,7 +814,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaDireccion = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -787,7 +831,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _desaAux = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ],
@@ -827,7 +872,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaCp = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           if (_desaCpGuardado.isNotEmpty)
@@ -852,7 +898,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaJp = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -865,7 +912,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _desaDireccion = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
           const SizedBox(height: 14),
@@ -881,7 +929,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _desaAux = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ],
@@ -963,7 +1012,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaJp = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               if (!_hasPolicia) ...[
@@ -977,7 +1027,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _desaAux = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -1000,7 +1051,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
                 .toList(),
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _desaMovil = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _desaMovil = value);
+              }
             },
           ),
         ),
@@ -1020,7 +1074,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaCp = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               if (_desaCpGuardado.isNotEmpty)
@@ -1045,7 +1100,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPoliciaSection() {
-    final sinPolicia = <String, dynamic>{'id': 0, 'nombre': 'Sin servidor policial'};
+    final sinPolicia = <String, dynamic>{
+      'id': 0,
+      'nombre': 'Sin servidor policial',
+    };
     final otto = <String, dynamic>{'id': -1, 'nombre': 'Otro'};
     final items = [sinPolicia, ..._servidoresPoliciales, otto];
 
@@ -1053,7 +1111,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_desaPoliciaOtro) {
       selected = otto;
     } else if (_desaPoliciaId != null && _desaPoliciaId! > 0) {
-      final idx = _servidoresPoliciales.indexWhere((s) => s['id'] == _desaPoliciaId);
+      final idx = _servidoresPoliciales.indexWhere(
+        (s) => s['id'] == _desaPoliciaId,
+      );
       if (idx >= 0) {
         selected = _servidoresPoliciales[idx];
       } else {
@@ -1113,7 +1173,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _desaPoliciaNombre = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ),
@@ -1185,7 +1246,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _desaDireccion = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
@@ -1224,7 +1286,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   selected: _desaAgresivo,
                   label: 'Sí',
                   icon: Icons.warning_amber_rounded,
-                  onTap: () { _invalidatePreview(); setState(() => _desaAgresivo = true); },
+                  onTap: () {
+                    _invalidatePreview();
+                    setState(() => _desaAgresivo = true);
+                  },
                 ),
               ),
               const SizedBox(width: 12),
@@ -1233,7 +1298,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   selected: !_desaAgresivo,
                   label: 'No',
                   icon: Icons.check_circle_outline,
-                  onTap: () { _invalidatePreview(); setState(() => _desaAgresivo = false); },
+                  onTap: () {
+                    _invalidatePreview();
+                    setState(() => _desaAgresivo = false);
+                  },
                 ),
               ),
             ],
@@ -1251,7 +1319,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     selected: _desaColaboracion,
                     label: 'Sí',
                     icon: Icons.groups_outlined,
-                    onTap: () { _invalidatePreview(); setState(() => _desaColaboracion = true); },
+                    onTap: () {
+                      _invalidatePreview();
+                      setState(() => _desaColaboracion = true);
+                    },
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1260,7 +1331,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     selected: !_desaColaboracion,
                     label: 'No',
                     icon: Icons.do_not_disturb_alt_outlined,
-                    onTap: () { _invalidatePreview(); setState(() => _desaColaboracion = false); },
+                    onTap: () {
+                      _invalidatePreview();
+                      setState(() => _desaColaboracion = false);
+                    },
                   ),
                 ),
               ],
@@ -1280,7 +1354,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _desaSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _desaSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -1316,9 +1393,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_desaCp.trim()).catchError((_) {}));
     }
     if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_desaPoliciaId != null) {
       saves.add(crtApi.savePolicia(_desaPoliciaId).catchError((_) {}));
     }
@@ -1329,7 +1408,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _desaPoliciaCtrl.clear();
       try {
         _servidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo = _servidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        final nuevo = _servidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _desaPoliciaId = nuevo['id'] as int?;
         }
@@ -1365,16 +1446,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         saves.add(crtApi.saveCp(_desaCp.trim()).catchError((_) {}));
       }
       if (_desaPoliciaOtro && _desaPoliciaNombre.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearServidorPolicial(_easDbId, _desaPoliciaNombre.trim())
+              .catchError((_) {}),
+        );
       } else if (_desaPoliciaId != null) {
         saves.add(crtApi.savePolicia(_desaPoliciaId).catchError((_) {}));
       }
       if (_desaDireccionOtro && _desaDireccion.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearDireccion(_easDbId, _desaDireccion.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearDireccion(_easDbId, _desaDireccion.trim())
+              .catchError((_) {}),
+        );
       }
       await Future.wait(saves);
       if (_desaDireccionOtro) _desaDireccionOtro = false;
@@ -1439,8 +1524,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _desaPoliciaId = pid;
-          _desaPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _desaPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
     } catch (_) {
@@ -1476,8 +1560,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _rtPoliciaId = pid;
-          _rtPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _rtPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
     } catch (_) {
@@ -1542,12 +1625,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _ezPoliciaId = pid;
-          _ezPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _ezPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
-    } catch (_) {}
-    finally { if (mounted) setState(() => _ezCargando = false); }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _ezCargando = false);
+    }
   }
 
   Widget _buildRetiroTemporalWizard() {
@@ -1614,11 +1698,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _rtDireccionOtro
         ? dirOptions.last
         : (_rtDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _rtDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _rtDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
@@ -1637,7 +1721,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _rtJp = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -1659,7 +1744,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 .map((m) => DropdownMenuItem(value: m, child: Text('MOVIL $m')))
                 .toList(),
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _rtMovil = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _rtMovil = value);
+              }
             },
           ),
         ),
@@ -1680,7 +1768,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _rtCp = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
                 if (_rtCpGuardado.isNotEmpty)
@@ -1714,7 +1803,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Sin servidor policial'),
+                  ),
                   ..._rtServidoresPoliciales.map((sp) {
                     final id = sp['id'] as int?;
                     final nombre = sp['nombre'] as String? ?? '';
@@ -1726,11 +1818,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     _rtPoliciaId = value;
                     if (value != null) {
                       _rtPoliciaOtro = false;
-                      _rtPoliciaNombre = _rtServidoresPoliciales
-                              .firstWhere(
+                      _rtPoliciaNombre =
+                          _rtServidoresPoliciales.firstWhere(
                                 (sp) => sp['id'] == value,
                                 orElse: () => <String, dynamic>{},
-                              )['nombre'] as String? ??
+                              )['nombre']
+                              as String? ??
                           '';
                     } else {
                       _rtPoliciaNombre = '';
@@ -1739,7 +1832,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   });
                 },
               ),
-              if (_rtPoliciaOtro || (_rtPoliciaId == null && _rtPoliciaNombre.isNotEmpty && !_rtPoliciaOtro))
+              if (_rtPoliciaOtro ||
+                  (_rtPoliciaId == null &&
+                      _rtPoliciaNombre.isNotEmpty &&
+                      !_rtPoliciaOtro))
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: TextField(
@@ -1751,11 +1847,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _rtPoliciaNombre = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
-              if (!_rtPoliciaOtro && _rtPoliciaId == null && _rtPoliciaNombre.isEmpty)
+              if (!_rtPoliciaOtro &&
+                  _rtPoliciaId == null &&
+                  _rtPoliciaNombre.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
@@ -1822,7 +1921,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _rtDireccion = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
@@ -1844,7 +1944,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _rtAux1 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -1857,7 +1958,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _rtAux2 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ],
@@ -1882,7 +1984,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _rtActividad = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -1900,7 +2003,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 3,
             onChanged: (value) {
               _rtElementos = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -1917,7 +2021,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
             onChanged: (value) {
               _rtCantidad = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -1934,7 +2039,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _rtSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _rtSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -1968,9 +2076,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_rtCp.trim()).catchError((_) {}));
     }
     if (_rtPoliciaOtro && _rtPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_rtPoliciaId != null) {
       saves.add(crtApi.savePolicia(_rtPoliciaId).catchError((_) {}));
     }
@@ -1980,10 +2090,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _rtPoliciaOtro = false;
       _rtPoliciaCtrl.clear();
       try {
-        _rtServidoresPoliciales =
-            await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo =
-            _rtServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _rtServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _rtServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _rtPoliciaId = nuevo['id'] as int?;
         }
@@ -2018,16 +2130,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         saves.add(crtApi.saveCp(_rtCp.trim()).catchError((_) {}));
       }
       if (_rtPoliciaOtro && _rtPoliciaNombre.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearServidorPolicial(_easDbId, _rtPoliciaNombre.trim())
+              .catchError((_) {}),
+        );
       } else if (_rtPoliciaId != null) {
         saves.add(crtApi.savePolicia(_rtPoliciaId).catchError((_) {}));
       }
       if (_rtDireccionOtro && _rtDireccion.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearDireccion(_easDbId, _rtDireccion.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearDireccion(_easDbId, _rtDireccion.trim())
+              .catchError((_) {}),
+        );
       }
       await Future.wait(saves);
       if (_rtDireccionOtro) _rtDireccionOtro = false;
@@ -2123,11 +2239,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _ezDireccionOtro
         ? dirOptions.last
         : (_ezDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _ezDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _ezDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
@@ -2142,7 +2258,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ezJp = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ezJp = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
@@ -2158,7 +2278,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezCp = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ezCp = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
               if (_ezCpGuardado.isNotEmpty)
                 Padding(
@@ -2190,7 +2314,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Sin servidor policial'),
+                  ),
                   ..._ezServidoresPoliciales.map((sp) {
                     final id = sp['id'] as int?;
                     final nombre = sp['nombre'] as String? ?? '';
@@ -2202,11 +2329,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     _ezPoliciaId = value;
                     if (value != null) {
                       _ezPoliciaOtro = false;
-                      _ezPoliciaNombre = _ezServidoresPoliciales
-                              .firstWhere(
+                      _ezPoliciaNombre =
+                          _ezServidoresPoliciales.firstWhere(
                                 (sp) => sp['id'] == value,
                                 orElse: () => <String, dynamic>{},
-                              )['nombre'] as String? ?? '';
+                              )['nombre']
+                              as String? ??
+                          '';
                     } else {
                       _ezPoliciaNombre = '';
                     }
@@ -2214,7 +2343,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   });
                 },
               ),
-              if (_ezPoliciaOtro || (_ezPoliciaId == null && _ezPoliciaNombre.isNotEmpty && !_ezPoliciaOtro))
+              if (_ezPoliciaOtro ||
+                  (_ezPoliciaId == null &&
+                      _ezPoliciaNombre.isNotEmpty &&
+                      !_ezPoliciaOtro))
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: TextField(
@@ -2224,14 +2356,26 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ezPoliciaNombre = v; _invalidatePreview(); setState(() {}); },
+                    onChanged: (v) {
+                      _ezPoliciaNombre = v;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
                   ),
                 ),
-              if (!_ezPoliciaOtro && _ezPoliciaId == null && _ezPoliciaNombre.isEmpty)
+              if (!_ezPoliciaOtro &&
+                  _ezPoliciaId == null &&
+                  _ezPoliciaNombre.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
-                    onTap: () { _invalidatePreview(); setState(() { _ezPoliciaOtro = true; _ezPoliciaId = null; }); },
+                    onTap: () {
+                      _invalidatePreview();
+                      setState(() {
+                        _ezPoliciaOtro = true;
+                        _ezPoliciaId = null;
+                      });
+                    },
                     child: const Text(
                       'Ingresar otro servidor policial',
                       style: TextStyle(
@@ -2271,7 +2415,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   final id = value['id'];
                   _invalidatePreview();
                   if (id is int && id == -1) {
-                    setState(() { _ezDireccionOtro = true; _ezDireccion = ''; });
+                    setState(() {
+                      _ezDireccionOtro = true;
+                      _ezDireccion = '';
+                    });
                   } else {
                     setState(() {
                       _ezDireccionOtro = false;
@@ -2292,7 +2439,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ezDireccion = v; _invalidatePreview(); setState(() {}); },
+                    onChanged: (v) {
+                      _ezDireccion = v;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
                   ),
                 ),
             ],
@@ -2311,7 +2462,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezAux1 = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ezAux1 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -2321,7 +2476,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ezAux2 = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ezAux2 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
             ],
           ),
@@ -2341,7 +2500,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             icon: _iconFor(field.key),
             minLines: field.minLines,
             required: field.required,
-            onChanged: () { _invalidatePreview(); setState(() {}); },
+            onChanged: () {
+              _invalidatePreview();
+              setState(() {});
+            },
           ),
           const SizedBox(height: 14),
         ],
@@ -2357,7 +2519,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _ezSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _ezSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -2391,9 +2556,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_ezCp.trim()).catchError((_) {}));
     }
     if (_ezPoliciaOtro && _ezPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _ezPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _ezPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_ezPoliciaId != null) {
       saves.add(crtApi.savePolicia(_ezPoliciaId).catchError((_) {}));
     }
@@ -2403,10 +2570,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _ezPoliciaOtro = false;
       _ezPoliciaCtrl.clear();
       try {
-        _ezServidoresPoliciales =
-            await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo =
-            _ezServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _ezServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _ezServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _ezPoliciaId = nuevo['id'] as int?;
           _ezPoliciaNombre = nuevo['nombre'] as String? ?? '';
@@ -2511,12 +2680,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _ausPoliciaId = pid;
-          _ausPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _ausPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
-    } catch (_) {}
-    finally { if (mounted) setState(() => _ausCargando = false); }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _ausCargando = false);
+    }
   }
 
   Widget _buildAusentismoWizard() {
@@ -2576,11 +2746,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _ausDireccionOtro
         ? dirOptions.last
         : (_ausDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _ausDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _ausDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
@@ -2595,7 +2765,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ausJp = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ausJp = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
@@ -2611,7 +2785,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausCp = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ausCp = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
               if (_ausCpGuardado.isNotEmpty)
                 Padding(
@@ -2643,7 +2821,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('Sin servidor policial'),
+                  ),
                   ..._ausServidoresPoliciales.map((sp) {
                     final id = sp['id'] as int?;
                     final nombre = sp['nombre'] as String? ?? '';
@@ -2655,11 +2836,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     _ausPoliciaId = value;
                     if (value != null) {
                       _ausPoliciaOtro = false;
-                      _ausPoliciaNombre = _ausServidoresPoliciales
-                              .firstWhere(
+                      _ausPoliciaNombre =
+                          _ausServidoresPoliciales.firstWhere(
                                 (sp) => sp['id'] == value,
                                 orElse: () => <String, dynamic>{},
-                              )['nombre'] as String? ?? '';
+                              )['nombre']
+                              as String? ??
+                          '';
                     } else {
                       _ausPoliciaNombre = '';
                     }
@@ -2667,7 +2850,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   });
                 },
               ),
-              if (_ausPoliciaOtro || (_ausPoliciaId == null && _ausPoliciaNombre.isNotEmpty && !_ausPoliciaOtro))
+              if (_ausPoliciaOtro ||
+                  (_ausPoliciaId == null &&
+                      _ausPoliciaNombre.isNotEmpty &&
+                      !_ausPoliciaOtro))
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: TextField(
@@ -2677,14 +2863,26 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ausPoliciaNombre = v; _invalidatePreview(); setState(() {}); },
+                    onChanged: (v) {
+                      _ausPoliciaNombre = v;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
                   ),
                 ),
-              if (!_ausPoliciaOtro && _ausPoliciaId == null && _ausPoliciaNombre.isEmpty)
+              if (!_ausPoliciaOtro &&
+                  _ausPoliciaId == null &&
+                  _ausPoliciaNombre.isEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
                   child: InkWell(
-                    onTap: () { _invalidatePreview(); setState(() { _ausPoliciaOtro = true; _ausPoliciaId = null; }); },
+                    onTap: () {
+                      _invalidatePreview();
+                      setState(() {
+                        _ausPoliciaOtro = true;
+                        _ausPoliciaId = null;
+                      });
+                    },
                     child: const Text(
                       'Ingresar otro servidor policial',
                       style: TextStyle(
@@ -2724,7 +2922,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   final id = value['id'];
                   _invalidatePreview();
                   if (id is int && id == -1) {
-                    setState(() { _ausDireccionOtro = true; _ausDireccion = ''; });
+                    setState(() {
+                      _ausDireccionOtro = true;
+                      _ausDireccion = '';
+                    });
                   } else {
                     setState(() {
                       _ausDireccionOtro = false;
@@ -2742,7 +2943,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       prefixIcon: Icon(Icons.edit_outlined),
                       border: OutlineInputBorder(),
                     ),
-                    onChanged: (v) { _ausDireccion = v; _invalidatePreview(); setState(() {}); },
+                    onChanged: (v) {
+                      _ausDireccion = v;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
                   ),
                 ),
             ],
@@ -2761,7 +2966,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausAux1 = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ausAux1 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
               const SizedBox(height: 14),
               TextFormField(
@@ -2771,7 +2980,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausAux2 = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ausAux2 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
             ],
           ),
@@ -2807,10 +3020,21 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'Permiso por horas', child: Text('Permiso por horas')),
-              DropdownMenuItem(value: 'Permiso por días', child: Text('Permiso por días')),
+              DropdownMenuItem(
+                value: 'Permiso por horas',
+                child: Text('Permiso por horas'),
+              ),
+              DropdownMenuItem(
+                value: 'Permiso por días',
+                child: Text('Permiso por días'),
+              ),
             ],
-            onChanged: (v) { if (v != null) { _invalidatePreview(); setState(() => _ausTipoPermiso = v); } },
+            onChanged: (v) {
+              if (v != null) {
+                _invalidatePreview();
+                setState(() => _ausTipoPermiso = v);
+              }
+            },
           ),
         ),
         const SizedBox(height: 20),
@@ -2824,7 +3048,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   context: context,
                   initialTime: _ausHoraSalida,
                 );
-                if (picked != null) { _invalidatePreview(); setState(() => _ausHoraSalida = picked); }
+                if (picked != null) {
+                  _invalidatePreview();
+                  setState(() => _ausHoraSalida = picked);
+                }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2845,7 +3072,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   context: context,
                   initialTime: _ausHoraRetorno,
                 );
-                if (picked != null) { _invalidatePreview(); setState(() => _ausHoraRetorno = picked); }
+                if (picked != null) {
+                  _invalidatePreview();
+                  setState(() => _ausHoraRetorno = picked);
+                }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2869,7 +3099,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   firstDate: DateTime.now().subtract(const Duration(days: 30)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                 );
-                if (picked != null) { _invalidatePreview(); setState(() => _ausFechaInicio = picked); }
+                if (picked != null) {
+                  _invalidatePreview();
+                  setState(() => _ausFechaInicio = picked);
+                }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2892,7 +3125,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   firstDate: DateTime.now().subtract(const Duration(days: 30)),
                   lastDate: DateTime.now().add(const Duration(days: 365)),
                 );
-                if (picked != null) { _invalidatePreview(); setState(() => _ausFechaFin = picked); }
+                if (picked != null) {
+                  _invalidatePreview();
+                  setState(() => _ausFechaFin = picked);
+                }
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
@@ -2904,7 +3140,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
           ),
         ],
-        if (_ausTipoPermiso == 'Permiso por horas' || _ausTipoPermiso == 'Permiso por días') ...[
+        if (_ausTipoPermiso == 'Permiso por horas' ||
+            _ausTipoPermiso == 'Permiso por días') ...[
           const SizedBox(height: 20),
           _StepCard(
             step: 9,
@@ -2917,15 +3154,41 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               items: const [
-                DropdownMenuItem(value: 'Exámenes médicos', child: Text('Exámenes médicos')),
-                DropdownMenuItem(value: 'Nacimiento', child: Text('Nacimiento')),
-                DropdownMenuItem(value: 'Paternidad', child: Text('Paternidad')),
-                DropdownMenuItem(value: 'Maternidad', child: Text('Maternidad')),
+                DropdownMenuItem(
+                  value: 'Exámenes médicos',
+                  child: Text('Exámenes médicos'),
+                ),
+                DropdownMenuItem(
+                  value: 'Nacimiento',
+                  child: Text('Nacimiento'),
+                ),
+                DropdownMenuItem(
+                  value: 'Paternidad',
+                  child: Text('Paternidad'),
+                ),
+                DropdownMenuItem(
+                  value: 'Maternidad',
+                  child: Text('Maternidad'),
+                ),
                 DropdownMenuItem(value: 'Estudios', child: Text('Estudios')),
-                DropdownMenuItem(value: 'Calamidad doméstica', child: Text('Calamidad doméstica')),
+                DropdownMenuItem(
+                  value: 'Calamidad doméstica',
+                  child: Text('Calamidad doméstica'),
+                ),
                 DropdownMenuItem(value: 'Otro', child: Text('Otro')),
               ],
-              onChanged: (v) { if (v != null) { _invalidatePreview(); setState(() { _ausMotivo = v; _ausLugar = ''; _ausDetalle = ''; _ausLugarCtrl.clear(); _ausDetalleCtrl.clear(); }); } },
+              onChanged: (v) {
+                if (v != null) {
+                  _invalidatePreview();
+                  setState(() {
+                    _ausMotivo = v;
+                    _ausLugar = '';
+                    _ausDetalle = '';
+                    _ausLugarCtrl.clear();
+                    _ausDetalleCtrl.clear();
+                  });
+                }
+              },
             ),
           ),
           if (requiereLugar) ...[
@@ -2939,7 +3202,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   prefixIcon: Icon(Icons.place_outlined),
                   border: OutlineInputBorder(),
                 ),
-                onChanged: (v) { _ausLugar = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ausLugar = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
             ),
           ],
@@ -2956,7 +3223,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 minLines: 3,
                 maxLines: 5,
-                onChanged: (v) { _ausDetalle = v; _invalidatePreview(); setState(() {}); },
+                onChanged: (v) {
+                  _ausDetalle = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
             ),
           ],
@@ -2972,7 +3243,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               minLines: 3,
               maxLines: 5,
-              onChanged: (v) { _ausInfoAdicional = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ausInfoAdicional = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ),
         ],
@@ -2988,7 +3263,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _ausSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _ausSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -3022,9 +3300,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_ausCp.trim()).catchError((_) {}));
     }
     if (_ausPoliciaOtro && _ausPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _ausPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _ausPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_ausPoliciaId != null) {
       saves.add(crtApi.savePolicia(_ausPoliciaId).catchError((_) {}));
     }
@@ -3034,10 +3314,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _ausPoliciaOtro = false;
       _ausPoliciaCtrl.clear();
       try {
-        _ausServidoresPoliciales =
-            await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo =
-            _ausServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _ausServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _ausServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _ausPoliciaId = nuevo['id'] as int?;
           _ausPoliciaNombre = nuevo['nombre'] as String? ?? '';
@@ -3113,8 +3395,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           '_aus_userNombre': widget.user?.nombreCompleto ?? '',
           '_aus_movil': movil,
           '_aus_tipoPermiso': _ausTipoPermiso,
-          '_aus_horaSalida': '${_ausHoraSalida.hour.toString().padLeft(2, '0')}:${_ausHoraSalida.minute.toString().padLeft(2, '0')}',
-          '_aus_horaRetorno': '${_ausHoraRetorno.hour.toString().padLeft(2, '0')}:${_ausHoraRetorno.minute.toString().padLeft(2, '0')}',
+          '_aus_horaSalida':
+              '${_ausHoraSalida.hour.toString().padLeft(2, '0')}:${_ausHoraSalida.minute.toString().padLeft(2, '0')}',
+          '_aus_horaRetorno':
+              '${_ausHoraRetorno.hour.toString().padLeft(2, '0')}:${_ausHoraRetorno.minute.toString().padLeft(2, '0')}',
           '_aus_fechaInicio': _fmtFecha(_ausFechaInicio),
           '_aus_fechaFin': _fmtFecha(_ausFechaFin),
           '_aus_motivo': _ausMotivo,
@@ -3140,9 +3424,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         eas: eas,
         rolMovil: rolMovil,
         values: {
-          '_rt_jp': _rtJp.isNotEmpty ? _rtJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_rt_jp': _rtJp.isNotEmpty
+              ? _rtJp
+              : (rolMovil == RolMovil.jp
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_rt_movil': movilValue,
-          '_rt_cp': _rtCp.isNotEmpty ? _rtCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_rt_cp': _rtCp.isNotEmpty
+              ? _rtCp
+              : (rolMovil == RolMovil.conductor
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_rt_policia': _rtPoliciaNombre,
           '_rt_direccion': _rtDireccion,
           '_rt_aux1': _rtAux1,
@@ -3181,8 +3473,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _colPoliciaId = pid;
-          _colPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _colPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
     } catch (_) {
@@ -3249,11 +3540,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _colDireccionOtro
         ? dirOptions.last
         : (_colDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _colDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _colDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
@@ -3270,7 +3561,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _colJp = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ),
@@ -3288,7 +3580,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _colCp = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ),
@@ -3305,7 +3598,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              const DropdownMenuItem(
+                value: null,
+                child: Text('Sin servidor policial'),
+              ),
               ..._colServidoresPoliciales.map((sp) {
                 final id = sp['id'] as int?;
                 final nombre = sp['nombre'] as String? ?? '';
@@ -3317,11 +3613,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _colPoliciaId = value;
                 if (value != null) {
                   _colPoliciaOtro = false;
-                  _colPoliciaNombre = _colServidoresPoliciales
-                      .firstWhere(
-                        (sp) => sp['id'] == value,
-                        orElse: () => <String, dynamic>{},
-                      )['nombre'] as String? ?? '';
+                  _colPoliciaNombre =
+                      _colServidoresPoliciales.firstWhere(
+                            (sp) => sp['id'] == value,
+                            orElse: () => <String, dynamic>{},
+                          )['nombre']
+                          as String? ??
+                      '';
                 } else {
                   _colPoliciaNombre = '';
                 }
@@ -3374,7 +3672,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _colDireccion = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
@@ -3396,7 +3695,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colAux1 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3409,7 +3709,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colAux2 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ],
@@ -3428,11 +3729,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'entidad', child: Text('Entidades de colaboración')),
-              DropdownMenuItem(value: 'accidente', child: Text('Hecho o Accidente')),
+              DropdownMenuItem(
+                value: 'entidad',
+                child: Text('Entidades de colaboración'),
+              ),
+              DropdownMenuItem(
+                value: 'accidente',
+                child: Text('Hecho o Accidente'),
+              ),
             ],
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _colSubtype = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _colSubtype = value);
+              }
             },
           ),
         ),
@@ -3466,11 +3776,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               DropdownMenuItem(value: 'ATM', child: Text('ATM')),
               DropdownMenuItem(value: 'CTE', child: Text('CTE')),
               DropdownMenuItem(value: 'Bomberos', child: Text('Bomberos')),
-              DropdownMenuItem(value: 'Paramédicos', child: Text('Paramédicos')),
-              DropdownMenuItem(value: 'Fuerzas Armadas', child: Text('Fuerzas Armadas')),
+              DropdownMenuItem(
+                value: 'Paramédicos',
+                child: Text('Paramédicos'),
+              ),
+              DropdownMenuItem(
+                value: 'Fuerzas Armadas',
+                child: Text('Fuerzas Armadas'),
+              ),
             ],
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _colEntidad = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _colEntidad = value);
+              }
             },
           ),
         ),
@@ -3487,7 +3806,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 4,
             onChanged: (value) {
               _colMotivo = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -3502,7 +3822,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           step: 7,
           title: 'Tipo de accidente',
           child: DropdownButtonFormField<String>(
-            initialValue: _colTipoAccidente.isNotEmpty ? _colTipoAccidente : null,
+            initialValue: _colTipoAccidente.isNotEmpty
+                ? _colTipoAccidente
+                : null,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Tipo de accidente',
@@ -3510,13 +3832,28 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'Accidente entre dos vehículos', child: Text('Accidente entre dos vehículos')),
-              DropdownMenuItem(value: 'Accidente múltiple', child: Text('Accidente múltiple')),
-              DropdownMenuItem(value: 'Choque y daño al espacio y vía pública', child: Text('Choque y daño al espacio y vía pública')),
-              DropdownMenuItem(value: 'Accidente entre vehículo y persona', child: Text('Accidente entre vehículo y persona')),
+              DropdownMenuItem(
+                value: 'Accidente entre dos vehículos',
+                child: Text('Accidente entre dos vehículos'),
+              ),
+              DropdownMenuItem(
+                value: 'Accidente múltiple',
+                child: Text('Accidente múltiple'),
+              ),
+              DropdownMenuItem(
+                value: 'Choque y daño al espacio y vía pública',
+                child: Text('Choque y daño al espacio y vía pública'),
+              ),
+              DropdownMenuItem(
+                value: 'Accidente entre vehículo y persona',
+                child: Text('Accidente entre vehículo y persona'),
+              ),
             ],
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _colTipoAccidente = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _colTipoAccidente = value);
+              }
             },
           ),
         ),
@@ -3534,7 +3871,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colNumHeridos = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3546,7 +3884,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colNombresHeridos = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ],
@@ -3583,7 +3922,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colNumFallecidos = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
                 const SizedBox(height: 14),
@@ -3595,7 +3935,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colNombresFallecidos = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3616,11 +3957,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'No intervino', child: Text('No intervino')),
+                  DropdownMenuItem(
+                    value: 'No intervino',
+                    child: Text('No intervino'),
+                  ),
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) { _invalidatePreview(); setState(() => _colCriminalistica = value); }
+                  if (value != null) {
+                    _invalidatePreview();
+                    setState(() => _colCriminalistica = value);
+                  }
                 },
               ),
               if (_colCriminalistica == 'Presente') ...[
@@ -3633,7 +3980,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colCriminalisticaNombre = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3646,11 +3994,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'No estuvo presente', child: Text('No estuvo presente')),
+                  DropdownMenuItem(
+                    value: 'No estuvo presente',
+                    child: Text('No estuvo presente'),
+                  ),
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) { _invalidatePreview(); setState(() => _colAtm = value); }
+                  if (value != null) {
+                    _invalidatePreview();
+                    setState(() => _colAtm = value);
+                  }
                 },
               ),
               if (_colAtm == 'Presente') ...[
@@ -3663,7 +4017,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAtmNombre = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
                 const SizedBox(height: 14),
@@ -3675,7 +4030,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAtmMovil = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3688,11 +4044,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'No estuvo presente', child: Text('No estuvo presente')),
+                  DropdownMenuItem(
+                    value: 'No estuvo presente',
+                    child: Text('No estuvo presente'),
+                  ),
                   DropdownMenuItem(value: 'Presente', child: Text('Presente')),
                 ],
                 onChanged: (value) {
-                  if (value != null) { _invalidatePreview(); setState(() => _colAmbulancia = value); }
+                  if (value != null) {
+                    _invalidatePreview();
+                    setState(() => _colAmbulancia = value);
+                  }
                 },
               ),
               if (_colAmbulancia == 'Presente') ...[
@@ -3705,7 +4067,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colAmbulanciaNombre = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3726,7 +4089,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colPlacas = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -3738,7 +4102,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _colConductores = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ],
@@ -3757,7 +4122,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 3,
             onChanged: (value) {
               _colDanios = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -3793,7 +4159,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   maxLines: 3,
                   onChanged: (value) {
                     _colCierreVialDesc = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3831,7 +4198,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   ),
                   onChanged: (value) {
                     _colCasaSalud = value;
-                    _invalidatePreview(); setState(() {});
+                    _invalidatePreview();
+                    setState(() {});
                   },
                 ),
               ],
@@ -3851,7 +4219,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _colSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _colSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -3885,9 +4256,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_colCp.trim()).catchError((_) {}));
     }
     if (_colPoliciaOtro && _colPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_colPoliciaId != null) {
       saves.add(crtApi.savePolicia(_colPoliciaId).catchError((_) {}));
     }
@@ -3897,10 +4270,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _colPoliciaOtro = false;
       _colPoliciaCtrl.clear();
       try {
-        _colServidoresPoliciales =
-            await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo =
-            _colServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _colServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _colServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _colPoliciaId = nuevo['id'] as int?;
         }
@@ -3933,16 +4308,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         saves.add(crtApi.saveCp(_colCp.trim()).catchError((_) {}));
       }
       if (_colPoliciaOtro && _colPoliciaNombre.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearServidorPolicial(_easDbId, _colPoliciaNombre.trim())
+              .catchError((_) {}),
+        );
       } else if (_colPoliciaId != null) {
         saves.add(crtApi.savePolicia(_colPoliciaId).catchError((_) {}));
       }
       if (_colDireccionOtro && _colDireccion.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearDireccion(_easDbId, _colDireccion.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearDireccion(_easDbId, _colDireccion.trim())
+              .catchError((_) {}),
+        );
       }
       await Future.wait(saves);
       if (_colDireccionOtro) _colDireccionOtro = false;
@@ -3995,9 +4374,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         rolMovil: rolMovil,
         values: {
           '_col_subtype': _colSubtype,
-          '_col_jp': _colJp.isNotEmpty ? _colJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_col_jp': _colJp.isNotEmpty
+              ? _colJp
+              : (rolMovil == RolMovil.jp
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_col_movil': movilValue,
-          '_col_cp': _colCp.isNotEmpty ? _colCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_col_cp': _colCp.isNotEmpty
+              ? _colCp
+              : (rolMovil == RolMovil.conductor
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_col_policia': _colPoliciaNombre,
           '_col_direccion': _colDireccion,
           '_col_aux1': _colAux1,
@@ -4054,8 +4441,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         final pid = policiaData?['servidorPolicialId'] as int?;
         if (pid != null && pid > 0) {
           _reqPoliciaId = pid;
-          _reqPoliciaNombre =
-              policiaData?['servidorNombre'] as String? ?? '';
+          _reqPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
         }
       });
     } catch (_) {
@@ -4122,11 +4508,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _reqDireccionOtro
         ? dirOptions.last
         : (_reqDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _reqDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _reqDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
@@ -4143,7 +4529,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _reqJp = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ),
@@ -4161,7 +4548,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               onChanged: (value) {
                 _reqCp = value;
-                _invalidatePreview(); setState(() {});
+                _invalidatePreview();
+                setState(() {});
               },
             ),
           ),
@@ -4178,7 +4566,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              const DropdownMenuItem(
+                value: null,
+                child: Text('Sin servidor policial'),
+              ),
               ..._reqServidoresPoliciales.map((sp) {
                 final id = sp['id'] as int?;
                 final nombre = sp['nombre'] as String? ?? '';
@@ -4190,11 +4581,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _reqPoliciaId = value;
                 if (value != null) {
                   _reqPoliciaOtro = false;
-                  _reqPoliciaNombre = _reqServidoresPoliciales
-                      .firstWhere(
-                        (sp) => sp['id'] == value,
-                        orElse: () => <String, dynamic>{},
-                      )['nombre'] as String? ?? '';
+                  _reqPoliciaNombre =
+                      _reqServidoresPoliciales.firstWhere(
+                            (sp) => sp['id'] == value,
+                            orElse: () => <String, dynamic>{},
+                          )['nombre']
+                          as String? ??
+                      '';
                 } else {
                   _reqPoliciaNombre = '';
                 }
@@ -4247,7 +4640,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _reqDireccion = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
@@ -4269,7 +4663,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _reqAux1 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
               const SizedBox(height: 14),
@@ -4282,7 +4677,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ),
                 onChanged: (value) {
                   _reqAux2 = value;
-                  _invalidatePreview(); setState(() {});
+                  _invalidatePreview();
+                  setState(() {});
                 },
               ),
             ],
@@ -4301,7 +4697,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           child: Column(
             children: [
               DropdownButtonFormField<String>(
-                initialValue: _reqSolicitante.isNotEmpty ? _reqSolicitante : null,
+                initialValue: _reqSolicitante.isNotEmpty
+                    ? _reqSolicitante
+                    : null,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: '¿Quién solicita el requerimiento?',
@@ -4312,15 +4710,33 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   DropdownMenuItem(value: 'EAS', child: Text('EAS')),
                   DropdownMenuItem(value: 'CR', child: Text('CR')),
                   DropdownMenuItem(value: 'OJ1', child: Text('OJ1')),
-                  DropdownMenuItem(value: 'Jefe de Control Municipal', child: Text('Jefe de Control Municipal')),
-                  DropdownMenuItem(value: 'Lima Oscar', child: Text('Lima Oscar')),
-                  DropdownMenuItem(value: 'Sircon Andrade', child: Text('Sircon Andrade')),
-                  DropdownMenuItem(value: 'Sr. Figallo', child: Text('Sr. Figallo')),
-                  DropdownMenuItem(value: 'Sr. Alex Anchundia', child: Text('Sr. Alex Anchundia')),
+                  DropdownMenuItem(
+                    value: 'Jefe de Control Municipal',
+                    child: Text('Jefe de Control Municipal'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Lima Oscar',
+                    child: Text('Lima Oscar'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Sircon Andrade',
+                    child: Text('Sircon Andrade'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Sr. Figallo',
+                    child: Text('Sr. Figallo'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Sr. Alex Anchundia',
+                    child: Text('Sr. Alex Anchundia'),
+                  ),
                   DropdownMenuItem(value: 'Otro', child: Text('Otro')),
                 ],
                 onChanged: (value) {
-                  if (value != null) { _invalidatePreview(); setState(() => _reqSolicitante = value); }
+                  if (value != null) {
+                    _invalidatePreview();
+                    setState(() => _reqSolicitante = value);
+                  }
                 },
               ),
               if (_reqSolicitante == 'Otro')
@@ -4335,7 +4751,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     ),
                     onChanged: (value) {
                       _reqSolicitanteOtro = value;
-                      _invalidatePreview(); setState(() {});
+                      _invalidatePreview();
+                      setState(() {});
                     },
                   ),
                 ),
@@ -4355,14 +4772,32 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: const [
-              DropdownMenuItem(value: 'Requerimiento', child: Text('Requerimiento')),
-              DropdownMenuItem(value: 'Punto martillo', child: Text('Punto martillo')),
-              DropdownMenuItem(value: 'Ronda disuasiva', child: Text('Ronda disuasiva')),
-              DropdownMenuItem(value: 'Presencia de Agente de Control', child: Text('Presencia de Agente de Control')),
-              DropdownMenuItem(value: 'Operativo en conjunto', child: Text('Operativo en conjunto')),
+              DropdownMenuItem(
+                value: 'Requerimiento',
+                child: Text('Requerimiento'),
+              ),
+              DropdownMenuItem(
+                value: 'Punto martillo',
+                child: Text('Punto martillo'),
+              ),
+              DropdownMenuItem(
+                value: 'Ronda disuasiva',
+                child: Text('Ronda disuasiva'),
+              ),
+              DropdownMenuItem(
+                value: 'Presencia de Agente de Control',
+                child: Text('Presencia de Agente de Control'),
+              ),
+              DropdownMenuItem(
+                value: 'Operativo en conjunto',
+                child: Text('Operativo en conjunto'),
+              ),
             ],
             onChanged: (value) {
-              if (value != null) { _invalidatePreview(); setState(() => _reqTipo = value); }
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _reqTipo = value);
+              }
             },
           ),
         ),
@@ -4379,7 +4814,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             maxLines: 5,
             onChanged: (value) {
               _reqInfoAdicional = value;
-              _invalidatePreview(); setState(() {});
+              _invalidatePreview();
+              setState(() {});
             },
           ),
         ),
@@ -4396,7 +4832,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _reqSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _reqSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -4430,9 +4869,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       saves.add(crtApi.saveCp(_reqCp.trim()).catchError((_) {}));
     }
     if (_reqPoliciaOtro && _reqPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi
-          .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
-          .catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_reqPoliciaId != null) {
       saves.add(crtApi.savePolicia(_reqPoliciaId).catchError((_) {}));
     }
@@ -4442,10 +4883,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _reqPoliciaOtro = false;
       _reqPoliciaCtrl.clear();
       try {
-        _reqServidoresPoliciales =
-            await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo =
-            _reqServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _reqServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _reqServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) {
           _reqPoliciaId = nuevo['id'] as int?;
         }
@@ -4478,16 +4921,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         saves.add(crtApi.saveCp(_reqCp.trim()).catchError((_) {}));
       }
       if (_reqPoliciaOtro && _reqPoliciaNombre.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearServidorPolicial(_easDbId, _reqPoliciaNombre.trim())
+              .catchError((_) {}),
+        );
       } else if (_reqPoliciaId != null) {
         saves.add(crtApi.savePolicia(_reqPoliciaId).catchError((_) {}));
       }
       if (_reqDireccionOtro && _reqDireccion.trim().isNotEmpty) {
-        saves.add(crtApi
-            .crearDireccion(_easDbId, _reqDireccion.trim())
-            .catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearDireccion(_easDbId, _reqDireccion.trim())
+              .catchError((_) {}),
+        );
       }
       await Future.wait(saves);
       if (_reqDireccionOtro) _reqDireccionOtro = false;
@@ -4539,15 +4986,25 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         eas: eas,
         rolMovil: rolMovil,
         values: {
-          '_req_jp': _reqJp.isNotEmpty ? _reqJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_req_jp': _reqJp.isNotEmpty
+              ? _reqJp
+              : (rolMovil == RolMovil.jp
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_req_movil': movilValue,
-          '_req_cp': _reqCp.isNotEmpty ? _reqCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_req_cp': _reqCp.isNotEmpty
+              ? _reqCp
+              : (rolMovil == RolMovil.conductor
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_req_policia': _reqPoliciaNombre,
           '_req_direccion': _reqDireccion,
           '_req_aux1': _reqAux1,
           '_req_aux2': _reqAux2,
           '_req_userNombre': widget.user?.nombreCompleto ?? '',
-          '_req_solicitante': _reqSolicitante == 'Otro' ? _reqSolicitanteOtro : _reqSolicitante,
+          '_req_solicitante': _reqSolicitante == 'Otro'
+              ? _reqSolicitanteOtro
+              : _reqSolicitante,
           '_req_tipo': _reqTipo,
           '_req_infoAdicional': _reqInfoAdicional,
         },
@@ -4612,7 +5069,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ),
               if (_ciuCargando)
                 const SizedBox(
-                  width: 18, height: 18,
+                  width: 18,
+                  height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
             ],
@@ -4647,16 +5105,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final dirValue = _ciuDireccionOtro
         ? dirOptions.last
         : (_ciuDireccion.isNotEmpty
-            ? dirOptions.firstWhere(
-                (d) => d['direccion'] == _ciuDireccion,
-                orElse: () => dirOptions.last,
-              )
-            : null);
+              ? dirOptions.firstWhere(
+                  (d) => d['direccion'] == _ciuDireccion,
+                  orElse: () => dirOptions.last,
+                )
+              : null);
 
     return Column(
       children: [
         if (rolMovil != RolMovil.jp)
-          _StepCard(step: 1, title: 'Nombre del JP',
+          _StepCard(
+            step: 1,
+            title: 'Nombre del JP',
             child: TextFormField(
               controller: _ciuJpCtrl,
               decoration: const InputDecoration(
@@ -4664,12 +5124,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.badge_outlined),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuJp = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ciuJp = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ),
         if (rolMovil != RolMovil.jp) const SizedBox(height: 20),
         if (rolMovil != RolMovil.conductor)
-          _StepCard(step: 2, title: 'Nombre del CP',
+          _StepCard(
+            step: 2,
+            title: 'Nombre del CP',
             child: TextFormField(
               controller: _ciuCpCtrl,
               decoration: const InputDecoration(
@@ -4677,11 +5143,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
-              onChanged: (v) { _ciuCp = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ciuCp = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ),
         if (rolMovil != RolMovil.conductor) const SizedBox(height: 20),
-        _StepCard(step: 3, title: 'Servidor policial',
+        _StepCard(
+          step: 3,
+          title: 'Servidor policial',
           child: DropdownButtonFormField<int?>(
             initialValue: _ciuPoliciaId,
             isExpanded: true,
@@ -4691,7 +5163,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: OutlineInputBorder(),
             ),
             items: [
-              const DropdownMenuItem(value: null, child: Text('Sin servidor policial')),
+              const DropdownMenuItem(
+                value: null,
+                child: Text('Sin servidor policial'),
+              ),
               ..._ciuServidoresPoliciales.map((sp) {
                 final id = sp['id'] as int?;
                 final nombre = sp['nombre'] as String? ?? '';
@@ -4703,91 +5178,145 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 _ciuPoliciaId = value;
                 if (value != null) {
                   _ciuPoliciaOtro = false;
-                  _ciuPoliciaNombre = _ciuServidoresPoliciales
-                      .firstWhere((sp) => sp['id'] == value, orElse: () => <String, dynamic>{})['nombre'] as String? ?? '';
-                } else { _ciuPoliciaNombre = ''; }
+                  _ciuPoliciaNombre =
+                      _ciuServidoresPoliciales.firstWhere(
+                            (sp) => sp['id'] == value,
+                            orElse: () => <String, dynamic>{},
+                          )['nombre']
+                          as String? ??
+                      '';
+                } else {
+                  _ciuPoliciaNombre = '';
+                }
                 _ciuPoliciaCtrl.clear();
               });
             },
           ),
         ),
         const SizedBox(height: 20),
-        _StepCard(step: 4, title: 'Dirección',
-          child: Column(children: [
-            DropdownButtonFormField<Map<String, dynamic>>(
-              initialValue: dirValue, isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Dirección', prefixIcon: Icon(Icons.place_outlined),
-                border: OutlineInputBorder(),
-              ),
-              items: dirOptions.map((d) {
-                final nombre = d['direccion'] as String? ?? '';
-                return DropdownMenuItem(value: d, child: Text(nombre));
-              }).toList(),
-              onChanged: (value) {
-                if (value == null) return;
-                final id = value['id'] as int?;
-                _invalidatePreview();
-                setState(() {
-                  if (id == -1) { _ciuDireccionOtro = true; _ciuDireccion = ''; }
-                  else { _ciuDireccionOtro = false; _ciuDireccion = value['direccion'] as String? ?? ''; }
-                });
-              },
-            ),
-            if (_ciuDireccionOtro)
-              Padding(padding: const EdgeInsets.only(top: 14),
-                child: TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Nueva dirección', prefixIcon: Icon(Icons.edit_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  onChanged: (v) { _ciuDireccion = v; _invalidatePreview(); setState(() {}); },
+        _StepCard(
+          step: 4,
+          title: 'Dirección',
+          child: Column(
+            children: [
+              DropdownButtonFormField<Map<String, dynamic>>(
+                initialValue: dirValue,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Dirección',
+                  prefixIcon: Icon(Icons.place_outlined),
+                  border: OutlineInputBorder(),
                 ),
+                items: dirOptions.map((d) {
+                  final nombre = d['direccion'] as String? ?? '';
+                  return DropdownMenuItem(value: d, child: Text(nombre));
+                }).toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final id = value['id'] as int?;
+                  _invalidatePreview();
+                  setState(() {
+                    if (id == -1) {
+                      _ciuDireccionOtro = true;
+                      _ciuDireccion = '';
+                    } else {
+                      _ciuDireccionOtro = false;
+                      _ciuDireccion = value['direccion'] as String? ?? '';
+                    }
+                  });
+                },
               ),
-          ]),
+              if (_ciuDireccionOtro)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'Nueva dirección',
+                      prefixIcon: Icon(Icons.edit_outlined),
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (v) {
+                      _ciuDireccion = v;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
-        _StepCard(step: 5, title: 'Auxiliares',
-          child: Column(children: [
-            TextField(
-              controller: _ciuAux1Ctrl,
-              decoration: const InputDecoration(
-                labelText: 'Auxiliar 1 (opcional)', prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
+        _StepCard(
+          step: 5,
+          title: 'Auxiliares',
+          child: Column(
+            children: [
+              TextField(
+                controller: _ciuAux1Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 1 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) {
+                  _ciuAux1 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
-              onChanged: (v) { _ciuAux1 = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuAux2Ctrl,
-              decoration: const InputDecoration(
-                labelText: 'Auxiliar 2 (opcional)', prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _ciuAux2Ctrl,
+                decoration: const InputDecoration(
+                  labelText: 'Auxiliar 2 (opcional)',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                onChanged: (v) {
+                  _ciuAux2 = v;
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
-              onChanged: (v) { _ciuAux2 = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
-        _StepCard(step: 6, title: 'Tipo de colaboración',
-          child: Column(children: [
-            DropdownButtonFormField<String>(
-              initialValue: _ciuTipoGeneral,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Seleccione el tipo',
-                prefixIcon: Icon(Icons.category_outlined),
-                border: OutlineInputBorder(),
+        _StepCard(
+          step: 6,
+          title: 'Tipo de colaboración',
+          child: Column(
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: _ciuTipoGeneral,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Seleccione el tipo',
+                  prefixIcon: Icon(Icons.category_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'denuncia',
+                    child: Text('Denuncias Ciudadanas'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'requerimiento',
+                    child: Text('Requerimientos Ciudadanos'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    _invalidatePreview();
+                    setState(() {
+                      _ciuTipoGeneral = value;
+                      _ciuTipoEspecifico = '';
+                    });
+                  }
+                },
               ),
-              items: const [
-                DropdownMenuItem(value: 'denuncia', child: Text('Denuncias Ciudadanas')),
-                DropdownMenuItem(value: 'requerimiento', child: Text('Requerimientos Ciudadanos')),
-              ],
-              onChanged: (value) {
-                if (value != null) { _invalidatePreview(); setState(() { _ciuTipoGeneral = value; _ciuTipoEspecifico = ''; }); }
-              },
-            ),
-          ]),
+            ],
+          ),
         ),
       ],
     );
@@ -4799,392 +5328,640 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildCiuCitizenFields() {
-    return Column(children: [
-      TextField(
-        controller: _ciuNombreCiudadanoCtrl,
-        decoration: const InputDecoration(
-          labelText: 'Nombre del ciudadano', prefixIcon: Icon(Icons.person_outline),
-          border: OutlineInputBorder(),
+    return Column(
+      children: [
+        TextField(
+          controller: _ciuNombreCiudadanoCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Nombre del ciudadano',
+            prefixIcon: Icon(Icons.person_outline),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            _ciuNombreCiudadano = v;
+            _invalidatePreview();
+            setState(() {});
+          },
         ),
-        onChanged: (v) { _ciuNombreCiudadano = v; _invalidatePreview(); setState(() {}); },
-      ),
-      const SizedBox(height: 14),
-      TextField(
-        controller: _ciuCedulaCtrl,
-        decoration: const InputDecoration(
-          labelText: 'Número de cédula', prefixIcon: Icon(Icons.credit_card_outlined),
-          border: OutlineInputBorder(),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _ciuCedulaCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Número de cédula',
+            prefixIcon: Icon(Icons.credit_card_outlined),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            _ciuCedula = v;
+            _invalidatePreview();
+            setState(() {});
+          },
         ),
-        onChanged: (v) { _ciuCedula = v; _invalidatePreview(); setState(() {}); },
-      ),
-      const SizedBox(height: 14),
-      TextField(
-        controller: _ciuCelularCtrl,
-        decoration: const InputDecoration(
-          labelText: 'Número de celular', prefixIcon: Icon(Icons.phone_outlined),
-          border: OutlineInputBorder(),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _ciuCelularCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Número de celular',
+            prefixIcon: Icon(Icons.phone_outlined),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            _ciuCelular = v;
+            _invalidatePreview();
+            setState(() {});
+          },
         ),
-        onChanged: (v) { _ciuCelular = v; _invalidatePreview(); setState(() {}); },
-      ),
-      const SizedBox(height: 14),
-      TextField(
-        controller: _ciuLugarCtrl,
-        decoration: const InputDecoration(
-          labelText: 'Lugar de la novedad', prefixIcon: Icon(Icons.place_outlined),
-          border: OutlineInputBorder(),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _ciuLugarCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Lugar de la novedad',
+            prefixIcon: Icon(Icons.place_outlined),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (v) {
+            _ciuLugar = v;
+            _invalidatePreview();
+            setState(() {});
+          },
         ),
-        onChanged: (v) { _ciuLugar = v; _invalidatePreview(); setState(() {}); },
-      ),
-    ]);
+      ],
+    );
   }
 
   Widget _buildCiuDenunciaForm() {
-    return Column(children: [
-      _StepCard(step: 7, title: 'Tipo de denuncia',
-        child: DropdownButtonFormField<String>(
-          initialValue: _ciuTipoEspecifico.isNotEmpty ? _ciuTipoEspecifico : null,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Tipo de denuncia ciudadana',
-            prefixIcon: Icon(Icons.warning_outlined),
-            border: OutlineInputBorder(),
+    return Column(
+      children: [
+        _StepCard(
+          step: 7,
+          title: 'Tipo de denuncia',
+          child: DropdownButtonFormField<String>(
+            initialValue: _ciuTipoEspecifico.isNotEmpty
+                ? _ciuTipoEspecifico
+                : null,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Tipo de denuncia ciudadana',
+              prefixIcon: Icon(Icons.warning_outlined),
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(
+                value: 'Robo a mano armada',
+                child: Text('Robo a mano armada'),
+              ),
+              DropdownMenuItem(
+                value: 'Pérdida de bien inmueble',
+                child: Text('Pérdida de bien inmueble'),
+              ),
+              DropdownMenuItem(
+                value: 'Extorsión a local',
+                child: Text('Extorsión a local'),
+              ),
+              DropdownMenuItem(value: 'Amenazas', child: Text('Amenazas')),
+              DropdownMenuItem(
+                value: 'Desaparición de persona',
+                child: Text('Desaparición de persona'),
+              ),
+              DropdownMenuItem(
+                value: 'Sector o nicho conflictivo',
+                child: Text('Sector o nicho conflictivo'),
+              ),
+              DropdownMenuItem(value: 'Agresión', child: Text('Agresión')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _ciuTipoEspecifico = value);
+              }
+            },
           ),
-          items: const [
-            DropdownMenuItem(value: 'Robo a mano armada', child: Text('Robo a mano armada')),
-            DropdownMenuItem(value: 'Pérdida de bien inmueble', child: Text('Pérdida de bien inmueble')),
-            DropdownMenuItem(value: 'Extorsión a local', child: Text('Extorsión a local')),
-            DropdownMenuItem(value: 'Amenazas', child: Text('Amenazas')),
-            DropdownMenuItem(value: 'Desaparición de persona', child: Text('Desaparición de persona')),
-            DropdownMenuItem(value: 'Sector o nicho conflictivo', child: Text('Sector o nicho conflictivo')),
-            DropdownMenuItem(value: 'Agresión', child: Text('Agresión')),
-          ],
-          onChanged: (value) { if (value != null) { _invalidatePreview(); setState(() => _ciuTipoEspecifico = value); } },
         ),
-      ),
-      const SizedBox(height: 20),
-      _StepCard(step: 8, title: 'Datos del ciudadano',
-        child: _buildCiuCitizenFields(),
-      ),
-      const SizedBox(height: 20),
-      if (_ciuTipoEspecifico == 'Robo a mano armada')
-        _StepCard(step: 9, title: 'Robo a mano armada',
-          child: Column(children: [
-            TextField(
-              controller: _ciuBienesRobadosCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Bienes robados', prefixIcon: Icon(Icons.inventory_2_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuBienesRobados = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuValorRobadoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuValorRobado = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Datos del ciudadano',
+          child: _buildCiuCitizenFields(),
         ),
-      if (_ciuTipoEspecifico == 'Pérdida de bien inmueble')
-        _StepCard(step: 9, title: 'Pérdida de bien inmueble',
-          child: Column(children: [
-            TextField(
-              controller: _ciuBienesPerdidosCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Bienes perdidos', prefixIcon: Icon(Icons.inventory_2_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuBienesPerdidos = v; _invalidatePreview(); setState(() {}); },
+        const SizedBox(height: 20),
+        if (_ciuTipoEspecifico == 'Robo a mano armada')
+          _StepCard(
+            step: 9,
+            title: 'Robo a mano armada',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuBienesRobadosCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Bienes robados',
+                    prefixIcon: Icon(Icons.inventory_2_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuBienesRobados = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuValorRobadoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Valor total aproximado',
+                    prefixIcon: Icon(Icons.attach_money_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuValorRobado = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuValorPerdidoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Valor total aproximado', prefixIcon: Icon(Icons.attach_money_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuValorPerdido = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Pérdida de bien inmueble')
+          _StepCard(
+            step: 9,
+            title: 'Pérdida de bien inmueble',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuBienesPerdidosCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Bienes perdidos',
+                    prefixIcon: Icon(Icons.inventory_2_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuBienesPerdidos = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuValorPerdidoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Valor total aproximado',
+                    prefixIcon: Icon(Icons.attach_money_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuValorPerdido = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Extorsión a local')
-        _StepCard(step: 9, title: 'Extorsión a local',
-          child: Column(children: [
-            TextField(
-              controller: _ciuNombreLocalCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del local comercial', prefixIcon: Icon(Icons.store_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuNombreLocal = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Extorsión a local')
+          _StepCard(
+            step: 9,
+            title: 'Extorsión a local',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuNombreLocalCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del local comercial',
+                    prefixIcon: Icon(Icons.store_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuNombreLocal = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuReferenciaLocalCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Referencia del local',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuReferenciaLocal = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuMotivoExtorsionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo de la extorsión',
+                    prefixIcon: Icon(Icons.description_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuMotivoExtorsion = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuReferenciaLocalCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Referencia del local', prefixIcon: Icon(Icons.edit_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuReferenciaLocal = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Amenazas')
+          _StepCard(
+            step: 9,
+            title: 'Amenazas',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuNombreAmenazanteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la persona que amenaza',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuNombreAmenazante = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuCedulaAmenazanteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Cédula de la persona que amenaza',
+                    prefixIcon: Icon(Icons.credit_card_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuCedulaAmenazante = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuTextoAmenazaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Frase o texto de la amenaza',
+                    prefixIcon: Icon(Icons.notes_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuTextoAmenaza = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuMotivoExtorsionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Motivo de la extorsión', prefixIcon: Icon(Icons.description_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (v) { _ciuMotivoExtorsion = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Desaparición de persona')
+          _StepCard(
+            step: 9,
+            title: 'Desaparición de persona',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuNombreDesaparecidoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre de la persona desaparecida',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuNombreDesaparecido = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuCedulaDesaparecidoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Cédula de la persona desaparecida',
+                    prefixIcon: Icon(Icons.credit_card_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuCedulaDesaparecido = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuUltimaUbicacionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Ubicación donde fue vista por última vez',
+                    prefixIcon: Icon(Icons.place_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuUltimaUbicacion = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuVestimentaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Vestimenta o accesorios que llevaba',
+                    prefixIcon: Icon(Icons.checkroom_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuVestimenta = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuAntecedenteCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '¿Antecedente de amenaza anterior?',
+                    prefixIcon: Icon(Icons.warning_amber_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuAntecedente = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Amenazas')
-        _StepCard(step: 9, title: 'Amenazas',
-          child: Column(children: [
-            TextField(
-              controller: _ciuNombreAmenazanteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de la persona que amenaza', prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuNombreAmenazante = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Sector o nicho conflictivo')
+          _StepCard(
+            step: 9,
+            title: 'Sector o nicho conflictivo',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuMotivoConflictivoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo por el cual el sector es conflictivo',
+                    prefixIcon: Icon(Icons.report_problem_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuMotivoConflictivo = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuRequerimientoCiudadanoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '¿Qué requiere el ciudadano denunciante?',
+                    prefixIcon: Icon(Icons.edit_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuRequerimientoCiudadano = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuCedulaAmenazanteCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Cédula de la persona que amenaza', prefixIcon: Icon(Icons.credit_card_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuCedulaAmenazante = v; _invalidatePreview(); setState(() {}); },
+          ),
+        if (_ciuTipoEspecifico == 'Agresión')
+          _StepCard(
+            step: 9,
+            title: 'Agresión',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuNombreAgresorCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del agresor',
+                    prefixIcon: Icon(Icons.person_outline),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuNombreAgresor = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuObjetoAgresionCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Objeto con el que agredió',
+                    prefixIcon: Icon(Icons.gavel_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuObjetoAgresion = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuDetalleHeridaCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Detalle de cómo se produjo la herida',
+                    prefixIcon: Icon(Icons.description_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuDetalleHerida = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuTextoAmenazaCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Frase o texto de la amenaza', prefixIcon: Icon(Icons.notes_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (v) { _ciuTextoAmenaza = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Desaparición de persona')
-        _StepCard(step: 9, title: 'Desaparición de persona',
-          child: Column(children: [
-            TextField(
-              controller: _ciuNombreDesaparecidoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de la persona desaparecida', prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuNombreDesaparecido = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuCedulaDesaparecidoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Cédula de la persona desaparecida', prefixIcon: Icon(Icons.credit_card_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuCedulaDesaparecido = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuUltimaUbicacionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Ubicación donde fue vista por última vez', prefixIcon: Icon(Icons.place_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuUltimaUbicacion = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuVestimentaCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Vestimenta o accesorios que llevaba', prefixIcon: Icon(Icons.checkroom_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuVestimenta = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuAntecedenteCtrl,
-              decoration: const InputDecoration(
-                labelText: '¿Antecedente de amenaza anterior?', prefixIcon: Icon(Icons.warning_amber_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuAntecedente = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Sector o nicho conflictivo')
-        _StepCard(step: 9, title: 'Sector o nicho conflictivo',
-          child: Column(children: [
-            TextField(
-              controller: _ciuMotivoConflictivoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Motivo por el cual el sector es conflictivo', prefixIcon: Icon(Icons.report_problem_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (v) { _ciuMotivoConflictivo = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuRequerimientoCiudadanoCtrl,
-              decoration: const InputDecoration(
-                labelText: '¿Qué requiere el ciudadano denunciante?', prefixIcon: Icon(Icons.edit_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (v) { _ciuRequerimientoCiudadano = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Agresión')
-        _StepCard(step: 9, title: 'Agresión',
-          child: Column(children: [
-            TextField(
-              controller: _ciuNombreAgresorCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Nombre del agresor', prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuNombreAgresor = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuObjetoAgresionCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Objeto con el que agredió', prefixIcon: Icon(Icons.gavel_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuObjetoAgresion = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuDetalleHeridaCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Detalle de cómo se produjo la herida', prefixIcon: Icon(Icons.description_outlined),
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              onChanged: (v) { _ciuDetalleHerida = v; _invalidatePreview(); setState(() {}); },
-            ),
-          ]),
-        ),
-    ]);
+          ),
+      ],
+    );
   }
 
   Widget _buildCiuRequerimientoForm() {
-    return Column(children: [
-      _StepCard(step: 7, title: 'Tipo de requerimiento',
-        child: DropdownButtonFormField<String>(
-          initialValue: _ciuTipoEspecifico.isNotEmpty ? _ciuTipoEspecifico : null,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'Tipo de requerimiento ciudadano',
-            prefixIcon: Icon(Icons.description_outlined),
-            border: OutlineInputBorder(),
-          ),
-          items: const [
-            DropdownMenuItem(value: 'Visualizar cámaras', child: Text('Visualizar cámaras')),
-            DropdownMenuItem(value: 'Colaboración en evento', child: Text('Colaboración en evento')),
-            DropdownMenuItem(value: 'Resguardo de personal', child: Text('Resguardo de personal')),
-            DropdownMenuItem(value: 'Colaboración de ATM', child: Text('Colaboración de ATM')),
-          ],
-          onChanged: (value) { if (value != null) { _invalidatePreview(); setState(() => _ciuTipoEspecifico = value); } },
-        ),
-      ),
-      const SizedBox(height: 20),
-      _StepCard(step: 8, title: 'Datos del ciudadano',
-        child: _buildCiuCitizenFields(),
-      ),
-      const SizedBox(height: 20),
-      if (_ciuTipoEspecifico == 'Visualizar cámaras')
-        _StepCard(step: 9, title: 'Visualizar cámaras',
-          child: TextField(
-            controller: _ciuMotivoCamarasCtrl,
+    return Column(
+      children: [
+        _StepCard(
+          step: 7,
+          title: 'Tipo de requerimiento',
+          child: DropdownButtonFormField<String>(
+            initialValue: _ciuTipoEspecifico.isNotEmpty
+                ? _ciuTipoEspecifico
+                : null,
+            isExpanded: true,
             decoration: const InputDecoration(
-              labelText: 'Motivo de la visualización de cámaras', prefixIcon: Icon(Icons.videocam_outlined),
+              labelText: 'Tipo de requerimiento ciudadano',
+              prefixIcon: Icon(Icons.description_outlined),
               border: OutlineInputBorder(),
             ),
-            maxLines: 3,
-            onChanged: (v) { _ciuMotivoCamaras = v; _invalidatePreview(); setState(() {}); },
+            items: const [
+              DropdownMenuItem(
+                value: 'Visualizar cámaras',
+                child: Text('Visualizar cámaras'),
+              ),
+              DropdownMenuItem(
+                value: 'Colaboración en evento',
+                child: Text('Colaboración en evento'),
+              ),
+              DropdownMenuItem(
+                value: 'Resguardo de personal',
+                child: Text('Resguardo de personal'),
+              ),
+              DropdownMenuItem(
+                value: 'Colaboración de ATM',
+                child: Text('Colaboración de ATM'),
+              ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _invalidatePreview();
+                setState(() => _ciuTipoEspecifico = value);
+              }
+            },
           ),
         ),
-      if (_ciuTipoEspecifico == 'Colaboración en evento')
-        _StepCard(step: 9, title: 'Colaboración en evento',
-          child: Column(children: [
-            TextField(
-              controller: _ciuNombreEventoCtrl,
+        const SizedBox(height: 20),
+        _StepCard(
+          step: 8,
+          title: 'Datos del ciudadano',
+          child: _buildCiuCitizenFields(),
+        ),
+        const SizedBox(height: 20),
+        if (_ciuTipoEspecifico == 'Visualizar cámaras')
+          _StepCard(
+            step: 9,
+            title: 'Visualizar cámaras',
+            child: TextField(
+              controller: _ciuMotivoCamarasCtrl,
               decoration: const InputDecoration(
-                labelText: 'Nombre del evento', prefixIcon: Icon(Icons.event_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuNombreEvento = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuFechaEventoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Fecha del evento', prefixIcon: Icon(Icons.calendar_today_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuFechaEvento = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuHoraEventoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Hora del evento', prefixIcon: Icon(Icons.access_time_outlined),
-                border: OutlineInputBorder(),
-              ),
-              onChanged: (v) { _ciuHoraEvento = v; _invalidatePreview(); setState(() {}); },
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: _ciuMotivoEventoCtrl,
-              decoration: const InputDecoration(
-                labelText: 'Motivo de la colaboración', prefixIcon: Icon(Icons.description_outlined),
+                labelText: 'Motivo de la visualización de cámaras',
+                prefixIcon: Icon(Icons.videocam_outlined),
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
-              onChanged: (v) { _ciuMotivoEvento = v; _invalidatePreview(); setState(() {}); },
+              onChanged: (v) {
+                _ciuMotivoCamaras = v;
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
-          ]),
-        ),
-      if (_ciuTipoEspecifico == 'Resguardo de personal')
-        _StepCard(step: 9, title: 'Resguardo de personal',
-          child: TextField(
-            controller: _ciuMotivoResguardoCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Motivo del resguardo', prefixIcon: Icon(Icons.shield_outlined),
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
-            onChanged: (v) { _ciuMotivoResguardo = v; _invalidatePreview(); setState(() {}); },
           ),
-        ),
-      if (_ciuTipoEspecifico == 'Colaboración de ATM')
-        _StepCard(step: 9, title: 'Colaboración de ATM',
-          child: TextField(
-            controller: _ciuMotivoAtmCtrl,
-            decoration: const InputDecoration(
-              labelText: 'Motivo de la presencia de ATM', prefixIcon: Icon(Icons.account_balance_outlined),
-              border: OutlineInputBorder(),
+        if (_ciuTipoEspecifico == 'Colaboración en evento')
+          _StepCard(
+            step: 9,
+            title: 'Colaboración en evento',
+            child: Column(
+              children: [
+                TextField(
+                  controller: _ciuNombreEventoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Nombre del evento',
+                    prefixIcon: Icon(Icons.event_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuNombreEvento = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuFechaEventoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Fecha del evento',
+                    prefixIcon: Icon(Icons.calendar_today_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuFechaEvento = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuHoraEventoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Hora del evento',
+                    prefixIcon: Icon(Icons.access_time_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _ciuHoraEvento = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: _ciuMotivoEventoCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Motivo de la colaboración',
+                    prefixIcon: Icon(Icons.description_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                  onChanged: (v) {
+                    _ciuMotivoEvento = v;
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+              ],
             ),
-            maxLines: 3,
-            onChanged: (v) { _ciuMotivoAtm = v; _invalidatePreview(); setState(() {}); },
           ),
-        ),
-    ]);
+        if (_ciuTipoEspecifico == 'Resguardo de personal')
+          _StepCard(
+            step: 9,
+            title: 'Resguardo de personal',
+            child: TextField(
+              controller: _ciuMotivoResguardoCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Motivo del resguardo',
+                prefixIcon: Icon(Icons.shield_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) {
+                _ciuMotivoResguardo = v;
+                _invalidatePreview();
+                setState(() {});
+              },
+            ),
+          ),
+        if (_ciuTipoEspecifico == 'Colaboración de ATM')
+          _StepCard(
+            step: 9,
+            title: 'Colaboración de ATM',
+            child: TextField(
+              controller: _ciuMotivoAtmCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Motivo de la presencia de ATM',
+                prefixIcon: Icon(Icons.account_balance_outlined),
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              onChanged: (v) {
+                _ciuMotivoAtm = v;
+                _invalidatePreview();
+                setState(() {});
+              },
+            ),
+          ),
+      ],
+    );
   }
 
   Widget _buildCiuNavButtons() {
@@ -5195,7 +5972,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       children: [
         if (!isFirst)
           OutlinedButton.icon(
-            onPressed: () { _invalidatePreview(); setState(() => _ciuSection--); },
+            onPressed: () {
+              _invalidatePreview();
+              setState(() => _ciuSection--);
+            },
             icon: const Icon(Icons.arrow_back),
             label: const Text('Anterior'),
           )
@@ -5205,7 +5985,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           FilledButton.icon(
             onPressed: _ciuGuardando ? null : () => _generarColCiudadana(),
             icon: _ciuGuardando
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.check),
             label: Text(_ciuGuardando ? 'Generando' : 'Generar cartilla'),
           )
@@ -5221,9 +6005,15 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   void _ciuIrSiguiente() async {
     final saves = <Future<void>>[];
-    if (_ciuCp.trim().isNotEmpty) saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+    if (_ciuCp.trim().isNotEmpty) {
+      saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+    }
     if (_ciuPoliciaOtro && _ciuPoliciaNombre.trim().isNotEmpty) {
-      saves.add(crtApi.crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim()).catchError((_) {}));
+      saves.add(
+        crtApi
+            .crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim())
+            .catchError((_) {}),
+      );
     } else if (_ciuPoliciaId != null) {
       saves.add(crtApi.savePolicia(_ciuPoliciaId).catchError((_) {}));
     }
@@ -5232,8 +6022,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _ciuPoliciaOtro = false;
       _ciuPoliciaCtrl.clear();
       try {
-        _ciuServidoresPoliciales = await crtApi.getServidoresPoliciales(_easDbId);
-        final nuevo = _ciuServidoresPoliciales.cast<Map<String, dynamic>?>().lastOrNull;
+        _ciuServidoresPoliciales = await crtApi.getServidoresPoliciales(
+          _easDbId,
+        );
+        final nuevo = _ciuServidoresPoliciales
+            .cast<Map<String, dynamic>?>()
+            .lastOrNull;
         if (nuevo != null) _ciuPoliciaId = nuevo['id'] as int?;
       } catch (_) {}
     }
@@ -5252,29 +6046,50 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Future<void> _generarColCiudadana() async {
     if (widget.user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Inicie sesion para generar cartillas')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Inicie sesion para generar cartillas')),
+      );
       return;
     }
     setState(() => _ciuGuardando = true);
     try {
       final saves = <Future<void>>[];
-      if (_ciuCp.trim().isNotEmpty) saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+      if (_ciuCp.trim().isNotEmpty) {
+        saves.add(crtApi.saveCp(_ciuCp.trim()).catchError((_) {}));
+      }
       if (_ciuPoliciaOtro && _ciuPoliciaNombre.trim().isNotEmpty) {
-        saves.add(crtApi.crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim()).catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearServidorPolicial(_easDbId, _ciuPoliciaNombre.trim())
+              .catchError((_) {}),
+        );
       } else if (_ciuPoliciaId != null) {
         saves.add(crtApi.savePolicia(_ciuPoliciaId).catchError((_) {}));
       }
       if (_ciuDireccionOtro && _ciuDireccion.trim().isNotEmpty) {
-        saves.add(crtApi.crearDireccion(_easDbId, _ciuDireccion.trim()).catchError((_) {}));
+        saves.add(
+          crtApi
+              .crearDireccion(_easDbId, _ciuDireccion.trim())
+              .catchError((_) {}),
+        );
       }
       await Future.wait(saves);
       if (_ciuDireccionOtro) _ciuDireccionOtro = false;
 
       final value = _buildColCiudadanaText();
-      final result = await InsApi().registrarCartilla(contenido: value, causa: '${modulo.label} - ${tipo.label}');
+      final result = await InsApi().registrarCartilla(
+        contenido: value,
+        causa: '${modulo.label} - ${tipo.label}',
+      );
       await Clipboard.setData(ClipboardData(text: value));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cartilla generada. Total: ${result.totalCartillasGeneradas}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+          ),
+        ),
+      );
       final insignia = result.insigniaDesbloqueada;
       if (insignia != null) {
         await _showBadgeDialog(
@@ -5285,7 +6100,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       }
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo generar la cartilla: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo generar la cartilla: $error')),
+      );
     } finally {
       if (mounted) setState(() => _ciuGuardando = false);
     }
@@ -5305,9 +6122,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         eas: eas,
         rolMovil: rolMovil,
         values: {
-          '_ciu_jp': _ciuJp.isNotEmpty ? _ciuJp : (rolMovil == RolMovil.jp ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_ciu_jp': _ciuJp.isNotEmpty
+              ? _ciuJp
+              : (rolMovil == RolMovil.jp
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_ciu_movil': movilValue,
-          '_ciu_cp': _ciuCp.isNotEmpty ? _ciuCp : (rolMovil == RolMovil.conductor ? (widget.user?.nombreCompleto ?? '') : ''),
+          '_ciu_cp': _ciuCp.isNotEmpty
+              ? _ciuCp
+              : (rolMovil == RolMovil.conductor
+                    ? (widget.user?.nombreCompleto ?? '')
+                    : ''),
           '_ciu_policia': _ciuPoliciaNombre,
           '_ciu_direccion': _ciuDireccion,
           '_ciu_aux1': _ciuAux1,
@@ -5401,7 +6226,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               label: 'Dirección',
               icon: Icons.place_outlined,
               required: false,
-              onChanged: () { _invalidatePreview(); setState(() {}); },
+              onChanged: () {
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
             const SizedBox(height: 14),
             for (final field in activeFields) ...[
@@ -5411,7 +6239,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 icon: _iconFor(field.key),
                 minLines: field.minLines,
                 required: field.required,
-                onChanged: () { _invalidatePreview(); setState(() {}); },
+                onChanged: () {
+                  _invalidatePreview();
+                  setState(() {});
+                },
               ),
               const SizedBox(height: 14),
             ],
@@ -5420,7 +6251,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               label: 'Persona que reporta',
               icon: Icons.badge_outlined,
               required: modulo != TipoModuloCartilla.eas,
-              onChanged: () { _invalidatePreview(); setState(() {}); },
+              onChanged: () {
+                _invalidatePreview();
+                setState(() {});
+              },
             ),
           ],
         ),
@@ -5433,42 +6267,47 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: _PanelTitle(
-                  icon: Icons.preview_outlined,
-                  title: 'Vista previa',
-                ),
-              ),
-              if (value != null) ...[
-                FilledButton.icon(
-                  onPressed: guardando ? null : () => _generar(value),
-                  icon: guardando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.copy_outlined),
-                  label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
-                ),
-                const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _previewText = null;
-                    _invalidatePreview(); setState(() {});
-                  },
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Seguir editando'),
-                ),
-              ] else
-                FilledButton.icon(
-                  onPressed: guardando ? null : () => _doPreview(),
-                  icon: const Icon(Icons.visibility_outlined),
-                  label: const Text('Generar vista previa'),
-                ),
-            ],
+          const _PanelTitle(
+            icon: Icons.preview_outlined,
+            title: 'Vista previa',
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.end,
+              children: [
+                if (value != null) ...[
+                  FilledButton.icon(
+                    onPressed: guardando ? null : () => _generar(value),
+                    icon: guardando
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.copy_outlined),
+                    label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      _previewText = null;
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Seguir editando'),
+                  ),
+                ] else
+                  FilledButton.icon(
+                    onPressed: guardando ? null : () => _doPreview(),
+                    icon: const Icon(Icons.visibility_outlined),
+                    label: const Text('Generar vista previa'),
+                  ),
+              ],
+            ),
           ),
           const SizedBox(height: 18),
           if (value != null)
@@ -5526,7 +6365,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _generar(String value) async {
-    if (formKey.currentState != null && !formKey.currentState!.validate()) return;
+    if (formKey.currentState != null && !formKey.currentState!.validate()) {
+      return;
+    }
     if (widget.user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Inicie sesion para generar cartillas')),
@@ -5638,7 +6479,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   String _buildDesalojoText() {
     final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    final movilValue = _desaMovil.isNotEmpty
+        ? _desaMovil
+        : _moviles.first.movil;
     return CrtTextGenerator.build(
       CrtFormData(
         modulo: TipoModuloCartilla.eas,
@@ -5667,7 +6510,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   String _buildPuntoMartilloText() {
     final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    final movilValue = _desaMovil.isNotEmpty
+        ? _desaMovil
+        : _moviles.first.movil;
     return CrtTextGenerator.build(
       CrtFormData(
         modulo: TipoModuloCartilla.eas,
@@ -5693,7 +6538,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   String _buildRondasDisuasivasText() {
     final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty ? _desaMovil : _moviles.first.movil;
+    final movilValue = _desaMovil.isNotEmpty
+        ? _desaMovil
+        : _moviles.first.movil;
     return CrtTextGenerator.build(
       CrtFormData(
         modulo: TipoModuloCartilla.eas,
@@ -5852,9 +6699,15 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   IconData _iconFor(String key) {
-    if (key.contains('movil') || key == 'vehiculo') return Icons.directions_car_outlined;
-    if (key.contains('personal') || key.contains('agente')) return Icons.groups_outlined;
-    if (key.contains('punto') || key.contains('sector') || key.contains('lugar')) {
+    if (key.contains('movil') || key == 'vehiculo') {
+      return Icons.directions_car_outlined;
+    }
+    if (key.contains('personal') || key.contains('agente')) {
+      return Icons.groups_outlined;
+    }
+    if (key.contains('punto') ||
+        key.contains('sector') ||
+        key.contains('lugar')) {
       return Icons.place_outlined;
     }
     if (key.contains('novedad') || key.contains('procedimiento')) {
@@ -5883,12 +6736,13 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(compact ? 18 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
@@ -5907,10 +6761,7 @@ class _PanelTitle extends StatelessWidget {
   final IconData icon;
   final String title;
 
-  const _PanelTitle({
-    required this.icon,
-    required this.title,
-  });
+  const _PanelTitle({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -5937,10 +6788,7 @@ class _InfoLine extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _InfoLine({
-    required this.icon,
-    required this.text,
-  });
+  const _InfoLine({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {

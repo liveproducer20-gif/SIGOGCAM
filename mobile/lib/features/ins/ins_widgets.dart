@@ -115,10 +115,7 @@ class _TimelineConnector extends StatelessWidget {
   final bool unlocked;
   final bool isCurrent;
 
-  const _TimelineConnector({
-    required this.unlocked,
-    required this.isCurrent,
-  });
+  const _TimelineConnector({required this.unlocked, required this.isCurrent});
 
   @override
   Widget build(BuildContext context) {
@@ -171,9 +168,10 @@ class _TimelineNodeState extends State<_TimelineNode>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _breathAnim = Tween<double>(begin: 1.0, end: 1.03).animate(
-      CurvedAnimation(parent: _breathingCtrl, curve: Curves.easeInOut),
-    );
+    _breathAnim = Tween<double>(
+      begin: 1.0,
+      end: 1.03,
+    ).animate(CurvedAnimation(parent: _breathingCtrl, curve: Curves.easeInOut));
     if (widget.isCurrent) {
       _breathingCtrl.repeat(reverse: true);
     }
@@ -205,10 +203,8 @@ class _TimelineNodeState extends State<_TimelineNode>
     if (widget.isCurrent) {
       return AnimatedBuilder(
         animation: _breathAnim,
-        builder: (_, child) => Transform.scale(
-          scale: _breathAnim.value,
-          child: child,
-        ),
+        builder: (_, child) =>
+            Transform.scale(scale: _breathAnim.value, child: child),
         child: node,
       );
     }
@@ -222,8 +218,9 @@ class _TimelineNodeState extends State<_TimelineNode>
       cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform:
-            _hovered ? (Matrix4.identity()..setTranslationRaw(0, -3, 0)) : Matrix4.identity(),
+        transform: _hovered
+            ? (Matrix4.identity()..setTranslationRaw(0, -3, 0))
+            : Matrix4.identity(),
         width: 110,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -249,8 +246,9 @@ class _TimelineNodeState extends State<_TimelineNode>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight:
-                      widget.isUnlocked || widget.isCurrent ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: widget.isUnlocked || widget.isCurrent
+                      ? FontWeight.w600
+                      : FontWeight.w400,
                   color: widget.isUnlocked || widget.isCurrent
                       ? AdmTokens.grey800
                       : AdmTokens.grey400,
@@ -321,10 +319,7 @@ class _NodeIcon extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AdmTokens.surface,
-            border: Border.all(
-              color: AdmTokens.action,
-              width: 2.5,
-            ),
+            border: Border.all(color: AdmTokens.action, width: 2.5),
             boxShadow: [
               BoxShadow(
                 color: AdmTokens.action.withValues(alpha: 0.15),
@@ -358,7 +353,11 @@ class _NodeIcon extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+            child: const Icon(
+              Icons.check_rounded,
+              size: 12,
+              color: Colors.white,
+            ),
           ),
         ),
       ],
@@ -391,10 +390,7 @@ class _NodeIcon extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: AdmTokens.surface,
-            border: Border.all(
-              color: AdmTokens.primary,
-              width: 2.5,
-            ),
+            border: Border.all(color: AdmTokens.primary, width: 2.5),
             boxShadow: [
               BoxShadow(
                 color: AdmTokens.primary.withValues(alpha: 0.1),
@@ -428,10 +424,7 @@ class _NodeIcon extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: AdmTokens.grey100,
-              border: Border.all(
-                color: AdmTokens.grey200,
-                width: 2,
-              ),
+              border: Border.all(color: AdmTokens.grey200, width: 2),
             ),
             child: ClipOval(
               child: BadgeIcon(
@@ -444,11 +437,7 @@ class _NodeIcon extends StatelessWidget {
           Positioned(
             right: -2,
             bottom: -2,
-            child: Icon(
-              Icons.lock_rounded,
-              size: 16,
-              color: AdmTokens.grey400,
-            ),
+            child: Icon(Icons.lock_rounded, size: 16, color: AdmTokens.grey400),
           ),
         ],
       ),
@@ -643,12 +632,12 @@ class _SummaryCardState extends State<_SummaryCard> {
             : Matrix4.identity(),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _hovered
-              ? AdmTokens.surface
-              : AdmTokens.grey50,
+          color: _hovered ? AdmTokens.surface : AdmTokens.grey50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? widget.iconColor.withValues(alpha: 0.3) : AdmTokens.grey100,
+            color: _hovered
+                ? widget.iconColor.withValues(alpha: 0.3)
+                : AdmTokens.grey100,
           ),
           boxShadow: _hovered ? AdmTokens.hoverShadow : AdmTokens.cardShadow,
         ),
@@ -659,14 +648,12 @@ class _SummaryCardState extends State<_SummaryCard> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: widget.iconColor.withValues(alpha: _hovered ? 0.15 : 0.1),
+                color: widget.iconColor.withValues(
+                  alpha: _hovered ? 0.15 : 0.1,
+                ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                widget.icon,
-                size: 18,
-                color: widget.iconColor,
-              ),
+              child: Icon(widget.icon, size: 18, color: widget.iconColor),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -763,11 +750,11 @@ class AchievementProgressCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                    '%',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: theme?.accentColor ?? AdmTokens.grey500,
+                      '%',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: theme?.accentColor ?? AdmTokens.grey500,
                       ),
                     ),
                   ],
@@ -894,7 +881,9 @@ class _CircularProgressPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CircularProgressPainter old) =>
-      old.progress != progress || old.color != color || old.strokeWidth != strokeWidth;
+      old.progress != progress ||
+      old.color != color ||
+      old.strokeWidth != strokeWidth;
 }
 
 // ──────────────────────────────────────────────
@@ -1012,7 +1001,11 @@ class TopUsersLeaderboard extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.leaderboard_outlined, size: 36, color: AdmTokens.grey300),
+              Icon(
+                Icons.leaderboard_outlined,
+                size: 36,
+                color: AdmTokens.grey300,
+              ),
               const SizedBox(height: 10),
               Text(
                 'Próximamente',
@@ -1071,7 +1064,10 @@ class TopUsersLeaderboard extends StatelessWidget {
                 return null;
               }),
               border: TableBorder(
-                horizontalInside: BorderSide(color: AdmTokens.grey100, width: 0.5),
+                horizontalInside: BorderSide(
+                  color: AdmTokens.grey100,
+                  width: 0.5,
+                ),
               ),
               columns: const [
                 DataColumn(
@@ -1128,100 +1124,106 @@ class TopUsersLeaderboard extends StatelessWidget {
               rows: List.generate(users.length.clamp(0, 10), (i) {
                 final u = users[i];
                 final levelColor = _levelColor(u.level);
-                return DataRow(cells: [
-                  DataCell(
-                    Text(
-                      '${i + 1}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: i < 3 ? levelColor : AdmTokens.grey500,
+                return DataRow(
+                  cells: [
+                    DataCell(
+                      Text(
+                        '${i + 1}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: i < 3 ? levelColor : AdmTokens.grey500,
+                        ),
                       ),
                     ),
-                  ),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircleAvatar(
-                          radius: 16,
-                          backgroundColor: AdmTokens.primary.withValues(alpha: 0.1),
-                          child: Text(
-                            u.initials,
-                            style: const TextStyle(
-                              color: AdmTokens.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 11,
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AdmTokens.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            child: Text(
+                              u.initials,
+                              style: const TextStyle(
+                                color: AdmTokens.primary,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 11,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          u.nombre,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AdmTokens.grey800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  DataCell(
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        BadgeIcon(
-                          metaCartillas: u.badgeMetaCartillas,
-                          size: 22,
-                          unlocked: true,
-                        ),
-                        const SizedBox(width: 6),
-                        Flexible(
-                          child: Text(
-                            u.badgeName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          const SizedBox(width: 8),
+                          Text(
+                            u.nombre,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: AdmTokens.grey600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  DataCell(_LevelBadge(label: u.level)),
-                  DataCell(
-                    SizedBox(
-                      width: 110,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(3),
-                            child: LinearProgressIndicator(
-                              value: u.progress.clamp(0, 1),
-                              minHeight: 5,
-                              backgroundColor: AdmTokens.grey100,
-                              valueColor: AlwaysStoppedAnimation<Color>(levelColor),
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${(u.progress.clamp(0, 1) * 100).toInt()}%',
-                            style: TextStyle(
-                              fontSize: 9,
                               fontWeight: FontWeight.w600,
-                              color: levelColor,
+                              color: AdmTokens.grey800,
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-                ]);
+                    DataCell(
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          BadgeIcon(
+                            metaCartillas: u.badgeMetaCartillas,
+                            size: 22,
+                            unlocked: true,
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              u.badgeName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AdmTokens.grey600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    DataCell(_LevelBadge(label: u.level)),
+                    DataCell(
+                      SizedBox(
+                        width: 110,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(3),
+                              child: LinearProgressIndicator(
+                                value: u.progress.clamp(0, 1),
+                                minHeight: 5,
+                                backgroundColor: AdmTokens.grey100,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  levelColor,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${(u.progress.clamp(0, 1) * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w600,
+                                color: levelColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
               }),
             ),
           ),
@@ -1371,7 +1373,11 @@ class TopUsersCards extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.emoji_events_outlined, size: 36, color: AdmTokens.grey300),
+              Icon(
+                Icons.emoji_events_outlined,
+                size: 36,
+                color: AdmTokens.grey300,
+              ),
               const SizedBox(height: 10),
               Text(
                 'Mejores usuarios',
@@ -1480,7 +1486,9 @@ class _TopUserCardState extends State<_TopUserCard> {
           color: AdmTokens.grey50,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: _hovered ? _borderColor.withValues(alpha: 0.5) : _borderColor.withValues(alpha: 0.2),
+            color: _hovered
+                ? _borderColor.withValues(alpha: 0.5)
+                : _borderColor.withValues(alpha: 0.2),
             width: 1.5,
           ),
           boxShadow: _hovered
@@ -1544,10 +1552,7 @@ class _TopUserCardState extends State<_TopUserCard> {
             const SizedBox(height: 2),
             Text(
               '${u.totalCartillas} cartillas',
-              style: const TextStyle(
-                fontSize: 11,
-                color: AdmTokens.grey400,
-              ),
+              style: const TextStyle(fontSize: 11, color: AdmTokens.grey400),
             ),
             const SizedBox(height: 6),
             _LevelBadge(label: u.level),
@@ -1563,6 +1568,39 @@ class _TopUserCardState extends State<_TopUserCard> {
 // ──────────────────────────────────────────────
 
 class UserRankBuilder {
+  static UserRankData fromRankingRow(Map<String, dynamic> row) {
+    final nombres = row['nombres']?.toString().trim() ?? '';
+    final apellidos = row['apellidos']?.toString().trim() ?? '';
+    final nombre = '$nombres $apellidos'.trim();
+    final total =
+        int.tryParse(row['total_cartillas_generadas']?.toString() ?? '') ?? 0;
+    final unlocked = BadgeCatalog.all
+        .where((badge) => badge.metaCartillas <= total)
+        .toList();
+    final highest = unlocked.isEmpty ? null : unlocked.last;
+    final next = highest == null
+        ? BadgeCatalog.all.first
+        : BadgeCatalog.next(highest);
+    final previousMeta = highest?.metaCartillas ?? 0;
+    final progress = next == null
+        ? 1.0
+        : ((total - previousMeta) / (next.metaCartillas - previousMeta))
+              .clamp(0.0, 1.0)
+              .toDouble();
+
+    return UserRankData(
+      nombre: nombre.isEmpty ? 'Usuario SIGO-GCAM' : nombre,
+      badgeName: highest?.name ?? 'Sin insignias',
+      badgeMetaCartillas: highest?.metaCartillas ?? 0,
+      level: highest == null
+          ? 'Novato'
+          : LevelTheme.forNivel(highest.nivel).name,
+      progress: progress,
+      totalCartillas: total,
+      initials: _initials(nombre),
+    );
+  }
+
   static UserRankData fromCurrentUser({
     required String nombre,
     required List<InsMdl> allBadges,
@@ -1578,16 +1616,12 @@ class UserRankBuilder {
         ? LevelTheme.forNivel(highest.nivel).name
         : 'Novato';
 
-    final initials = nombre.isNotEmpty
-        ? nombre
-            .split(' ')
-            .where((w) => w.isNotEmpty)
-            .take(2)
-            .map((w) => w[0].toUpperCase())
-            .join()
-        : '??';
+    final initials = _initials(nombre);
 
-    final progress = BadgeCatalog.intervalProgress(totalCartillas, unlockedMetas);
+    final progress = BadgeCatalog.intervalProgress(
+      totalCartillas,
+      unlockedMetas,
+    );
 
     return UserRankData(
       nombre: nombre,
@@ -1599,6 +1633,15 @@ class UserRankBuilder {
       initials: initials,
     );
   }
+
+  static String _initials(String nombre) => nombre.isNotEmpty
+      ? nombre
+            .split(' ')
+            .where((word) => word.isNotEmpty)
+            .take(2)
+            .map((word) => word[0].toUpperCase())
+            .join()
+      : '??';
 }
 
 // ──────────────────────────────────────────────
@@ -1644,7 +1687,9 @@ class _AchievementTabsState extends State<AchievementTabs>
     final badges = widget.allBadges;
     final unlocked = badges.where((b) => b.desbloqueada).toList();
     final inProgress = _getInProgress(badges);
-    final locked = badges.where((b) => !b.desbloqueada && !_isInProgress(b)).toList();
+    final locked = badges
+        .where((b) => !b.desbloqueada && !_isInProgress(b))
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1670,13 +1715,25 @@ class _AchievementTabsState extends State<AchievementTabs>
                 ),
                 tabs: [
                   Tab(
-                    child: _TabLabel('Desbloqueadas', unlocked.length, AdmTokens.success),
+                    child: _TabLabel(
+                      'Desbloqueadas',
+                      unlocked.length,
+                      AdmTokens.success,
+                    ),
                   ),
                   Tab(
-                    child: _TabLabel('En progreso', inProgress.length, AdmTokens.primary),
+                    child: _TabLabel(
+                      'En progreso',
+                      inProgress.length,
+                      AdmTokens.primary,
+                    ),
                   ),
                   Tab(
-                    child: _TabLabel('Bloqueadas', locked.length, AdmTokens.grey400),
+                    child: _TabLabel(
+                      'Bloqueadas',
+                      locked.length,
+                      AdmTokens.grey400,
+                    ),
                   ),
                 ],
               ),
@@ -1790,8 +1847,8 @@ class _BadgeGrid extends StatelessWidget {
                 type == _BadgeType.unlocked
                     ? 'Aún no has desbloqueado insignias.'
                     : type == _BadgeType.inProgress
-                        ? 'No hay insignias en progreso.'
-                        : 'No hay insignias bloqueadas.',
+                    ? 'No hay insignias en progreso.'
+                    : 'No hay insignias bloqueadas.',
                 style: TextStyle(fontSize: 12, color: AdmTokens.grey400),
               ),
             ],
@@ -1804,8 +1861,11 @@ class _BadgeGrid extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final crossAxisCount =
-              constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 500 ? 2 : 1;
+          final crossAxisCount = constraints.maxWidth >= 700
+              ? 3
+              : constraints.maxWidth >= 500
+              ? 2
+              : 1;
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -1852,7 +1912,9 @@ class _AchievementCard extends StatelessWidget {
     final isInProgress = type == _BadgeType.inProgress;
     final pct = isInProgress
         ? (totalCartillas / badge.metaCartillas).clamp(0.0, 1.0).toDouble()
-        : isUnlocked ? 1.0 : 0.0;
+        : isUnlocked
+        ? 1.0
+        : 0.0;
 
     final theme = badge.levelTheme;
 
@@ -1862,16 +1924,16 @@ class _AchievementCard extends StatelessWidget {
         color: AdmTokens.surface,
         borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
         border: Border.all(
-              color: isUnlocked
-                  ? theme.borderColor.withValues(alpha: 0.4)
-                  : isInProgress
-                      ? AdmTokens.primary.withValues(alpha: 0.3)
-                      : AdmTokens.grey100,
-          ),
-          boxShadow: isUnlocked
-              ? [
-                  BoxShadow(
-                    color: theme.glowColor,
+          color: isUnlocked
+              ? theme.borderColor.withValues(alpha: 0.4)
+              : isInProgress
+              ? AdmTokens.primary.withValues(alpha: 0.3)
+              : AdmTokens.grey100,
+        ),
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: theme.glowColor,
                   blurRadius: 6,
                   offset: const Offset(0, 1),
                 ),
@@ -1900,7 +1962,9 @@ class _AchievementCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: isUnlocked ? AdmTokens.grey900 : AdmTokens.grey500,
+                        color: isUnlocked
+                            ? AdmTokens.grey900
+                            : AdmTokens.grey500,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -1960,14 +2024,21 @@ class _AchievementCard extends StatelessWidget {
           else if (isUnlocked)
             Row(
               children: [
-                Icon(Icons.check_circle_rounded, size: 13, color: AdmTokens.success),
+                Icon(
+                  Icons.check_circle_rounded,
+                  size: 13,
+                  color: AdmTokens.success,
+                ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     'Desbloqueada con ${badge.totalAlDesbloquear ?? badge.metaCartillas} cartillas',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 9, color: AdmTokens.grey400),
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: AdmTokens.grey400,
+                    ),
                   ),
                 ),
               ],
@@ -1989,8 +2060,8 @@ class _AchievementCard extends StatelessWidget {
             label: isUnlocked
                 ? 'Compartir logro'
                 : isInProgress
-                    ? 'Compartir progreso'
-                    : 'Compartir',
+                ? 'Compartir progreso'
+                : 'Compartir',
             icon: Icons.share_outlined,
             enabled: isUnlocked || isInProgress,
           ),

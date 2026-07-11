@@ -104,8 +104,31 @@ async function obtenerProgreso(usuarioId) {
     }
 }
 
+async function obtenerRanking() {
+    const pool = await getPool();
+    const conexion = await pool.connect();
+
+    try {
+        return await conexion.query(`
+            SELECT TOP 10
+                id,
+                nombres,
+                apellidos,
+                ISNULL(total_cartillas_generadas, 0) AS total_cartillas_generadas
+            FROM personal
+            WHERE activo = 1
+            ORDER BY ISNULL(total_cartillas_generadas, 0) DESC,
+                     apellidos,
+                     nombres
+        `);
+    } finally {
+        await conexion.close();
+    }
+}
+
 module.exports = {
     obtenerTodas,
     obtenerUsuarioInsignias,
-    obtenerProgreso
+    obtenerProgreso,
+    obtenerRanking
 };

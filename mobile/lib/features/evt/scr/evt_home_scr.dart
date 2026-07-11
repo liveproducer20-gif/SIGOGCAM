@@ -4,6 +4,7 @@ import '../../../core/auth/app_user.dart';
 import '../../../core/pdf/pdf_preview.dart';
 import '../../../core/thm/app_thm.dart';
 import '../../../core/url/open_url.dart';
+import '../../adm/adm_design_tokens.dart';
 import '../../dash/wdg/page_ttl_wdg.dart';
 import '../../dash/wdg/top_bar_wdg.dart';
 import '../ann/scr/ann_home_scr.dart';
@@ -60,22 +61,29 @@ class EvtHomeScr extends StatelessWidget {
         ),
         body: Column(
           children: [
-            SizedBox(height: 18),
-            TabBar(
-              isScrollable: true,
-              labelColor: AppThm.priClr,
-              unselectedLabelColor: Colors.black54,
-              indicatorColor: AppThm.secClr,
-              tabs: [
-                Tab(
-                  icon: Icon(Icons.event_outlined),
-                  text: 'Eventos',
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Container(
+                height: 58,
+                decoration: BoxDecoration(
+                  color: AdmTokens.surface,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: AdmTokens.cardShadow,
                 ),
-                Tab(
-                  icon: Icon(Icons.campaign_outlined),
-                  text: 'Anuncios',
+                clipBehavior: Clip.antiAlias,
+                child: const TabBar(
+                  dividerColor: Colors.transparent,
+                  labelColor: AdmTokens.primary,
+                  unselectedLabelColor: AdmTokens.grey500,
+                  indicatorColor: AdmTokens.secondary,
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  indicatorWeight: 3,
+                  tabs: [
+                    Tab(icon: Icon(Icons.event_outlined), text: 'Eventos'),
+                    Tab(icon: Icon(Icons.campaign_outlined), text: 'Anuncios'),
+                  ],
                 ),
-              ],
+              ),
             ),
             Expanded(
               child: TabBarView(
@@ -126,32 +134,64 @@ class _EvtLstState extends State<_EvtLst> {
         final items = _filtrar(snapshot.data ?? []);
 
         return ListView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
           children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: PageTtlWdg(
-                    ttl: 'Eventos',
-                    sub:
-                        'Administración de capacitaciones, convocatorias, operativos y reuniones.',
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 620;
+                final createButton = FilledButton.icon(
+                  onPressed: _crearEvento,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Nuevo evento'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(150, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-                if (widget.user.puedeGestionarEventos)
-                  FilledButton.icon(
-                    onPressed: _crearEvento,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Nuevo Evento'),
-                  ),
-              ],
+                );
+                const title = PageTtlWdg(
+                  ttl: 'Eventos',
+                  sub:
+                      'Administración de capacitaciones, convocatorias, operativos y reuniones.',
+                );
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      title,
+                      if (widget.user.puedeGestionarEventos) ...[
+                        const SizedBox(height: 16),
+                        createButton,
+                      ],
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    const Expanded(child: title),
+                    if (widget.user.puedeGestionarEventos) createButton,
+                  ],
+                );
+              },
             ),
-            const SizedBox(height: 12),
-            EvtFilWdg(
-              onBuscar: (v) => setState(() => buscar = v.trim().toLowerCase()),
-              onEstado: (v) => setState(() => estado = v),
-              onTipo: (v) => setState(() => tipo = v),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AdmTokens.surface,
+                borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
+                border: Border.all(color: AdmTokens.grey100),
+                boxShadow: AdmTokens.cardShadow,
+              ),
+              child: EvtFilWdg(
+                onBuscar: (v) =>
+                    setState(() => buscar = v.trim().toLowerCase()),
+                onEstado: (v) => setState(() => estado = v),
+                onTipo: (v) => setState(() => tipo = v),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
             if (loading)
               const SizedBox(
                 height: 260,
@@ -184,9 +224,7 @@ class _EvtLstState extends State<_EvtLst> {
   Future<void> _crearEvento() async {
     final creado = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(
-        builder: (_) => EvtNewScr(creadoPor: widget.user.id),
-      ),
+      MaterialPageRoute(builder: (_) => EvtNewScr(creadoPor: widget.user.id)),
     );
 
     if (!mounted) return;
@@ -209,7 +247,8 @@ class _EvtLstState extends State<_EvtLst> {
 
   List<EvtMdl> _filtrar(List<EvtMdl> items) {
     return items.where((evt) {
-      final matchBuscar = buscar.isEmpty ||
+      final matchBuscar =
+          buscar.isEmpty ||
           evt.nom.toLowerCase().contains(buscar) ||
           evt.tipo.toLowerCase().contains(buscar) ||
           evt.estado.toLowerCase().contains(buscar);
@@ -245,9 +284,9 @@ class _EvtLstState extends State<_EvtLst> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -268,9 +307,9 @@ class _EvtLstState extends State<_EvtLst> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -304,9 +343,9 @@ class _EvtLstState extends State<_EvtLst> {
       );
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 }
@@ -459,7 +498,10 @@ class _EvtEditDlgState extends State<_EvtEditDlg> {
                 ),
                 items: const [
                   DropdownMenuItem(value: 'Normal', child: Text('Normal')),
-                  DropdownMenuItem(value: 'Importante', child: Text('Importante')),
+                  DropdownMenuItem(
+                    value: 'Importante',
+                    child: Text('Importante'),
+                  ),
                   DropdownMenuItem(value: 'Urgente', child: Text('Urgente')),
                 ],
                 onChanged: (v) {
@@ -549,7 +591,9 @@ class _EvtEditDlgState extends State<_EvtEditDlg> {
   Future<void> _pickTime({required bool isInicio}) async {
     final selected = await showTimePicker(
       context: context,
-      initialTime: _parseInputTime(isInicio ? horaIniCtl.text : horaFinCtl.text),
+      initialTime: _parseInputTime(
+        isInicio ? horaIniCtl.text : horaFinCtl.text,
+      ),
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(alwaysUse24HourFormat: true),
@@ -866,10 +910,7 @@ class _InfoIcon extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _InfoIcon({
-    required this.icon,
-    required this.text,
-  });
+  const _InfoIcon({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {

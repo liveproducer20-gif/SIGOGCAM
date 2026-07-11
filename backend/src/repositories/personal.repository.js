@@ -274,8 +274,12 @@ async function crear(data) {
         const columnas = await columnasPersonal(conexion);
         const campos = camposPersonal(data, columnas);
         const names = campos.map(([name]) => name);
-        const values = campos.map(([, value]) => value);
-        const marks = names.map(() => '?').join(', ');
+        const values = campos
+            .filter(([, value]) => value !== null)
+            .map(([, value]) => value);
+        const marks = campos
+            .map(([, value]) => value === null ? 'NULL' : '?')
+            .join(', ');
 
         const result = await conexion.query(`
             INSERT INTO personal (${names.join(', ')}, fecha_creacion)
@@ -314,12 +318,17 @@ async function actualizar(id, data) {
         const columnas = await columnasPersonal(conexion);
         const campos = camposPersonal(data, columnas)
             .filter(([name]) => name !== 'password_hash');
+        const assignments = campos.map(([name, value]) =>
+            value === null ? `${name} = NULL` : `${name} = ?`
+        );
+        const values = campos
+            .filter(([, value]) => value !== null)
+            .map(([, value]) => value);
         if (columnas.has('fecha_actualizacion')) {
-            campos.push(['fecha_actualizacion', new Date()]);
+            assignments.push('fecha_actualizacion = GETDATE()');
         }
 
-        const setSql = campos.map(([name]) => `${name} = ?`).join(', ');
-        const values = campos.map(([, value]) => value);
+        const setSql = assignments.join(', ');
         values.push(id);
 
         await conexion.query(`

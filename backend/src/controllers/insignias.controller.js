@@ -67,8 +67,21 @@ async function obtenerProgreso(req, res) {
     }
 }
 
+async function obtenerRanking(req, res) {
+    try {
+        const datos = await service.obtenerRanking();
+        res.json({ ok: true, datos });
+    } catch (error) {
+        res.status(500).json({
+            ok: false,
+            mensaje: error.message
+        });
+    }
+}
+
 module.exports = {
     obtenerTodas,
     obtenerUsuarioInsignias,
-    obtenerProgreso
+    obtenerProgreso,
+    obtenerRanking
 };

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/thm/app_thm.dart';
+import '../../adm/adm_design_tokens.dart';
 import '../mdl/evt_mdl.dart';
 import 'evt_estado_style.dart';
 
@@ -22,17 +22,30 @@ class EvtTblWdg extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        return Card(
+        return Container(
           clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            color: AdmTokens.surface,
+            borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
+            border: Border.all(color: AdmTokens.grey100),
+            boxShadow: AdmTokens.cardShadow,
+          ),
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: ConstrainedBox(
               constraints: BoxConstraints(minWidth: constraints.maxWidth),
               child: DataTable(
-                columnSpacing: 36,
-                horizontalMargin: 30,
-                headingRowColor: WidgetStateProperty.all(
-                  AppThm.priClr.withValues(alpha: 0.08),
+                headingRowHeight: 48,
+                dataRowMinHeight: 58,
+                dataRowMaxHeight: 66,
+                columnSpacing: 30,
+                horizontalMargin: 22,
+                dividerThickness: .6,
+                headingRowColor: WidgetStateProperty.all(AdmTokens.grey50),
+                dataRowColor: WidgetStateProperty.resolveWith(
+                  (states) => states.contains(WidgetState.hovered)
+                      ? AdmTokens.primary.withValues(alpha: .035)
+                      : Colors.white,
                 ),
                 columns: const [
                   DataColumn(label: Text('Evento')),
@@ -47,7 +60,17 @@ class EvtTblWdg extends StatelessWidget {
                 rows: items.map((e) {
                   return DataRow(
                     cells: [
-                      DataCell(Text(e.nom)),
+                      DataCell(
+                        SizedBox(
+                          width: 220,
+                          child: Text(
+                            e.nom,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
                       DataCell(Text(e.tipo)),
                       DataCell(Text(e.fecha)),
                       DataCell(Text(e.hora)),
@@ -115,26 +138,11 @@ class _EvtActionsMenu extends StatelessWidget {
         }
       },
       itemBuilder: (_) => const [
-        PopupMenuItem(
-          enabled: false,
-          child: Text('Estado'),
-        ),
-        PopupMenuItem(
-          value: 'estado:PLANIFICADO',
-          child: Text('Planificado'),
-        ),
-        PopupMenuItem(
-          value: 'estado:EN_CURSO',
-          child: Text('En curso'),
-        ),
-        PopupMenuItem(
-          value: 'estado:FINALIZADO',
-          child: Text('Finalizar'),
-        ),
-        PopupMenuItem(
-          value: 'estado:CANCELADO',
-          child: Text('Cancelar'),
-        ),
+        PopupMenuItem(enabled: false, child: Text('Estado')),
+        PopupMenuItem(value: 'estado:PLANIFICADO', child: Text('Planificado')),
+        PopupMenuItem(value: 'estado:EN_CURSO', child: Text('En curso')),
+        PopupMenuItem(value: 'estado:FINALIZADO', child: Text('Finalizar')),
+        PopupMenuItem(value: 'estado:CANCELADO', child: Text('Cancelar')),
         PopupMenuDivider(),
         PopupMenuItem(
           value: 'editar',

@@ -6,6 +6,7 @@ const { requireAuth } = require('../middleware/auth.middleware');
 
 router.use(requireAuth);
 
+router.get('/ranking', controller.obtenerRanking);
 router.get('/', controller.obtenerTodas);
 
 module.exports = router;
