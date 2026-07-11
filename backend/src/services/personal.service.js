@@ -99,14 +99,16 @@ function mapPerfil(row) {
 
 async function crear(data) {
     validarCamposRequeridos(data, [
-        'cedula', 'nombres', 'apellidos', 'correoInstitucional',
-        'fechaNacimiento', 'areaId', 'grupoId', 'rolId', 'estadoPersonalId'
+        'cedula', 'nombres', 'apellidos', 'correoInstitucional', 'gradoId'
     ]);
 
     const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
 
     const payload = normalizarPayload(data, { cedula, correoInstitucional });
-    payload.passwordHash = await bcrypt.hash(passwordInicial(payload.fechaNacimiento), 10);
+    payload.passwordHash = await bcrypt.hash(
+        payload.fechaNacimiento ? passwordInicial(payload.fechaNacimiento) : 'segura2025',
+        10
+    );
 
     return await repository.crear(payload);
 }
@@ -118,8 +120,7 @@ async function actualizar(id, data) {
     }
 
     validarCamposRequeridos(data, [
-        'cedula', 'nombres', 'apellidos', 'correoInstitucional',
-        'fechaNacimiento', 'areaId', 'grupoId', 'rolId', 'estadoPersonalId'
+        'cedula', 'nombres', 'apellidos', 'correoInstitucional', 'gradoId'
     ]);
 
     const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
@@ -178,13 +179,13 @@ function normalizarPayload(data, base) {
         fechaIngreso: data.fechaIngreso || null,
         cargoId: Number(data.cargoId || gradoId),
         gradoId: Number(gradoId),
-        areaId: Number(data.areaId),
+        areaId: data.areaId ? Number(data.areaId) : null,
         funcionOperativaId: data.funcionOperativaId ? Number(data.funcionOperativaId) : null,
         jornadaId: data.jornadaId ? Number(data.jornadaId) : null,
-        grupoId: Number(data.grupoId),
+        grupoId: data.grupoId ? Number(data.grupoId) : null,
         tipoRotacionId: data.tipoRotacionId ? Number(data.tipoRotacionId) : null,
-        rolId: Number(data.rolId),
-        estadoPersonalId: Number(data.estadoPersonalId)
+        rolId: data.rolId ? Number(data.rolId) : null,
+        estadoPersonalId: data.estadoPersonalId ? Number(data.estadoPersonalId) : null
     };
 }
 
