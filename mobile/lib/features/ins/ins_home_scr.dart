@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/auth/app_user.dart';
-import '../../core/thm/app_thm.dart';
-import '../dash/wdg/page_ttl_wdg.dart';
+import '../adm/adm_design_tokens.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import 'ins_api.dart';
-import 'ins_badge_dlg.dart';
-import 'ins_icn_wdg.dart';
 import 'ins_mdl.dart';
+import 'ins_share_wdg.dart';
+import 'ins_widgets.dart';
 
 class InsHomeScr extends StatefulWidget {
   final AppUser user;
@@ -28,18 +27,18 @@ class InsHomeScr extends StatefulWidget {
 }
 
 class _InsHomeScrState extends State<InsHomeScr> {
-  late Future<_InsData> future;
+  late Future<_InsData> _future;
 
   @override
   void initState() {
     super.initState();
-    future = _load();
+    _future = _load();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppThm.bgClr,
+      backgroundColor: AdmTokens.background,
       appBar: TopBarWdg(
         ttl: 'Mis insignias',
         user: widget.user,
@@ -49,60 +48,100 @@ class _InsHomeScrState extends State<InsHomeScr> {
       ),
       body: SafeArea(
         child: FutureBuilder<_InsData>(
-          future: future,
+          future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator(
+                strokeWidth: 3, color: AdmTokens.primary,
+              ));
             }
 
             if (snapshot.hasError) {
               return Center(
-                child: Text('No se pudieron cargar las insignias: ${snapshot.error}'),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.error_outline, size: 48, color: AdmTokens.grey300),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No se pudieron cargar las insignias',
+                        style: TextStyle(fontSize: 16, color: AdmTokens.grey600),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        '${snapshot.error}',
+                        style: TextStyle(fontSize: 13, color: AdmTokens.grey400),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      OutlinedButton.icon(
+                        onPressed: () => setState(() => _future = _load()),
+                        icon: const Icon(Icons.refresh_rounded, size: 18),
+                        label: const Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                ),
               );
             }
 
             final data = snapshot.data!;
             return RefreshIndicator(
               onRefresh: () async {
-                setState(() => future = _load());
-                await future;
+                setState(() => _future = _load());
+                await _future;
               },
+              color: AdmTokens.primary,
               child: ListView(
-                padding: const EdgeInsets.all(28),
+                padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
                 children: [
-                  const PageTtlWdg(
-                    ttl: 'Mis insignias',
-                    sub: 'Progreso por cartillas generadas.',
+                  const SizedBox(height: 24),
+                  _Header(),
+                  const SizedBox(height: 24),
+                  AchievementsTimeline(
+                    allBadges: data.allBadges,
+                    progreso: data.progreso,
                   ),
-                  const SizedBox(height: 22),
-                  _ProgressPanel(progreso: data.progreso),
-                  const SizedBox(height: 22),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final width = constraints.maxWidth;
-                      final columns = width >= 1100 ? 3 : width >= 720 ? 2 : 1;
-                      return GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: data.insignias.length,
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          mainAxisExtent: 210,
-                        ),
-                        itemBuilder: (_, index) => _InsCard(
-                          insignia: data.insignias[index],
-                          user: widget.user,
-                        ),
-                      );
-                    },
+                  const SizedBox(height: 20),
+                  AchievementProgressCard(
+                    progreso: data.progreso,
+                    nombreUsuario: widget.user.nombreCompleto,
+                    onShare: () => _shareProgreso(context, data),
+                  ),
+                  const SizedBox(height: 24),
+                  _DashboardSection(
+                    allBadges: data.allBadges,
+                    progreso: data.progreso,
+                    nombreUsuario: widget.user.nombreCompleto,
+                  ),
+                  const SizedBox(height: 24),
+                  AchievementTabs(
+                    allBadges: data.allBadges,
+                    totalCartillas: data.progreso.totalCartillasGeneradas,
+                    nombreUsuario: widget.user.nombreCompleto,
                   ),
                 ],
               ),
             );
           },
         ),
+      ),
+    );
+  }
+
+  void _shareProgreso(BuildContext context, _InsData data) {
+    final badge = data.allBadges.isNotEmpty ? data.allBadges.lastWhere(
+      (b) => !b.desbloqueada,
+      orElse: () => data.allBadges.last,
+    ) : null;
+    if (badge == null) return;
+    showDialog(
+      context: context,
+      builder: (_) => InsShareWdg(
+        insignia: badge,
+        nombreUsuario: widget.user.nombreCompleto,
       ),
     );
   }
@@ -125,177 +164,110 @@ class _InsHomeScrState extends State<InsHomeScr> {
       );
     }).toList();
 
-    return _InsData(insignias: merged, progreso: progreso);
+    return _InsData(allBadges: merged, progreso: progreso);
   }
 }
 
-class _ProgressPanel extends StatelessWidget {
+// ──────────────────────────────────────────────
+// HEADER
+// ──────────────────────────────────────────────
+
+class _Header extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AdmTokens.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.workspace_premium_rounded, size: 22, color: Colors.white),
+            ),
+            const SizedBox(width: 14),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Mis insignias', style: AdmTokens.h1),
+                SizedBox(height: 2),
+                Text(
+                  'Progresa generando cartillas y desbloquea nuevas insignias.',
+                  style: TextStyle(fontSize: 14, color: AdmTokens.grey500),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// DASHBOARD SECTION
+// ──────────────────────────────────────────────
+
+class _DashboardSection extends StatelessWidget {
+  final List<InsMdl> allBadges;
   final InsProgresoMdl progreso;
+  final String nombreUsuario;
 
-  const _ProgressPanel({required this.progreso});
-
-  @override
-  Widget build(BuildContext context) {
-    final complete = progreso.proximaInsignia == null;
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.black.withValues(alpha: 0.08)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.workspace_premium_outlined, color: AppThm.secClr),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  complete
-                      ? 'Todas las insignias principales desbloqueadas'
-                      : 'Proxima: ${progreso.proximaInsignia}',
-                  style: const TextStyle(
-                    color: AppThm.priClr,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          LinearProgressIndicator(
-            value: progreso.porcentajeProgreso.clamp(0, 100) / 100,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(8),
-            backgroundColor: Colors.black.withValues(alpha: 0.08),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            complete
-                ? '${progreso.totalCartillasGeneradas} cartillas generadas.'
-                : '${progreso.totalCartillasGeneradas}/${progreso.metaProxima} cartillas. Faltan ${progreso.cartillasFaltantes}.',
-            style: const TextStyle(color: AppThm.txtClr),
-          ),
-          if (progreso.ultimaInsignia != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              'Ultima insignia: ${progreso.ultimaInsignia}',
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _InsCard extends StatelessWidget {
-  final InsMdl insignia;
-  final AppUser user;
-
-  const _InsCard({required this.insignia, required this.user});
+  const _DashboardSection({
+    required this.allBadges,
+    required this.progreso,
+    required this.nombreUsuario,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = insignia.desbloqueada;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: unlocked
-              ? AppThm.accClr.withValues(alpha: 0.65)
-              : Colors.black.withValues(alpha: 0.08),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    final currentUser = UserRankBuilder.fromCurrentUser(
+      nombre: nombreUsuario,
+      allBadges: allBadges,
+      totalCartillas: progreso.totalCartillasGeneradas,
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final wide = constraints.maxWidth >= 800;
+        if (wide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              BadgeIcon(
-                metaCartillas: insignia.metaCartillas,
-                size: 48,
-                unlocked: unlocked,
-              ),
-              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  insignia.titulo,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: unlocked ? AppThm.priClr : Colors.black54,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+                flex: 3,
+                child: TopUsersLeaderboard(users: [currentUser]),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                flex: 2,
+                child: TopUsersCards(users: [currentUser]),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Meta: ${insignia.metaCartillas} cartillas',
-            style: const TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: Text(
-              unlocked
-                  ? 'Desbloqueada con ${insignia.totalAlDesbloquear ?? insignia.metaCartillas} cartillas.'
-                  : 'Bloqueada hasta alcanzar la meta.',
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
-          if (unlocked) ...[
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _compartir(context),
-                icon: const Icon(Icons.share_outlined, size: 18),
-                label: const Text('Compartir en mis redes', style: TextStyle(fontSize: 12)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppThm.priClr,
-                  side: BorderSide(color: AppThm.priClr.withValues(alpha: 0.3)),
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-            ),
+          );
+        }
+        return Column(
+          children: [
+            TopUsersLeaderboard(users: [currentUser]),
+            const SizedBox(height: 14),
+            TopUsersCards(users: [currentUser]),
           ],
-        ],
-      ),
-    );
-  }
-
-  void _compartir(BuildContext context) {
-    final meta = insignia.metaCartillas;
-    final total = insignia.totalAlDesbloquear ?? meta;
-    showDialog(
-      context: context,
-      builder: (_) => AchievementUnlockedDialog(
-        insignia: InsigniaDesbloqueadaMdl(
-          titulo: insignia.titulo,
-          mensaje: insignia.descripcion,
-          icono: meta.toString(),
-        ),
-        totalCartillas: total,
-        nombreUsuario: user.nombreCompleto,
-      ),
+        );
+      },
     );
   }
 }
 
 class _InsData {
-  final List<InsMdl> insignias;
+  final List<InsMdl> allBadges;
   final InsProgresoMdl progreso;
 
   const _InsData({
-    required this.insignias,
+    required this.allBadges,
     required this.progreso,
   });
 }
