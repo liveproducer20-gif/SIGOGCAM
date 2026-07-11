@@ -110,6 +110,13 @@ async function crear(data) {
         10
     );
 
+    console.log('===== SERVICE.crear payload =====');
+    Object.entries(payload).forEach(([k, v]) => {
+        const val = typeof v === 'string' && v.length > 60 ? v.substring(0, 60)+'...' : v;
+        console.log(`  ${k}: ${val} (${typeof v})`);
+    });
+    console.log('=================================');
+
     return await repository.crear(payload);
 }
 
@@ -177,7 +184,7 @@ function normalizarPayload(data, base) {
         telefono: data.telefono ? data.telefono.toString().trim() : null,
         fechaNacimiento: data.fechaNacimiento || null,
         fechaIngreso: data.fechaIngreso || null,
-        cargoId: Number(data.cargoId || gradoId),
+        cargoId: data.cargoId ? Number(data.cargoId) : null,
         gradoId: Number(gradoId),
         areaId: data.areaId ? Number(data.areaId) : null,
         funcionOperativaId: data.funcionOperativaId ? Number(data.funcionOperativaId) : null,

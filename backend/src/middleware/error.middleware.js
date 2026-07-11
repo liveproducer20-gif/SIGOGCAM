@@ -1,4 +1,11 @@
 function errorHandler(error, req, res, next) {
+    console.error('========== ERROR DETECTADO ==========');
+    console.error('URL:', req?.method, req?.originalUrl);
+    console.error('Message:', error?.message);
+    if (error?.odbcErrors) console.error('ODBC Errors:', JSON.stringify(error.odbcErrors, null, 2));
+    if (error?.stack) console.error('Stack:', error.stack);
+    console.error('======================================');
+
     if (error?.type === 'entity.too.large') {
         return res.status(413).json({
             ok: false,
