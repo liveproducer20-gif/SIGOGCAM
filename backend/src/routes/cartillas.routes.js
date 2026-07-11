@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 const controller = require('../controllers/cartillas.controller');
+const adminRepo = require('../repositories/admin.repository');
 const {
     requireAuth,
     requirePermission
@@ -9,6 +10,20 @@ const {
 const { auditAction } = require('../middleware/audit.middleware');
 
 router.use(requireAuth);
+
+router.get(
+    '/jefe-control-municipal',
+    requirePermission('personal.ver'),
+    async (req, res) => {
+        try {
+            const jefe = await adminRepo.obtenerJefeControlMunicipal();
+            res.json({ ok: true, datos: jefe });
+        } catch (error) {
+            console.error('Error al obtener Jefe de Control Municipal:', error.message);
+            res.status(500).json({ ok: false, mensaje: error.message });
+        }
+    }
+);
 
 router.post(
     '/',

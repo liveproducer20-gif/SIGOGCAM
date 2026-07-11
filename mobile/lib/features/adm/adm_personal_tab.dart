@@ -61,7 +61,7 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
       title: 'Personal',
       subtitle: 'Cuenta institucional, datos personales y datos operativos.',
       future: _future,
-      columns: const ['Cédula', 'Nombres', 'Correo', 'Rol', 'Estado', 'Acciones'],
+      columns: const ['Cédula', 'Nombres', 'Correo', 'Grado', 'Rol', 'Estado', 'Acciones'],
       onRefresh: _reload,
       onCreate: () => _edit(null),
       total: _total,
@@ -74,6 +74,7 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
         admText(item['cedula']),
         admText('${item['apellidos'] ?? ''} ${item['nombres'] ?? ''}'.trim()),
         admText(item['correo_institucional']),
+        admText(item['grado']),
         admText(item['rol']),
         AdmStateChip(active: admIsActive(item)),
         AdmActions(

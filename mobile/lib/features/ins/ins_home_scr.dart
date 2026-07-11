@@ -5,9 +5,9 @@ import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import 'ins_api.dart';
+import 'ins_badge_dlg.dart';
 import 'ins_icn_wdg.dart';
 import 'ins_mdl.dart';
-import 'ins_share_wdg.dart';
 
 class InsHomeScr extends StatefulWidget {
   final AppUser user;
@@ -273,10 +273,17 @@ class _InsCard extends StatelessWidget {
   }
 
   void _compartir(BuildContext context) {
+    final meta = insignia.metaCartillas;
+    final total = insignia.totalAlDesbloquear ?? meta;
     showDialog(
       context: context,
-      builder: (_) => InsShareWdg(
-        insignia: insignia,
+      builder: (_) => AchievementUnlockedDialog(
+        insignia: InsigniaDesbloqueadaMdl(
+          titulo: insignia.titulo,
+          mensaje: insignia.descripcion,
+          icono: meta.toString(),
+        ),
+        totalCartillas: total,
         nombreUsuario: user.nombreCompleto,
       ),
     );

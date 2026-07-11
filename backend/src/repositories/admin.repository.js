@@ -790,7 +790,35 @@ async function eliminarAsignacion(id) {
     return withConnection((conexion) => conexion.query('DELETE FROM dbo.movil_eas_asignaciones WHERE id = ?', [id]));
 }
 
+async function obtenerJefeControlMunicipal() {
+    return withConnection(async (conexion) => {
+        const sql = `
+            SELECT TOP 1 p.id, p.nombres, p.apellidos,
+                   ISNULL(cd.nombre, g.nombre) AS cargo
+            FROM dbo.personal p
+            LEFT JOIN dbo.catalogo_detalles cd ON cd.id = p.cargo_id AND cd.codigo = 'JEFE_CONTROL_MUNICIPAL'
+            LEFT JOIN dbo.grados g ON g.id = p.grado_id AND g.nombre = 'Jefe de Control Municipal'
+            WHERE p.activo = 1
+              AND (cd.id IS NOT NULL OR g.id IS NOT NULL)
+            ORDER BY p.fecha_ingreso DESC
+        `;
+        const rows = await conexion.query(sql);
+        if (!rows || rows.length === 0) return null;
+        const jefe = rows[0];
+        const apellidos = (jefe.apellidos ?? '').trim();
+        const nombres = (jefe.nombres ?? '').trim();
+        return {
+            id: jefe.id,
+            nombres: nombres,
+            apellidos: apellidos,
+            nombreCompleto: apellidos && nombres ? apellidos + ' ' + nombres : apellidos || nombres,
+            cargo: jefe.cargo || 'Jefe de Control Municipal'
+        };
+    });
+}
+
 module.exports = {
+    withConnection,
     listarCatalogos,
     listarDetalles,
     crearDetalle,
@@ -834,5 +862,6 @@ module.exports = {
     eliminarAsignacion,
     obtenerAlertasMantenimiento,
     listarMantenimientos,
-    crearMantenimiento
+    crearMantenimiento,
+    obtenerJefeControlMunicipal
 };

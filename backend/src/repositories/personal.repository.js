@@ -47,11 +47,14 @@ async function obtenerTodo(query = {}) {
                 vd.nombre_completo, vd.correo_institucional, vd.telefono,
                 vd.fecha_nacimiento, vd.fecha_ingreso,
                 vd.rol, vd.estado_personal, vd.activo,
+                ISNULL(g.nombre, ISNULL(cd.nombre, 'SIN GRADO')) AS grado,
                 p.cargo_id, p.grado_id, p.area_id,
                 p.funcion_operativa_id, p.jornada_id, p.grupo_id,
                 p.tipo_rotacion_id, p.rol_id, p.estado_personal_id
             FROM vw_personal_detalle vd
             INNER JOIN dbo.personal p ON p.id = vd.id
+            LEFT JOIN dbo.grados g ON g.id = p.grado_id
+            LEFT JOIN dbo.catalogo_detalles cd ON cd.id = p.cargo_id
             WHERE 1=1 ${searchClause}
             ORDER BY vd.apellidos, vd.nombres
             ${paginate ? 'OFFSET ? ROWS FETCH NEXT ? ROWS ONLY' : ''}

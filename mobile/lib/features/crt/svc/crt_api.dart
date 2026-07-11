@@ -49,6 +49,14 @@ class CrtApi {
     );
   }
 
+  Future<Map<String, dynamic>?> getJefeControlMunicipal() async {
+    final resp = await _client.get<Map<String, dynamic>>(
+      'cartillas/jefe-control-municipal',
+      (value) => value is Map<String, dynamic> ? value : <String, dynamic>{},
+    );
+    return resp.datos;
+  }
+
   Future<List<Map<String, dynamic>>> getDirecciones(int easId) async {
     final resp = await _client.get<List>(
       'cartillas/eas-direcciones?easId=$easId',

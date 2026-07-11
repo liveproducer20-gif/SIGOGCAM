@@ -4,6 +4,16 @@ import '../mdl/crt_models.dart';
 class CrtTextGenerator {
   CrtTextGenerator._();
 
+  static String _jefeNombre = '';
+
+  static String get jefeDisplay =>
+      _jefeNombre.isEmpty ? 'Jefe de Control Municipal' : '$_jefeNombre Jefe de Control Municipal';
+
+  static String get jefeDisplayCsv =>
+      _jefeNombre.isEmpty ? 'Jefe de Control Municipal,' : '$_jefeNombre, Jefe de Control Municipal,';
+
+  static set jefeNombre(String v) => _jefeNombre = v;
+
   static String build(CrtFormData data) {
     if (data.modulo == TipoModuloCartilla.eas) {
       return _buildEas(data);
@@ -24,7 +34,7 @@ class CrtTextGenerator {
 *Horario:* ${data.horario}
 ${_ubicacionInstitucional(data, direccion)}
 
-${_saludo(DateTime.now())}, permiso Sr. Jefe de Control Municipal.
+${_saludo(DateTime.now())}, permiso Sr. $jefeDisplay.
 
 Muy respetuosamente me permito informar que $procedimiento$puntoMartillo
 
@@ -223,7 +233,7 @@ Adjunto fotografía''';
 
 *PROCEDIMIENTO:*
 
-$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Punto martillo, dando apoyo a la seguridad ciudadana y presencia disuasiva.
+$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Punto martillo, dando apoyo a la seguridad ciudadana y presencia disuasiva.
 
 Notifico novedades para fines correspondientes.
 
@@ -282,7 +292,7 @@ Adjunto fotografía''';
 
 *PROCEDIMIENTO:*
 
-$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Rondas disuasivas, dando apoyo a la seguridad ciudadana y presencia disuasiva.
+$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con Rondas disuasivas, dando apoyo a la seguridad ciudadana y presencia disuasiva.
 
 Notifico novedades para fines correspondientes.
 
@@ -317,7 +327,7 @@ Adjunto fotografía''';
     final saludo = _saludoFormal(DateTime.now());
 
     final procedimiento = StringBuffer()
-      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" mediante operativo conjunto con móviles que se encontraban realizando recorridos dentro del circuito $circuito, se procedió a ejecutar acciones de control sobre vendedores autónomos no regularizados que se encontraban ocupando el espacio público.');
+      ..write('$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" mediante operativo conjunto con móviles que se encontraban realizando recorridos dentro del circuito $circuito, se procedió a ejecutar acciones de control sobre vendedores autónomos no regularizados que se encontraban ocupando el espacio público.');
     if (actividad.isNotEmpty) {
       procedimiento.writeln();
       procedimiento.writeln();
@@ -406,7 +416,7 @@ Adjunto fotografía''';
     final policia = _v(data, '_col_policia');
     final saludo = _saludoFormal(DateTime.now());
 
-    final procedimiento = '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con la colaboración a los señores de $entidad${motivo.isEmpty ? "." : " debido a $motivo."}';
+    final procedimiento = '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con la colaboración a los señores de $entidad${motivo.isEmpty ? "." : " debido a $motivo."}';
 
     final auxNames = <String>[];
     if (data.rolMovil == RolMovil.auxiliar) {
@@ -523,7 +533,7 @@ Adjunto fotografía''';
         : '';
 
     final procedimiento = StringBuffer()
-      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me permito informar que se registró un $tipoAcc en el sector asignado.')
+      ..write('$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" me permito informar que se registró un $tipoAcc en el sector asignado.')
       ..writeln();
     if (numHeridos.isNotEmpty || huboFallecidos.isNotEmpty) {
       procedimiento.writeln();
@@ -629,7 +639,7 @@ Adjunto fotografía''';
     };
 
     final procedimiento = StringBuffer()
-      ..write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir", por órdenes de $solicitante, se procede a $accion.');
+      ..write('$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir", por órdenes de $solicitante, se procede a $accion.');
     if (infoAdicional.isNotEmpty) {
       procedimiento.writeln();
       procedimiento.writeln();
@@ -775,39 +785,39 @@ Adjunto fotografía''';
       case 'Robo a mano armada':
         final bienes = _v(data, '_ciu_bienesRobados');
         final valor = _v(data, '_ciu_valorRobado');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a un caso de robo a mano armada suscitado en $lugar.\n\nEl ciudadano manifiesta que le fueron sustraídos los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes robados asciende a $valor.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a un caso de robo a mano armada suscitado en $lugar.\n\nEl ciudadano manifiesta que le fueron sustraídos los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes robados asciende a $valor.';
       case 'Pérdida de bien inmueble':
         final bienes = _v(data, '_ciu_bienesPerdidos');
         final valor = _v(data, '_ciu_valorPerdido');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la pérdida de bienes ocurrida en $lugar.\n\nEl ciudadano manifiesta haber extraviado los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes perdidos asciende a $valor.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la pérdida de bienes ocurrida en $lugar.\n\nEl ciudadano manifiesta haber extraviado los siguientes bienes: $bienes. Asimismo, indica que el valor aproximado de los bienes perdidos asciende a $valor.';
       case 'Extorsión a local':
         final local = _v(data, '_ciu_nombreLocal');
         final ref = _v(data, '_ciu_referenciaLocal');
         final motivo = _v(data, '_ciu_motivoExtorsion');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta extorsión a local comercial, suscitada en $lugar.\n\nEl ciudadano manifiesta que el local comercial denominado $local, ubicado como referencia en $ref, estaría siendo objeto de presunta extorsión por el siguiente motivo: $motivo.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta extorsión a local comercial, suscitada en $lugar.\n\nEl ciudadano manifiesta que el local comercial denominado $local, ubicado como referencia en $ref, estaría siendo objeto de presunta extorsión por el siguiente motivo: $motivo.';
       case 'Amenazas':
         final nA = _v(data, '_ciu_nombreAmenazante');
         final cA = _v(data, '_ciu_cedulaAmenazante');
         final tA = _v(data, '_ciu_textoAmenaza');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta amenaza suscitada en $lugar.\n\nEl ciudadano manifiesta estar siendo víctima de amenazas por parte de $nA, portador de la cédula de ciudadanía No. $cA, quien presuntamente habría expresado el siguiente texto o frase intimidatoria:\n\n"$tA"\n\nPor lo expuesto, el ciudadano solicita que se deje constancia de lo manifestado para los fines correspondientes.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta amenaza suscitada en $lugar.\n\nEl ciudadano manifiesta estar siendo víctima de amenazas por parte de $nA, portador de la cédula de ciudadanía No. $cA, quien presuntamente habría expresado el siguiente texto o frase intimidatoria:\n\n"$tA"\n\nPor lo expuesto, el ciudadano solicita que se deje constancia de lo manifestado para los fines correspondientes.';
       case 'Desaparición de persona':
         final nD = _v(data, '_ciu_nombreDesaparecido');
         final uU = _v(data, '_ciu_ultimaUbicacion');
         final cD = _v(data, '_ciu_cedulaDesaparecido');
         final vest = _v(data, '_ciu_vestimenta');
         final ant = _v(data, '_ciu_antecedente');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la desaparición de una persona.\n\nEl ciudadano manifiesta que la persona desaparecida responde a los nombres de $nD, con cédula de ciudadanía No. $cD, quien fue vista por última vez en $uU. Asimismo, indica que al momento de su desaparición vestía o portaba lo siguiente: $vest.\n\nRespecto a antecedentes de amenazas anteriores, el ciudadano indica: $ant.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a la desaparición de una persona.\n\nEl ciudadano manifiesta que la persona desaparecida responde a los nombres de $nD, con cédula de ciudadanía No. $cD, quien fue vista por última vez en $uU. Asimismo, indica que al momento de su desaparición vestía o portaba lo siguiente: $vest.\n\nRespecto a antecedentes de amenazas anteriores, el ciudadano indica: $ant.';
       case 'Sector o nicho conflictivo':
         final mC = _v(data, '_ciu_motivoConflictivo');
         final rC = _v(data, '_ciu_requerimientoCiudadano');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para informar una novedad relacionada con un sector conflictivo ubicado en $lugar.\n\nEl ciudadano manifiesta que el sector presenta la siguiente problemática: $mC.\n\nAsimismo, solicita lo siguiente por parte de las autoridades competentes: $rC.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para informar una novedad relacionada con un sector conflictivo ubicado en $lugar.\n\nEl ciudadano manifiesta que el sector presenta la siguiente problemática: $mC.\n\nAsimismo, solicita lo siguiente por parte de las autoridades competentes: $rC.';
       case 'Agresión':
         final nAg = _v(data, '_ciu_nombreAgresor');
         final obj = _v(data, '_ciu_objetoAgresion');
         final det = _v(data, '_ciu_detalleHerida');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta agresión suscitada en $lugar.\n\nEl ciudadano manifiesta que fue agredido por $nAg, quien habría utilizado $obj para ocasionar la lesión.\n\nDe acuerdo con lo manifestado, la agresión se produjo de la siguiente manera: $det.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS debido a una presunta agresión suscitada en $lugar.\n\nEl ciudadano manifiesta que fue agredido por $nAg, quien habría utilizado $obj para ocasionar la lesión.\n\nDe acuerdo con lo manifestado, la agresión se produjo de la siguiente manera: $det.';
       default:
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para reportar una novedad en $lugar.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para reportar una novedad en $lugar.';
     }
   }
 
@@ -818,21 +828,21 @@ Adjunto fotografía''';
     switch (tipo) {
       case 'Visualizar cámaras':
         final motivo = _v(data, '_ciu_motivoCamaras');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando la visualización de cámaras por una novedad suscitada en $lugar.\n\nEl ciudadano manifiesta que requiere la revisión del sistema de videovigilancia debido a lo siguiente: $motivo.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando la visualización de cámaras por una novedad suscitada en $lugar.\n\nEl ciudadano manifiesta que requiere la revisión del sistema de videovigilancia debido a lo siguiente: $motivo.';
       case 'Colaboración en evento':
         final nEv = _v(data, '_ciu_nombreEvento');
         final hEv = _v(data, '_ciu_horaEvento');
         final fEv = _v(data, '_ciu_fechaEvento');
         final mEv = _v(data, '_ciu_motivoEvento');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración institucional para un evento a desarrollarse en $lugar.\n\nEl ciudadano informa que el evento denominado $nEv se llevará a cabo el día $fEv a las $hEv, indicando que la colaboración es requerida debido a: $mEv.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración institucional para un evento a desarrollarse en $lugar.\n\nEl ciudadano informa que el evento denominado $nEv se llevará a cabo el día $fEv a las $hEv, indicando que la colaboración es requerida debido a: $mEv.';
       case 'Resguardo de personal':
         final motivo = _v(data, '_ciu_motivoResguardo');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando resguardo de personal en $lugar.\n\nEl ciudadano manifiesta que requiere el acompañamiento o resguardo respectivo debido a: $motivo.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando resguardo de personal en $lugar.\n\nEl ciudadano manifiesta que requiere el acompañamiento o resguardo respectivo debido a: $motivo.';
       case 'Colaboración de ATM':
         final motivo = _v(data, '_ciu_motivoAtm');
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración de ATM en $lugar.\n\nEl ciudadano manifiesta que requiere la presencia de personal de ATM debido a: $motivo.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS solicitando colaboración de ATM en $lugar.\n\nEl ciudadano manifiesta que requiere la presencia de personal de ATM debido a: $motivo.';
       default:
-        return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para solicitar un requerimiento en $lugar.';
+        return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que al momento se acerca el ciudadano $nombre, con cédula de ciudadanía No. $cedula y número de celular $celular, a la base EAS CEIBOS para solicitar un requerimiento en $lugar.';
     }
   }
 
@@ -901,7 +911,7 @@ Adjunto fotografía''';
 
 *PROCEDIMIENTO:*
 
-$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con $accion.
+$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con $accion.
 
 Notifico novedades para fines correspondientes.
 
@@ -960,9 +970,9 @@ Adjunto fotografía''';
 
     final procedimiento = StringBuffer();
     if (tipoPermiso == 'Permiso por horas') {
-      procedimiento.write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me retiro temporalmente de mis funciones por motivo de $motivo, desde las $horaSalida hasta las $horaRetorno.');
+      procedimiento.write('$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" me retiro temporalmente de mis funciones por motivo de $motivo, desde las $horaSalida hasta las $horaRetorno.');
     } else {
-      procedimiento.write('$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$dir" me ausentaré temporalmente de mis funciones por motivo de $motivo, desde el día $fechaInicio hasta el día $fechaFin.');
+      procedimiento.write('$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" me ausentaré temporalmente de mis funciones por motivo de $motivo, desde el día $fechaInicio hasta el día $fechaFin.');
     }
 
     if (lugar.isNotEmpty) {
@@ -1096,7 +1106,7 @@ Adjunto fotografía''';
 
   static String _procedimientoEas(CrtFormData data, String direccion) {
     final saludo =
-        '${_saludoFormal(DateTime.now())}, Sr. Maldonado Cabrera Freddy, Jefe de Control Municipal, muy respetuosamente me permito informarle que';
+        '${_saludoFormal(DateTime.now())}, Sr. $jefeDisplayCsv muy respetuosamente me permito informarle que';
     final puntoMartillo = data.tipo == TipoCartilla.permisoAusentismo ||
             data.tipo == TipoCartilla.desalojoVendedores
         ? ''
@@ -1170,14 +1180,14 @@ Adjunto fotografía''';
     final saludo = _saludoFormal(DateTime.now());
 
     if (esAgresivo == 'no') {
-      return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se realizo el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo de manera pacífica y respetando la integridad de los señores comerciantes no regularizados se les indicó que no pueden permanecer en el lugar y que posterior a ello se retiren del sitio, así mismo haciendo cumplir la ordenanza municipal De Uso De Espacio Y Vía Pública se dejó el espacio sin novedad.';
+      return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$calle" se realizo el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo de manera pacífica y respetando la integridad de los señores comerciantes no regularizados se les indicó que no pueden permanecer en el lugar y que posterior a ello se retiren del sitio, así mismo haciendo cumplir la ordenanza municipal De Uso De Espacio Y Vía Pública se dejó el espacio sin novedad.';
     }
 
     if (necesitaColab == 'si') {
-      return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso a las indicaciones que se les está dando de parte del personal municipal, solicito colaboración con otro móvil para realizar un operativo en el sector mencionado para evitar el asentamiento no regularizado de los comerciantes en el punto.';
+      return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso a las indicaciones que se les está dando de parte del personal municipal, solicito colaboración con otro móvil para realizar un operativo en el sector mencionado para evitar el asentamiento no regularizado de los comerciantes en el punto.';
     }
 
-    return '$saludo, Sr. Maldonado Cabrera Freddy Jefe de Control Municipal muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso, de tal manera se les indicó que, si mantenían esa actitud y no colaboraban con lo solicitado, se procedería a realizar el retiro temporal de la mercadería, de tal modo una vez indicado el procedimiento que iba a tomar el personal municipal, procedieron a retirarse.';
+    return '$saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$calle" se procedió a realizar el desalojo de vendedores autónomos no regularizados que se encontraban realizando actividad comercial en los alrededores; asi mismo los señores hacen caso omiso, de tal manera se les indicó que, si mantenían esa actitud y no colaboraban con lo solicitado, se procedería a realizar el retiro temporal de la mercadería, de tal modo una vez indicado el procedimiento que iba a tomar el personal municipal, procedieron a retirarse.';
   }
 
   static String _ubicacionInstitucional(CrtFormData data, String direccion) {

@@ -18,6 +18,8 @@ import 'wdg/page_ttl_wdg.dart';
 import 'wdg/side_menu_wdg.dart';
 import 'wdg/top_bar_wdg.dart';
 import '../crt/crt_home_scr.dart';
+import '../crt/svc/crt_api.dart';
+import '../crt/svc/crt_text_generator.dart';
 import '../evt/scr/evt_home_scr.dart';
 import '../evt/svc/evt_svc.dart';
 import '../ins/ins_home_scr.dart';
@@ -202,7 +204,8 @@ class _WebContent extends StatefulWidget {
 }
 
 class _WebContentState extends State<_WebContent> {
-  List<Widget>? _children;
+  int _lastIdxSel = 0;
+  int _insRefreshKey = 0;
 
   List<Widget> _buildChildren() {
     final common = (
@@ -211,6 +214,10 @@ class _WebContentState extends State<_WebContent> {
       onLogout: widget.onLogout,
       onNotifications: widget.onNotifications,
     );
+    if (widget.idxSel == 2 && widget.idxSel != _lastIdxSel) {
+      _insRefreshKey++;
+    }
+    _lastIdxSel = widget.idxSel;
     return [
       EvtHomeScr(
         user: common.user,
@@ -225,6 +232,7 @@ class _WebContentState extends State<_WebContent> {
         onNotifications: common.onNotifications,
       ),
       InsHomeScr(
+        key: ValueKey('ins_$_insRefreshKey'),
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
@@ -243,17 +251,6 @@ class _WebContentState extends State<_WebContent> {
   }
 
   @override
-  void didUpdateWidget(covariant _WebContent oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.user != oldWidget.user ||
-        widget.onUserChanged != oldWidget.onUserChanged ||
-        widget.onLogout != oldWidget.onLogout ||
-        widget.onNotifications != oldWidget.onNotifications) {
-      _children = null;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     if (!widget.item.enabled) {
       return Scaffold(
@@ -269,10 +266,9 @@ class _WebContentState extends State<_WebContent> {
       );
     }
 
-    _children ??= _buildChildren();
     return IndexedStack(
       index: widget.idxSel,
-      children: _children!,
+      children: _buildChildren(),
     );
   }
 }
@@ -435,6 +431,20 @@ class _CrtHomeState extends State<_CrtHome> {
     ]) {
       ctl.addListener(() => setState(() {}));
     }
+
+    _cargarJefe();
+  }
+
+  Future<void> _cargarJefe() async {
+    try {
+      final api = CrtApi();
+      final jefe = await api.getJefeControlMunicipal();
+      final ap = (jefe?['apellidos'] as String? ?? '').trim();
+      final nm = (jefe?['nombres'] as String? ?? '').trim();
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+    } catch (_) {
+      CrtTextGenerator.jefeNombre = '';
+    }
   }
 
   @override
@@ -530,7 +540,7 @@ class _CrtHomeState extends State<_CrtHome> {
 *Fecha:* $fechaGeneracion
 *Causa:* ${causaCtl.text.trim()}
 
-${_saludo()}, permiso Sr. Maldonado Cabrera Freddy Jefe de Control Municipal.
+${_saludo()}, permiso Sr. ${CrtTextGenerator.jefeDisplay}.
 
 Muy respetuosamente me permito informarle que en las instalaciones de ${eas.codigo} - ${eas.nombre} se registra la siguiente novedad:
 

@@ -370,6 +370,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _syncFields();
     movil = _moviles.first.movil;
     _autoFillByRole();
+    _cargarJefe();
+  }
+
+  Future<void> _cargarJefe() async {
+    try {
+      final jefe = await crtApi.getJefeControlMunicipal();
+      final ap = (jefe?['apellidos'] as String? ?? '').trim();
+      final nm = (jefe?['nombres'] as String? ?? '').trim();
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+    } catch (_) {
+      CrtTextGenerator.jefeNombre = '';
+    }
   }
 
   @override
@@ -1385,7 +1397,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       );
 
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2031,7 +2049,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       );
 
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2417,7 +2441,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       );
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3042,7 +3072,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       );
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -3927,7 +3963,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       );
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -4466,7 +4508,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       );
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -5228,7 +5276,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Cartilla generada. Total: ${result.totalCartillasGeneradas}')));
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('No se pudo generar la cartilla: $error')));
@@ -5499,7 +5553,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       );
 
       final insignia = result.insigniaDesbloqueada;
-      if (insignia != null) await _showBadgeDialog(insignia);
+      if (insignia != null) {
+        await _showBadgeDialog(
+          insignia,
+          totalCartillas: result.totalCartillasGeneradas,
+          nombreUsuario: widget.user?.nombreCompleto ?? '',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -5510,11 +5570,19 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
   }
 
-  Future<void> _showBadgeDialog(InsigniaDesbloqueadaMdl insignia) {
+  Future<void> _showBadgeDialog(
+    InsigniaDesbloqueadaMdl insignia, {
+    int? totalCartillas,
+    String? nombreUsuario,
+  }) {
     return showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => BadgeUnlockDialog(insignia: insignia),
+      builder: (_) => BadgeUnlockDialog(
+        insignia: insignia,
+        totalCartillas: totalCartillas,
+        nombreUsuario: nombreUsuario,
+      ),
     );
   }
 
