@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'adm_crud_tab.dart';
+import 'adm_design_tokens.dart';
 import 'adm_helpers.dart';
 import 'adm_lazy_tab.dart';
 import 'adm_widgets.dart';
@@ -70,6 +71,38 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
       onPageChanged: _onPageChanged,
       onSearch: _onSearch,
       searchHint: 'Buscar personal...',
+      summaryBuilder: (items) => [
+        AdminSummaryCardData(
+          icon: Icons.people_rounded,
+          value: '$_total',
+          label: 'Total personal',
+          color: AdmTokens.primary,
+        ),
+        AdminSummaryCardData(
+          icon: Icons.check_circle_rounded,
+          value: '${items.where((i) => admIsActive(i)).length}',
+          label: 'Activos en página',
+          color: AdmTokens.success,
+        ),
+        AdminSummaryCardData(
+          icon: Icons.admin_panel_settings_rounded,
+          value: '${items.where((i) {
+            final r = i['rol']?.toString() ?? '';
+            return r.contains('Administrador') || r.contains('admin');
+          }).length}',
+          label: 'Administradores',
+          color: AdmTokens.warning,
+        ),
+        AdminSummaryCardData(
+          icon: Icons.engineering_rounded,
+          value: '${items.where((i) {
+            final r = i['rol']?.toString() ?? '';
+            return !r.contains('Administrador') && !r.contains('admin');
+          }).length}',
+          label: 'Operativos',
+          color: AdmTokens.secondary,
+        ),
+      ],
       rowBuilder: (item) => [
         admText(item['cedula']),
         admText('${item['apellidos'] ?? ''} ${item['nombres'] ?? ''}'.trim()),

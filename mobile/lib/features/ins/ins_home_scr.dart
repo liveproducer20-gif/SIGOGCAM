@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/auth/app_user.dart';
 import '../adm/adm_design_tokens.dart';
 import '../dash/wdg/top_bar_wdg.dart';
+import 'ins_achievement_theme.dart';
 import 'ins_api.dart';
 import 'ins_mdl.dart';
 import 'ins_share_wdg.dart';
@@ -51,9 +52,12 @@ class _InsHomeScrState extends State<InsHomeScr> {
           future: _future,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator(
-                strokeWidth: 3, color: AdmTokens.primary,
-              ));
+              return const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AdmTokens.primary,
+                ),
+              );
             }
 
             if (snapshot.hasError) {
@@ -88,6 +92,19 @@ class _InsHomeScrState extends State<InsHomeScr> {
             }
 
             final data = snapshot.data!;
+            final unlocked = data.allBadges.where((b) => b.desbloqueada).toList();
+            final locked = data.allBadges.where((b) => !b.desbloqueada).toList();
+            final inProgress = data.allBadges
+                .where((b) => !b.desbloqueada && b.metaCartillas <= data.progreso.totalCartillasGeneradas)
+                .toList();
+
+            final highestUnlocked = unlocked.isEmpty
+                ? (data.allBadges.isNotEmpty ? data.allBadges.first : null)
+                : unlocked.last;
+            final nivelActual = highestUnlocked != null
+                ? AchievementTheme.forCartillas(highestUnlocked.metaCartillas).nombre
+                : 'Novato';
+
             return RefreshIndicator(
               onRefresh: () async {
                 setState(() => _future = _load());
@@ -95,28 +112,36 @@ class _InsHomeScrState extends State<InsHomeScr> {
               },
               color: AdmTokens.primary,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(28, 0, 28, 32),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
                 children: [
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   _Header(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   AchievementsTimeline(
                     allBadges: data.allBadges,
                     progreso: data.progreso,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  ProgressSummaryCards(
+                    desbloqueadas: unlocked.length,
+                    pendientes: locked.length - inProgress.length,
+                    cartillasRestantes: data.progreso.cartillasFaltantes,
+                    nivelActual: nivelActual,
+                  ),
+                  const SizedBox(height: 16),
                   AchievementProgressCard(
                     progreso: data.progreso,
                     nombreUsuario: widget.user.nombreCompleto,
+                    nombreNivel: nivelActual,
                     onShare: () => _shareProgreso(context, data),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   _DashboardSection(
                     allBadges: data.allBadges,
                     progreso: data.progreso,
                     nombreUsuario: widget.user.nombreCompleto,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   AchievementTabs(
                     allBadges: data.allBadges,
                     totalCartillas: data.progreso.totalCartillasGeneradas,
@@ -132,10 +157,12 @@ class _InsHomeScrState extends State<InsHomeScr> {
   }
 
   void _shareProgreso(BuildContext context, _InsData data) {
-    final badge = data.allBadges.isNotEmpty ? data.allBadges.lastWhere(
-      (b) => !b.desbloqueada,
-      orElse: () => data.allBadges.last,
-    ) : null;
+    final badge = data.allBadges.isNotEmpty
+        ? data.allBadges.lastWhere(
+            (b) => !b.desbloqueada,
+            orElse: () => data.allBadges.last,
+          )
+        : null;
     if (badge == null) return;
     showDialog(
       context: context,
@@ -187,7 +214,11 @@ class _Header extends StatelessWidget {
                 color: AdmTokens.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.workspace_premium_rounded, size: 22, color: Colors.white),
+              child: const Icon(
+                Icons.workspace_premium_rounded,
+                size: 22,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 14),
             const Column(

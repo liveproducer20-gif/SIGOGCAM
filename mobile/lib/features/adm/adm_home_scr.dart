@@ -37,6 +37,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   final api = AdmApi();
   List<_TabDef>? _cachedTabs;
   late TabController _tabCtrl;
+  int _hoveredTabIndex = -1;
 
   List<_TabDef> _buildTabs() {
     final list = <_TabDef>[];
@@ -146,6 +147,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   }
 
   Widget _buildPageHeader(_TabDef tab) {
+    final user = widget.user;
     return Container(
       padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
       child: Row(
@@ -170,64 +172,127 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
             ],
           ),
           const Spacer(),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: widget.onNotifications,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AdmTokens.grey50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.notifications_outlined, size: 20, color: AdmTokens.grey600),
+              ),
+            ),
+          ),
+          const SizedBox(width: 14),
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AdmTokens.primary,
+            child: Text(
+              _initials(user),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(user.nombreCompleto,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AdmTokens.grey800)),
+              const SizedBox(height: 1),
+              Text(user.rol,
+                style: const TextStyle(fontSize: 12, color: AdmTokens.grey500)),
+            ],
+          ),
         ],
       ),
     );
   }
 
+  String _initials(AppUser user) {
+    final parts = user.nombreCompleto.split(' ').where((p) => p.isNotEmpty).toList();
+    if (parts.length >= 2) return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    if (parts.isNotEmpty) return parts.first[0].toUpperCase();
+    return 'U';
+  }
+
   Widget _buildSubmenu(List<_TabDef> tabs) {
-    return Container(
-      height: 52,
-      margin: const EdgeInsets.fromLTRB(28, 16, 28, 0),
-      decoration: BoxDecoration(
-        color: AdmTokens.surface,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: AdmTokens.cardShadow,
-      ),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        itemCount: tabs.length,
-        itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(28, 14, 28, 0),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: AdmTokens.surface,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: AdmTokens.cardShadow,
+        ),
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          itemCount: tabs.length,
+          itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
+        ),
       ),
     );
   }
 
   Widget _buildTabItem(_TabDef tab, int i) {
     final isActive = _tabCtrl.index == i;
-    return GestureDetector(
-      onTap: () => _tabCtrl.animateTo(i),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: isActive ? AdmTokens.primary.withValues(alpha: 0.06) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: isActive
-              ? const Border(
-                  bottom: BorderSide(color: AdmTokens.primary, width: 2.5),
-                )
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              tab.icon,
-              size: 18,
-              color: isActive ? AdmTokens.primary : AdmTokens.grey400,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              tab.label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-                color: isActive ? AdmTokens.primary : AdmTokens.grey500,
+    final isHovered = _hoveredTabIndex == i;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hoveredTabIndex = i),
+      onExit: (_) => setState(() => _hoveredTabIndex = -1),
+      child: GestureDetector(
+        onTap: () => _tabCtrl.animateTo(i),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: isActive
+                ? AdmTokens.primary
+                : isHovered
+                    ? AdmTokens.primary.withValues(alpha: 0.06)
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                tab.icon,
+                size: 18,
+                color: isActive
+                    ? Colors.white
+                    : isHovered
+                        ? AdmTokens.primary
+                        : AdmTokens.grey400,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              Text(
+                tab.label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                  color: isActive
+                      ? Colors.white
+                      : isHovered
+                          ? AdmTokens.primary
+                          : AdmTokens.grey500,
+                ),
+              ),
+              if (isActive)
+                const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Icon(Icons.arrow_drop_up_rounded, size: 16, color: Colors.white70),
+                ),
+            ],
+          ),
         ),
       ),
     );

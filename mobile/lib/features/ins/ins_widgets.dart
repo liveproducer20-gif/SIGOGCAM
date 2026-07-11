@@ -39,9 +39,7 @@ class _AchievementsTimelineState extends State<AchievementsTimeline>
     final badges = widget.allBadges;
     if (badges.isEmpty) return 0;
     for (int i = 0; i < badges.length; i++) {
-      if (!badges[i].desbloqueada) {
-        return i;
-      }
+      if (!badges[i].desbloqueada) return i;
     }
     return badges.length - 1;
   }
@@ -51,18 +49,52 @@ class _AchievementsTimelineState extends State<AchievementsTimeline>
     final badges = widget.allBadges;
     if (badges.isEmpty) return const SizedBox.shrink();
 
+    final unlockedCount = badges.where((b) => b.desbloqueada).length;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final sideBySide = constraints.maxWidth >= 660;
+        if (sideBySide) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: _buildTimeline(badges)),
+              const SizedBox(width: 12),
+              _GeneralProgressIndicator(
+                unlocked: unlockedCount,
+                total: badges.length,
+              ),
+            ],
+          );
+        }
+        return Column(
+          children: [
+            _buildTimeline(badges),
+            const SizedBox(height: 12),
+            _GeneralProgressIndicator(
+              unlocked: unlockedCount,
+              total: badges.length,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTimeline(List<InsMdl> badges) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: IntrinsicHeight(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             for (int i = 0; i < badges.length; i++) ...[
-              if (i > 0) _TimelineConnector(
-                unlocked: badges[i - 1].desbloqueada,
-                isCurrent: i == _currentIndex,
-              ),
+              if (i > 0)
+                _TimelineConnector(
+                  unlocked: badges[i - 1].desbloqueada,
+                  isCurrent: i == _currentIndex,
+                ),
               _TimelineNode(
                 badge: badges[i],
                 index: i,
@@ -94,10 +126,11 @@ class _TimelineConnector extends StatelessWidget {
       width: 40,
       child: Center(
         child: Container(
-          height: 2,
+          height: 6,
+          width: double.infinity,
           decoration: BoxDecoration(
             color: color,
-            borderRadius: BorderRadius.circular(1),
+            borderRadius: BorderRadius.circular(3),
           ),
         ),
       ),
@@ -137,7 +170,7 @@ class _TimelineNodeState extends State<_TimelineNode>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
-    _breathAnim = Tween<double>(begin: 1.0, end: 1.08).animate(
+    _breathAnim = Tween<double>(begin: 1.0, end: 1.03).animate(
       CurvedAnimation(parent: _breathingCtrl, curve: Curves.easeInOut),
     );
     if (widget.isCurrent) {
@@ -162,63 +195,77 @@ class _TimelineNodeState extends State<_TimelineNode>
     super.dispose();
   }
 
+  AchievementTheme get _rank =>
+      AchievementTheme.forCartillas(widget.badge.metaCartillas);
+
   @override
   Widget build(BuildContext context) {
-    final rank = AchievementTheme.forCartillas(widget.badge.metaCartillas);
+    final node = gestureWidget();
+
+    if (widget.isCurrent) {
+      return AnimatedBuilder(
+        animation: _breathAnim,
+        builder: (_, child) => Transform.scale(
+          scale: _breathAnim.value,
+          child: child,
+        ),
+        child: node,
+      );
+    }
+    return node;
+  }
+
+  Widget gestureWidget() {
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
+      cursor: SystemMouseCursors.click,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: _hovered ? (Matrix4.identity()..setTranslationRaw(0, -3, 0)) : Matrix4.identity(),
+        transform:
+            _hovered ? (Matrix4.identity()..setTranslationRaw(0, -3, 0)) : Matrix4.identity(),
         width: 110,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
-              height: 72,
+              height: 92,
               child: Center(
-                child: widget.isCurrent
-                    ? AnimatedBuilder(
-                        animation: _breathAnim,
-                        builder: (_, child) => Transform.scale(
-                          scale: _breathAnim.value,
-                          child: child,
-                        ),
-                        child: _NodeIcon(
-                          badge: widget.badge,
-                          isUnlocked: widget.isUnlocked,
-                          isCurrent: widget.isCurrent,
-                          rank: rank,
-                        ),
-                      )
-                    : _NodeIcon(
-                        badge: widget.badge,
-                        isUnlocked: widget.isUnlocked,
-                        isCurrent: widget.isCurrent,
-                        rank: rank,
-                      ),
+                child: _NodeIcon(
+                  badge: widget.badge,
+                  isUnlocked: widget.isUnlocked,
+                  isCurrent: widget.isCurrent,
+                  rank: _rank,
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              widget.badge.titulo,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: widget.isUnlocked || widget.isCurrent ? FontWeight.w600 : FontWeight.w400,
-                color: widget.isUnlocked || widget.isCurrent ? AdmTokens.grey800 : AdmTokens.grey400,
-                height: 1.2,
+            const SizedBox(height: 10),
+            Tooltip(
+              message: widget.badge.titulo,
+              child: Text(
+                widget.badge.titulo,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight:
+                      widget.isUnlocked || widget.isCurrent ? FontWeight.w600 : FontWeight.w400,
+                  color: widget.isUnlocked || widget.isCurrent
+                      ? AdmTokens.grey800
+                      : AdmTokens.grey400,
+                  height: 1.3,
+                ),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               '${widget.badge.metaCartillas} cart.',
               style: TextStyle(
                 fontSize: 10,
-                color: widget.isUnlocked || widget.isCurrent ? AdmTokens.grey500 : AdmTokens.grey300,
+                color: widget.isUnlocked || widget.isCurrent
+                    ? AdmTokens.grey500
+                    : AdmTokens.grey300,
               ),
             ),
           ],
@@ -243,110 +290,465 @@ class _NodeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (isUnlocked) return _buildUnlocked();
+    if (isCurrent) return _buildCurrent();
+    return _buildLocked();
+  }
+
+  Widget _buildUnlocked() {
     return Stack(
       clipBehavior: Clip.none,
       alignment: Alignment.center,
       children: [
-        if (isUnlocked)
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AdmTokens.action.withValues(alpha: 0.12),
-            ),
-          ),
         Container(
-          width: 48,
-          height: 48,
+          width: 76,
+          height: 76,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isUnlocked
-                ? AdmTokens.primary
-                : isCurrent
-                    ? AdmTokens.secondary
-                    : AdmTokens.grey100,
+            color: AdmTokens.action.withValues(alpha: 0.12),
+            boxShadow: [
+              BoxShadow(
+                color: AdmTokens.action.withValues(alpha: 0.25),
+                blurRadius: 12,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AdmTokens.surface,
             border: Border.all(
-              color: isUnlocked
-                  ? AdmTokens.action
-                  : isCurrent
-                      ? AdmTokens.secondary
-                      : AdmTokens.grey200,
-              width: isUnlocked ? 2.5 : 2,
+              color: AdmTokens.action,
+              width: 2.5,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: AdmTokens.action.withValues(alpha: 0.15),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: ClipOval(
             child: BadgeIcon(
               metaCartillas: badge.metaCartillas,
-              size: 30,
-              unlocked: isUnlocked || isCurrent,
+              size: 46,
+              unlocked: true,
             ),
           ),
         ),
-        if (isUnlocked)
+        Positioned(
+          right: -1,
+          bottom: -1,
+          child: Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AdmTokens.success,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: AdmTokens.success.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.check_rounded, size: 12, color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrent() {
+    return Stack(
+      clipBehavior: Clip.none,
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 78,
+          height: 78,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AdmTokens.primary.withValues(alpha: 0.06),
+            boxShadow: [
+              BoxShadow(
+                color: AdmTokens.primary.withValues(alpha: 0.18),
+                blurRadius: 14,
+                spreadRadius: 1,
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 70,
+          height: 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AdmTokens.surface,
+            border: Border.all(
+              color: AdmTokens.primary,
+              width: 2.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AdmTokens.primary.withValues(alpha: 0.1),
+                blurRadius: 6,
+                spreadRadius: 0,
+              ),
+            ],
+          ),
+          child: ClipOval(
+            child: BadgeIcon(
+              metaCartillas: badge.metaCartillas,
+              size: 46,
+              unlocked: true,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocked() {
+    return Opacity(
+      opacity: 0.6,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AdmTokens.grey100,
+              border: Border.all(
+                color: AdmTokens.grey200,
+                width: 2,
+              ),
+            ),
+            child: ClipOval(
+              child: BadgeIcon(
+                metaCartillas: badge.metaCartillas,
+                size: 46,
+                unlocked: false,
+              ),
+            ),
+          ),
           Positioned(
             right: -2,
             bottom: -2,
-            child: Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AdmTokens.success,
-                border: Border.all(color: Colors.white, width: 2),
-              ),
-              child: const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+            child: Icon(
+              Icons.lock_rounded,
+              size: 16,
+              color: AdmTokens.grey400,
             ),
           ),
-        if (!isUnlocked && !isCurrent)
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Icon(Icons.lock_rounded, size: 14, color: AdmTokens.grey300),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 // ──────────────────────────────────────────────
-// PROGRESS CARD — circular + share button
+// GENERAL PROGRESS INDICATOR
+// ──────────────────────────────────────────────
+
+class _GeneralProgressIndicator extends StatelessWidget {
+  final int unlocked;
+  final int total;
+
+  const _GeneralProgressIndicator({
+    required this.unlocked,
+    required this.total,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = total > 0 ? (unlocked / total * 100).toInt() : 0;
+    final progress = total > 0 ? unlocked / total : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AdmTokens.surface,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AdmTokens.cardShadow,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 42,
+            height: 42,
+            child: CustomPaint(
+              painter: _CircularProgressPainter(
+                progress: progress,
+                color: AdmTokens.primary,
+                trackColor: AdmTokens.grey100,
+                strokeWidth: 4,
+              ),
+              child: Center(
+                child: Text(
+                  '$pct%',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: AdmTokens.grey800,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Progreso general',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AdmTokens.grey500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '$unlocked / $total insignias',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AdmTokens.grey900,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// PROGRESS SUMMARY CARDS
+// ──────────────────────────────────────────────
+
+class ProgressSummaryCards extends StatelessWidget {
+  final int desbloqueadas;
+  final int pendientes;
+  final int cartillasRestantes;
+  final String nivelActual;
+
+  const ProgressSummaryCards({
+    super.key,
+    required this.desbloqueadas,
+    required this.pendientes,
+    required this.cartillasRestantes,
+    required this.nivelActual,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cols = constraints.maxWidth >= 600 ? 4 : 2;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            SizedBox(
+              width: _cardWidth(constraints.maxWidth, cols),
+              child: _SummaryCard(
+                icon: Icons.emoji_events_rounded,
+                iconColor: AdmTokens.action,
+                value: desbloqueadas.toString(),
+                label: 'Desbloqueadas',
+              ),
+            ),
+            SizedBox(
+              width: _cardWidth(constraints.maxWidth, cols),
+              child: _SummaryCard(
+                icon: Icons.lock_rounded,
+                iconColor: AdmTokens.grey400,
+                value: pendientes.toString(),
+                label: 'Pendientes',
+              ),
+            ),
+            SizedBox(
+              width: _cardWidth(constraints.maxWidth, cols),
+              child: _SummaryCard(
+                icon: Icons.local_fire_department_rounded,
+                iconColor: const Color(0xFFE67E22),
+                value: cartillasRestantes.toString(),
+                label: 'Cartillas restantes',
+              ),
+            ),
+            SizedBox(
+              width: _cardWidth(constraints.maxWidth, cols),
+              child: _SummaryCard(
+                icon: Icons.star_rounded,
+                iconColor: AdmTokens.action,
+                value: nivelActual,
+                label: 'Nivel actual',
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  double _cardWidth(double totalWidth, int cols) {
+    if (cols == 4) return (totalWidth - 30) / 4;
+    return (totalWidth - 10) / 2;
+  }
+}
+
+class _SummaryCard extends StatefulWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  const _SummaryCard({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  State<_SummaryCard> createState() => _SummaryCardState();
+}
+
+class _SummaryCardState extends State<_SummaryCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: _hovered
+            ? (Matrix4.identity()..setTranslationRaw(0, -2, 0))
+            : Matrix4.identity(),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _hovered
+              ? AdmTokens.surface
+              : AdmTokens.grey50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _hovered ? widget.iconColor.withValues(alpha: 0.3) : AdmTokens.grey100,
+          ),
+          boxShadow: _hovered ? AdmTokens.hoverShadow : AdmTokens.cardShadow,
+        ),
+        child: Row(
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: widget.iconColor.withValues(alpha: _hovered ? 0.15 : 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                widget.icon,
+                size: 18,
+                color: widget.iconColor,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: AdmTokens.grey900,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    widget.label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: AdmTokens.grey500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// PROGRESS CARD — circular + details + share
 // ──────────────────────────────────────────────
 
 class AchievementProgressCard extends StatelessWidget {
   final InsProgresoMdl progreso;
   final VoidCallback onShare;
   final String nombreUsuario;
+  final String nombreNivel;
 
   const AchievementProgressCard({
     super.key,
     required this.progreso,
     required this.onShare,
     required this.nombreUsuario,
+    this.nombreNivel = 'Novato',
   });
 
   @override
   Widget build(BuildContext context) {
     final complete = progreso.proximaInsignia == null;
     final pct = progreso.porcentajeProgreso.clamp(0, 100) / 100;
+    final rank = progreso.metaProxima != null
+        ? AchievementTheme.forCartillas(progreso.metaProxima!)
+        : null;
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AdmTokens.surface,
         borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
         boxShadow: AdmTokens.cardShadow,
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 100,
-            height: 100,
+            width: 84,
+            height: 84,
             child: CustomPaint(
               painter: _CircularProgressPainter(
                 progress: pct,
                 color: complete ? AdmTokens.success : AdmTokens.primary,
                 trackColor: AdmTokens.grey100,
+                strokeWidth: 7,
               ),
               child: Center(
                 child: Column(
@@ -355,17 +757,17 @@ class AchievementProgressCard extends StatelessWidget {
                     Text(
                       '${(pct * 100).toInt()}',
                       style: const TextStyle(
-                        fontSize: 24,
+                        fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AdmTokens.grey900,
                       ),
                     ),
                     Text(
                       '%',
-                      style: const TextStyle(
-                        fontSize: 12,
+                      style: TextStyle(
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
-                        color: AdmTokens.grey500,
+                        color: rank?.accentColor ?? AdmTokens.grey500,
                       ),
                     ),
                   ],
@@ -373,51 +775,81 @@ class AchievementProgressCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 24),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   complete
                       ? 'Todas las insignias desbloqueadas'
                       : progreso.proximaInsignia!,
-                  style: const TextStyle(
-                    fontSize: 18,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: AdmTokens.grey900,
+                    color: rank?.titleColor ?? AdmTokens.grey900,
                     letterSpacing: -0.2,
                   ),
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
                 Text(
                   complete
                       ? '${progreso.totalCartillasGeneradas} cartillas generadas.'
-                      : '${progreso.totalCartillasGeneradas}/${progreso.metaProxima} cartillas.',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AdmTokens.grey500,
+                      : '${progreso.totalCartillasGeneradas} / ${progreso.metaProxima} cartillas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: rank?.subtitleColor ?? AdmTokens.grey500,
                   ),
                 ),
                 if (!complete) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Faltan ${progreso.cartillasFaltantes} cartillas para desbloquear esta insignia.',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AdmTokens.grey400,
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      minHeight: 5,
+                      backgroundColor: AdmTokens.grey100,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        rank?.progressColor ?? AdmTokens.primary,
+                      ),
                     ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        'Faltan ${progreso.cartillasFaltantes} cartillas',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: AdmTokens.grey400,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (progreso.ultimaInsignia != null)
+                        Text(
+                          'Última: ${progreso.ultimaInsignia}',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AdmTokens.grey400,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ],
             ),
           ),
           const SizedBox(width: 16),
-          _ShareButton(
+          ShareButton(
             onTap: onShare,
             label: 'Compartir progreso',
+            subtitle: 'Comparte tu avance en redes sociales.',
             icon: Icons.share_outlined,
-            compact: false,
           ),
         ],
       ),
@@ -429,20 +861,22 @@ class _CircularProgressPainter extends CustomPainter {
   final double progress;
   final Color color;
   final Color trackColor;
+  final double strokeWidth;
 
   _CircularProgressPainter({
     required this.progress,
     required this.color,
     required this.trackColor,
+    this.strokeWidth = 8,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 6;
+    final radius = math.min(size.width, size.height) / 2 - strokeWidth / 2;
     final paint = Paint()
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 8
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     paint.color = trackColor;
@@ -460,70 +894,94 @@ class _CircularProgressPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CircularProgressPainter old) =>
-      old.progress != progress || old.color != color;
+      old.progress != progress || old.color != color || old.strokeWidth != strokeWidth;
 }
 
 // ──────────────────────────────────────────────
 // SHARE BUTTON
 // ──────────────────────────────────────────────
 
-class _ShareButton extends StatelessWidget {
+class ShareButton extends StatefulWidget {
   final VoidCallback onTap;
   final String label;
+  final String? subtitle;
   final IconData icon;
-  final bool compact;
   final bool enabled;
 
-  const _ShareButton({
+  const ShareButton({
+    super.key,
     required this.onTap,
     required this.label,
+    this.subtitle,
     required this.icon,
-    this.compact = true,
     this.enabled = true,
   });
 
   @override
+  State<ShareButton> createState() => _ShareButtonState();
+}
+
+class _ShareButtonState extends State<ShareButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: enabled ? AdmTokens.primary : AdmTokens.grey100,
-      borderRadius: BorderRadius.circular(10),
-      elevation: 0,
-      child: InkWell(
+    final enabled = widget.enabled;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+      child: Material(
+        color: enabled
+            ? (_hovered ? AdmTokens.secondary : AdmTokens.primary)
+            : AdmTokens.grey100,
         borderRadius: BorderRadius.circular(10),
-        onTap: enabled ? onTap : null,
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: compact ? 14 : 20,
-            vertical: compact ? 10 : 14,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: compact ? 16 : 18,
-                color: enabled ? Colors.white : AdmTokens.grey400),
-              if (!compact) ...[
-                const SizedBox(width: 8),
+        elevation: 0,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: enabled ? widget.onTap : null,
+          splashColor: Colors.white.withValues(alpha: 0.15),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 18,
+                  color: enabled ? Colors.white : AdmTokens.grey400,
+                ),
+                const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(label, style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: enabled ? Colors.white : AdmTokens.grey400,
-                    )),
                     Text(
-                      'Comparte tu avance en redes sociales.',
+                      widget.label,
                       style: TextStyle(
-                        fontSize: 10,
-                        color: enabled
-                            ? Colors.white.withValues(alpha: 0.7)
-                            : AdmTokens.grey300,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: enabled ? Colors.white : AdmTokens.grey400,
+                        letterSpacing: 0.2,
                       ),
                     ),
+                    if (widget.subtitle != null) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        widget.subtitle!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: enabled
+                              ? Colors.white.withValues(alpha: 0.7)
+                              : AdmTokens.grey300,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -544,7 +1002,7 @@ class TopUsersLeaderboard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (users.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: AdmTokens.surface,
           borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
@@ -552,16 +1010,23 @@ class TopUsersLeaderboard extends StatelessWidget {
         ),
         child: Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.leaderboard_outlined, size: 40, color: AdmTokens.grey300),
-              const SizedBox(height: 12),
-              Text('Próximamente', style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w600, color: AdmTokens.grey500,
-              )),
+              Icon(Icons.leaderboard_outlined, size: 36, color: AdmTokens.grey300),
+              const SizedBox(height: 10),
+              Text(
+                'Próximamente',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AdmTokens.grey500,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('El ranking de usuarios estará disponible pronto.', style: TextStyle(
-                fontSize: 13, color: AdmTokens.grey400,
-              )),
+              Text(
+                'El ranking de usuarios estará disponible pronto.',
+                style: TextStyle(fontSize: 12, color: AdmTokens.grey400),
+              ),
             ],
           ),
         ),
@@ -580,60 +1045,188 @@ class TopUsersLeaderboard extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
-            child: Text('Top Usuarios', style: TextStyle(
-              fontSize: 16, fontWeight: FontWeight.w700, color: AdmTokens.grey900,
-            )),
-          ),
-          DataTable(
-            headingRowHeight: 40,
-            dataRowMinHeight: 48,
-            dataRowMaxHeight: 56,
-            horizontalMargin: 20,
-            columnSpacing: 16,
-            showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(AdmTokens.grey50),
-            dataRowColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.hovered)) return AdmTokens.primary.withValues(alpha: 0.04);
-              return null;
-            }),
-            border: TableBorder(
-              horizontalInside: BorderSide(color: AdmTokens.grey100, width: 0.5),
+            child: Text(
+              'Top Usuarios',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AdmTokens.grey900,
+              ),
             ),
-            columns: const [
-              DataColumn(label: Text('#', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AdmTokens.grey500))),
-              DataColumn(label: Text('Usuario', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AdmTokens.grey500))),
-              DataColumn(label: Text('Insignia más alta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AdmTokens.grey500))),
-              DataColumn(label: Text('Nivel', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AdmTokens.grey500))),
-              DataColumn(label: Text('Progreso', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AdmTokens.grey500))),
-            ],
-            rows: List.generate(users.length.clamp(0, 10), (i) {
-              final u = users[i];
-              return DataRow(cells: [
-                DataCell(Text('${i + 1}', style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700, color: AdmTokens.grey700,
-                ))),
-                DataCell(Text(u.nombre, style: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w500, color: AdmTokens.grey800,
-                ))),
-                DataCell(Text(u.badgeName, style: const TextStyle(
-                  fontSize: 12, color: AdmTokens.grey600,
-                ))),
-                DataCell(_LevelBadge(label: u.level)),
-                DataCell(SizedBox(
-                  width: 120,
-                  child: LinearProgressIndicator(
-                    value: u.progress.clamp(0, 1),
-                    minHeight: 6,
-                    borderRadius: BorderRadius.circular(3),
-                    backgroundColor: AdmTokens.grey100,
-                    valueColor: AlwaysStoppedAnimation<Color>(_levelColor(u.level)),
+          ),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowHeight: 40,
+              dataRowMinHeight: 52,
+              dataRowMaxHeight: 60,
+              horizontalMargin: 16,
+              columnSpacing: 14,
+              showCheckboxColumn: false,
+              headingRowColor: WidgetStateProperty.all(AdmTokens.grey50),
+              dataRowColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.hovered)) {
+                  return AdmTokens.primary.withValues(alpha: 0.04);
+                }
+                return null;
+              }),
+              border: TableBorder(
+                horizontalInside: BorderSide(color: AdmTokens.grey100, width: 0.5),
+              ),
+              columns: const [
+                DataColumn(
+                  label: Text(
+                    '#',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AdmTokens.grey500,
+                    ),
                   ),
-                )),
-              ]);
-            }),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Usuario',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AdmTokens.grey500,
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Insignia más alta',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AdmTokens.grey500,
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Nivel',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AdmTokens.grey500,
+                    ),
+                  ),
+                ),
+                DataColumn(
+                  label: Text(
+                    'Progreso',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AdmTokens.grey500,
+                    ),
+                  ),
+                ),
+              ],
+              rows: List.generate(users.length.clamp(0, 10), (i) {
+                final u = users[i];
+                final levelColor = _levelColor(u.level);
+                return DataRow(cells: [
+                  DataCell(
+                    Text(
+                      '${i + 1}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: i < 3 ? levelColor : AdmTokens.grey500,
+                      ),
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AdmTokens.primary.withValues(alpha: 0.1),
+                          child: Text(
+                            u.initials,
+                            style: const TextStyle(
+                              color: AdmTokens.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          u.nombre,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AdmTokens.grey800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DataCell(
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        BadgeIcon(
+                          metaCartillas: u.badgeMetaCartillas,
+                          size: 22,
+                          unlocked: true,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            u.badgeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AdmTokens.grey600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  DataCell(_LevelBadge(label: u.level)),
+                  DataCell(
+                    SizedBox(
+                      width: 110,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(3),
+                            child: LinearProgressIndicator(
+                              value: u.progress.clamp(0, 1),
+                              minHeight: 5,
+                              backgroundColor: AdmTokens.grey100,
+                              valueColor: AlwaysStoppedAnimation<Color>(levelColor),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${(u.progress.clamp(0, 1) * 100).toInt()}%',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: levelColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ]);
+              }),
+            ),
           ),
           const Padding(
-            padding: EdgeInsets.fromLTRB(20, 8, 20, 16),
+            padding: EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Text(
               'Ver ranking completo →',
               style: TextStyle(
@@ -650,13 +1243,21 @@ class TopUsersLeaderboard extends StatelessWidget {
 
   Color _levelColor(String level) {
     switch (level.toLowerCase()) {
-      case 'leyenda': return const Color(0xFFF1C40F);
-      case 'comandante': return const Color(0xFFBDC3C7);
-      case 'élite': case 'elite': return const Color(0xFF8E44AD);
-      case 'profesional': return const Color(0xFFE67E22);
-      case 'experimentado': return const Color(0xFF1ABC9C);
-      case 'operativo': return const Color(0xFF2ECC71);
-      default: return AdmTokens.primary;
+      case 'leyenda':
+        return const Color(0xFFF1C40F);
+      case 'comandante':
+        return const Color(0xFFBDC3C7);
+      case 'élite':
+      case 'elite':
+        return const Color(0xFF8E44AD);
+      case 'profesional':
+        return const Color(0xFF0CBAA4);
+      case 'experimentado':
+        return const Color(0xFF1ABC9C);
+      case 'operativo':
+        return const Color(0xFF2ECC71);
+      default:
+        return const Color(0xFFF6C343);
     }
   }
 }
@@ -670,33 +1271,49 @@ class _LevelBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: _levelColor.withValues(alpha: 0.1),
+        color: _color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Text(label, style: TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-        color: _levelColor,
-      )),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: _color,
+        ),
+      ),
     );
   }
 
-  Color get _levelColor {
+  Color get _color {
     switch (label.toLowerCase()) {
-      case 'leyenda': return const Color(0xFFF1C40F);
-      case 'comandante': return const Color(0xFF7F8C8D);
-      case 'élite': case 'elite': return const Color(0xFF8E44AD);
-      case 'profesional': return const Color(0xFFE67E22);
-      case 'experimentado': return const Color(0xFF1ABC9C);
-      case 'operativo': return const Color(0xFF2ECC71);
-      default: return AdmTokens.primary;
+      case 'leyenda':
+        return const Color(0xFFF1C40F);
+      case 'comandante':
+        return const Color(0xFF7F8C8D);
+      case 'élite':
+      case 'elite':
+        return const Color(0xFF8E44AD);
+      case 'profesional':
+        return const Color(0xFF0CBAA4);
+      case 'experimentado':
+        return const Color(0xFF1ABC9C);
+      case 'operativo':
+        return const Color(0xFF2ECC71);
+      default:
+        return AdmTokens.primary;
     }
   }
 }
 
+// ──────────────────────────────────────────────
+// USER RANK DATA
+// ──────────────────────────────────────────────
+
 class UserRankData {
   final String nombre;
   final String badgeName;
+  final int badgeMetaCartillas;
   final String level;
   final double progress;
   final int totalCartillas;
@@ -705,6 +1322,7 @@ class UserRankData {
   UserRankData({
     required this.nombre,
     required this.badgeName,
+    required this.badgeMetaCartillas,
     required this.level,
     required this.progress,
     required this.totalCartillas,
@@ -713,7 +1331,7 @@ class UserRankData {
 }
 
 // ──────────────────────────────────────────────
-// TOP USERS CARDS (top 3)
+// TOP USERS CARDS (podium)
 // ──────────────────────────────────────────────
 
 class TopUsersCards extends StatelessWidget {
@@ -727,7 +1345,7 @@ class TopUsersCards extends StatelessWidget {
   Widget build(BuildContext context) {
     if (users.isEmpty) {
       return Container(
-        padding: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           color: AdmTokens.surface,
           borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
@@ -735,21 +1353,30 @@ class TopUsersCards extends StatelessWidget {
         ),
         child: Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.emoji_events_outlined, size: 40, color: AdmTokens.grey300),
-              const SizedBox(height: 12),
-              Text('Mejores usuarios', style: TextStyle(
-                fontSize: 16, fontWeight: FontWeight.w600, color: AdmTokens.grey500,
-              )),
+              Icon(Icons.emoji_events_outlined, size: 36, color: AdmTokens.grey300),
+              const SizedBox(height: 10),
+              Text(
+                'Mejores usuarios',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AdmTokens.grey500,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Los mejores agentes aparecerán aquí.', style: TextStyle(
-                fontSize: 13, color: AdmTokens.grey400,
-              )),
+              Text(
+                'Los mejores agentes aparecerán aquí.',
+                style: TextStyle(fontSize: 12, color: AdmTokens.grey400),
+              ),
             ],
           ),
         ),
       );
     }
+
+    final top3 = users.take(3).toList();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -761,13 +1388,18 @@ class TopUsersCards extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Mejores Usuarios', style: TextStyle(
-            fontSize: 16, fontWeight: FontWeight.w700, color: AdmTokens.grey900,
-          )),
+          const Text(
+            'Mejores Usuarios',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AdmTokens.grey900,
+            ),
+          ),
           const SizedBox(height: 16),
-          for (int i = 0; i < users.length.clamp(0, 3); i++) ...[
-            if (i > 0) const SizedBox(height: 12),
-            _TopUserCard(rank: i, user: users[i]),
+          for (int i = 0; i < top3.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _TopUserCard(rank: i, user: top3[i]),
           ],
         ],
       ),
@@ -775,59 +1407,180 @@ class TopUsersCards extends StatelessWidget {
   }
 }
 
-class _TopUserCard extends StatelessWidget {
+class _TopUserCard extends StatefulWidget {
   final int rank;
   final UserRankData user;
 
   const _TopUserCard({required this.rank, required this.user});
 
   @override
+  State<_TopUserCard> createState() => _TopUserCardState();
+}
+
+class _TopUserCardState extends State<_TopUserCard> {
+  bool _hovered = false;
+
+  Color get _borderColor {
+    switch (widget.user.level.toLowerCase()) {
+      case 'leyenda':
+        return const Color(0xFFF1C40F);
+      case 'comandante':
+        return const Color(0xFFBDC3C7);
+      case 'élite':
+      case 'elite':
+        return const Color(0xFF8E44AD);
+      case 'profesional':
+        return const Color(0xFF0CBAA4);
+      case 'experimentado':
+        return const Color(0xFF1ABC9C);
+      case 'operativo':
+        return const Color(0xFF2ECC71);
+      default:
+        return const Color(0xFFF6C343);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AdmTokens.grey50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AdmTokens.grey100),
-      ),
-      child: Row(
-        children: [
-          Text(TopUsersCards._medals[rank], style: const TextStyle(fontSize: 24)),
-          const SizedBox(width: 14),
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: AdmTokens.primary,
-            child: Text(
-              user.initials,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-              ),
-            ),
+    final u = widget.user;
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: _hovered
+            ? (Matrix4.identity()..setTranslationRaw(0, -2, 0))
+            : Matrix4.identity(),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AdmTokens.grey50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _hovered ? _borderColor.withValues(alpha: 0.5) : _borderColor.withValues(alpha: 0.2),
+            width: 1.5,
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          boxShadow: _hovered
+              ? [
+                  BoxShadow(
+                    color: _borderColor.withValues(alpha: 0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(user.nombre, style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w700, color: AdmTokens.grey900,
-                )),
-                const SizedBox(height: 2),
-                Text(user.badgeName, style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w500, color: AdmTokens.grey600,
-                )),
-                const SizedBox(height: 1),
-                Text('${user.totalCartillas} cartillas', style: const TextStyle(
-                  fontSize: 11, color: AdmTokens.grey400,
-                )),
+                Text(
+                  TopUsersCards._medals[widget.rank],
+                  style: const TextStyle(fontSize: 22),
+                ),
+                const SizedBox(width: 10),
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: AdmTokens.primary.withValues(alpha: 0.1),
+                  child: Text(
+                    u.initials,
+                    style: const TextStyle(
+                      color: AdmTokens.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+                ),
               ],
             ),
-          ),
-          _LevelBadge(label: user.level),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              u.nombre,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AdmTokens.grey900,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              u.badgeName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: _borderColor,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${u.totalCartillas} cartillas',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AdmTokens.grey400,
+              ),
+            ),
+            const SizedBox(height: 6),
+            _LevelBadge(label: u.level),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────
+// HELPER: build user rank data from current user
+// ──────────────────────────────────────────────
+
+class UserRankBuilder {
+  static UserRankData fromCurrentUser({
+    required String nombre,
+    required List<InsMdl> allBadges,
+    required int totalCartillas,
+  }) {
+    final unlocked = allBadges.where((b) => b.desbloqueada).toList();
+    final highest = unlocked.isEmpty
+        ? (allBadges.isNotEmpty ? allBadges.first : null)
+        : unlocked.last;
+
+    final level = highest != null
+        ? AchievementTheme.forCartillas(highest.metaCartillas).nombre
+        : 'Novato';
+
+    final initials = nombre.isNotEmpty
+        ? nombre
+            .split(' ')
+            .where((w) => w.isNotEmpty)
+            .take(2)
+            .map((w) => w[0].toUpperCase())
+            .join()
+        : '??';
+
+    final nextBadge = allBadges.isNotEmpty
+        ? allBadges.lastWhere(
+            (b) => !b.desbloqueada,
+            orElse: () => allBadges.last,
+          )
+        : null;
+
+    final progress = nextBadge != null
+        ? (totalCartillas / nextBadge.metaCartillas).clamp(0.0, 1.0).toDouble()
+        : 1.0;
+
+    return UserRankData(
+      nombre: nombre,
+      badgeName: highest?.titulo ?? 'Sin insignias',
+      badgeMetaCartillas: highest?.metaCartillas ?? 0,
+      level: level,
+      progress: progress,
+      totalCartillas: totalCartillas,
+      initials: initials,
     );
   }
 }
@@ -896,22 +1649,44 @@ class _AchievementTabsState extends State<AchievementTabs>
                 indicatorColor: AdmTokens.primary,
                 indicatorWeight: 3,
                 labelStyle: const TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
                 ),
                 tabs: [
-                  Tab(child: _TabLabel('Desbloqueadas', unlocked.length, AdmTokens.success)),
-                  Tab(child: _TabLabel('En progreso', inProgress.length, AdmTokens.primary)),
-                  Tab(child: _TabLabel('Bloqueadas', locked.length, AdmTokens.grey400)),
+                  Tab(
+                    child: _TabLabel('Desbloqueadas', unlocked.length, AdmTokens.success),
+                  ),
+                  Tab(
+                    child: _TabLabel('En progreso', inProgress.length, AdmTokens.primary),
+                  ),
+                  Tab(
+                    child: _TabLabel('Bloqueadas', locked.length, AdmTokens.grey400),
+                  ),
                 ],
               ),
               SizedBox(
-                height: 360,
+                height: 300,
                 child: TabBarView(
                   controller: _tabCtrl,
                   children: [
-                    _BadgeGrid(badges: unlocked, totalCartillas: widget.totalCartillas, nombreUsuario: widget.nombreUsuario, type: _BadgeType.unlocked),
-                    _BadgeGrid(badges: inProgress, totalCartillas: widget.totalCartillas, nombreUsuario: widget.nombreUsuario, type: _BadgeType.inProgress),
-                    _BadgeGrid(badges: locked, totalCartillas: widget.totalCartillas, nombreUsuario: widget.nombreUsuario, type: _BadgeType.locked),
+                    _BadgeGrid(
+                      badges: unlocked,
+                      totalCartillas: widget.totalCartillas,
+                      nombreUsuario: widget.nombreUsuario,
+                      type: _BadgeType.unlocked,
+                    ),
+                    _BadgeGrid(
+                      badges: inProgress,
+                      totalCartillas: widget.totalCartillas,
+                      nombreUsuario: widget.nombreUsuario,
+                      type: _BadgeType.inProgress,
+                    ),
+                    _BadgeGrid(
+                      badges: locked,
+                      totalCartillas: widget.totalCartillas,
+                      nombreUsuario: widget.nombreUsuario,
+                      type: _BadgeType.locked,
+                    ),
                   ],
                 ),
               ),
@@ -989,19 +1764,19 @@ class _BadgeGrid extends StatelessWidget {
     if (badges.isEmpty) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(32),
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.inbox_rounded, size: 36, color: AdmTokens.grey300),
-              const SizedBox(height: 12),
+              Icon(Icons.inbox_rounded, size: 32, color: AdmTokens.grey300),
+              const SizedBox(height: 10),
               Text(
                 type == _BadgeType.unlocked
                     ? 'Aún no has desbloqueado insignias.'
                     : type == _BadgeType.inProgress
                         ? 'No hay insignias en progreso.'
                         : 'No hay insignias bloqueadas.',
-                style: TextStyle(fontSize: 13, color: AdmTokens.grey400),
+                style: TextStyle(fontSize: 12, color: AdmTokens.grey400),
               ),
             ],
           ),
@@ -1010,19 +1785,20 @@ class _BadgeGrid extends StatelessWidget {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final crossAxisCount = constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 500 ? 2 : 1;
+          final crossAxisCount =
+              constraints.maxWidth >= 700 ? 3 : constraints.maxWidth >= 500 ? 2 : 1;
           return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: badges.length,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: crossAxisCount,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              mainAxisExtent: 220,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: 155,
             ),
             itemBuilder: (_, i) => _AchievementCard(
               badge: badges[i],
@@ -1060,27 +1836,31 @@ class _AchievementCard extends StatelessWidget {
     final isInProgress = type == _BadgeType.inProgress;
     final pct = isInProgress
         ? (totalCartillas / badge.metaCartillas).clamp(0.0, 1.0).toDouble()
-        : isUnlocked
-            ? 1.0
-            : 0.0;
+        : isUnlocked ? 1.0 : 0.0;
+
+    final rank = AchievementTheme.forCartillas(badge.metaCartillas);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AdmTokens.surface,
         borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
         border: Border.all(
           color: isUnlocked
-              ? AdmTokens.action.withValues(alpha: 0.5)
-              : AdmTokens.grey100,
+              ? rank.borderColor.withValues(alpha: 0.4)
+              : isInProgress
+                  ? AdmTokens.primary.withValues(alpha: 0.3)
+                  : AdmTokens.grey100,
         ),
-        boxShadow: isUnlocked ? [
-          BoxShadow(
-            color: AdmTokens.action.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ] : null,
+        boxShadow: isUnlocked
+            ? [
+                BoxShadow(
+                  color: rank.glowColor,
+                  blurRadius: 6,
+                  offset: const Offset(0, 1),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1089,25 +1869,25 @@ class _AchievementCard extends StatelessWidget {
             children: [
               BadgeIcon(
                 metaCartillas: badge.metaCartillas,
-                size: 40,
+                size: 34,
                 unlocked: isUnlocked || isInProgress,
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       badge.titulo,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: isUnlocked ? AdmTokens.grey900 : AdmTokens.grey500,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     _StatusBadge(type: type),
                   ],
                 ),
@@ -1118,60 +1898,84 @@ class _AchievementCard extends StatelessWidget {
           Text(
             'Meta: ${badge.metaCartillas} cartillas',
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: AdmTokens.grey500,
+              color: isUnlocked ? rank.subtitleColor : AdmTokens.grey400,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           if (isInProgress)
             Column(
               children: [
-                LinearProgressIndicator(
-                  value: pct,
-                  minHeight: 6,
+                ClipRRect(
                   borderRadius: BorderRadius.circular(3),
-                  backgroundColor: AdmTokens.grey100,
-                  valueColor: const AlwaysStoppedAnimation<Color>(AdmTokens.primary),
-                ),
-                const SizedBox(height: 4),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    '$totalCartillas/${badge.metaCartillas}',
-                    style: const TextStyle(fontSize: 10, color: AdmTokens.grey400),
+                  child: LinearProgressIndicator(
+                    value: pct,
+                    minHeight: 4,
+                    backgroundColor: AdmTokens.grey100,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      rank.progressColor,
+                    ),
                   ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${(pct * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: rank.progressColor,
+                      ),
+                    ),
+                    Text(
+                      '$totalCartillas/${badge.metaCartillas}',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AdmTokens.grey400,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             )
           else if (isUnlocked)
             Row(
               children: [
-                Icon(Icons.check_circle_rounded, size: 14, color: AdmTokens.success),
+                Icon(Icons.check_circle_rounded, size: 13, color: AdmTokens.success),
                 const SizedBox(width: 4),
-                Text(
-                  'Desbloqueada con ${badge.totalAlDesbloquear ?? badge.metaCartillas} cartillas',
-                  style: const TextStyle(fontSize: 10, color: AdmTokens.grey400),
+                Expanded(
+                  child: Text(
+                    'Desbloqueada con ${badge.totalAlDesbloquear ?? badge.metaCartillas} cartillas',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 9, color: AdmTokens.grey400),
+                  ),
                 ),
               ],
             )
           else
             Row(
               children: [
-                Icon(Icons.lock_rounded, size: 14, color: AdmTokens.grey300),
+                Icon(Icons.lock_rounded, size: 13, color: AdmTokens.grey300),
                 const SizedBox(width: 4),
                 Text(
                   'Bloqueada hasta alcanzar la meta',
-                  style: const TextStyle(fontSize: 10, color: AdmTokens.grey300),
+                  style: const TextStyle(fontSize: 9, color: AdmTokens.grey300),
                 ),
               ],
             ),
-          const SizedBox(height: 10),
-          _ShareButton(
+          const SizedBox(height: 6),
+          ShareButton(
             onTap: () => _share(context),
-            label: isUnlocked ? 'Compartir logro' : isInProgress ? 'Compartir progreso' : 'Compartir',
+            label: isUnlocked
+                ? 'Compartir logro'
+                : isInProgress
+                    ? 'Compartir progreso'
+                    : 'Compartir',
             icon: Icons.share_outlined,
-            compact: true,
             enabled: isUnlocked || isInProgress,
           ),
         ],
@@ -1211,67 +2015,20 @@ class _StatusBadge extends StatelessWidget {
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: FontWeight.w700,
           color: color,
           letterSpacing: 0.5,
         ),
       ),
-    );
-  }
-}
-
-// ──────────────────────────────────────────────
-// HELPER: build user rank data from current user
-// ──────────────────────────────────────────────
-
-class UserRankBuilder {
-  static UserRankData fromCurrentUser({
-    required String nombre,
-    required List<InsMdl> allBadges,
-    required int totalCartillas,
-  }) {
-    final unlocked = allBadges.where((b) => b.desbloqueada).toList();
-    final highest = unlocked.isEmpty
-        ? allBadges.isNotEmpty
-            ? allBadges.first
-            : null
-        : unlocked.last;
-
-    final level = highest != null
-        ? AchievementTheme.forCartillas(highest.metaCartillas).nombre
-        : 'Novato';
-
-    final initials = nombre.isNotEmpty
-        ? nombre.split(' ').where((w) => w.isNotEmpty).take(2).map((w) => w[0].toUpperCase()).join()
-        : '??';
-
-    final nextBadge = allBadges.isNotEmpty
-        ? allBadges.lastWhere(
-            (b) => !b.desbloqueada,
-            orElse: () => allBadges.last,
-          )
-        : null;
-
-    final progress = nextBadge != null
-        ? (totalCartillas / nextBadge.metaCartillas).clamp(0.0, 1.0).toDouble()
-        : 1.0;
-
-    return UserRankData(
-      nombre: nombre,
-      badgeName: highest?.titulo ?? 'Sin insignias',
-      level: level,
-      progress: progress,
-      totalCartillas: totalCartillas,
-      initials: initials,
     );
   }
 }

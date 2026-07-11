@@ -86,27 +86,43 @@ class AdminHeader extends StatelessWidget {
   }
 }
 
-class _ToolbarButton extends StatelessWidget {
+class _ToolbarButton extends StatefulWidget {
   final IconData icon;
   final String tooltip;
   final VoidCallback onTap;
   const _ToolbarButton({required this.icon, required this.tooltip, required this.onTap});
 
   @override
+  State<_ToolbarButton> createState() => _ToolbarButtonState();
+}
+
+class _ToolbarButtonState extends State<_ToolbarButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 40,
-      height: 40,
-      child: Material(
-        color: AdmTokens.surface,
-        borderRadius: BorderRadius.circular(10),
-        elevation: 0,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: Tooltip(
-            message: tooltip,
-            child: Icon(icon, size: 20, color: AdmTokens.grey600),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.05 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: Tooltip(
+          message: widget.tooltip,
+          child: Material(
+            color: _hovered ? AdmTokens.grey100 : AdmTokens.surface,
+            borderRadius: BorderRadius.circular(16),
+            elevation: _hovered ? 2 : 0,
+            shadowColor: AdmTokens.grey300,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: widget.onTap,
+              child: SizedBox(
+                width: 40,
+                height: 40,
+                child: Icon(widget.icon, size: 20, color: AdmTokens.grey600),
+              ),
+            ),
           ),
         ),
       ),
@@ -114,35 +130,51 @@ class _ToolbarButton extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+class _ActionButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
   const _ActionButton({required this.icon, required this.label, required this.onTap});
 
   @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: Material(
-        color: AdmTokens.primary,
-        borderRadius: BorderRadius.circular(10),
-        elevation: 0,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 18),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: Colors.white),
-                const SizedBox(width: 8),
-                Text(label, style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                )),
-              ],
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedScale(
+        scale: _hovered ? 1.03 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        child: SizedBox(
+          height: 40,
+          child: Material(
+            color: AdmTokens.primary,
+            borderRadius: BorderRadius.circular(16),
+            elevation: _hovered ? 4 : 0,
+            shadowColor: AdmTokens.primary.withValues(alpha: 0.3),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: widget.onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Row(
+                  children: [
+                    Icon(widget.icon, size: 18, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(widget.label, style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    )),
+                  ],
+                ),
+              ),
             ),
           ),
         ),
@@ -249,7 +281,7 @@ class _AdminSummaryCardTileState extends State<_AdminSummaryCardTile>
                 height: 48,
                 decoration: BoxDecoration(
                   color: c.color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
+                  shape: BoxShape.circle,
                 ),
                 child: Icon(c.icon, color: c.color, size: 22),
               ),
@@ -293,14 +325,17 @@ class AdminSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 48,
+      height: 52,
       child: TextField(
         controller: controller,
-        style: const TextStyle(fontSize: 14),
+        style: const TextStyle(fontSize: 14, color: AdmTokens.grey800),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: TextStyle(color: AdmTokens.grey400),
-          prefixIcon: Icon(Icons.search_rounded, size: 20, color: AdmTokens.grey400),
+          hintStyle: TextStyle(color: AdmTokens.grey500, fontSize: 14, fontWeight: FontWeight.w400),
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 14, right: 8),
+            child: Icon(Icons.search_rounded, size: 20, color: AdmTokens.grey400),
+          ),
           suffixIcon: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -319,13 +354,13 @@ class AdminSearchBar extends StatelessWidget {
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     onTap: onFilters,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: AdmTokens.grey100,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -334,7 +369,7 @@ class AdminSearchBar extends StatelessWidget {
                           const SizedBox(width: 6),
                           Text('Filtros', style: TextStyle(
                             fontSize: 13,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                             color: AdmTokens.grey600,
                           )),
                         ],
@@ -348,17 +383,17 @@ class AdminSearchBar extends StatelessWidget {
           ),
           filled: true,
           fillColor: AdmTokens.surface,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(color: AdmTokens.grey200),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(color: AdmTokens.grey200),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(color: AdmTokens.primary, width: 1.5),
           ),
         ),
@@ -375,17 +410,27 @@ class AdminSearchBar extends StatelessWidget {
 class AdminStatusChip extends StatelessWidget {
   final bool active;
   final String? label;
-  const AdminStatusChip({super.key, required this.active, this.label});
+  final String? status;
+
+  const AdminStatusChip({super.key, required this.active, this.label, this.status});
+
+  static const Map<String, Color> _chipColors = {
+    'Activo': Color(0xFF2BB673),
+    'Suspendido': Color(0xFFF39C12),
+    'Pendiente': Color(0xFF3498DB),
+    'Inactivo': Color(0xFF9EA6B4),
+  };
 
   @override
   Widget build(BuildContext context) {
-    final isActive = active;
+    final resolvedStatus = status ?? (active ? 'Activo' : 'Inactivo');
+    final resolvedLabel = label ?? resolvedStatus;
+    final color = _chipColors[resolvedStatus] ?? (active ? AdmTokens.success : AdmTokens.grey400);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
       decoration: BoxDecoration(
-        color: isActive
-            ? AdmTokens.success.withValues(alpha: 0.1)
-            : AdmTokens.grey100,
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -395,17 +440,18 @@ class AdminStatusChip extends StatelessWidget {
             width: 7,
             height: 7,
             decoration: BoxDecoration(
-              color: isActive ? AdmTokens.success : AdmTokens.grey400,
+              color: color,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 7),
           Text(
-            label ?? (isActive ? 'Activo' : 'Inactivo'),
+            resolvedLabel,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: isActive ? AdmTokens.success : AdmTokens.grey500,
+              color: color,
+              letterSpacing: 0.2,
             ),
           ),
         ],
@@ -418,7 +464,7 @@ class AdminStatusChip extends StatelessWidget {
 // ACTION MENU (PopupMenuButton)
 // ──────────────────────────────────────────────
 
-class AdminActionMenu extends StatelessWidget {
+class AdminActionMenu extends StatefulWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onToggle;
   final VoidCallback? onDelete;
@@ -437,59 +483,75 @@ class AdminActionMenu extends StatelessWidget {
   });
 
   @override
+  State<AdminActionMenu> createState() => _AdminActionMenuState();
+}
+
+class _AdminActionMenuState extends State<AdminActionMenu> {
+  bool _hovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      offset: const Offset(-140, 0),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      itemBuilder: (_) => [
-        if (onEdit != null)
-          PopupMenuItem(
-            value: 'edit',
-            child: _MenuRow(icon: Icons.edit_outlined, text: 'Editar', color: AdmTokens.grey700),
-          ),
-        if (onReset != null)
-          PopupMenuItem(
-            value: 'reset',
-            child: _MenuRow(icon: Icons.lock_reset_outlined, text: 'Restablecer contraseña', color: AdmTokens.grey700),
-          ),
-        if (onToggle != null)
-          PopupMenuItem(
-            value: 'toggle',
-            child: _MenuRow(
-              icon: active ? Icons.block_outlined : Icons.check_circle_outline,
-              text: active ? 'Desactivar' : 'Activar',
-              color: active ? AdmTokens.warning : AdmTokens.success,
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: PopupMenuButton<String>(
+        offset: const Offset(-150, 4),
+        elevation: 4,
+        shadowColor: Colors.black26,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        itemBuilder: (_) => [
+          if (widget.onEdit != null)
+            PopupMenuItem(
+              value: 'edit',
+              child: _MenuRow(icon: Icons.edit_outlined, text: 'Editar', color: AdmTokens.grey700),
             ),
+          if (widget.onReset != null)
+            PopupMenuItem(
+              value: 'reset',
+              child: _MenuRow(icon: Icons.lock_reset_outlined, text: 'Restablecer contraseña', color: AdmTokens.grey700),
+            ),
+          if (widget.onToggle != null)
+            PopupMenuItem(
+              value: 'toggle',
+              child: _MenuRow(
+                icon: widget.active ? Icons.block_outlined : Icons.check_circle_outline,
+                text: widget.active ? 'Desactivar' : 'Activar',
+                color: widget.active ? AdmTokens.warning : AdmTokens.success,
+              ),
+            ),
+          if (widget.onHistory != null)
+            PopupMenuItem(
+              value: 'history',
+              child: _MenuRow(icon: Icons.build_outlined, text: 'Mantenimientos', color: AdmTokens.grey700),
+            ),
+          if (widget.onDelete != null)
+            PopupMenuItem(
+              value: 'delete',
+              child: _MenuRow(icon: Icons.delete_outline, text: 'Eliminar', color: AdmTokens.error),
+            ),
+        ],
+        onSelected: (v) {
+          switch (v) {
+            case 'edit': widget.onEdit?.call();
+            case 'reset': widget.onReset?.call();
+            case 'toggle': widget.onToggle?.call();
+            case 'history': widget.onHistory?.call();
+            case 'delete': widget.onDelete?.call();
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _hovered ? AdmTokens.grey100 : AdmTokens.grey50,
+            shape: BoxShape.circle,
+            boxShadow: _hovered
+                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 6, offset: const Offset(0, 2))]
+                : null,
           ),
-        if (onHistory != null)
-          PopupMenuItem(
-            value: 'history',
-            child: _MenuRow(icon: Icons.build_outlined, text: 'Mantenimientos', color: AdmTokens.grey700),
-          ),
-        if (onDelete != null)
-          PopupMenuItem(
-            value: 'delete',
-            child: _MenuRow(icon: Icons.delete_outline, text: 'Eliminar', color: AdmTokens.error),
-          ),
-      ],
-      onSelected: (v) {
-        switch (v) {
-          case 'edit': onEdit?.call();
-          case 'reset': onReset?.call();
-          case 'toggle': onToggle?.call();
-          case 'history': onHistory?.call();
-          case 'delete': onDelete?.call();
-        }
-      },
-      child: Container(
-        width: 34,
-        height: 34,
-        decoration: BoxDecoration(
-          color: AdmTokens.grey50,
-          borderRadius: BorderRadius.circular(8),
+          child: Icon(Icons.more_horiz_rounded, size: 18, color: AdmTokens.grey500),
         ),
-        child: Icon(Icons.more_horiz_rounded, size: 18, color: AdmTokens.grey500),
       ),
     );
   }
@@ -539,7 +601,7 @@ class AdminPagination extends StatelessWidget {
     final end = (currentPage * pageSize).clamp(0, total);
 
     return Padding(
-      padding: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 14),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -554,14 +616,14 @@ class AdminPagination extends StatelessWidget {
                 icon: Icons.chevron_left_rounded,
                 onTap: currentPage > 1 ? () => onPageChanged(currentPage - 1) : null,
               ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               for (final p in _visiblePages())
                 _PageNum(
                   page: p,
                   isActive: p == currentPage,
                   onTap: () => onPageChanged(p),
                 ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 4),
               _PageBtn(
                 icon: Icons.chevron_right_rounded,
                 onTap: currentPage < totalPages ? () => onPageChanged(currentPage + 1) : null,
@@ -584,7 +646,7 @@ class AdminPagination extends StatelessWidget {
     final start = (cur - 2).clamp(2, total - 4);
     final end = (cur + 2).clamp(5, total - 1);
     if (start > 2) {
-      pages.add(-1); // ellipsis
+      pages.add(-1);
     }
     for (int i = start; i <= end; i++) {
       pages.add(i);
@@ -604,10 +666,10 @@ class _PageBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: onTap != null ? AdmTokens.surface : AdmTokens.grey50,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
       elevation: 0,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: SizedBox(
           width: 36,
@@ -637,10 +699,11 @@ class _PageNum extends StatelessWidget {
     }
     return Material(
       color: isActive ? AdmTokens.primary : Colors.transparent,
-      borderRadius: BorderRadius.circular(10),
-      elevation: 0,
+      borderRadius: BorderRadius.circular(12),
+      elevation: isActive ? 2 : 0,
+      shadowColor: isActive ? AdmTokens.primary.withValues(alpha: 0.3) : null,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: isActive ? null : onTap,
         child: SizedBox(
           width: 36,
@@ -650,7 +713,7 @@ class _PageNum extends StatelessWidget {
               '$page',
               style: TextStyle(
                 fontSize: 13,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 color: isActive ? Colors.white : AdmTokens.grey600,
               ),
             ),
@@ -696,11 +759,11 @@ class AdminTable extends StatelessWidget {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: DataTable(
-          headingRowHeight: 48,
-          dataRowMinHeight: 48,
-          dataRowMaxHeight: 56,
-          horizontalMargin: 20,
-          columnSpacing: 24,
+          headingRowHeight: 52,
+          dataRowMinHeight: 52,
+          dataRowMaxHeight: 60,
+          horizontalMargin: 24,
+          columnSpacing: 32,
           showCheckboxColumn: false,
           headingRowColor: WidgetStateProperty.all(AdmTokens.grey50),
           dataRowColor: WidgetStateProperty.resolveWith((states) {
@@ -708,7 +771,7 @@ class AdminTable extends StatelessWidget {
             return null;
           }),
           border: TableBorder(
-            horizontalInside: BorderSide(color: AdmTokens.grey100, width: 0.5),
+            horizontalInside: BorderSide(color: AdmTokens.grey100.withValues(alpha: 0.3), width: 0.5),
           ),
           columns: [
             for (final column in columns)
@@ -717,7 +780,7 @@ class AdminTable extends StatelessWidget {
                   column,
                   style: const TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
                     color: AdmTokens.grey500,
                     letterSpacing: 0.5,
                   ),
@@ -731,7 +794,7 @@ class AdminTable extends StatelessWidget {
                       width: 600,
                       child: Center(
                         child: Padding(
-                          padding: const EdgeInsets.all(32),
+                          padding: const EdgeInsets.all(40),
                           child: Column(
                             children: [
                               Icon(Icons.inbox_rounded, size: 40, color: AdmTokens.grey300),
@@ -1000,6 +1063,7 @@ class AdmAsyncTable extends StatelessWidget {
   final ValueChanged<int>? onPageChanged;
   final ValueChanged<String>? onSearch;
   final String? searchHint;
+  final List<AdminSummaryCardData>? Function(List<Map<String, dynamic>> items)? summaryBuilder;
 
   const AdmAsyncTable({
     super.key,
@@ -1017,6 +1081,7 @@ class AdmAsyncTable extends StatelessWidget {
     this.onPageChanged,
     this.onSearch,
     this.searchHint,
+    this.summaryBuilder,
   });
 
   @override
@@ -1025,8 +1090,9 @@ class AdmAsyncTable extends StatelessWidget {
       future: future,
       builder: (context, snapshot) {
         final items = snapshot.data ?? [];
+        final summaryCards = summaryBuilder?.call(items);
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+          padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1036,6 +1102,10 @@ class AdmAsyncTable extends StatelessWidget {
                 onRefresh: onRefresh,
                 onCreate: onCreate,
               ),
+              if (summaryCards != null && summaryCards.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                AdminSummaryRow(cards: summaryCards),
+              ],
               if (onSearch != null) ...[
                 const SizedBox(height: 12),
                 AdminSearchBar(

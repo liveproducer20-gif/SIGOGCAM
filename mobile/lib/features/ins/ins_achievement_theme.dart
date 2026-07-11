@@ -117,17 +117,17 @@ class AchievementTheme {
   static const profesional = AchievementTheme(
     rank: AchievementRank.profesional,
     nombre: 'Profesional',
-    accentColor: Color(0xFFE67E22),
-    progressColor: Color(0xFFE67E22),
-    glowColor: Color(0x30E67E22),
+    accentColor: Color(0xFF0CBAA4),
+    progressColor: Color(0xFF0CBAA4),
+    glowColor: Color(0x300CBAA4),
     borderColor: instBlue,
-    buttonColor: Color(0xFFE67E22),
+    buttonColor: Color(0xFF0CBAA4),
     buttonTextColor: white,
-    titleColor: Color(0xFFE67E22),
+    titleColor: Color(0xFF0CBAA4),
     dividerColor: Color(0xFFE8EDF5),
     subtitleColor: Color(0xFF6B7A8F),
-    confettiColors: [Color(0xFFE67E22), white, Color(0xFFF0B27A)],
-    particleColors: [Color(0x80E67E22), Color(0x50FFFFFF)],
+    confettiColors: [Color(0xFF0CBAA4), white, Color(0xFFA3E4D7)],
+    particleColors: [Color(0x800CBAA4), Color(0x50FFFFFF)],
   );
 
   static const elite = AchievementTheme(
