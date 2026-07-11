@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import '../../core/auth/app_user.dart';
 import '../adm/adm_design_tokens.dart';
 import '../dash/wdg/top_bar_wdg.dart';
+import 'badge_catalog.dart';
 import 'ins_achievement_theme.dart';
 import 'ins_api.dart';
 import 'ins_mdl.dart';
-import 'ins_share_wdg.dart';
+import 'ins_share_modal.dart';
 import 'ins_widgets.dart';
 
 class InsHomeScr extends StatefulWidget {
@@ -98,11 +99,10 @@ class _InsHomeScrState extends State<InsHomeScr> {
                 .where((b) => !b.desbloqueada && b.metaCartillas <= data.progreso.totalCartillasGeneradas)
                 .toList();
 
-            final highestUnlocked = unlocked.isEmpty
-                ? (data.allBadges.isNotEmpty ? data.allBadges.first : null)
-                : unlocked.last;
+            final unlockedMetas = unlocked.map((b) => b.metaCartillas).toList();
+            final highestUnlocked = BadgeCatalog.lastUnlocked(unlockedMetas);
             final nivelActual = highestUnlocked != null
-                ? AchievementTheme.forCartillas(highestUnlocked.metaCartillas).nombre
+                ? LevelTheme.forNivel(highestUnlocked.nivel).name
                 : 'Novato';
 
             return RefreshIndicator(
@@ -157,19 +157,22 @@ class _InsHomeScrState extends State<InsHomeScr> {
   }
 
   void _shareProgreso(BuildContext context, _InsData data) {
-    final badge = data.allBadges.isNotEmpty
-        ? data.allBadges.lastWhere(
-            (b) => !b.desbloqueada,
-            orElse: () => data.allBadges.last,
-          )
-        : null;
-    if (badge == null) return;
-    showDialog(
-      context: context,
-      builder: (_) => InsShareWdg(
-        insignia: badge,
-        nombreUsuario: widget.user.nombreCompleto,
-      ),
+    final unlocked = data.allBadges.where((b) => b.desbloqueada).toList();
+    final highest = unlocked.isEmpty ? null : unlocked.last;
+    if (highest == null) return;
+    final meta = highest.metaCartillas;
+    final total = highest.totalAlDesbloquear ?? meta;
+    final catalogEntry = BadgeCatalog.byMeta(meta);
+    showShareAchievement(
+      context,
+      titulo: highest.titulo,
+      mensaje: highest.descripcion,
+      metaCartillas: meta,
+      totalCartillas: total,
+      nombreUsuario: widget.user.nombreCompleto,
+      nivelName: catalogEntry != null
+          ? LevelTheme.forNivel(catalogEntry.nivel).name
+          : null,
     );
   }
 

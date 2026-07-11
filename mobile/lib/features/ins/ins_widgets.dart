@@ -2,10 +2,11 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../adm/adm_design_tokens.dart';
+import 'badge_catalog.dart';
 import 'ins_achievement_theme.dart';
-import 'ins_badge_dlg.dart';
 import 'ins_icn_wdg.dart';
 import 'ins_mdl.dart';
+import 'ins_share_modal.dart';
 
 // ──────────────────────────────────────────────
 // TIMELINE — horizontal progress stepper
@@ -195,8 +196,7 @@ class _TimelineNodeState extends State<_TimelineNode>
     super.dispose();
   }
 
-  AchievementTheme get _rank =>
-      AchievementTheme.forCartillas(widget.badge.metaCartillas);
+  LevelTheme get _theme => widget.badge.levelTheme;
 
   @override
   Widget build(BuildContext context) {
@@ -235,7 +235,7 @@ class _TimelineNodeState extends State<_TimelineNode>
                   badge: widget.badge,
                   isUnlocked: widget.isUnlocked,
                   isCurrent: widget.isCurrent,
-                  rank: _rank,
+                  theme: _theme,
                 ),
               ),
             ),
@@ -279,13 +279,13 @@ class _NodeIcon extends StatelessWidget {
   final InsMdl badge;
   final bool isUnlocked;
   final bool isCurrent;
-  final AchievementTheme rank;
+  final LevelTheme theme;
 
   const _NodeIcon({
     required this.badge,
     required this.isUnlocked,
     required this.isCurrent,
-    required this.rank,
+    required this.theme,
   });
 
   @override
@@ -726,8 +726,8 @@ class AchievementProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final complete = progreso.proximaInsignia == null;
     final pct = progreso.porcentajeProgreso.clamp(0, 100) / 100;
-    final rank = progreso.metaProxima != null
-        ? AchievementTheme.forCartillas(progreso.metaProxima!)
+    final theme = progreso.metaProxima != null
+        ? LevelTheme.forMeta(progreso.metaProxima!)
         : null;
 
     return Container(
@@ -763,11 +763,11 @@ class AchievementProgressCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '%',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: rank?.accentColor ?? AdmTokens.grey500,
+                    '%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: theme?.accentColor ?? AdmTokens.grey500,
                       ),
                     ),
                   ],
@@ -790,7 +790,7 @@ class AchievementProgressCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: rank?.titleColor ?? AdmTokens.grey900,
+                    color: theme?.titleColor ?? AdmTokens.grey900,
                     letterSpacing: -0.2,
                   ),
                 ),
@@ -802,7 +802,7 @@ class AchievementProgressCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: rank?.subtitleColor ?? AdmTokens.grey500,
+                    color: theme?.subtitleColor ?? AdmTokens.grey500,
                   ),
                 ),
                 if (!complete) ...[
@@ -814,7 +814,7 @@ class AchievementProgressCard extends StatelessWidget {
                       minHeight: 5,
                       backgroundColor: AdmTokens.grey100,
                       valueColor: AlwaysStoppedAnimation<Color>(
-                        rank?.progressColor ?? AdmTokens.primary,
+                        theme?.progressColor ?? AdmTokens.primary,
                       ),
                     ),
                   ),
@@ -1243,16 +1243,24 @@ class TopUsersLeaderboard extends StatelessWidget {
 
   Color _levelColor(String level) {
     switch (level.toLowerCase()) {
+      case 'máximo':
+      case 'maximo':
+        return const Color(0xFFFFD700);
+      case 'mítico':
+      case 'mitico':
+        return const Color(0xFF4A7CC9);
+      case 'supremo':
+        return const Color(0xFF95A5A6);
       case 'leyenda':
-        return const Color(0xFFF1C40F);
-      case 'comandante':
-        return const Color(0xFFBDC3C7);
+        return const Color(0xFFCD7F32);
       case 'élite':
       case 'elite':
+        return const Color(0xFFE74C3C);
+      case 'experto':
+        return const Color(0xFFE67E22);
+      case 'avanzado':
         return const Color(0xFF8E44AD);
       case 'profesional':
-        return const Color(0xFF0CBAA4);
-      case 'experimentado':
         return const Color(0xFF1ABC9C);
       case 'operativo':
         return const Color(0xFF2ECC71);
@@ -1287,16 +1295,24 @@ class _LevelBadge extends StatelessWidget {
 
   Color get _color {
     switch (label.toLowerCase()) {
+      case 'máximo':
+      case 'maximo':
+        return const Color(0xFFFFD700);
+      case 'mítico':
+      case 'mitico':
+        return const Color(0xFF4A7CC9);
+      case 'supremo':
+        return const Color(0xFF95A5A6);
       case 'leyenda':
-        return const Color(0xFFF1C40F);
-      case 'comandante':
-        return const Color(0xFF7F8C8D);
+        return const Color(0xFFCD7F32);
       case 'élite':
       case 'elite':
+        return const Color(0xFFE74C3C);
+      case 'experto':
+        return const Color(0xFFE67E22);
+      case 'avanzado':
         return const Color(0xFF8E44AD);
       case 'profesional':
-        return const Color(0xFF0CBAA4);
-      case 'experimentado':
         return const Color(0xFF1ABC9C);
       case 'operativo':
         return const Color(0xFF2ECC71);
@@ -1422,16 +1438,24 @@ class _TopUserCardState extends State<_TopUserCard> {
 
   Color get _borderColor {
     switch (widget.user.level.toLowerCase()) {
+      case 'máximo':
+      case 'maximo':
+        return const Color(0xFFFFD700);
+      case 'mítico':
+      case 'mitico':
+        return const Color(0xFF4A7CC9);
+      case 'supremo':
+        return const Color(0xFF95A5A6);
       case 'leyenda':
-        return const Color(0xFFF1C40F);
-      case 'comandante':
-        return const Color(0xFFBDC3C7);
+        return const Color(0xFFCD7F32);
       case 'élite':
       case 'elite':
+        return const Color(0xFFE74C3C);
+      case 'experto':
+        return const Color(0xFFE67E22);
+      case 'avanzado':
         return const Color(0xFF8E44AD);
       case 'profesional':
-        return const Color(0xFF0CBAA4);
-      case 'experimentado':
         return const Color(0xFF1ABC9C);
       case 'operativo':
         return const Color(0xFF2ECC71);
@@ -1544,13 +1568,14 @@ class UserRankBuilder {
     required List<InsMdl> allBadges,
     required int totalCartillas,
   }) {
-    final unlocked = allBadges.where((b) => b.desbloqueada).toList();
-    final highest = unlocked.isEmpty
-        ? (allBadges.isNotEmpty ? allBadges.first : null)
-        : unlocked.last;
+    final unlockedMetas = allBadges
+        .where((b) => b.desbloqueada)
+        .map((b) => b.metaCartillas)
+        .toList();
+    final highest = BadgeCatalog.lastUnlocked(unlockedMetas);
 
     final level = highest != null
-        ? AchievementTheme.forCartillas(highest.metaCartillas).nombre
+        ? LevelTheme.forNivel(highest.nivel).name
         : 'Novato';
 
     final initials = nombre.isNotEmpty
@@ -1562,20 +1587,11 @@ class UserRankBuilder {
             .join()
         : '??';
 
-    final nextBadge = allBadges.isNotEmpty
-        ? allBadges.lastWhere(
-            (b) => !b.desbloqueada,
-            orElse: () => allBadges.last,
-          )
-        : null;
-
-    final progress = nextBadge != null
-        ? (totalCartillas / nextBadge.metaCartillas).clamp(0.0, 1.0).toDouble()
-        : 1.0;
+    final progress = BadgeCatalog.intervalProgress(totalCartillas, unlockedMetas);
 
     return UserRankData(
       nombre: nombre,
-      badgeName: highest?.titulo ?? 'Sin insignias',
+      badgeName: highest?.name ?? 'Sin insignias',
       badgeMetaCartillas: highest?.metaCartillas ?? 0,
       level: level,
       progress: progress,
@@ -1838,7 +1854,7 @@ class _AchievementCard extends StatelessWidget {
         ? (totalCartillas / badge.metaCartillas).clamp(0.0, 1.0).toDouble()
         : isUnlocked ? 1.0 : 0.0;
 
-    final rank = AchievementTheme.forCartillas(badge.metaCartillas);
+    final theme = badge.levelTheme;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1846,16 +1862,16 @@ class _AchievementCard extends StatelessWidget {
         color: AdmTokens.surface,
         borderRadius: BorderRadius.circular(AdmTokens.radiusMd),
         border: Border.all(
-          color: isUnlocked
-              ? rank.borderColor.withValues(alpha: 0.4)
-              : isInProgress
-                  ? AdmTokens.primary.withValues(alpha: 0.3)
-                  : AdmTokens.grey100,
-        ),
-        boxShadow: isUnlocked
-            ? [
-                BoxShadow(
-                  color: rank.glowColor,
+              color: isUnlocked
+                  ? theme.borderColor.withValues(alpha: 0.4)
+                  : isInProgress
+                      ? AdmTokens.primary.withValues(alpha: 0.3)
+                      : AdmTokens.grey100,
+          ),
+          boxShadow: isUnlocked
+              ? [
+                  BoxShadow(
+                    color: theme.glowColor,
                   blurRadius: 6,
                   offset: const Offset(0, 1),
                 ),
@@ -1900,7 +1916,7 @@ class _AchievementCard extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: isUnlocked ? rank.subtitleColor : AdmTokens.grey400,
+              color: isUnlocked ? theme.subtitleColor : AdmTokens.grey400,
             ),
           ),
           const SizedBox(height: 6),
@@ -1914,7 +1930,7 @@ class _AchievementCard extends StatelessWidget {
                     minHeight: 4,
                     backgroundColor: AdmTokens.grey100,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      rank.progressColor,
+                      theme.progressColor,
                     ),
                   ),
                 ),
@@ -1927,7 +1943,7 @@ class _AchievementCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
-                        color: rank.progressColor,
+                        color: theme.progressColor,
                       ),
                     ),
                     Text(
@@ -1986,17 +2002,17 @@ class _AchievementCard extends StatelessWidget {
   void _share(BuildContext context) {
     final meta = badge.metaCartillas;
     final total = badge.totalAlDesbloquear ?? meta;
-    showDialog(
-      context: context,
-      builder: (_) => AchievementUnlockedDialog(
-        insignia: InsigniaDesbloqueadaMdl(
-          titulo: badge.titulo,
-          mensaje: badge.descripcion,
-          icono: meta.toString(),
-        ),
-        totalCartillas: total,
-        nombreUsuario: nombreUsuario,
-      ),
+    final catalogEntry = BadgeCatalog.byMeta(meta);
+    showShareAchievement(
+      context,
+      titulo: badge.titulo,
+      mensaje: badge.descripcion,
+      metaCartillas: meta,
+      totalCartillas: total,
+      nombreUsuario: nombreUsuario,
+      nivelName: catalogEntry != null
+          ? LevelTheme.forNivel(catalogEntry.nivel).name
+          : null,
     );
   }
 }

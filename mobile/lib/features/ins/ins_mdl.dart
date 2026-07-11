@@ -1,3 +1,6 @@
+import 'badge_catalog.dart';
+import 'ins_achievement_theme.dart';
+
 class InsMdl {
   final int id;
   final String codigo;
@@ -138,4 +141,11 @@ class InsigniaDesbloqueadaMdl {
 int _toInt(Object? value) {
   if (value is int) return value;
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+extension InsMdlExt on InsMdl {
+  BadgeEntry? get catalogEntry => BadgeCatalog.byMeta(metaCartillas);
+  int get nivel => catalogEntry?.nivel ?? 1;
+  LevelTheme get levelTheme => LevelTheme.forNivel(nivel);
+  String get nivelName => levelTheme.name;
 }

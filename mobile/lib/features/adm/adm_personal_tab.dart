@@ -59,8 +59,8 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
   @override
   Widget build(BuildContext context) {
     return AdmAsyncTable(
-      title: 'Personal',
-      subtitle: 'Cuenta institucional, datos personales y datos operativos.',
+      contentTitle: 'Personal',
+      contentSubtitle: 'Cuenta institucional, datos personales y datos operativos.',
       future: _future,
       columns: const ['Cédula', 'Nombres', 'Correo', 'Grado', 'Rol', 'Estado', 'Acciones'],
       onRefresh: _reload,

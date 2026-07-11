@@ -88,7 +88,6 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final tabs = _cachedTabs!;
-    final curIdx = _tabCtrl.index;
 
     if (tabs.isEmpty) {
       return Scaffold(
@@ -125,10 +124,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
       ),
       body: Column(
         children: [
-          // Header section
-          _buildPageHeader(tabs[curIdx]),
-
-          // Submenu
+          // Submenu card
           _buildSubmenu(tabs),
 
           // Tab content
@@ -137,7 +133,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
               controller: _tabCtrl,
               children: [
                 for (final tab in tabs)
-                  RepaintBoundary(child: tab.child),
+                  tab.child,
               ],
             ),
           ),
@@ -146,94 +142,24 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildPageHeader(_TabDef tab) {
-    final user = widget.user;
-    return Container(
-      padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AdmTokens.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(tab.icon, color: AdmTokens.primary, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Administración', style: AdmTokens.h2),
-              const SizedBox(height: 2),
-              Text('Gestión centralizada de usuarios y catálogos institucionales.',
-                style: AdmTokens.subtitle),
-            ],
-          ),
-          const Spacer(),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(10),
-              onTap: widget.onNotifications,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AdmTokens.grey50,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(Icons.notifications_outlined, size: 20, color: AdmTokens.grey600),
-              ),
-            ),
-          ),
-          const SizedBox(width: 14),
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: AdmTokens.primary,
-            child: Text(
-              _initials(user),
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(user.nombreCompleto,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AdmTokens.grey800)),
-              const SizedBox(height: 1),
-              Text(user.rol,
-                style: const TextStyle(fontSize: 12, color: AdmTokens.grey500)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _initials(AppUser user) {
-    final parts = user.nombreCompleto.split(' ').where((p) => p.isNotEmpty).toList();
-    if (parts.length >= 2) return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-    if (parts.isNotEmpty) return parts.first[0].toUpperCase();
-    return 'U';
-  }
-
   Widget _buildSubmenu(List<_TabDef> tabs) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 14, 28, 0),
       child: Container(
-        height: 48,
         decoration: BoxDecoration(
           color: AdmTokens.surface,
           borderRadius: BorderRadius.circular(14),
-          boxShadow: AdmTokens.cardShadow,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
           itemCount: tabs.length,
           itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
         ),
@@ -251,46 +177,41 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
         onTap: () => _tabCtrl.animateTo(i),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           decoration: BoxDecoration(
-            color: isActive
-                ? AdmTokens.primary
-                : isHovered
-                    ? AdmTokens.primary.withValues(alpha: 0.06)
-                    : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
+            border: Border(
+              bottom: BorderSide(
+                color: isActive ? AdmTokens.primary : Colors.transparent,
+                width: 3,
+              ),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 tab.icon,
-                size: 18,
+                size: 20,
                 color: isActive
-                    ? Colors.white
+                    ? AdmTokens.primary
                     : isHovered
-                        ? AdmTokens.primary
+                        ? AdmTokens.primary.withValues(alpha: 0.6)
                         : AdmTokens.grey400,
               ),
               const SizedBox(width: 8),
               Text(
                 tab.label,
                 style: TextStyle(
-                  fontSize: 13,
+                  fontSize: 14,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
                   color: isActive
-                      ? Colors.white
+                      ? AdmTokens.primary
                       : isHovered
-                          ? AdmTokens.primary
-                          : AdmTokens.grey500,
+                          ? AdmTokens.primary.withValues(alpha: 0.6)
+                          : const Color(0xFF4B5563),
                 ),
               ),
-              if (isActive)
-                const Padding(
-                  padding: EdgeInsets.only(left: 6),
-                  child: Icon(Icons.arrow_drop_up_rounded, size: 16, color: Colors.white70),
-                ),
             ],
           ),
         ),

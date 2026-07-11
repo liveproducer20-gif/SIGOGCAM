@@ -45,8 +45,8 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
   late final Animation<double> _contentFade;
   late final Animation<double> _progressAnim;
 
-  AchievementTheme get _theme =>
-      AchievementTheme.forCartillas(int.tryParse(widget.insignia.icono) ?? 0);
+  LevelTheme get _theme =>
+      LevelTheme.forMeta(int.tryParse(widget.insignia.icono) ?? 0);
 
   int get _meta => int.tryParse(widget.insignia.icono) ?? 0;
   int get _total => widget.totalCartillas ?? _meta;
@@ -214,7 +214,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildCard(BuildContext context, double cardW, AchievementTheme thm) {
+  Widget _buildCard(BuildContext context, double cardW, LevelTheme thm) {
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -222,7 +222,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
         constraints: const BoxConstraints(maxHeight: 0.9),
         margin: const EdgeInsets.symmetric(vertical: 40),
         decoration: BoxDecoration(
-          color: AchievementTheme.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: thm.borderColor.withValues(alpha: 0.15)),
         ),
@@ -271,7 +271,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildHeader(AchievementTheme thm) {
+  Widget _buildHeader(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _titleFade,
       builder: (context, _) {
@@ -323,7 +323,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildBadgeSection(AchievementTheme thm) {
+  Widget _buildBadgeSection(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (context, _) {
@@ -372,7 +372,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildTextSection(AchievementTheme thm) {
+  Widget _buildTextSection(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _contentFade,
       builder: (context, _) {
@@ -411,7 +411,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildDivider(AchievementTheme thm) {
+  Widget _buildDivider(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _contentFade,
       builder: (context, _) {
@@ -426,7 +426,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildProgressSection(AchievementTheme thm) {
+  Widget _buildProgressSection(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _progressAnim,
       builder: (context, _) {
@@ -503,7 +503,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildActions(BuildContext context, AchievementTheme thm) {
+  Widget _buildActions(BuildContext context, LevelTheme thm) {
     final isDesktop = MediaQuery.of(context).size.width >= 768;
     return AnimatedBuilder(
       animation: _contentFade,
@@ -543,7 +543,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildShareButton(AchievementTheme thm) {
+  Widget _buildShareButton(LevelTheme thm) {
     if (_generating) {
       return const Center(
         child: Padding(
@@ -565,18 +565,18 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildContinueButton(AchievementTheme thm) {
+  Widget _buildContinueButton(LevelTheme thm) {
     return _ActionBtn(
       label: 'Continuar',
       icon: Icons.arrow_forward_rounded,
-      bgColor: AchievementTheme.white,
+      bgColor: Colors.white,
       textColor: thm.borderColor,
       borderColor: thm.dividerColor,
       onPressed: _handleClose,
     );
   }
 
-  Widget _buildCloseButton(AchievementTheme thm) {
+  Widget _buildCloseButton(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _contentFade,
       builder: (context, _) {
@@ -603,7 +603,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
     );
   }
 
-  Widget _buildParticles(AchievementTheme thm) {
+  Widget _buildParticles(LevelTheme thm) {
     return AnimatedBuilder(
       animation: _contentFade,
       builder: (context, _) {
@@ -701,7 +701,7 @@ class _AchievementUnlockedDialogState extends State<AchievementUnlockedDialog>
                       end: Alignment.bottomCenter,
                       colors: [
                         Color(0xFFF0F7FF),
-                        AchievementTheme.white,
+                        Colors.white,
                         Color(0xFFFFF9E6),
                       ],
                     ),
@@ -881,7 +881,7 @@ class _ActionBtn extends StatelessWidget {
 // ── Confetti painter for share card ─────────────────────────────
 
 class _ShareConfettiPainter extends CustomPainter {
-  final AchievementTheme thm;
+  final LevelTheme thm;
 
   _ShareConfettiPainter({required this.thm});
 
@@ -890,7 +890,7 @@ class _ShareConfettiPainter extends CustomPainter {
     final rng = math.Random(42);
     final colors = [
       thm.accentColor,
-      AchievementTheme.white.withValues(alpha: 0.6),
+      Colors.white.withValues(alpha: 0.6),
       ...thm.confettiColors,
       thm.borderColor.withValues(alpha: 0.3),
     ];
@@ -931,7 +931,7 @@ class _ShareConfettiPainter extends CustomPainter {
 // ── Particle painter for dialog background ──────────────────────
 
 class _ParticlePainter extends CustomPainter {
-  final AchievementTheme thm;
+  final LevelTheme thm;
 
   _ParticlePainter({required this.thm});
 
