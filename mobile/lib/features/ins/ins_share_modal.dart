@@ -81,16 +81,20 @@ class _InsShareModalState extends State<_InsShareModal> {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             children: [
               // Handle bar
-              Container(
-                margin: const EdgeInsets.only(top: 10),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 10),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               // Title
@@ -98,6 +102,7 @@ class _InsShareModalState extends State<_InsShareModal> {
                 padding: EdgeInsets.only(top: 16, bottom: 8),
                 child: Text(
                   'Compartir logro',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
@@ -105,78 +110,70 @@ class _InsShareModalState extends State<_InsShareModal> {
                   ),
                 ),
               ),
-              // Scrollable content
-              Expanded(
-                child: SingleChildScrollView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    children: [
-                      // Share card preview
-                      RepaintBoundary(
-                        key: _repaintKey,
-                        child: _ShareCard(
-                          width: cardWidth,
-                          height: cardHeight,
-                          titulo: widget.titulo,
-                          mensaje: widget.mensaje,
-                          metaCartillas: widget.metaCartillas,
-                          totalCartillas: widget.totalCartillas,
-                          nombreUsuario: widget.nombreUsuario,
-                          nivelName: _nivel,
-                          theme: _theme,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Action buttons
-                      if (_generating)
-                        const Padding(
-                          padding: EdgeInsets.all(24),
-                          child: CircularProgressIndicator(strokeWidth: 3),
-                        )
-                      else ...[
-                        _ActionRow(
-                          icon: Icons.copy_rounded,
-                          label: 'Copiar texto',
-                          color: AdmTokens.primary,
-                          onTap: _copyText,
-                        ),
-                        const SizedBox(height: 10),
-                        _ActionRow(
-                          icon: Icons.share_rounded,
-                          label: 'Compartir',
-                          color: const Color(0xFF25D366),
-                          onTap: _share,
-                        ),
-                        const SizedBox(height: 10),
-                        _ActionRow(
-                          icon: Icons.download_rounded,
-                          label: 'Descargar imagen',
-                          color: const Color(0xFF8E44AD),
-                          onTap: _download,
-                        ),
-                      ],
-                      const SizedBox(height: 12),
-                      // Close
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AdmTokens.grey500,
-                            side: BorderSide(color: AdmTokens.grey200),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                          ),
-                          child: const Text('Cerrar',
-                            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+              // Share card preview
+              Center(
+                child: RepaintBoundary(
+                  key: _repaintKey,
+                  child: _ShareCard(
+                    width: cardWidth,
+                    height: cardHeight,
+                    titulo: widget.titulo,
+                    mensaje: widget.mensaje,
+                    metaCartillas: widget.metaCartillas,
+                    totalCartillas: widget.totalCartillas,
+                    nombreUsuario: widget.nombreUsuario,
+                    nivelName: _nivel,
+                    theme: _theme,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Action buttons
+              if (_generating)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: CircularProgressIndicator(strokeWidth: 3),
+                  ),
+                )
+              else ...[
+                _ActionRow(
+                  icon: Icons.copy_rounded,
+                  label: 'Copiar texto',
+                  color: AdmTokens.primary,
+                  onTap: _copyText,
+                ),
+                const SizedBox(height: 10),
+                _ActionRow(
+                  icon: Icons.share_rounded,
+                  label: 'Compartir',
+                  color: const Color(0xFF25D366),
+                  onTap: _share,
+                ),
+                const SizedBox(height: 10),
+                _ActionRow(
+                  icon: Icons.download_rounded,
+                  label: 'Descargar imagen',
+                  color: const Color(0xFF8E44AD),
+                  onTap: _download,
+                ),
+              ],
+              const SizedBox(height: 12),
+              // Close
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AdmTokens.grey500,
+                    side: BorderSide(color: AdmTokens.grey200),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text('Cerrar',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                 ),
               ),
