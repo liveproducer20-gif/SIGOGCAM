@@ -42,31 +42,85 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   List<_TabDef> _buildTabs() {
     final list = <_TabDef>[];
     if (widget.user.hasPermission('personal.ver')) {
-      list.add(_TabDef(icon: Icons.groups_rounded, label: 'Personal', child: PersonalTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.groups_rounded,
+          label: 'Personal',
+          child: PersonalTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('catalogos.ver')) {
-      list.add(_TabDef(icon: Icons.list_alt_rounded, label: 'Catálogos', child: CatalogosTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.list_alt_rounded,
+          label: 'Catálogos',
+          child: CatalogosTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('roles.ver')) {
-      list.add(_TabDef(icon: Icons.admin_panel_settings_rounded, label: 'Roles', child: RolesTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.admin_panel_settings_rounded,
+          label: 'Roles',
+          child: RolesTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('lugares_servicio.ver')) {
-      list.add(_TabDef(icon: Icons.place_rounded, label: 'Lugares', child: LugaresTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.place_rounded,
+          label: 'Lugares',
+          child: LugaresTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('rutas.ver')) {
-      list.add(_TabDef(icon: Icons.map_rounded, label: 'Rutas', child: RutasTab(api: api)));
+      list.add(
+        _TabDef(
+          icon: Icons.map_rounded,
+          label: 'Rutas',
+          child: RutasTab(api: api),
+        ),
+      );
     }
     if (widget.user.hasPermission('personal.ver')) {
-      list.add(_TabDef(icon: Icons.school_rounded, label: 'Grados', child: GradosTab(api: api)));
+      list.add(
+        _TabDef(
+          icon: Icons.school_rounded,
+          label: 'Grados',
+          child: GradosTab(api: api),
+        ),
+      );
     }
     if (widget.user.hasPermission('eas.ver')) {
-      list.add(_TabDef(icon: Icons.location_city_rounded, label: 'EAS', child: EasTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.location_city_rounded,
+          label: 'EAS',
+          child: EasTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('moviles.ver')) {
-      list.add(_TabDef(icon: Icons.directions_car_rounded, label: 'Móviles', child: MovilesTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.directions_car_rounded,
+          label: 'Móviles',
+          child: MovilesTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     if (widget.user.hasPermission('moviles.asignar')) {
-      list.add(_TabDef(icon: Icons.compare_arrows_rounded, label: 'Asignaciones', child: AsignacionesTab(api: api, tabIndex: list.length)));
+      list.add(
+        _TabDef(
+          icon: Icons.compare_arrows_rounded,
+          label: 'Asignaciones',
+          child: AsignacionesTab(api: api, tabIndex: list.length),
+        ),
+      );
     }
     return list;
   }
@@ -96,10 +150,16 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.lock_outline_rounded, size: 48, color: AdmTokens.grey300),
+              Icon(
+                Icons.lock_outline_rounded,
+                size: 48,
+                color: AdmTokens.grey300,
+              ),
               const SizedBox(height: 16),
-              Text('No tienes permisos de administración',
-                style: TextStyle(fontSize: 16, color: AdmTokens.grey500)),
+              Text(
+                'No tienes permisos de administración',
+                style: TextStyle(fontSize: 16, color: AdmTokens.grey500),
+              ),
             ],
           ),
         ),
@@ -131,10 +191,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
           Expanded(
             child: TabBarView(
               controller: _tabCtrl,
-              children: [
-                for (final tab in tabs)
-                  tab.child,
-              ],
+              children: [for (final tab in tabs) tab.child],
             ),
           ),
         ],
@@ -143,27 +200,41 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
   }
 
   Widget _buildSubmenu(List<_TabDef> tabs) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 14, 28, 0),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AdmTokens.surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 700;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 12 : 28,
+            14,
+            compact ? 12 : 28,
+            0,
+          ),
+          child: SizedBox(
+            height: 56,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AdmTokens.surface,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.06),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                itemCount: tabs.length,
+                itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
+              ),
             ),
-          ],
-        ),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-          itemCount: tabs.length,
-          itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -196,8 +267,8 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
                 color: isActive
                     ? AdmTokens.primary
                     : isHovered
-                        ? AdmTokens.primary.withValues(alpha: 0.6)
-                        : AdmTokens.grey400,
+                    ? AdmTokens.primary.withValues(alpha: 0.6)
+                    : AdmTokens.grey400,
               ),
               const SizedBox(width: 8),
               Text(
@@ -208,8 +279,8 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
                   color: isActive
                       ? AdmTokens.primary
                       : isHovered
-                          ? AdmTokens.primary.withValues(alpha: 0.6)
-                          : const Color(0xFF4B5563),
+                      ? AdmTokens.primary.withValues(alpha: 0.6)
+                      : const Color(0xFF4B5563),
                 ),
               ),
             ],
