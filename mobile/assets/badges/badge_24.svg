@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Insignia 24">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#263442"/><stop offset="1" stop-color="#2b2119"/></linearGradient></defs>
+  <path d="M100 8l78 45v94l-78 45-78-45V53z" fill="#2b2119" stroke="#06111c" stroke-width="6"/>
+  <path d="M100 14l72 42v88l-72 42-72-42V56z" fill="url(#bg)" stroke="#f3a62a" stroke-width="5"/>
+  <path d="M100 22l64 37v82l-64 37-64-37V59z" fill="none" stroke="#e8eef2" stroke-opacity=".45" stroke-width="2"/>
+  <g><rect x="67" y="57" width="57" height="78" rx="4" fill="#f4f5f6" stroke="#101820" stroke-width="3" stroke-linejoin="round"/><path d="M80 76h31M80 94h31M80 112h20" fill="none" stroke="#f4f5f6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M116 71h17v72H76" fill="none" stroke="#f4f5f6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M106 112h9" stroke="#ffc21c" stroke-width="6"/></g>
+</svg>

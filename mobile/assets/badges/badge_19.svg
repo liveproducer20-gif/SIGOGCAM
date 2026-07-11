@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Insignia 19">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#263442"/><stop offset="1" stop-color="#28192f"/></linearGradient></defs>
+  <path d="M100 8l78 45v94l-78 45-78-45V53z" fill="#28192f" stroke="#06111c" stroke-width="6"/>
+  <path d="M100 14l72 42v88l-72 42-72-42V56z" fill="url(#bg)" stroke="#b768c3" stroke-width="5"/>
+  <path d="M100 22l64 37v82l-64 37-64-37V59z" fill="none" stroke="#e8eef2" stroke-opacity=".45" stroke-width="2"/>
+  <g><circle cx="100" cy="100" r="35" fill="none" stroke="#f4f5f6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="100" cy="100" r="9" fill="#f4f5f6" stroke="#101820" stroke-width="3" stroke-linejoin="round"/><path d="M100 48v25m0 54v25M48 100h25m54 0h25" fill="none" stroke="#f4f5f6" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></g>
+</svg>
