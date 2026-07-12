@@ -1,12 +1,12 @@
-import 'dart:io';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart' show Share, XFile;
 
+import 'achievement_image_export.dart';
 import 'badge_catalog.dart';
 import 'ins_achievement_theme.dart';
 import 'ins_icn_wdg.dart';
@@ -77,6 +77,7 @@ class _AchievementUnlockedCardState extends State<AchievementUnlockedCard>
   late final AnimationController _controller;
   late final Animation<double> _badgeScale;
   bool _busy = false;
+  Uint8List? _cachedImage;
 
   BadgeEntry? get _badge => BadgeCatalog.byMeta(widget.metaCartillas);
   LevelTheme get _theme => LevelTheme.forNivel(_badge?.nivel ?? 1);
@@ -93,6 +94,7 @@ class _AchievementUnlockedCardState extends State<AchievementUnlockedCard>
       TweenSequenceItem(tween: Tween(begin: 1.08, end: 1), weight: 45),
     ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _controller.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepareImage());
   }
 
   @override
@@ -211,7 +213,13 @@ class _AchievementUnlockedCardState extends State<AchievementUnlockedCard>
     );
   }
 
-  Future<File> _capture({Directory? directory}) async {
+  String get _fileName {
+    final safeTitle = widget.title.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
+    return 'SIGO_GCAM_$safeTitle.png';
+  }
+
+  Future<Uint8List> _captureBytes() async {
+    if (_cachedImage != null) return _cachedImage!;
     await WidgetsBinding.instance.endOfFrame;
     final boundary =
         _captureKey.currentContext?.findRenderObject()
@@ -221,30 +229,39 @@ class _AchievementUnlockedCardState extends State<AchievementUnlockedCard>
     final image = await boundary.toImage(pixelRatio: ratio);
     final data = await image.toByteData(format: ui.ImageByteFormat.png);
     if (data == null) throw StateError('No se pudo generar el PNG');
-    final target = directory ?? await getTemporaryDirectory();
-    final safeTitle = widget.title.replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_');
-    final file = File('${target.path}/SIGO_GCAM_$safeTitle.png');
-    await file.writeAsBytes(data.buffer.asUint8List(), flush: true);
-    return file;
+    _cachedImage = data.buffer.asUint8List(
+      data.offsetInBytes,
+      data.lengthInBytes,
+    );
+    return _cachedImage!;
+  }
+
+  Future<void> _prepareImage() async {
+    try {
+      await _controller.forward(from: _controller.value);
+      await _captureBytes();
+    } catch (_) {
+      // The action button retries and reports a visible error if needed.
+    }
   }
 
   Future<void> _share() async {
     await _run(() async {
-      final file = await _capture();
-      await Share.shareXFiles([XFile(file.path)]);
+      final bytes = await _captureBytes();
+      await Share.shareXFiles([
+        XFile.fromData(bytes, mimeType: 'image/png', name: _fileName),
+      ]);
     }, 'No fue posible compartir la imagen');
   }
 
   Future<void> _download() async {
     await _run(() async {
-      final directory =
-          await getDownloadsDirectory() ??
-          await getApplicationDocumentsDirectory();
-      final file = await _capture(directory: directory);
+      final bytes = await _captureBytes();
+      final path = await downloadAchievementImage(bytes, _fileName);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Imagen guardada en ${file.path}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Imagen guardada en $path')));
     }, 'No fue posible descargar la imagen');
   }
 

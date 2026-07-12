@@ -14,7 +14,8 @@ class PersonalTab extends AdmCrudTab {
   State<AdmCrudTab> createState() => _PersonalTabState();
 }
 
-class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
+class _PersonalTabState extends State<AdmCrudTab>
+    with AdmLazyTabMixin<AdmCrudTab> {
   int _page = 1;
   int _total = 0;
   int _totalPages = 1;
@@ -39,12 +40,16 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
   }
 
   void _reload() {
-    setState(() { _page = 1; });
+    setState(() {
+      _page = 1;
+    });
     _load();
   }
 
   void _onPageChanged(int page) {
-    setState(() { _page = page; });
+    setState(() {
+      _page = page;
+    });
     _load();
   }
 
@@ -60,9 +65,19 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
   Widget build(BuildContext context) {
     return AdmAsyncTable(
       contentTitle: 'Personal',
-      contentSubtitle: 'Cuenta institucional, datos personales y datos operativos.',
+      contentSubtitle:
+          'Cuenta institucional, datos personales y datos operativos.',
       future: _future,
-      columns: const ['Cédula', 'Nombres', 'Correo', 'Grado', 'Rol', 'Estado', 'Acciones'],
+      columns: const [
+        'Cédula',
+        'Nombres',
+        'Correo',
+        'Grado',
+        'Rol',
+        'Área',
+        'Estado',
+        'Acciones',
+      ],
       onRefresh: _reload,
       onCreate: () => _edit(null),
       total: _total,
@@ -86,19 +101,21 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
         ),
         AdminSummaryCardData(
           icon: Icons.admin_panel_settings_rounded,
-          value: '${items.where((i) {
-            final r = i['rol']?.toString() ?? '';
-            return r.contains('Administrador') || r.contains('admin');
-          }).length}',
+          value:
+              '${items.where((i) {
+                final r = i['rol']?.toString() ?? '';
+                return r.contains('Administrador') || r.contains('admin');
+              }).length}',
           label: 'Administradores',
           color: AdmTokens.warning,
         ),
         AdminSummaryCardData(
           icon: Icons.engineering_rounded,
-          value: '${items.where((i) {
-            final r = i['rol']?.toString() ?? '';
-            return !r.contains('Administrador') && !r.contains('admin');
-          }).length}',
+          value:
+              '${items.where((i) {
+                final r = i['rol']?.toString() ?? '';
+                return !r.contains('Administrador') && !r.contains('admin');
+              }).length}',
           label: 'Operativos',
           color: AdmTokens.secondary,
         ),
@@ -109,6 +126,7 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
         admText(item['correo_institucional']),
         admText(item['grado']),
         admText(item['rol']),
+        admText(item['area']),
         AdmStateChip(active: admIsActive(item)),
         AdmActions(
           onEdit: () => _edit(item),
@@ -176,10 +194,14 @@ class _PersonalTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTa
     await _run(() => widget.api.resetPassword(admId(item)));
   }
 
-  Future<void> _run(Future<void> Function() action) => admSafeRun(context, action);
+  Future<void> _run(Future<void> Function() action) =>
+      admSafeRun(context, action);
 
   Future<void> _confirmDelete(
-      Map<String, dynamic> item, String label, Future<void> Function() deleteFn) async {
+    Map<String, dynamic> item,
+    String label,
+    Future<void> Function() deleteFn,
+  ) async {
     final ok = await admConfirm(context, 'Confirmar', '¿Eliminar $label?');
     if (ok != true) return;
     if (!mounted) return;
@@ -195,7 +217,12 @@ class _PersonalDialog extends StatefulWidget {
   final Map<String, List<Map<String, dynamic>>> catalogs;
   final List<Map<String, dynamic>> roles;
   final List<Map<String, dynamic>> grados;
-  const _PersonalDialog({this.item, required this.catalogs, required this.roles, required this.grados});
+  const _PersonalDialog({
+    this.item,
+    required this.catalogs,
+    required this.roles,
+    required this.grados,
+  });
   @override
   State<_PersonalDialog> createState() => _PersonalDialogState();
 }
@@ -206,7 +233,9 @@ class _PersonalDialogState extends State<_PersonalDialog> {
   late final apellidos = TextEditingController(text: _s('apellidos'));
   late final correo = TextEditingController(text: _s('correo_institucional'));
   late final telefono = TextEditingController(text: _s('telefono'));
-  late final nacimiento = TextEditingController(text: admFormatDate(_s('fecha_nacimiento')));
+  late final nacimiento = TextEditingController(
+    text: admFormatDate(_s('fecha_nacimiento')),
+  );
   int? gradoId;
   int? areaId;
   int? funcionId;
@@ -229,38 +258,79 @@ class _PersonalDialogState extends State<_PersonalDialog> {
 
   @override
   Widget build(BuildContext context) => AdmFormDialog(
-        title: widget.item == null ? 'Registrar personal' : 'Editar personal',
-        children: [
-          admField(cedula, 'Cédula *'),
-          admField(nombres, 'Nombres *'),
-          admField(apellidos, 'Apellidos *'),
-          admField(correo, 'Correo institucional *'),
-          admField(telefono, 'Teléfono'),
-          admField(nacimiento, 'Fecha de nacimiento (yyyy-mm-dd)'),
-          admDropdown('Grado *', widget.grados, gradoId, (v) => setState(() => gradoId = v)),
-          admDropdown('Area', widget.catalogs['AREAS'], areaId, (v) => setState(() => areaId = v), optional: true),
-          admDropdown('Funcion operativa', widget.catalogs['FUNCIONES_OPERATIVAS'], funcionId, (v) => setState(() => funcionId = v), optional: true),
-          admDropdown('Grupo', widget.catalogs['GRUPOS'], grupoId, (v) => setState(() => grupoId = v), optional: true),
-          admDropdown('Tipo rotacion', widget.catalogs['TIPOS_ROTACION'], rotacionId, (v) => setState(() => rotacionId = v), optional: true),
-          admDropdown('Rol', widget.roles, rolId, (v) => setState(() => rolId = v), optional: true),
-          admDropdown('Estado', widget.catalogs['ESTADOS_PERSONAL'], estadoId, (v) => setState(() => estadoId = v), optional: true),
-        ],
-        onSave: () => Navigator.pop(context, {
-          'cedula': cedula.text.trim(),
-          'nombres': nombres.text.trim(),
-          'apellidos': apellidos.text.trim(),
-          'correoInstitucional': correo.text.trim(),
-          'telefono': telefono.text.trim(),
-          'fechaNacimiento': nacimiento.text.trim(),
-          'gradoId': gradoId,
-          'areaId': areaId,
-          'funcionOperativaId': funcionId,
-          'grupoId': grupoId,
-          'tipoRotacionId': rotacionId,
-          'rolId': rolId,
-          'estadoPersonalId': estadoId,
-        }),
-      );
+    title: widget.item == null ? 'Registrar personal' : 'Editar personal',
+    children: [
+      admField(cedula, 'Cédula *'),
+      admField(nombres, 'Nombres *'),
+      admField(apellidos, 'Apellidos *'),
+      admField(correo, 'Correo institucional *'),
+      admField(telefono, 'Teléfono'),
+      admField(nacimiento, 'Fecha de nacimiento (yyyy-mm-dd)'),
+      admDropdown(
+        'Grado *',
+        widget.grados,
+        gradoId,
+        (v) => setState(() => gradoId = v),
+      ),
+      admDropdown(
+        'Area',
+        widget.catalogs['AREAS'],
+        areaId,
+        (v) => setState(() => areaId = v),
+        optional: true,
+      ),
+      admDropdown(
+        'Funcion operativa',
+        widget.catalogs['FUNCIONES_OPERATIVAS'],
+        funcionId,
+        (v) => setState(() => funcionId = v),
+        optional: true,
+      ),
+      admDropdown(
+        'Grupo',
+        widget.catalogs['GRUPOS'],
+        grupoId,
+        (v) => setState(() => grupoId = v),
+        optional: true,
+      ),
+      admDropdown(
+        'Tipo rotacion',
+        widget.catalogs['TIPOS_ROTACION'],
+        rotacionId,
+        (v) => setState(() => rotacionId = v),
+        optional: true,
+      ),
+      admDropdown(
+        'Rol',
+        widget.roles,
+        rolId,
+        (v) => setState(() => rolId = v),
+        optional: true,
+      ),
+      admDropdown(
+        'Estado',
+        widget.catalogs['ESTADOS_PERSONAL'],
+        estadoId,
+        (v) => setState(() => estadoId = v),
+        optional: true,
+      ),
+    ],
+    onSave: () => Navigator.pop(context, {
+      'cedula': cedula.text.trim(),
+      'nombres': nombres.text.trim(),
+      'apellidos': apellidos.text.trim(),
+      'correoInstitucional': correo.text.trim(),
+      'telefono': telefono.text.trim(),
+      'fechaNacimiento': nacimiento.text.trim(),
+      'gradoId': gradoId,
+      'areaId': areaId,
+      'funcionOperativaId': funcionId,
+      'grupoId': grupoId,
+      'tipoRotacionId': rotacionId,
+      'rolId': rolId,
+      'estadoPersonalId': estadoId,
+    }),
+  );
 
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
