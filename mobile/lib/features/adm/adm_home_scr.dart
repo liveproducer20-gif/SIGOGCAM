@@ -182,19 +182,29 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
               )
             : null,
       ),
-      body: Column(
-        children: [
-          // Submenu card
-          _buildSubmenu(tabs),
-
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabCtrl,
-              children: [for (final tab in tabs) tab.child],
-            ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AdmTokens.surface,
+            borderRadius: BorderRadius.circular(AdmTokens.radiusLg),
+            border: Border.all(color: AdmTokens.grey200),
+            boxShadow: AdmTokens.cardShadow,
           ),
-        ],
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              _buildSubmenu(tabs),
+              const Divider(height: 1, color: AdmTokens.grey200),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabCtrl,
+                  children: [for (final tab in tabs) tab.child],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -203,35 +213,16 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 700;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            compact ? 12 : 28,
-            14,
-            compact ? 12 : 28,
-            0,
-          ),
-          child: SizedBox(
-            height: 56,
-            child: Container(
-              decoration: BoxDecoration(
-                color: AdmTokens.surface,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 20,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                itemCount: tabs.length,
-                itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
-              ),
+        return SizedBox(
+          height: 62,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 8 : 18,
+              vertical: 6,
             ),
+            itemCount: tabs.length,
+            itemBuilder: (context, i) => _buildTabItem(tabs[i], i),
           ),
         );
       },
