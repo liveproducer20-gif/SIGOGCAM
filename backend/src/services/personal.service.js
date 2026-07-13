@@ -105,17 +105,9 @@ async function crear(data) {
     const { cedula, correoInstitucional } = validarCedulaYCorreo(data);
 
     const payload = normalizarPayload(data, { cedula, correoInstitucional });
-    payload.passwordHash = await bcrypt.hash(
-        payload.fechaNacimiento ? passwordInicial(payload.fechaNacimiento) : 'segura2025',
-        10
-    );
-
-    console.log('===== SERVICE.crear payload =====');
-    Object.entries(payload).forEach(([k, v]) => {
-        const val = typeof v === 'string' && v.length > 60 ? v.substring(0, 60)+'...' : v;
-        console.log(`  ${k}: ${val} (${typeof v})`);
-    });
-    console.log('=================================');
+    // Una cuenta creada desde Administracion debe poder autenticarse de forma
+    // inmediata. La credencial inicial es siempre la cedula del usuario.
+    payload.passwordHash = await bcrypt.hash(cedula, 10);
 
     return await repository.crear(payload);
 }
@@ -162,11 +154,7 @@ async function restablecerPassword(id) {
     if (!persona) {
         throw new Error('Personal no encontrado');
     }
-    if (!persona.fecha_nacimiento) {
-        throw new Error('El personal no tiene fecha de nacimiento registrada');
-    }
-
-    const hash = await bcrypt.hash(passwordInicial(persona.fecha_nacimiento), 10);
+    const hash = await bcrypt.hash(persona.cedula, 10);
     await repository.actualizarPassword(personalId, hash);
 }
 
@@ -194,23 +182,6 @@ function normalizarPayload(data, base) {
         rolId: data.rolId ? Number(data.rolId) : null,
         estadoPersonalId: data.estadoPersonalId ? Number(data.estadoPersonalId) : null
     };
-}
-
-function passwordInicial(fechaNacimiento) {
-    const value = fechaNacimiento instanceof Date
-        ? fechaNacimiento.toISOString().substring(0, 10)
-        : fechaNacimiento.toString().substring(0, 10);
-    const parts = value.includes('-') ? value.split('-') : value.split('/');
-
-    if (parts.length !== 3) {
-        throw new Error('La fecha de nacimiento no es válida');
-    }
-
-    if (value.includes('-')) {
-        return `${parts[2]}${parts[1]}${parts[0]}`;
-    }
-
-    return `${parts[0].padStart(2, '0')}${parts[1].padStart(2, '0')}${parts[2]}`;
 }
 
 module.exports = {

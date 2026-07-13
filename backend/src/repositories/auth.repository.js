@@ -10,7 +10,7 @@ async function query(sql, params) {
     }
 }
 
-async function buscarPorCorreo(correo) {
+async function buscarPorCorreo(identificador) {
     const tienePassword = await tieneColumna('password_hash');
     const tieneFoto = await tieneColumna('foto_perfil_url');
 
@@ -31,11 +31,11 @@ async function buscarPorCorreo(correo) {
             ${extraLobSelect}
         FROM vw_personal_detalle vd
         LEFT JOIN dbo.personal p ON p.id = vd.id
-        WHERE LOWER(vd.correo_institucional) = ?
+        WHERE (LOWER(vd.correo_institucional) = ? OR vd.cedula = ?)
           AND (vd.activo = 1 OR vd.activo = '1')
         ORDER BY vd.id
     `;
-    const result = await query(sql, [correo]);
+    const result = await query(sql, [identificador, identificador]);
     return result[0] || null;
 }
 

@@ -8,12 +8,12 @@ async function login(correo, password) {
     const clave = (password || '').toString().trim();
 
     if (!login || !clave) {
-        throw Object.assign(new Error('Correo y contraseña son obligatorios'), { statusCode: 400 });
+        throw Object.assign(new Error('Correo o cédula y contraseña son obligatorios'), { statusCode: 400 });
     }
 
     const persona = await repository.buscarPorCorreo(login);
     if (!persona) {
-        throw Object.assign(new Error('Correo no encontrado o usuario inactivo'), { statusCode: 401 });
+        throw Object.assign(new Error('Usuario no encontrado o inactivo'), { statusCode: 401 });
     }
 
     const rolCodigo = normalizarRol(persona.rol);

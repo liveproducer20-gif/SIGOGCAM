@@ -401,7 +401,7 @@ async function obtenerBasico(id) {
 
     try {
         const result = await conexion.query(`
-            SELECT TOP 1 id, fecha_nacimiento
+            SELECT TOP 1 id, cedula, fecha_nacimiento
             FROM personal
             WHERE id = ?
         `, [id]);

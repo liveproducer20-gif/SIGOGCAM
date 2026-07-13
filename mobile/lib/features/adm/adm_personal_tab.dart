@@ -169,6 +169,12 @@ class _PersonalTabState extends State<AdmCrudTab>
     await _run(() async {
       if (item == null) {
         await widget.api.createPersonal(data);
+        if (mounted) {
+          await _showInitialCredentials(
+            correo: data['correoInstitucional']?.toString() ?? '',
+            cedula: data['cedula']?.toString() ?? '',
+          );
+        }
       } else {
         await widget.api.updatePersonal(admId(item), data);
       }
@@ -187,11 +193,41 @@ class _PersonalTabState extends State<AdmCrudTab>
     final ok = await admConfirm(
       context,
       'Restablecer contraseña',
-      'La contraseña volverá a ser la fecha de nacimiento en formato ddmmaaaa.',
+      'La contraseña volverá a ser la cédula registrada del usuario.',
     );
     if (ok != true) return;
     if (!mounted) return;
     await _run(() => widget.api.resetPassword(admId(item)));
+  }
+
+  Future<void> _showInitialCredentials({
+    required String correo,
+    required String cedula,
+  }) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.verified_user_rounded, color: AdmTokens.success),
+        title: const Text('Usuario registrado correctamente'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('El nuevo personal ya puede iniciar sesión con:'),
+            const SizedBox(height: 16),
+            SelectableText('Usuario: $correo\no cédula: $cedula'),
+            const SizedBox(height: 10),
+            SelectableText('Contraseña inicial: $cedula'),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Entendido'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _run(Future<void> Function() action) =>

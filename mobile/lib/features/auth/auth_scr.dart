@@ -5,7 +5,6 @@ import '../../core/thm/app_thm.dart';
 import '../dash/dash_scr.dart';
 import 'auth_api.dart';
 
-
 class AuthScr extends StatelessWidget {
   const AuthScr({super.key});
 
@@ -27,14 +26,8 @@ class _AuthWide extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Row(
       children: [
-        Expanded(
-          flex: 5,
-          child: _AuthImgPanel(),
-        ),
-        Expanded(
-          flex: 4,
-          child: _AuthFrmPanel(),
-        ),
+        Expanded(flex: 5, child: _AuthImgPanel()),
+        Expanded(flex: 4, child: _AuthFrmPanel()),
       ],
     );
   }
@@ -57,10 +50,7 @@ class _AuthImgPanel extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(
-          'assets/img/auth_bg.jpg',
-          fit: BoxFit.cover,
-        ),
+        Image.asset('assets/img/auth_bg.jpg', fit: BoxFit.cover),
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
@@ -94,10 +84,7 @@ class _AuthImgPanel extends StatelessWidget {
               Text(
                 'Cuerpo de agentes de control Municipal de Guayaquil',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 20),
               ),
               SizedBox(height: 18),
               Text(
@@ -193,14 +180,11 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 const SizedBox(height: 28),
                 const Text(
                   'Inicia sesión para continuar',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(color: Colors.black54, fontSize: 18),
                 ),
                 const SizedBox(height: 36),
                 const Text(
-                  'Correo institucional',
+                  'Correo institucional o cédula',
                   style: TextStyle(
                     color: AppThm.priClr,
                     fontWeight: FontWeight.bold,
@@ -210,8 +194,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 TextField(
                   controller: usuarioCtl,
                   decoration: InputDecoration(
-                    hintText: 'usuario@institucion.gob.ec',
-                    prefixIcon: const Icon(Icons.mail_outline),
+                    hintText: 'usuario@institucion.gob.ec o 0900000000',
+                    prefixIcon: const Icon(Icons.person_outline_rounded),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -301,7 +285,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
     if (usuario.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ingrese correo institucional y contraseña'),
+          content: Text('Ingrese correo institucional o cédula y contraseña'),
         ),
       );
       return;
@@ -310,25 +294,20 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
     setState(() => loading = true);
 
     try {
-      final user = await api.login(
-        usuario: usuario,
-        password: password,
-      );
+      final user = await api.login(usuario: usuario, password: password);
 
       if (!mounted) return;
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => DashScr(user: user),
-        ),
+        MaterialPageRoute(builder: (_) => DashScr(user: user)),
       );
     } catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     } finally {
       if (mounted) setState(() => loading = false);
     }
