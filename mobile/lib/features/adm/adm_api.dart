@@ -96,7 +96,6 @@ class AdmApi {
   Future<void> createPersonal(Map<String, dynamic> data) => _post('personal', data);
   Future<void> updatePersonal(int id, Map<String, dynamic> data) => _put('personal/$id', data);
   Future<void> setPersonalActivo(int id, bool activo) => _put('personal/$id/estado', {'activo': activo});
-  Future<void> resetPassword(int id) => _post('personal/$id/reset-password', {});
   Future<void> deletePersonal(int id) => _delete('personal/$id');
   Future<void> deleteCatalogoDetalle(int id) => _delete('admin/catalogos/detalles/$id');
   Future<void> deleteRol(int id) => _delete('admin/roles/$id');

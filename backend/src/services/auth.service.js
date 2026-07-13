@@ -8,7 +8,7 @@ async function login(correo, password) {
     const clave = (password || '').toString().trim();
 
     if (!login || !clave) {
-        throw Object.assign(new Error('Correo o cédula y contraseña son obligatorios'), { statusCode: 400 });
+        throw Object.assign(new Error('Correo institucional y contraseña son obligatorios'), { statusCode: 400 });
     }
 
     const persona = await repository.buscarPorCorreo(login);
@@ -27,14 +27,9 @@ async function login(correo, password) {
         permisos = permisosPorDefecto(rolCodigo);
     }
 
-    if (!persona.password_hash) {
-        if (clave !== persona.cedula) {
-            throw Object.assign(
-                new Error('Debe restablecer su contraseña antes de iniciar sesión. Contacte a su administrador.'),
-                { statusCode: 401, requiereReset: true }
-            );
-        }
-    } else if (!(await bcrypt.compare(clave, persona.password_hash))) {
+    // Por ahora la credencial institucional es fija: correo + cédula.
+    // No se aplican cambios ni restablecimientos de contraseña en este flujo.
+    if (clave !== persona.cedula) {
         throw Object.assign(new Error('Contraseña incorrecta'), { statusCode: 401 });
     }
 

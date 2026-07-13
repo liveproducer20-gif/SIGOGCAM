@@ -53,8 +53,6 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
           _openProfile(context, editMode: false);
         } else if (action == _ProfileAction.edit) {
           _openProfile(context, editMode: true);
-        } else if (action == _ProfileAction.password) {
-          _openPasswordFlow(context);
         } else if (action == _ProfileAction.notifications) {
           widget.onNotifications?.call();
         } else {
@@ -84,14 +82,6 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
             dense: true,
             leading: Icon(Icons.notifications_outlined),
             title: Text('Notificaciones'),
-          ),
-        ),
-        PopupMenuItem(
-          value: _ProfileAction.password,
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.password_outlined),
-            title: Text('Cambiar contraseña'),
           ),
         ),
         PopupMenuDivider(),
@@ -212,15 +202,6 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
     if (updated != null) {
       widget.onUserChanged?.call(updated);
     }
-  }
-
-  Future<void> _openPasswordFlow(BuildContext context) async {
-    final ok = await showPasswordCooldownNotice(context);
-    if (!ok || !context.mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) => const _ChangePasswordDialog(),
-    );
   }
 
   String _initials(AppUser user) {
@@ -388,12 +369,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
                   icon: const Icon(Icons.photo_camera_outlined),
                   label: const Text('Cambiar foto'),
                 ),
-                const SizedBox(height: 8),
-                OutlinedButton.icon(
-                  onPressed: _showPasswordNotice,
-                  icon: const Icon(Icons.password_outlined),
-                  label: const Text('Cambiar contraseña'),
-                ),
               ],
             ],
           ),
@@ -497,15 +472,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
     setState(() {
       fotoPerfilUrl = file.dataUrl ?? file.previewUrl;
     });
-  }
-
-  Future<void> _showPasswordNotice() async {
-    final ok = await showPasswordCooldownNotice(context);
-    if (!ok || !mounted) return;
-    await showDialog<void>(
-      context: context,
-      builder: (_) => const _ChangePasswordDialog(),
-    );
   }
 
   Future<void> _save() async {
@@ -650,7 +616,7 @@ Future<bool> showPasswordCooldownNotice(BuildContext context) async {
   return ok == true;
 }
 
-enum _ProfileAction { view, edit, notifications, password, logout }
+enum _ProfileAction { view, edit, notifications, logout }
 
 class _ChangePasswordDialog extends StatefulWidget {
   const _ChangePasswordDialog();

@@ -27,6 +27,4 @@ router.get('/registro', (req, res) => {
 
 router.post('/login', loginLimiter, controller.login);
 router.post('/refresh', refreshLimiter, requireAuth, controller.refresh);
-router.post('/change-password', requireAuth, controller.changePassword);
-
 module.exports = router;

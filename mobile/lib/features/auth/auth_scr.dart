@@ -133,24 +133,6 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
     super.dispose();
   }
 
-  Future<void> _showPasswordRecovery() => showDialog<void>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Recuperar contraseña'),
-      content: const Text(
-        'Solicita al administrador que restablezca tu contraseña desde '
-        'Administración > Personal. La contraseña temporal será tu número de '
-        'cédula y podrás ingresar usando tu correo institucional o tu cédula.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Entendido'),
-        ),
-      ],
-    ),
-  );
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -202,7 +184,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 ),
                 const SizedBox(height: 36),
                 const Text(
-                  'Correo institucional o cédula',
+                  'Correo institucional',
                   style: TextStyle(
                     color: AppThm.priClr,
                     fontWeight: FontWeight.bold,
@@ -212,8 +194,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 TextField(
                   controller: usuarioCtl,
                   decoration: InputDecoration(
-                    hintText: 'usuario@institucion.gob.ec o 0900000000',
-                    prefixIcon: const Icon(Icons.person_outline_rounded),
+                    hintText: 'usuario@institucion.gob.ec',
+                    prefixIcon: const Icon(Icons.email_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -264,13 +246,6 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                     style: const TextStyle(fontSize: 17),
                   ),
                 ),
-                const SizedBox(height: 18),
-                Center(
-                  child: TextButton(
-                    onPressed: _showPasswordRecovery,
-                    child: const Text('¿Olvidó su contraseña?'),
-                  ),
-                ),
                 const SizedBox(height: 42),
                 const Divider(),
                 const SizedBox(height: 28),
@@ -303,7 +278,9 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
     if (usuario.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Ingrese correo institucional o cédula y contraseña'),
+          content: Text(
+            'Ingrese el correo institucional y la cédula como contraseña',
+          ),
         ),
       );
       return;

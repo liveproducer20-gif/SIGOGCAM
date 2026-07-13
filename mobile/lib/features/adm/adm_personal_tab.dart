@@ -131,7 +131,6 @@ class _PersonalTabState extends State<AdmCrudTab>
         AdmActions(
           onEdit: () => _edit(item),
           onToggle: () => _toggle(item),
-          onReset: () => _reset(item),
           onDelete: () => _confirmDelete(
             item,
             'personal ${item['nombres']} ${item['apellidos']}'.trim(),
@@ -189,17 +188,6 @@ class _PersonalTabState extends State<AdmCrudTab>
     });
   }
 
-  Future<void> _reset(Map<String, dynamic> item) async {
-    final ok = await admConfirm(
-      context,
-      'Restablecer contraseña',
-      'La contraseña volverá a ser la cédula registrada del usuario.',
-    );
-    if (ok != true) return;
-    if (!mounted) return;
-    await _run(() => widget.api.resetPassword(admId(item)));
-  }
-
   Future<void> _showInitialCredentials({
     required String correo,
     required String cedula,
@@ -215,7 +203,7 @@ class _PersonalTabState extends State<AdmCrudTab>
           children: [
             const Text('El nuevo personal ya puede iniciar sesión con:'),
             const SizedBox(height: 16),
-            SelectableText('Usuario: $correo\no cédula: $cedula'),
+            SelectableText('Usuario: $correo'),
             const SizedBox(height: 10),
             SelectableText('Contraseña inicial: $cedula'),
           ],

@@ -69,11 +69,4 @@ router.delete(
     auditAction({ accion: 'eliminar', modulo: 'personal', tabla: 'personal' }),
     controller.eliminar
 );
-router.post(
-    '/:id/reset-password',
-    requirePermission('personal.reset_password'),
-    auditAction({ accion: 'reset_password', modulo: 'personal', tabla: 'personal' }),
-    controller.restablecerPassword
-);
-
 module.exports = router;
