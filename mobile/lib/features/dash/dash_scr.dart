@@ -165,6 +165,8 @@ class _WebDashState extends State<_WebDash> {
             onMenuTap: widget.onMenuTap,
             onItemTap: widget.onSel,
             onLogout: widget.onLogout,
+            user: widget.user,
+            onUserChanged: widget.onUserChanged,
           ),
           Expanded(
             child: _WebContent(
