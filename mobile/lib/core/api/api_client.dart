@@ -127,6 +127,54 @@ class ApiClient {
     }
   }
 
+  Future<ApiResponse<T>> postBytes<T>(
+    String path,
+    List<int> bytes,
+    String contentType,
+    T Function(Object? value) parseDatos,
+  ) async {
+    try {
+      final response = await _client
+          .post(
+            _uri(path),
+            headers: {..._headers(), 'Content-Type': contentType},
+            body: bytes,
+          )
+          .timeout(const Duration(seconds: 30));
+      return _parseResponse(response, parseDatos);
+    } on TimeoutException {
+      throw Exception('La carga de la imagen no respondió a tiempo');
+    } on http.ClientException {
+      throw Exception('No se pudo cargar la imagen');
+    }
+  }
+
+  Stream<String> streamLines(String path) async* {
+    final request = http.Request('GET', _uri(path));
+    request.headers.addAll(_headers());
+    final response = await _client.send(request);
+    if (response.statusCode == 401) {
+      AuthSession.clear();
+      AuthSession.onSessionExpired?.call();
+      throw const UnauthorizedException();
+    }
+    if (response.statusCode >= 400) {
+      throw Exception('No se pudo conectar al canal en tiempo real');
+    }
+    yield* response.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+  }
+
+  static String absoluteUrl(String? value) {
+    final path = value?.trim() ?? '';
+    if (path.isEmpty || path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final api = Uri.parse(baseUrl);
+    return api.replace(path: path, query: null, fragment: null).toString();
+  }
+
   Uri _uri(String path) {
     final cleanPath = path.startsWith('/') ? path.substring(1) : path;
     return Uri.parse('$baseUrl/$cleanPath');

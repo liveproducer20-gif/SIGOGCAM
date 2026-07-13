@@ -8,6 +8,7 @@ import 'adm_design_tokens.dart';
 import 'adm_eas_tab.dart';
 import 'adm_grados_tab.dart';
 import 'adm_lugares_tab.dart';
+import 'adm_lazy_tab.dart';
 import 'adm_moviles_tab.dart';
 import 'adm_personal_tab.dart';
 import 'adm_roles_tab.dart';
@@ -46,7 +47,11 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
         _TabDef(
           icon: Icons.groups_rounded,
           label: 'Personal',
-          child: PersonalTab(api: api, tabIndex: list.length),
+          child: PersonalTab(
+            api: api,
+            user: widget.user,
+            tabIndex: list.length,
+          ),
         ),
       );
     }
@@ -82,7 +87,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
         _TabDef(
           icon: Icons.map_rounded,
           label: 'Rutas',
-          child: RutasTab(api: api),
+          child: RutasTab(api: api, tabIndex: list.length),
         ),
       );
     }
@@ -91,7 +96,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
         _TabDef(
           icon: Icons.school_rounded,
           label: 'Grados',
-          child: GradosTab(api: api),
+          child: GradosTab(api: api, tabIndex: list.length),
         ),
       );
     }
@@ -197,9 +202,12 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
               _buildSubmenu(tabs),
               const Divider(height: 1, color: AdmTokens.grey200),
               Expanded(
-                child: TabBarView(
+                child: AdmTabScope(
                   controller: _tabCtrl,
-                  children: [for (final tab in tabs) tab.child],
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [for (final tab in tabs) tab.child],
+                  ),
                 ),
               ),
             ],

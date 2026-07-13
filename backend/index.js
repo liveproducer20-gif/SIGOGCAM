@@ -15,10 +15,16 @@ const cartillasRoutes = require('./src/routes/cartillas.routes');
 const cartillaFlowRoutes = require('./src/routes/cartilla-flow.routes');
 const insigniasRoutes = require('./src/routes/insignias.routes');
 const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes');
+const soporteRoutes = require('./src/routes/soporte.routes');
 
 const app = express();
 
 app.use(cors());
+app.use('/uploads', express.static(require('path').resolve(__dirname, 'uploads'), {
+    fallthrough: false,
+    maxAge: '1d',
+    immutable: false
+}));
 
 app.use((req, res, next) => {
     res.set('Content-Type', 'application/json; charset=utf-8');
@@ -41,6 +47,7 @@ app.use('/api/cartillas', cartillasRoutes);
 app.use('/api/cartillas', cartillaFlowRoutes);
 app.use('/api/insignias', insigniasRoutes);
 app.use('/api/usuarios', usuariosInsigniasRoutes);
+app.use('/api/soporte', soporteRoutes);
 
 app.get('/api', (req, res) => {
     res.json({
@@ -49,7 +56,7 @@ app.get('/api', (req, res) => {
         rutas: [
             '/api/auth', '/api/catalogos', '/api/admin',
             '/api/personal', '/api/eventos', '/api/anuncios',
-            '/api/cartillas', '/api/insignias', '/api/probar-db'
+            '/api/cartillas', '/api/insignias', '/api/soporte', '/api/probar-db'
         ]
     });
 });

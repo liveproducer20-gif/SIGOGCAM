@@ -95,7 +95,9 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
         ),
       ],
       child: Padding(
-        padding: const EdgeInsets.only(right: 16),
+        padding: EdgeInsets.only(
+          right: MediaQuery.sizeOf(context).width < 600 ? 8 : 16,
+        ),
         child: FutureBuilder<int>(
           future: _notifCountFuture,
           builder: (context, snapshot) {
@@ -103,12 +105,16 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/img/sigo_gcam.png',
-                  height: 340,
-                  width: 340,
-                ),
-                const SizedBox(width: 8),
+                if (MediaQuery.sizeOf(context).width >= 700) ...[
+                  Image.asset(
+                    'assets/img/sigo_gcam.png',
+                    height: 38,
+                    width: 116,
+                    fit: BoxFit.contain,
+                    semanticLabel: 'SIGO-GCAM',
+                  ),
+                  const SizedBox(width: 10),
+                ],
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
@@ -193,10 +199,7 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
   }) async {
     final updated = await showDialog<AppUser>(
       context: context,
-      builder: (_) => ProfileDialog(
-        user: widget.user,
-        editMode: editMode,
-      ),
+      builder: (_) => ProfileDialog(user: widget.user, editMode: editMode),
     );
 
     if (updated != null) {
@@ -223,11 +226,7 @@ class ProfileDialog extends StatefulWidget {
   final AppUser user;
   final bool editMode;
 
-  const ProfileDialog({
-    super.key,
-    required this.user,
-    required this.editMode,
-  });
+  const ProfileDialog({super.key, required this.user, required this.editMode});
 
   @override
   State<ProfileDialog> createState() => _ProfileDialogState();
@@ -267,6 +266,8 @@ class _ProfileDialogState extends State<ProfileDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      scrollable: true,
       title: Row(
         children: [
           _ProfileAvatar(
@@ -280,98 +281,78 @@ class _ProfileDialogState extends State<ProfileDialog> {
           ),
         ],
       ),
-      content: SizedBox(
-        width: 540,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (error != null) ...[
-                _ErrorBox(error: error!),
-                const SizedBox(height: 12),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: _field(
-                      controller: nombresCtl,
-                      label: 'Nombres',
-                      enabled: false,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _field(
-                      controller: apellidosCtl,
-                      label: 'Apellidos',
-                      enabled: false,
-                    ),
-                  ),
-                ],
-              ),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 540),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (error != null) ...[
+              _ErrorBox(error: error!),
               const SizedBox(height: 12),
-              _field(
-                controller: cedulaCtl,
-                label: 'Cédula',
-                icon: Icons.badge_outlined,
-                enabled: editando,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                controller: correoCtl,
-                label: 'Correo institucional',
-                icon: Icons.mail_outline,
-                enabled: editando,
-              ),
-              const SizedBox(height: 12),
-              _field(
-                controller: telefonoCtl,
-                label: 'Teléfono',
-                icon: Icons.phone_outlined,
-                enabled: editando,
-              ),
-              const SizedBox(height: 12),
-              InkWell(
-                onTap: editando ? _pickDate : null,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: 'Fecha de nacimiento',
-                    prefixIcon: Icon(Icons.calendar_month_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  child: Text(
-                    fechaNacimiento?.split('T').first ?? 'Sin registrar',
-                    style: TextStyle(
-                      color: editando ? Colors.black87 : Colors.black54,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _readOnlyInfo('Rol', widget.user.rol),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _readOnlyInfo(
-                      'Estado operativo',
-                      widget.user.estadoPersonal ?? 'Sin estado',
-                    ),
-                  ),
-                ],
-              ),
-              if (editando) ...[
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.photo_camera_outlined),
-                  label: const Text('Cambiar foto'),
-                ),
-              ],
             ],
-          ),
+            _responsivePair(
+              _field(controller: nombresCtl, label: 'Nombres', enabled: false),
+              _field(
+                controller: apellidosCtl,
+                label: 'Apellidos',
+                enabled: false,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _field(
+              controller: cedulaCtl,
+              label: 'Cédula',
+              icon: Icons.badge_outlined,
+              enabled: editando,
+            ),
+            const SizedBox(height: 12),
+            _field(
+              controller: correoCtl,
+              label: 'Correo institucional',
+              icon: Icons.mail_outline,
+              enabled: editando,
+            ),
+            const SizedBox(height: 12),
+            _field(
+              controller: telefonoCtl,
+              label: 'Teléfono',
+              icon: Icons.phone_outlined,
+              enabled: editando,
+            ),
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: editando ? _pickDate : null,
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Fecha de nacimiento',
+                  prefixIcon: Icon(Icons.calendar_month_outlined),
+                  border: OutlineInputBorder(),
+                ),
+                child: Text(
+                  fechaNacimiento?.split('T').first ?? 'Sin registrar',
+                  style: TextStyle(
+                    color: editando ? Colors.black87 : Colors.black54,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _responsivePair(
+              _readOnlyInfo('Rol', widget.user.rol),
+              _readOnlyInfo(
+                'Estado operativo',
+                widget.user.estadoPersonal ?? 'Sin estado',
+              ),
+            ),
+            if (editando) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickImage,
+                icon: const Icon(Icons.photo_camera_outlined),
+                label: const Text('Cambiar foto'),
+              ),
+            ],
+          ],
         ),
       ),
       actions: [
@@ -400,6 +381,21 @@ class _ProfileDialogState extends State<ProfileDialog> {
       ],
     );
   }
+
+  Widget _responsivePair(Widget first, Widget second) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < 430) {
+        return Column(children: [first, const SizedBox(height: 12), second]);
+      }
+      return Row(
+        children: [
+          Expanded(child: first),
+          const SizedBox(width: 12),
+          Expanded(child: second),
+        ],
+      );
+    },
+  );
 
   TextField _field({
     required TextEditingController controller,
@@ -475,6 +471,14 @@ class _ProfileDialogState extends State<ProfileDialog> {
   }
 
   Future<void> _save() async {
+    final cedula = cedulaCtl.text.trim();
+    final correo = correoCtl.text.trim();
+    if (cedula.length != 10 || !correo.contains('@')) {
+      setState(() {
+        error = 'Ingresa una cédula de 10 dígitos y un correo válido.';
+      });
+      return;
+    }
     setState(() {
       guardando = true;
       error = null;
@@ -482,9 +486,11 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
     try {
       final updated = await api.updateMe(
-        cedula: cedulaCtl.text.trim(),
-        correo: correoCtl.text.trim(),
-        telefono: telefonoCtl.text.trim().isEmpty ? null : telefonoCtl.text.trim(),
+        cedula: cedula,
+        correo: correo,
+        telefono: telefonoCtl.text.trim().isEmpty
+            ? null
+            : telefonoCtl.text.trim(),
         fechaNacimiento: fechaNacimiento,
         fotoPerfilUrl: fotoPerfilUrl,
       );
@@ -535,10 +541,7 @@ class _ErrorBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.red.shade200),
       ),
-      child: Text(
-        error,
-        style: TextStyle(color: Colors.red.shade800),
-      ),
+      child: Text(error, style: TextStyle(color: Colors.red.shade800)),
     );
   }
 }
@@ -647,9 +650,11 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      scrollable: true,
       title: const Text('Cambiar contraseña'),
-      content: SizedBox(
-        width: 460,
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

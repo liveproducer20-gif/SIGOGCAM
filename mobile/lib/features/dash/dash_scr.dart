@@ -27,10 +27,7 @@ import '../ins/ins_home_scr.dart';
 class DashScr extends StatefulWidget {
   final AppUser user;
 
-  const DashScr({
-    super.key,
-    required this.user,
-  });
+  const DashScr({super.key, required this.user});
 
   @override
   State<DashScr> createState() => _DashScrState();
@@ -42,20 +39,52 @@ class _DashScrState extends State<DashScr> {
   late AppUser user;
 
   List<SideMenuItem> get items => [
-        const SideMenuItem(title: 'Eventos', icon: Icons.event_outlined, enabled: true),
-        const SideMenuItem(title: 'Cartillas', icon: Icons.description_outlined, enabled: true),
-        const SideMenuItem(title: 'Mis insignias', icon: Icons.workspace_premium_outlined, enabled: true),
-        SideMenuItem(
-          title: 'Administracion',
-          icon: Icons.admin_panel_settings_outlined,
-          enabled: user.puedeVerAdministracion,
-        ),
-        const SideMenuItem(title: 'Servicios', icon: Icons.local_police_outlined, enabled: false),
-        const SideMenuItem(title: 'Reportes', icon: Icons.bar_chart_outlined, enabled: false),
-        const SideMenuItem(title: 'Operaciones', icon: Icons.security_outlined, enabled: false),
-        const SideMenuItem(title: 'Estadísticas', icon: Icons.insights_outlined, enabled: false),
-        const SideMenuItem(title: 'Configuración', icon: Icons.settings_outlined, enabled: false),
-      ];
+    const SideMenuItem(
+      title: 'Eventos',
+      icon: Icons.event_outlined,
+      enabled: true,
+    ),
+    const SideMenuItem(
+      title: 'Cartillas',
+      icon: Icons.description_outlined,
+      enabled: true,
+    ),
+    const SideMenuItem(
+      title: 'Mis insignias',
+      icon: Icons.workspace_premium_outlined,
+      enabled: true,
+    ),
+    SideMenuItem(
+      title: 'Administracion',
+      icon: Icons.admin_panel_settings_outlined,
+      enabled: user.puedeVerAdministracion,
+    ),
+    const SideMenuItem(
+      title: 'Servicios',
+      icon: Icons.local_police_outlined,
+      enabled: false,
+    ),
+    const SideMenuItem(
+      title: 'Reportes',
+      icon: Icons.bar_chart_outlined,
+      enabled: false,
+    ),
+    const SideMenuItem(
+      title: 'Operaciones',
+      icon: Icons.security_outlined,
+      enabled: false,
+    ),
+    const SideMenuItem(
+      title: 'Estadísticas',
+      icon: Icons.insights_outlined,
+      enabled: false,
+    ),
+    const SideMenuItem(
+      title: 'Configuración',
+      icon: Icons.settings_outlined,
+      enabled: false,
+    ),
+  ];
 
   @override
   void initState() {
@@ -206,50 +235,84 @@ class _WebContent extends StatefulWidget {
 }
 
 class _WebContentState extends State<_WebContent> {
-  int _lastIdxSel = 0;
   int _insRefreshKey = 0;
+  late List<Widget?> _pages;
+  bool _startingSection = false;
 
-  List<Widget> _buildChildren() {
+  @override
+  void initState() {
+    super.initState();
+    _pages = List<Widget?>.filled(4, null);
+  }
+
+  @override
+  void didUpdateWidget(covariant _WebContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.user, widget.user)) {
+      _pages = List<Widget?>.filled(4, null);
+    }
+    if (oldWidget.idxSel != widget.idxSel && widget.idxSel < _pages.length) {
+      if (widget.idxSel == 2) {
+        _insRefreshKey++;
+        _pages[2] = null;
+      }
+      _startingSection = _pages[widget.idxSel] == null;
+      if (_startingSection) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() => _startingSection = false);
+        });
+      }
+    }
+  }
+
+  Widget _buildPage(int index) {
     final common = (
       user: widget.user,
       onUserChanged: widget.onUserChanged,
       onLogout: widget.onLogout,
       onNotifications: widget.onNotifications,
     );
-    if (widget.idxSel == 2 && widget.idxSel != _lastIdxSel) {
-      _insRefreshKey++;
-    }
-    _lastIdxSel = widget.idxSel;
-    return [
-      EvtHomeScr(
+    return switch (index) {
+      0 => EvtHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      CrtHomeScr(
+      1 => CrtHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      InsHomeScr(
+      2 => InsHomeScr(
         key: ValueKey('ins_$_insRefreshKey'),
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      if (widget.user.puedeVerAdministracion)
-        AdmHomeScr(
-          user: common.user,
-          onUserChanged: common.onUserChanged,
-          onLogout: common.onLogout,
-          onNotifications: common.onNotifications,
-        )
-      else
-        const SizedBox.shrink(),
-    ];
+      3 =>
+        widget.user.puedeVerAdministracion
+            ? AdmHomeScr(
+                user: common.user,
+                onUserChanged: common.onUserChanged,
+                onLogout: common.onLogout,
+                onNotifications: common.onNotifications,
+              )
+            : const SizedBox.shrink(),
+      _ => const SizedBox.shrink(),
+    };
+  }
+
+  List<Widget> _buildChildren() {
+    if (widget.idxSel < _pages.length) {
+      _pages[widget.idxSel] ??= _buildPage(widget.idxSel);
+    }
+    return List<Widget>.generate(
+      _pages.length,
+      (index) => _pages[index] ?? const SizedBox.shrink(),
+    );
   }
 
   @override
@@ -268,14 +331,20 @@ class _WebContentState extends State<_WebContent> {
       );
     }
 
-    return IndexedStack(
-      index: widget.idxSel,
-      children: _buildChildren(),
+    return Stack(
+      children: [
+        IndexedStack(index: widget.idxSel, children: _buildChildren()),
+        if (_startingSection)
+          const Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: LinearProgressIndicator(minHeight: 3),
+          ),
+      ],
     );
   }
 }
-
-
 
 class _EasStation {
   final String codigo;
@@ -443,7 +512,9 @@ class _CrtHomeState extends State<_CrtHome> {
       final jefe = await api.getJefeControlMunicipal();
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -482,7 +553,8 @@ class _CrtHomeState extends State<_CrtHome> {
             children: [
               const PageTtlWdg(
                 ttl: 'Cartilla de novedades',
-                sub: 'Generador basado en el formato del bot SAC para novedades registradas en EAS CEIBOS.',
+                sub:
+                    'Generador basado en el formato del bot SAC para novedades registradas en EAS CEIBOS.',
               ),
               const SizedBox(height: 26),
               if (isWide)
@@ -657,12 +729,7 @@ class _CrtFormPanel extends StatelessWidget {
               ),
             ),
             items: _rolesCentral
-                .map(
-                  (rol) => DropdownMenuItem(
-                    value: rol,
-                    child: Text(rol),
-                  ),
-                )
+                .map((rol) => DropdownMenuItem(value: rol, child: Text(rol)))
                 .toList(),
             onChanged: (value) {
               if (value == null) return;
@@ -725,10 +792,7 @@ class _CrtPreviewPanel extends StatelessWidget {
   final String cartilla;
   final VoidCallback onCopy;
 
-  const _CrtPreviewPanel({
-    required this.cartilla,
-    required this.onCopy,
-  });
+  const _CrtPreviewPanel({required this.cartilla, required this.onCopy});
 
   @override
   Widget build(BuildContext context) {
@@ -808,10 +872,7 @@ class _CrtPanelTtl extends StatelessWidget {
   final IconData icon;
   final String ttl;
 
-  const _CrtPanelTtl({
-    required this.icon,
-    required this.ttl,
-  });
+  const _CrtPanelTtl({required this.icon, required this.ttl});
 
   @override
   Widget build(BuildContext context) {
@@ -858,9 +919,7 @@ class _CrtTextFld extends StatelessWidget {
         prefixIcon: Icon(icon),
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       ),
     );
   }
@@ -899,12 +958,16 @@ class _NotifDialogState extends State<_NotifDialog> {
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text('No se pudieron cargar: ${snapshot.error}'));
+              return Center(
+                child: Text('No se pudieron cargar: ${snapshot.error}'),
+              );
             }
 
             final items = snapshot.data ?? [];
             if (items.isEmpty) {
-              return const Center(child: Text('No tienes notificaciones pendientes.'));
+              return const Center(
+                child: Text('No tienes notificaciones pendientes.'),
+              );
             }
 
             return ListView.separated(
@@ -940,10 +1003,9 @@ class _NotifDialogState extends State<_NotifDialog> {
 
     return [
       ...events.where((evt) => evt.notificar).map(_NotifItem.fromEvent),
-      ...announcements.map((ann) => _NotifItem.fromAnnouncement(
-            ann,
-            widget.user.nombreCompleto,
-          )),
+      ...announcements.map(
+        (ann) => _NotifItem.fromAnnouncement(ann, widget.user.nombreCompleto),
+      ),
     ].where((item) => !NotifReadStore.isRead(item.readId)).toList();
   }
 
@@ -1090,10 +1152,7 @@ class _NotifCard extends StatelessWidget {
   final _NotifItem item;
   final VoidCallback? onTap;
 
-  const _NotifCard({
-    required this.item,
-    this.onTap,
-  });
+  const _NotifCard({required this.item, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1194,8 +1253,10 @@ class _NotifItem {
         _NotifDetail('Notificacion', ann.notificar ? 'Activa' : 'Inactiva'),
         _NotifDetail('Destinatario', userName.isEmpty ? 'Agente' : userName),
         _NotifDetail('Descripcion', ann.desc),
-        _NotifDetail('Fecha de publicación',
-            '${ann.fecPub.day.toString().padLeft(2, '0')}/${ann.fecPub.month.toString().padLeft(2, '0')}/${ann.fecPub.year}'),
+        _NotifDetail(
+          'Fecha de publicación',
+          '${ann.fecPub.day.toString().padLeft(2, '0')}/${ann.fecPub.month.toString().padLeft(2, '0')}/${ann.fecPub.year}',
+        ),
         _NotifDetail('Fecha de expiración', expira),
         if (ann.imgUrl?.isNotEmpty == true)
           _NotifDetail.image('Imagen', ann.imgUrl!),
@@ -1213,16 +1274,12 @@ class _NotifDetail {
   final String value;
   final _NotifDetailKind kind;
 
-  const _NotifDetail(
-    this.label,
-    this.value,
-  ) : kind = _NotifDetailKind.text;
+  const _NotifDetail(this.label, this.value) : kind = _NotifDetailKind.text;
 
   const _NotifDetail.image(this.label, this.value)
-      : kind = _NotifDetailKind.image;
+    : kind = _NotifDetailKind.image;
 
-  const _NotifDetail.pdf(this.label, this.value)
-      : kind = _NotifDetailKind.pdf;
+  const _NotifDetail.pdf(this.label, this.value) : kind = _NotifDetailKind.pdf;
 
   String get displayValue {
     if (kind == _NotifDetailKind.image) return 'Imagen adjunta';

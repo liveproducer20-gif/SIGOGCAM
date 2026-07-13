@@ -1,36 +1,54 @@
 import 'package:flutter/material.dart';
 
-/// Mezcla que retrasa la carga de datos de un tab hasta que el usuario
-/// selecciona esa pestaña por primera vez. Evita que todas las pestañas
-/// hagan fetch simultáneo al abrir la pantalla de Administración, lo que
-/// causaba congelamientos por la avalancha de conexiones al backend.
+/// Exposes Administration's explicit controller to lazy tabs.
+class AdmTabScope extends InheritedNotifier<TabController> {
+  const AdmTabScope({
+    super.key,
+    required TabController controller,
+    required super.child,
+  }) : super(notifier: controller);
+
+  static TabController? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<AdmTabScope>()?.notifier;
+}
+
+/// Loads a tab only the first time it becomes visible and keeps its state.
 mixin AdmLazyTabMixin<T extends StatefulWidget> on State<T> {
   bool _didLoad = false;
+  TabController? _controller;
+  int? _myIndex;
+  Future<void> Function()? _loader;
 
   void initLazy(int myIndex, Future<void> Function() load) {
+    _myIndex = myIndex;
+    _loader = load;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final controller = DefaultTabController.maybeOf(context);
-      if (controller == null) {
-        _loadOnce(load);
+      if (!mounted) return;
+      _controller =
+          AdmTabScope.maybeOf(context) ?? DefaultTabController.maybeOf(context);
+      if (_controller == null) {
+        _loadOnce();
         return;
       }
-      if (controller.index == myIndex) {
-        _loadOnce(load);
-      } else {
-        controller.addListener(() {
-          if (!mounted) return;
-          if (controller.index == myIndex) {
-            _loadOnce(load);
-          }
-        });
-      }
+      _controller!.addListener(_handleTabChange);
+      _handleTabChange();
     });
   }
 
-  void _loadOnce(Future<void> Function() load) {
-    if (_didLoad || !mounted) return;
+  void _handleTabChange() {
+    if (mounted && _controller?.index == _myIndex) _loadOnce();
+  }
+
+  void _loadOnce() {
+    if (_didLoad || !mounted || _loader == null) return;
     _didLoad = true;
-    load();
-    if (mounted) setState(() {});
+    _loader!();
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_handleTabChange);
+    super.dispose();
   }
 }

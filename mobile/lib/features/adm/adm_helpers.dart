@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
@@ -11,7 +13,8 @@ class CatalogCache {
   static const Duration _ttl = Duration(minutes: 5);
 
   Future<Map<String, List<Map<String, dynamic>>>> getOrLoad(AdmApi api) async {
-    if (_catalogs != null && _loadedAt != null &&
+    if (_catalogs != null &&
+        _loadedAt != null &&
         DateTime.now().difference(_loadedAt!) < _ttl) {
       return _catalogs!;
     }
@@ -46,30 +49,75 @@ class CatalogCache {
   ];
 }
 
-Future<Map<String, List<Map<String, dynamic>>>> admLoadCatalogs(AdmApi api) async {
-  final results = await Future.wait(CatalogCache.codes.map((code) async {
-    try {
-      final paginated = await api.getCatalogo(code, page: 1, limit: 200);
-      return MapEntry(code, paginated.datos);
-    } catch (_) {
-      return MapEntry(code, <Map<String, dynamic>>[]);
-    }
-  }));
+Future<Map<String, List<Map<String, dynamic>>>> admLoadCatalogs(
+  AdmApi api,
+) async {
+  final results = await Future.wait(
+    CatalogCache.codes.map((code) async {
+      try {
+        final paginated = await api.getCatalogo(code, page: 1, limit: 200);
+        return MapEntry(code, paginated.datos);
+      } catch (_) {
+        return MapEntry(code, <Map<String, dynamic>>[]);
+      }
+    }),
+  );
   return Map.fromEntries(results);
 }
 
-Future<void> admSafeRun(BuildContext context, Future<void> Function() action) async {
+Future<void> admSafeRun(
+  BuildContext context,
+  Future<void> Function() action,
+) async {
+  var loaderVisible = false;
   try {
+    loaderVisible = true;
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const PopScope(
+          canPop: false,
+          child: Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 22),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2.5),
+                    ),
+                    SizedBox(width: 16),
+                    Text('Guardando cambios...'),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     await action();
+    if (context.mounted && loaderVisible) {
+      Navigator.of(context, rootNavigator: true).pop();
+      loaderVisible = false;
+    }
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Operacion realizada correctamente')),
+      const SnackBar(content: Text('Operación realizada correctamente')),
     );
   } catch (error) {
+    if (context.mounted && loaderVisible) {
+      Navigator.of(context, rootNavigator: true).pop();
+      loaderVisible = false;
+    }
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(error.toString())),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(error.toString())));
   }
 }
 
@@ -80,8 +128,14 @@ Future<bool?> admConfirm(BuildContext context, String title, String message) {
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Aceptar')),
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Aceptar'),
+        ),
       ],
     ),
   );

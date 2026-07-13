@@ -1,0 +1,111 @@
+const { query, transaction } = require('../config/db');
+
+function whereFor(filters, user) {
+    const clauses = ['a.activo = 1'];
+    const params = [];
+    if (user.rol !== 'ADMINISTRADOR') {
+        clauses.push('a.usuario_id = ?');
+        params.push(Number(user.id));
+    }
+    if (filters.estado) { clauses.push('a.estado = ?'); params.push(filters.estado); }
+    if (filters.prioridad) { clauses.push('a.prioridad = ?'); params.push(filters.prioridad); }
+    if (filters.modulo) { clauses.push('a.modulo = ?'); params.push(filters.modulo); }
+    if (filters.usuario) { clauses.push('a.usuario_nombre LIKE ?'); params.push(`%${filters.usuario}%`); }
+    if (filters.area) { clauses.push('a.area = ?'); params.push(filters.area); }
+    if (filters.desde) { clauses.push('a.fecha_creacion >= ?'); params.push(filters.desde); }
+    if (filters.buscar) {
+        clauses.push('(a.titulo LIKE ? OR a.descripcion LIKE ? OR a.codigo_alerta LIKE ? OR a.usuario_nombre LIKE ?)');
+        const value = `%${filters.buscar}%`;
+        params.push(value, value, value, value);
+    }
+    return { sql: clauses.join(' AND '), params };
+}
+
+async function listar(filters, user) {
+    const page = Math.max(1, Number(filters.page) || 1);
+    const pageSize = Math.min(100, Math.max(5, Number(filters.pageSize) || 20));
+    const where = whereFor(filters, user);
+    const rows = await query(`
+        SELECT a.*
+        FROM dbo.alertas_soporte a
+        WHERE ${where.sql}
+        ORDER BY a.fecha_creacion DESC
+        OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`, [...where.params, (page - 1) * pageSize, pageSize]);
+    const count = await query(`SELECT COUNT_BIG(1) total FROM dbo.alertas_soporte a WHERE ${where.sql}`, where.params);
+    return { datos: rows, total: Number(count[0]?.total || 0), page, pageSize };
+}
+
+async function estadisticas(user) {
+    const own = user.rol === 'ADMINISTRADOR' ? '' : ' AND usuario_id = ?';
+    const params = user.rol === 'ADMINISTRADOR' ? [] : [Number(user.id)];
+    const rows = await query(`
+        SELECT COUNT_BIG(1) total,
+          SUM(CASE WHEN prioridad='Crítica' THEN 1 ELSE 0 END) criticas,
+          SUM(CASE WHEN prioridad='Alta' THEN 1 ELSE 0 END) altas,
+          SUM(CASE WHEN prioridad='Media' THEN 1 ELSE 0 END) medias,
+          SUM(CASE WHEN prioridad='Baja' THEN 1 ELSE 0 END) bajas,
+          SUM(CASE WHEN estado NOT IN ('Resuelto','Cancelado') THEN 1 ELSE 0 END) pendientes,
+          AVG(CASE WHEN fecha_primera_respuesta IS NOT NULL THEN DATEDIFF(MINUTE, fecha_creacion, fecha_primera_respuesta) END) promedio_minutos
+        FROM dbo.alertas_soporte WHERE activo=1${own}`, params);
+    return rows[0] || {};
+}
+
+async function detalle(id, user) {
+    const params = [Number(id)];
+    let access = '';
+    if (user.rol !== 'ADMINISTRADOR') { access = ' AND usuario_id = ?'; params.push(Number(user.id)); }
+    const tickets = await query(`SELECT * FROM dbo.alertas_soporte WHERE id=? AND activo=1${access}`, params);
+    if (!tickets[0]) return null;
+    const comentarios = await query(`SELECT * FROM dbo.alertas_soporte_comentarios WHERE alerta_id=? ${user.rol === 'ADMINISTRADOR' ? '' : 'AND es_interno=0'} ORDER BY fecha_creacion`, [Number(id)]);
+    const historial = await query('SELECT * FROM dbo.alertas_soporte_historial WHERE alerta_id=? ORDER BY fecha_creacion', [Number(id)]);
+    return { alerta: tickets[0], comentarios, historial };
+}
+
+async function crear(data, user) {
+    return transaction(async (cx) => {
+        const profile = await cx.query(`SELECT TOP 1 p.nombres, p.apellidos, r.nombre rol, ar.nombre area FROM dbo.personal p LEFT JOIN dbo.roles r ON r.id=p.rol_id LEFT JOIN dbo.catalogo_detalles ar ON ar.id=p.area_id WHERE p.id=?`, [Number(user.id)]);
+        const row = profile[0] || {};
+        const name = `${row.nombres || user.nombres || ''} ${row.apellidos || user.apellidos || ''}`.trim() || user.nombreCompleto || user.correo;
+        const inserted = await cx.query(`INSERT INTO dbo.alertas_soporte (titulo,descripcion,usuario_id,usuario_nombre,rol,area,modulo,prioridad,imagen) OUTPUT INSERTED.id VALUES (?,?,?,?,?,?,?,?,?)`, [data.titulo, data.descripcion, Number(user.id), name, row.rol || user.rol, row.area || null, data.modulo, data.prioridad, data.imagen || null]);
+        const id = Number(inserted[0].id);
+        const code = `ALT-${new Date().getFullYear()}-${id.toString().padStart(6, '0')}`;
+        await cx.query('UPDATE dbo.alertas_soporte SET codigo_alerta=? WHERE id=?', [code, id]);
+        await cx.query(`INSERT INTO dbo.alertas_soporte_historial(alerta_id,usuario_id,usuario_nombre,accion,valor_nuevo) VALUES (?,?,?,?,?)`, [id, Number(user.id), name, 'Reporte creado', 'Nuevo']);
+        return { id, codigo_alerta: code, usuario_id: Number(user.id), titulo: data.titulo };
+    });
+}
+
+async function actualizar(id, changes, user) {
+    return transaction(async (cx) => {
+        const currentRows = await cx.query('SELECT * FROM dbo.alertas_soporte WHERE id=? AND activo=1', [Number(id)]);
+        const current = currentRows[0];
+        if (!current) return null;
+        const name = user.nombreCompleto || `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.correo;
+        if (changes.estado && changes.estado !== current.estado) {
+            await cx.query(`UPDATE dbo.alertas_soporte SET estado=?, fecha_actualizacion=SYSDATETIME(), fecha_primera_respuesta=COALESCE(fecha_primera_respuesta,SYSDATETIME()), fecha_resolucion=CASE WHEN ?='Resuelto' THEN SYSDATETIME() ELSE fecha_resolucion END WHERE id=?`, [changes.estado, changes.estado, Number(id)]);
+            await cx.query(`INSERT INTO dbo.alertas_soporte_historial(alerta_id,usuario_id,usuario_nombre,accion,valor_anterior,valor_nuevo) VALUES (?,?,?,?,?,?)`, [Number(id), Number(user.id), name, 'Cambio de estado', current.estado, changes.estado]);
+        }
+        if (changes.prioridad && changes.prioridad !== current.prioridad) {
+            await cx.query('UPDATE dbo.alertas_soporte SET prioridad=?, fecha_actualizacion=SYSDATETIME() WHERE id=?', [changes.prioridad, Number(id)]);
+            await cx.query(`INSERT INTO dbo.alertas_soporte_historial(alerta_id,usuario_id,usuario_nombre,accion,valor_anterior,valor_nuevo) VALUES (?,?,?,?,?,?)`, [Number(id), Number(user.id), name, 'Cambio de prioridad', current.prioridad, changes.prioridad]);
+        }
+        if (changes.asignadoA !== undefined) {
+            await cx.query('UPDATE dbo.alertas_soporte SET asignado_a=?, asignado_nombre=?, estado=CASE WHEN estado=\'Nuevo\' THEN \'En proceso\' ELSE estado END, fecha_actualizacion=SYSDATETIME(), fecha_primera_respuesta=COALESCE(fecha_primera_respuesta,SYSDATETIME()) WHERE id=?', [changes.asignadoA || null, changes.asignadoNombre || null, Number(id)]);
+            await cx.query(`INSERT INTO dbo.alertas_soporte_historial(alerta_id,usuario_id,usuario_nombre,accion,valor_nuevo) VALUES (?,?,?,?,?)`, [Number(id), Number(user.id), name, 'Asignación', changes.asignadoNombre || 'Sin asignar']);
+        }
+        const next = await cx.query('SELECT * FROM dbo.alertas_soporte WHERE id=?', [Number(id)]);
+        return next[0];
+    });
+}
+
+async function comentar(id, comentario, interno, user) {
+    const ticket = await query('SELECT * FROM dbo.alertas_soporte WHERE id=? AND activo=1', [Number(id)]);
+    if (!ticket[0]) return null;
+    const name = user.nombreCompleto || `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.correo;
+    await query(`INSERT INTO dbo.alertas_soporte_comentarios(alerta_id,usuario_id,usuario_nombre,rol,comentario,es_interno) VALUES (?,?,?,?,?,?)`, [Number(id), Number(user.id), name, user.rol, comentario, interno ? 1 : 0]);
+    await query(`UPDATE dbo.alertas_soporte SET fecha_actualizacion=SYSDATETIME(), fecha_primera_respuesta=CASE WHEN ?=1 THEN COALESCE(fecha_primera_respuesta,SYSDATETIME()) ELSE fecha_primera_respuesta END WHERE id=?`, [user.rol === 'ADMINISTRADOR' ? 1 : 0, Number(id)]);
+    return ticket[0];
+}
+
+module.exports = { listar, estadisticas, detalle, crear, actualizar, comentar };
+

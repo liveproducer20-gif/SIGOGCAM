@@ -49,9 +49,11 @@ Future<FilePickResult?> _pickFile(
 
     if (!withPreview) {
       completer.complete(
-        FilePickResult(
-          name: file.name,
-        ),
+          FilePickResult(
+            name: file.name,
+            mimeType: file.type,
+            size: file.size,
+          ),
       );
       return;
     }
@@ -65,6 +67,8 @@ Future<FilePickResult?> _pickFile(
             name: file.name,
             previewUrl: previewUrl,
             dataUrl: dataUrl,
+            mimeType: file.type,
+            size: file.size,
           ),
         );
       }
@@ -75,6 +79,8 @@ Future<FilePickResult?> _pickFile(
           FilePickResult(
             name: file.name,
             previewUrl: previewUrl,
+            mimeType: file.type,
+            size: file.size,
           ),
         );
       }
