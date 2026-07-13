@@ -133,6 +133,24 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
     super.dispose();
   }
 
+  Future<void> _showPasswordRecovery() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Recuperar contraseña'),
+      content: const Text(
+        'Solicita al administrador que restablezca tu contraseña desde '
+        'Administración > Personal. La contraseña temporal será tu número de '
+        'cédula y podrás ingresar usando tu correo institucional o tu cédula.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Entendido'),
+        ),
+      ],
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -249,7 +267,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 const SizedBox(height: 18),
                 Center(
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: _showPasswordRecovery,
                     child: const Text('¿Olvidó su contraseña?'),
                   ),
                 ),

@@ -5,13 +5,15 @@ class AdmApi {
 
   AdmApi({ApiClient? client}) : _client = client ?? ApiClient();
 
+  String _search(String value) => Uri.encodeQueryComponent(value.trim());
+
   Future<List<Map<String, dynamic>>> getPersonalList() => _getList('personal');
   Future<AdmPaginatedResult> getPersonal({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('personal?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('personal?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
 
   Future<AdmPaginatedResult> getCatalogos() => _getPaginated('admin/catalogos', 50);
   Future<AdmPaginatedResult> getCatalogo(String codigo, {int page = 1, int limit = 100, String search = ''}) =>
-      _getPaginated('admin/catalogos/$codigo?incluirInactivos=1&page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/catalogos/$codigo?incluirInactivos=1&page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<void> createCatalogoDetalle(String codigo, Map<String, dynamic> data) =>
       _post('admin/catalogos/$codigo', data);
   Future<void> updateCatalogoDetalle(int id, Map<String, dynamic> data) =>
@@ -22,7 +24,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getRolesList() =>
       _getList('admin/roles');
   Future<AdmPaginatedResult> getRoles({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('admin/roles?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/roles?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<List<Map<String, dynamic>>> getPermisos() =>
       _getList('admin/permisos');
   Future<void> createRol(Map<String, dynamic> data) =>
@@ -35,7 +37,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getLugaresList() =>
       _getList('admin/lugares-servicio');
   Future<AdmPaginatedResult> getLugares({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('admin/lugares-servicio?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/lugares-servicio?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<void> createLugar(Map<String, dynamic> data) =>
       _post('admin/lugares-servicio', data);
   Future<void> updateLugar(int id, Map<String, dynamic> data) =>
@@ -46,7 +48,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getEasList() =>
       _getList('admin/eas');
   Future<AdmPaginatedResult> getEas({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('admin/eas?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/eas?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<void> createEas(Map<String, dynamic> data) =>
       _post('admin/eas', data);
   Future<void> updateEas(int id, Map<String, dynamic> data) =>
@@ -74,7 +76,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getMovilesList() =>
       _getList('admin/moviles');
   Future<AdmPaginatedResult> getMoviles({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('admin/moviles?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/moviles?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<void> createMovil(Map<String, dynamic> data) =>
       _post('admin/moviles', data);
   Future<void> updateMovil(int id, Map<String, dynamic> data) =>
@@ -85,7 +87,7 @@ class AdmApi {
   Future<List<Map<String, dynamic>>> getAsignacionesList() =>
       _getList('admin/movil-eas-asignaciones');
   Future<AdmPaginatedResult> getAsignaciones({int page = 1, int limit = 50, String search = ''}) =>
-      _getPaginated('admin/movil-eas-asignaciones?page=$page&limit=$limit${search.isNotEmpty ? '&search=$search' : ''}', limit);
+      _getPaginated('admin/movil-eas-asignaciones?page=$page&limit=$limit${search.isNotEmpty ? '&search=${_search(search)}' : ''}', limit);
   Future<void> createAsignacion(Map<String, dynamic> data) =>
       _post('admin/movil-eas-asignaciones', data);
   Future<void> updateAsignacion(int id, Map<String, dynamic> data) =>

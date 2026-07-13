@@ -18,11 +18,19 @@ class SplScr extends StatefulWidget {
 }
 
 class _SplScrState extends State<SplScr> {
+  Timer? _navigationTimer;
+
   @override
   void initState() {
     super.initState();
 
-    Timer(const Duration(seconds: 2), _checkSession);
+    _navigationTimer = Timer(const Duration(seconds: 2), _checkSession);
+  }
+
+  @override
+  void dispose() {
+    _navigationTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _checkSession() async {

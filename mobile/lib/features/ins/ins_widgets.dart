@@ -1008,7 +1008,7 @@ class TopUsersLeaderboard extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Próximamente',
+                'Sin datos de ranking',
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
@@ -1017,7 +1017,7 @@ class TopUsersLeaderboard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'El ranking de usuarios estará disponible pronto.',
+                'No hay usuarios activos para mostrar en este momento.',
                 style: TextStyle(fontSize: 12, color: AdmTokens.grey400),
               ),
             ],
@@ -1230,7 +1230,7 @@ class TopUsersLeaderboard extends StatelessWidget {
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 8, 20, 14),
             child: Text(
-              'Ver ranking completo →',
+              'Top 10 según cartillas generadas',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1574,27 +1574,22 @@ class UserRankBuilder {
     final nombre = '$nombres $apellidos'.trim();
     final total =
         int.tryParse(row['total_cartillas_generadas']?.toString() ?? '') ?? 0;
-    final unlocked = BadgeCatalog.all
-        .where((badge) => badge.metaCartillas <= total)
-        .toList();
-    final highest = unlocked.isEmpty ? null : unlocked.last;
-    final next = highest == null
-        ? BadgeCatalog.all.first
-        : BadgeCatalog.next(highest);
-    final previousMeta = highest?.metaCartillas ?? 0;
-    final progress = next == null
+    final badgeName = row['insignia_titulo']?.toString().trim();
+    final previousMeta =
+        int.tryParse(row['insignia_meta']?.toString() ?? '') ?? 0;
+    final nextMeta = int.tryParse(row['proxima_meta']?.toString() ?? '');
+    final category = row['insignia_categoria']?.toString().trim();
+    final progress = nextMeta == null
         ? 1.0
-        : ((total - previousMeta) / (next.metaCartillas - previousMeta))
+        : ((total - previousMeta) / (nextMeta - previousMeta))
               .clamp(0.0, 1.0)
               .toDouble();
 
     return UserRankData(
       nombre: nombre.isEmpty ? 'Usuario SIGO-GCAM' : nombre,
-      badgeName: highest?.name ?? 'Sin insignias',
-      badgeMetaCartillas: highest?.metaCartillas ?? 0,
-      level: highest == null
-          ? 'Novato'
-          : LevelTheme.forNivel(highest.nivel).name,
+      badgeName: badgeName?.isNotEmpty == true ? badgeName! : 'Sin insignias',
+      badgeMetaCartillas: previousMeta,
+      level: category?.isNotEmpty == true ? category! : 'Novato',
       progress: progress,
       totalCartillas: total,
       initials: _initials(nombre),

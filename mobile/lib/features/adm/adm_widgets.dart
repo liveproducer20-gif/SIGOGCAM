@@ -314,29 +314,56 @@ class _AdminSummaryCardTileState extends State<_AdminSummaryCardTile>
 // SEARCH BAR
 // ──────────────────────────────────────────────
 
-class AdminSearchBar extends StatelessWidget {
-  final TextEditingController controller;
+class AdminSearchBar extends StatefulWidget {
+  final TextEditingController? controller;
   final ValueChanged<String> onChanged;
   final String hintText;
   final VoidCallback? onFilters;
 
   const AdminSearchBar({
     super.key,
-    required this.controller,
+    this.controller,
     required this.onChanged,
     this.hintText = 'Buscar...',
     this.onFilters,
   });
 
   @override
+  State<AdminSearchBar> createState() => _AdminSearchBarState();
+}
+
+class _AdminSearchBarState extends State<AdminSearchBar> {
+  late final TextEditingController _controller;
+  late final bool _ownsController;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? TextEditingController();
+    _controller.addListener(_refreshClearButton);
+  }
+
+  void _refreshClearButton() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_refreshClearButton);
+    if (_ownsController) _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 52,
       child: TextField(
-        controller: controller,
+        controller: _controller,
         style: const TextStyle(fontSize: 14, color: AdmTokens.grey800),
         decoration: InputDecoration(
-          hintText: hintText,
+          hintText: widget.hintText,
           hintStyle: TextStyle(color: AdmTokens.grey500, fontSize: 14, fontWeight: FontWeight.w400),
           prefixIcon: Padding(
             padding: const EdgeInsets.only(left: 14, right: 8),
@@ -345,23 +372,23 @@ class AdminSearchBar extends StatelessWidget {
           suffixIcon: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (controller.text.isNotEmpty)
+              if (_controller.text.isNotEmpty)
                 IconButton(
                   icon: Icon(Icons.clear_rounded, size: 18, color: AdmTokens.grey400),
                   onPressed: () {
-                    controller.clear();
-                    onChanged('');
+                    _controller.clear();
+                    widget.onChanged('');
                   },
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
-              if (onFilters != null) ...[
+              if (widget.onFilters != null) ...[
                 const SizedBox(width: 4),
                 Material(
                   color: Colors.transparent,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(10),
-                    onTap: onFilters,
+                    onTap: widget.onFilters,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
@@ -403,7 +430,7 @@ class AdminSearchBar extends StatelessWidget {
             borderSide: BorderSide(color: AdmTokens.primary, width: 1.5),
           ),
         ),
-        onChanged: onChanged,
+        onChanged: widget.onChanged,
       ),
     );
   }
@@ -1146,7 +1173,6 @@ class AdmAsyncTable extends StatelessWidget {
                     children: [
                       Expanded(
                         child: AdminSearchBar(
-                          controller: TextEditingController(),
                           onChanged: onSearch!,
                           hintText: searchHint ?? 'Buscar...',
                         ),
@@ -1209,7 +1235,6 @@ class AdmAsyncTable extends StatelessWidget {
               if (onSearch != null) ...[
                 const SizedBox(height: 12),
                 AdminSearchBar(
-                  controller: TextEditingController(),
                   onChanged: onSearch!,
                   hintText: searchHint ?? 'Buscar...',
                 ),

@@ -111,7 +111,7 @@ class SideMenuWdg extends StatelessWidget {
                               color: Colors.white38,
                             )
                           : null,
-                      onTap: () => onItemTap(index),
+                      onTap: item.enabled ? () => onItemTap(index) : null,
                     );
                   },
                 ),

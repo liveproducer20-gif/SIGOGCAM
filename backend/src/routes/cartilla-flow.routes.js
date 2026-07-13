@@ -6,6 +6,7 @@ const { requireAuth, requirePermission } = require('../middleware/auth.middlewar
 const { auditAction } = require('../middleware/audit.middleware');
 
 router.use(requireAuth);
+router.use(requirePermission('cartillas.generar'));
 
 router.get('/temp/cp', controller.obtenerCp);
 router.put('/temp/cp',

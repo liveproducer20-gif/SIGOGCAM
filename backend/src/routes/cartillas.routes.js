@@ -5,7 +5,8 @@ const controller = require('../controllers/cartillas.controller');
 const adminRepo = require('../repositories/admin.repository');
 const {
     requireAuth,
-    requirePermission
+    requirePermission,
+    requireAnyPermission
 } = require('../middleware/auth.middleware');
 const { auditAction } = require('../middleware/audit.middleware');
 
@@ -13,7 +14,7 @@ router.use(requireAuth);
 
 router.get(
     '/jefe-control-municipal',
-    requirePermission('personal.ver'),
+    requireAnyPermission(['personal.ver', 'cartillas.generar']),
     async (req, res) => {
         try {
             const jefe = await adminRepo.obtenerJefeControlMunicipal();

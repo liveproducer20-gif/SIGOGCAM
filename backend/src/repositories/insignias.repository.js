@@ -81,15 +81,25 @@ async function obtenerProgreso(usuarioId) {
               AND meta_cartillas > ?
             ORDER BY meta_cartillas
         `, [total]);
+        const anterior = await conexion.query(`
+            SELECT TOP 1 titulo, meta_cartillas
+            FROM insignias
+            WHERE activo = 1
+              AND meta_cartillas <= ?
+            ORDER BY meta_cartillas DESC
+        `, [total]);
 
         const next = proxima[0] || null;
         const metaProxima = next ? Number(next.meta_cartillas) : null;
+        const metaAnterior = Number(anterior[0]?.meta_cartillas || 0);
         const faltantes = metaProxima === null
             ? 0
             : Math.max(metaProxima - total, 0);
         const porcentaje = metaProxima === null
             ? 100
-            : Math.min(100, Math.floor((total / metaProxima) * 100));
+            : Math.max(0, Math.min(100, Math.floor(
+                ((total - metaAnterior) / Math.max(metaProxima - metaAnterior, 1)) * 100
+            )));
 
         return {
             total_cartillas_generadas: total,
@@ -111,15 +121,33 @@ async function obtenerRanking() {
     try {
         return await conexion.query(`
             SELECT TOP 10
-                id,
-                nombres,
-                apellidos,
-                ISNULL(total_cartillas_generadas, 0) AS total_cartillas_generadas
-            FROM personal
-            WHERE activo = 1
-            ORDER BY ISNULL(total_cartillas_generadas, 0) DESC,
-                     apellidos,
-                     nombres
+                p.id,
+                p.nombres,
+                p.apellidos,
+                ISNULL(p.total_cartillas_generadas, 0) AS total_cartillas_generadas,
+                actual.titulo AS insignia_titulo,
+                actual.meta_cartillas AS insignia_meta,
+                actual.categoria AS insignia_categoria,
+                siguiente.meta_cartillas AS proxima_meta
+            FROM personal p
+            OUTER APPLY (
+                SELECT TOP 1 i.titulo, i.meta_cartillas, i.categoria
+                FROM insignias i
+                WHERE i.activo = 1
+                  AND i.meta_cartillas <= ISNULL(p.total_cartillas_generadas, 0)
+                ORDER BY i.meta_cartillas DESC
+            ) actual
+            OUTER APPLY (
+                SELECT TOP 1 i.meta_cartillas
+                FROM insignias i
+                WHERE i.activo = 1
+                  AND i.meta_cartillas > ISNULL(p.total_cartillas_generadas, 0)
+                ORDER BY i.meta_cartillas
+            ) siguiente
+            WHERE p.activo = 1
+            ORDER BY ISNULL(p.total_cartillas_generadas, 0) DESC,
+                     p.apellidos,
+                     p.nombres
         `);
     } finally {
         await conexion.close();
