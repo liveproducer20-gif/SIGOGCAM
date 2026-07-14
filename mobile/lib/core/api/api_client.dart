@@ -21,6 +21,21 @@ class UnauthorizedException implements Exception {
   String toString() => message;
 }
 
+class ForbiddenException implements Exception {
+  final String message;
+  const ForbiddenException(this.message);
+  @override
+  String toString() => message;
+}
+
+class NetworkException implements Exception {
+  final String message;
+  final String? originalError;
+  const NetworkException(this.message, [this.originalError]);
+  @override
+  String toString() => message;
+}
+
 class ApiClient {
   static const String baseUrl = String.fromEnvironment(
     'SIGO_API_BASE_URL',
@@ -41,12 +56,13 @@ class ApiClient {
           .timeout(const Duration(seconds: 12));
       return _parseResponse(response, parseDatos);
     } on TimeoutException {
-      throw Exception(
+      throw NetworkException(
         'La API no respondió a tiempo. Verifique el backend en $baseUrl',
       );
-    } on http.ClientException {
-      throw Exception(
+    } on http.ClientException catch (e) {
+      throw NetworkException(
         'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
       );
     }
   }
@@ -67,12 +83,13 @@ class ApiClient {
 
       return _parseResponse(response, parseDatos);
     } on TimeoutException {
-      throw Exception(
+      throw NetworkException(
         'La API no respondió a tiempo. Verifique el backend en $baseUrl',
       );
-    } on http.ClientException {
-      throw Exception(
+    } on http.ClientException catch (e) {
+      throw NetworkException(
         'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
       );
     }
   }
@@ -93,12 +110,13 @@ class ApiClient {
 
       return _parseResponse(response, parseDatos);
     } on TimeoutException {
-      throw Exception(
+      throw NetworkException(
         'La API no respondió a tiempo. Verifique el backend en $baseUrl',
       );
-    } on http.ClientException {
-      throw Exception(
+    } on http.ClientException catch (e) {
+      throw NetworkException(
         'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
       );
     }
   }
@@ -140,9 +158,9 @@ class ApiClient {
           .timeout(const Duration(seconds: 30));
       return _parseResponse(response, parseDatos);
     } on TimeoutException {
-      throw Exception('La carga de la imagen no respondió a tiempo');
-    } on http.ClientException {
-      throw Exception('No se pudo cargar la imagen');
+      throw NetworkException('La carga de la imagen no respondió a tiempo');
+    } on http.ClientException catch (e) {
+      throw NetworkException('No se pudo cargar la imagen', e.message);
     }
   }
 
@@ -238,6 +256,12 @@ class ApiClient {
       );
     }
 
+    if (response.statusCode == 403) {
+      throw ForbiddenException(
+        decoded['mensaje']?.toString() ?? 'No tienes permiso para esta acción',
+      );
+    }
+
     if (response.statusCode >= 400 || !ok) {
       throw Exception(
         decoded['mensaje']?.toString() ?? 'Error al consumir la API',
@@ -255,12 +279,13 @@ class ApiClient {
           .timeout(const Duration(seconds: 12));
       return _decodeResponse(response);
     } on TimeoutException {
-      throw Exception(
+      throw NetworkException(
         'La API no respondió a tiempo. Verifique el backend en $baseUrl',
       );
-    } on http.ClientException {
-      throw Exception(
+    } on http.ClientException catch (e) {
+      throw NetworkException(
         'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
       );
     }
   }

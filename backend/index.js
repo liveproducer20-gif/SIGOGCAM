@@ -20,7 +20,12 @@ const soporteRepository = require('./src/repositories/soporte.repository');
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Authorization'],
+}));
 app.use('/uploads', express.static(require('path').resolve(__dirname, 'uploads'), {
     fallthrough: false,
     maxAge: '1d',

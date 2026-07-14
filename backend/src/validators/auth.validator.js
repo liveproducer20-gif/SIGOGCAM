@@ -75,6 +75,7 @@ function permisosPorDefecto(rolCodigo) {
             'perfil.ver', 'perfil.editar'
         ],
         ENCARGADO: [
+            'eventos.ver_convocado', 'anuncios.ver', 'insignias.ver',
             'reportes.ver', 'personal.ver_asignado',
             'cartillas.generar', 'cartillas.ver',
             'perfil.ver', 'perfil.editar'
