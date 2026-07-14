@@ -132,7 +132,16 @@ async function estadisticas(user) {
           SUM(CASE WHEN estado NOT IN ('Resuelto','Cancelado') THEN 1 ELSE 0 END) pendientes,
           AVG(CASE WHEN fecha_primera_respuesta IS NOT NULL THEN DATEDIFF(MINUTE, fecha_creacion, fecha_primera_respuesta) END) promedio_minutos
         FROM dbo.alertas_soporte WHERE activo=1${own}`, params);
-    return rows[0] || {};
+    const row = rows[0] || {};
+    return {
+        total: Number(row.total || 0),
+        criticas: Number(row.criticas || 0),
+        altas: Number(row.altas || 0),
+        medias: Number(row.medias || 0),
+        bajas: Number(row.bajas || 0),
+        pendientes: Number(row.pendientes || 0),
+        promedio_minutos: Number(row.promedio_minutos || 0)
+    };
 }
 
 async function detalle(id, user) {

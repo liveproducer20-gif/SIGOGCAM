@@ -46,14 +46,29 @@ async function login(correo, password) {
         permisos
     };
 
-    const token = jwt.sign(usuarioSesion, process.env.JWT_SECRET, { expiresIn: '8h' });
+    // La foto puede venir como data URL/base64 y superar ampliamente el límite
+    // de los encabezados HTTP. El JWT solo debe transportar identidad y permisos;
+    // el perfil completo se devuelve por separado en la respuesta del login.
+    const token = jwt.sign(tokenPayload(usuarioSesion), process.env.JWT_SECRET, { expiresIn: '8h' });
 
     return { usuario: usuarioSesion, token };
 }
 
 function refreshToken(user) {
-    const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign(tokenPayload(user), process.env.JWT_SECRET, { expiresIn: '8h' });
     return token;
+}
+
+function tokenPayload(user) {
+    return {
+        id: Number(user.id),
+        correo: user.correo,
+        nombres: user.nombres,
+        apellidos: user.apellidos,
+        nombreCompleto: user.nombreCompleto,
+        rol: user.rol,
+        permisos: Array.isArray(user.permisos) ? user.permisos : []
+    };
 }
 
 async function changePassword(userId, oldPassword, newPassword, confirmPassword) {
