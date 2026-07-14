@@ -12,32 +12,20 @@ class ConfigApi {
   }
 
   Future<List<ModuloModel>> getModulos() async {
-    final res = await _client
-        .get<List<ModuloModel>>('configuracion/modulos', (data) {
-      final list = data as List<dynamic>;
-      return list
-          .map((e) => ModuloModel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    });
-    return res.datos ?? [];
+    final res = await _client.getFull('configuracion/modulos');
+    return ((res['data'] as List<dynamic>?) ?? [])
+        .map((e) => ModuloModel.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<ModuloModel> crearModulo(Map<String, dynamic> body) async {
-    final res = await _client.post<ModuloModel>(
-      'configuracion/modulos',
-      body,
-      (data) => ModuloModel.fromJson(data as Map<String, dynamic>),
-    );
-    return res.datos!;
+    final res = await _client.postFull('configuracion/modulos', body);
+    return ModuloModel.fromJson(res['data'] as Map<String, dynamic>);
   }
 
   Future<ModuloModel> actualizarModulo(int id, Map<String, dynamic> body) async {
-    final res = await _client.put<ModuloModel>(
-      'configuracion/modulos/$id',
-      body,
-      (data) => ModuloModel.fromJson(data as Map<String, dynamic>),
-    );
-    return res.datos!;
+    final res = await _client.putFull('configuracion/modulos/$id', body);
+    return ModuloModel.fromJson(res['data'] as Map<String, dynamic>);
   }
 
   Future<void> eliminarModulo(int id) async {

@@ -10,11 +10,20 @@ async function obtenerTodos(filtros = {}) {
 
         if (filtros.personalId) {
             where = `
-                WHERE EXISTS (
-                    SELECT 1
-                    FROM anuncio_personal ap
-                    WHERE ap.anuncio_id = a.id
-                      AND ap.personal_id = ?
+                WHERE a.publicado = 1
+                  AND (a.fecha_expiracion IS NULL OR a.fecha_expiracion >= GETDATE())
+                  AND (
+                    NOT EXISTS (
+                        SELECT 1
+                        FROM anuncio_personal audiencia
+                        WHERE audiencia.anuncio_id = a.id
+                    )
+                    OR EXISTS (
+                        SELECT 1
+                        FROM anuncio_personal asignado
+                        WHERE asignado.anuncio_id = a.id
+                          AND asignado.personal_id = ?
+                    )
                 )
             `;
             params.push(filtros.personalId);

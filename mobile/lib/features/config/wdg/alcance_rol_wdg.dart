@@ -145,10 +145,14 @@ class _AlcanceRolWdgState extends State<AlcanceRolWdg> {
               ),
               isDense: true,
               items: const [
-                DropdownMenuItem(value: 'todos', child: Text('Todos los datos')),
+                DropdownMenuItem(value: 'global', child: Text('Todos los datos')),
                 DropdownMenuItem(value: 'propio', child: Text('Solo propio')),
-                DropdownMenuItem(value: 'unidad', child: Text('Misma unidad')),
-                DropdownMenuItem(value: 'departamento', child: Text('Mismo departamento')),
+                DropdownMenuItem(value: 'area', child: Text('Misma área')),
+                DropdownMenuItem(value: 'equipo', child: Text('Mismo equipo')),
+                DropdownMenuItem(value: 'turno', child: Text('Mismo turno')),
+                DropdownMenuItem(value: 'distrito', child: Text('Mismo distrito')),
+                DropdownMenuItem(value: 'creado_por_usuario', child: Text('Creado por el usuario')),
+                DropdownMenuItem(value: 'asignado_usuario', child: Text('Asignado al usuario')),
                 DropdownMenuItem(value: 'personalizado', child: Text('Personalizado')),
               ],
               onChanged: (v) {
@@ -174,10 +178,10 @@ class _AlcanceRolWdgState extends State<AlcanceRolWdg> {
 
   Widget _alcanceChip(String alcance) {
     final color = switch (alcance) {
-      'todos' => Colors.green,
+      'global' => Colors.green,
       'propio' => Colors.orange,
-      'unidad' => Colors.blue,
-      'departamento' => Colors.purple,
+      'area' || 'equipo' => Colors.blue,
+      'turno' || 'distrito' => Colors.purple,
       _ => Colors.grey,
     };
     return Container(

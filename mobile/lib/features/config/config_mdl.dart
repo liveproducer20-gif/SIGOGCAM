@@ -20,7 +20,7 @@ class ModuloModel {
   });
 
   factory ModuloModel.fromJson(Map<String, dynamic> json) => ModuloModel(
-    id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+    id: _asInt(json['id']),
     nombre: json['nombre'] ?? '',
     codigo: json['codigo'] ?? '',
     icono: json['icono'],
@@ -30,8 +30,8 @@ class ModuloModel {
             ? json['modulo_padre_id']
             : int.tryParse(json['modulo_padre_id'].toString()))
         : null,
-    orden: json['orden'] ?? 0,
-    activo: json['activo'] ?? true,
+    orden: _asInt(json['orden']),
+    activo: _asBool(json['activo'], fallback: true),
   );
 
   Map<String, dynamic> toJson() => {
@@ -73,15 +73,15 @@ class MenuItemModel {
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) => MenuItemModel(
-    moduloId: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+    moduloId: _asInt(json['id']),
     nombre: json['nombre'] ?? '',
     codigo: json['codigo'] ?? '',
     icono: json['icono'],
     ruta: json['ruta'],
     moduloPadreId: json['modulo_padre_id'],
-    nivel: json['nivel'] ?? 0,
-    orden: json['orden'] ?? 0,
-    visible: json['visible'] ?? true,
+    nivel: _asInt(json['nivel']),
+    orden: _asInt(json['orden']),
+    visible: _asBool(json['visible'], fallback: true),
     etiquetaPersonalizada: json['etiqueta_personalizada'],
     hijos: (json['hijos'] as List<dynamic>?)
             ?.map((e) => MenuItemModel.fromJson(e as Map<String, dynamic>))
@@ -119,16 +119,12 @@ class RolMenuConfigModel {
 
   factory RolMenuConfigModel.fromJson(Map<String, dynamic> json) =>
       RolMenuConfigModel(
-        id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-        rolId: json['rol_id'] is int
-            ? json['rol_id']
-            : int.parse(json['rol_id'].toString()),
-        moduloId: json['modulo_id'] is int
-            ? json['modulo_id']
-            : int.parse(json['modulo_id'].toString()),
-        nivel: json['nivel'] ?? 0,
-        orden: json['orden'] ?? 0,
-        visible: json['visible'] ?? 1,
+        id: _asInt(json['id']),
+        rolId: _asInt(json['rol_id']),
+        moduloId: _asInt(json['modulo_id']),
+        nivel: _asInt(json['nivel']),
+        orden: _asInt(json['orden']),
+        visible: _asBool(json['visible'], fallback: true) ? 1 : 0,
         etiquetaPersonalizada: json['etiqueta_personalizada'],
         moduloNombre: json['modulo_nombre'],
         moduloCodigo: json['modulo_codigo'],
@@ -155,10 +151,8 @@ class ScopeModel {
   });
 
   factory ScopeModel.fromJson(Map<String, dynamic> json) => ScopeModel(
-    id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-    rolId: json['rol_id'] is int
-        ? json['rol_id']
-        : int.parse(json['rol_id'].toString()),
+    id: _asInt(json['id']),
+    rolId: _asInt(json['rol_id']),
     modulo: json['modulo'] ?? '',
     alcance: json['alcance'] ?? 'todos',
     entidad: json['entidad'] ?? '',
@@ -197,17 +191,12 @@ class CampoPermisoModel {
 
   factory CampoPermisoModel.fromJson(Map<String, dynamic> json) =>
       CampoPermisoModel(
-        id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-        rolId: json['rol_id'] is int
-            ? json['rol_id']
-            : int.parse(json['rol_id'].toString()),
-        campoId: json['campo_id'] is int
-            ? json['campo_id']
-            : int.parse(json['campo_id'].toString()),
-        puedeVer: json['puede_ver'] == true || json['puede_ver'] == 1,
-        puedeEditar:
-            json['puede_editar'] == true || json['puede_editar'] == 1,
-        requerido: json['requerido'] == true || json['requerido'] == 1,
+        id: _asInt(json['id']),
+        rolId: _asInt(json['rol_id']),
+        campoId: _asInt(json['campo_id']),
+        puedeVer: _asBool(json['puede_ver']),
+        puedeEditar: _asBool(json['puede_editar']),
+        requerido: _asBool(json['requerido']),
         campoNombre: json['campo_nombre'],
         campoCodigo: json['campo_codigo'],
         tipoDato: json['tipo_dato'],
@@ -236,20 +225,16 @@ class VersionModel {
   });
 
   factory VersionModel.fromJson(Map<String, dynamic> json) => VersionModel(
-    id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
-    rolId: json['rol_id'] is int
-        ? json['rol_id']
-        : int.parse(json['rol_id'].toString()),
-    version: json['version'] is int
-        ? json['version']
-        : int.parse(json['version'].toString()),
+    id: _asInt(json['id']),
+    rolId: _asInt(json['rol_id']),
+    version: _asInt(json['version']),
     datosJson: json['datos_json'] ?? '{}',
     descripcion: json['descripcion'],
     creadoPor: json['creado_por'] != null
         ? int.tryParse(json['creado_por'].toString())
         : null,
     creadoEn: json['creado_en'] != null
-        ? DateTime.tryParse(json['creado_en'])
+        ? DateTime.tryParse(json['creado_en'].toString())
         : null,
   );
 }
@@ -278,7 +263,7 @@ class AuditoriaModel {
   });
 
   factory AuditoriaModel.fromJson(Map<String, dynamic> json) => AuditoriaModel(
-    id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+    id: _asInt(json['id']),
     rolId: json['rol_id'] != null
         ? int.tryParse(json['rol_id'].toString())
         : null,
@@ -295,7 +280,7 @@ class AuditoriaModel {
         ? Map<String, dynamic>.from(json['datos_nuevos'])
         : null,
     creadoEn: json['creado_en'] != null
-        ? DateTime.tryParse(json['creado_en'])
+        ? DateTime.tryParse(json['creado_en'].toString())
         : null,
   );
 }
@@ -314,10 +299,10 @@ class RolModel {
   });
 
   factory RolModel.fromJson(Map<String, dynamic> json) => RolModel(
-    id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),
+    id: _asInt(json['id']),
     nombre: json['nombre'] ?? '',
     codigo: json['codigo'] ?? '',
-    activo: json['activo'] ?? true,
+    activo: _asBool(json['activo'], fallback: true),
   );
 }
 
@@ -337,4 +322,20 @@ class EstructuraData {
             .toList() ??
         [],
   );
+}
+
+int _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+bool _asBool(Object? value, {bool fallback = false}) {
+  if (value == null) return fallback;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  final text = value.toString().trim().toLowerCase();
+  if (const {'1', 'true', 'si', 'sí'}.contains(text)) return true;
+  if (const {'0', 'false', 'no'}.contains(text)) return false;
+  return fallback;
 }

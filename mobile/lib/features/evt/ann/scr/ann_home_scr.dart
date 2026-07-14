@@ -42,7 +42,9 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
     final visibles = anuncios.where((ann) {
       final q = filtro.toLowerCase();
       final autorizado =
-          !widget.user.esUsuario || ann.personalIds.contains(widget.user.id);
+          !widget.user.esUsuario ||
+          ann.personalIds.isEmpty ||
+          ann.personalIds.contains(widget.user.id);
       final matchFocus = widget.focusAnnId == null || ann.id == widget.focusAnnId;
       final matchFiltro = q.isEmpty ||
           ann.ttl.toLowerCase().contains(q) ||

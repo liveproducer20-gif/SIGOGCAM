@@ -51,7 +51,7 @@ const eliminarModulo = asyncHandler(async (req, res) => {
 const listarPermisosModulo = asyncHandler(async (req, res) => {
     const modulo = await repo.obtenerModulo(req.params.id);
     if (!modulo) return res.status(404).json({ ok: false, mensaje: 'Módulo no encontrado' });
-    const permisos = await repo.listarPermisosPorModulo(modulo.codigo);
+    const permisos = await repo.listarPermisosPorModulo(modulo.id);
     res.json({ ok: true, data: permisos });
 });
 
