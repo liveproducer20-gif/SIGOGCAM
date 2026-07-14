@@ -11,6 +11,13 @@ const { auditAction } = require('../middleware/audit.middleware');
 
 router.use(requireAuth);
 
+router.post(
+    '/archivos',
+    requirePermission('eventos.crear'),
+    express.raw({ type: ['image/png', 'image/jpeg', 'image/webp', 'application/pdf'], limit: '10mb' }),
+    controller.subirArchivo
+);
+
 router.get(
     '/',
     requireAnyPermission(['eventos.ver', 'eventos.ver_convocado']),

@@ -108,8 +108,10 @@ class _SupHomeScrState extends State<SupHomeScr> {
   }
 
   void _onLiveEvent(String line) {
-    _liveReload?.cancel();
-    _liveReload = Timer(const Duration(milliseconds: 350), _load);
+    if (admin || _userTab != 1) {
+      _liveReload?.cancel();
+      _liveReload = Timer(const Duration(milliseconds: 350), _load);
+    }
     if (admin && line.contains('"titulo"')) {
       if (!mounted) return;
       final match = RegExp(r'"titulo":"([^"]+)').firstMatch(line);
@@ -234,15 +236,21 @@ class _SupHomeScrState extends State<SupHomeScr> {
         child: IndexedStack(
           index: _userTab,
           children: [
-            _userTickets(),
-            SupportReportForm(
-              api: api,
-              onSubmitted: () {
-                setState(() => _userTab = 0);
-                _load();
-              },
-            ),
-            _userTickets(history: true),
+            _userTab == 0 ? _userTickets() : const SizedBox.shrink(),
+            _userTab == 1
+                ? RepaintBoundary(
+                    child: SupportReportForm(
+                      api: api,
+                      onSubmitted: () {
+                        setState(() => _userTab = 0);
+                        _load();
+                      },
+                    ),
+                  )
+                : const SizedBox.shrink(),
+            _userTab == 2
+                ? _userTickets(history: true)
+                : const SizedBox.shrink(),
           ],
         ),
       ),

@@ -18,7 +18,7 @@ import '../wdg/evt_estado_style.dart';
 import '../../../shared/slc/prs_slc_dlg.dart';
 import '../../../shared/slc/prs_slc_mdl.dart';
 
-class EvtHomeScr extends StatelessWidget {
+class EvtHomeScr extends StatefulWidget {
   final AppUser user;
   final ValueChanged<AppUser>? onUserChanged;
   final VoidCallback? onLogout;
@@ -39,66 +39,107 @@ class EvtHomeScr extends StatelessWidget {
   });
 
   @override
+  State<EvtHomeScr> createState() => _EvtHomeScrState();
+}
+
+class _EvtHomeScrState extends State<EvtHomeScr>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  late bool _eventsOpened;
+  late bool _announcementsOpened;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initialTab.clamp(0, 1);
+    _eventsOpened = initial == 0;
+    _announcementsOpened = initial == 1;
+    _tabController = TabController(length: 2, initialIndex: initial, vsync: this)
+      ..addListener(_openSelectedTab);
+  }
+
+  void _openSelectedTab() {
+    final index = _tabController.index;
+    if ((index == 0 && !_eventsOpened) ||
+        (index == 1 && !_announcementsOpened)) {
+      setState(() {
+        if (index == 0) _eventsOpened = true;
+        if (index == 1) _announcementsOpened = true;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController
+      ..removeListener(_openSelectedTab)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      initialIndex: initialTab,
-      child: Scaffold(
-        backgroundColor: AppThm.bgClr,
-        appBar: TopBarWdg(
-          ttl: 'Eventos y anuncios',
-          user: user,
-          onUserChanged: onUserChanged,
-          onLogout: onLogout,
-          onNotifications: onNotifications,
-          leading: showBack
-              ? IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close),
-                  tooltip: 'Salir',
-                )
-              : null,
-        ),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-              child: Container(
-                height: 58,
-                decoration: BoxDecoration(
-                  color: AdmTokens.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: AdmTokens.cardShadow,
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: const TabBar(
-                  dividerColor: Colors.transparent,
-                  labelColor: AdmTokens.primary,
-                  unselectedLabelColor: AdmTokens.grey500,
-                  indicatorColor: AdmTokens.secondary,
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicatorWeight: 3,
-                  tabs: [
-                    Tab(icon: Icon(Icons.event_outlined), text: 'Eventos'),
-                    Tab(icon: Icon(Icons.campaign_outlined), text: 'Anuncios'),
-                  ],
-                ),
+    return Scaffold(
+      backgroundColor: AppThm.bgClr,
+      appBar: TopBarWdg(
+        ttl: 'Eventos y anuncios',
+        user: widget.user,
+        onUserChanged: widget.onUserChanged,
+        onLogout: widget.onLogout,
+        onNotifications: widget.onNotifications,
+        leading: widget.showBack
+            ? IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close),
+                tooltip: 'Salir',
+              )
+            : null,
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            child: Container(
+              height: 58,
+              decoration: BoxDecoration(
+                color: AdmTokens.surface,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: AdmTokens.cardShadow,
               ),
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _EvtLst(user: user),
-                  AnnHomeScr(
-                    user: user,
-                    focusAnnId: focusAnnId,
-                    showExit: showBack && focusAnnId != null,
-                  ),
+              clipBehavior: Clip.antiAlias,
+              child: TabBar(
+                controller: _tabController,
+                dividerColor: Colors.transparent,
+                labelColor: AdmTokens.primary,
+                unselectedLabelColor: AdmTokens.grey500,
+                indicatorColor: AdmTokens.secondary,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicatorWeight: 3,
+                tabs: const [
+                  Tab(icon: Icon(Icons.event_outlined), text: 'Eventos'),
+                  Tab(icon: Icon(Icons.campaign_outlined), text: 'Anuncios'),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _eventsOpened
+                    ? _EvtLst(user: widget.user)
+                    : const SizedBox.shrink(),
+                _announcementsOpened
+                    ? AnnHomeScr(
+                        user: widget.user,
+                        focusAnnId: widget.focusAnnId,
+                        showExit: widget.showBack && widget.focusAnnId != null,
+                      )
+                    : const SizedBox.shrink(),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

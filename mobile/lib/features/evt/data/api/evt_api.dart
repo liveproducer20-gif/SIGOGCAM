@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../../../../core/api/api_client.dart';
 
 class EvtApi {
@@ -40,9 +42,12 @@ class EvtApi {
   }
 
   Future<int> crearEvento(Map<String, dynamic> data) async {
+    final payload = Map<String, dynamic>.from(data);
+    payload['imagenUrl'] = await _uploadDataUrl(payload['imagenUrl']);
+    payload['pdfUrl'] = await _uploadDataUrl(payload['pdfUrl']);
     final response = await _client.post<int>(
       'eventos',
-      data,
+      payload,
       (value) {
         final map = value as Map<String, dynamic>? ?? {};
         return map['eventoId'] as int? ?? 0;
@@ -50,6 +55,31 @@ class EvtApi {
     );
 
     return response.datos ?? 0;
+  }
+
+  Future<String?> _uploadDataUrl(Object? value) async {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) return null;
+    if (!text.startsWith('data:')) return text;
+
+    final comma = text.indexOf(',');
+    final separator = text.indexOf(';');
+    if (comma < 0 || separator < 5 || separator > comma) {
+      throw Exception('El archivo seleccionado no es válido');
+    }
+    final mimeType = text.substring(5, separator).toLowerCase();
+    final bytes = base64Decode(text.substring(comma + 1));
+    final response = await _client.postBytes<Map<String, dynamic>>(
+      'eventos/archivos',
+      bytes,
+      mimeType,
+      (data) => Map<String, dynamic>.from(data as Map),
+    );
+    final route = response.datos?['ruta']?.toString();
+    if (route == null || route.isEmpty) {
+      throw Exception('El servidor no devolvió la ruta del archivo');
+    }
+    return route;
   }
 
   Future<void> cambiarEstado(int id, String estado) async {

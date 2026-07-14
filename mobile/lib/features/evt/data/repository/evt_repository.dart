@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../../../../core/api/api_client.dart';
 import '../../../../shared/slc/prs_slc_mdl.dart';
 import '../../mdl/evt_mdl.dart';
 import '../api/evt_api.dart';
@@ -87,9 +88,9 @@ class EvtRepository {
       lugar: _cleanText(json['lugar']?.toString() ?? ''),
       descripcion: _cleanText(json['descripcion']?.toString() ?? ''),
       prioridad: _cleanText(_firstText(json, ['prioridad', 'nivel_prioridad'], 'Normal')),
-      imgUrl: _nullableText(json, ['imagen_url', 'img_url', 'imagen']),
+      imgUrl: _absoluteNullableText(json, ['imagen_url', 'img_url', 'imagen']),
       pdfNombre: _nullableText(json, ['pdf_nombre', 'archivo_pdf_nombre']),
-      pdfUrl: _nullableText(json, ['pdf_url', 'archivo_pdf_url']),
+      pdfUrl: _absoluteNullableText(json, ['pdf_url', 'archivo_pdf_url']),
       notificar: _toBool(json['notificar'], fallback: true),
       convocados: _toInt(json['convocados']),
       confirmados: _toInt(json['confirmados']),
@@ -153,6 +154,14 @@ class EvtRepository {
     }
 
     return null;
+  }
+
+  String? _absoluteNullableText(
+    Map<String, dynamic> json,
+    List<String> keys,
+  ) {
+    final value = _nullableText(json, keys);
+    return value == null ? null : ApiClient.absoluteUrl(value);
   }
 
   String _formatDate(DateTime? value) {

@@ -2,6 +2,16 @@ const { query, transaction } = require('../config/db');
 
 let schemaPromise;
 
+function jsonSafe(row) {
+    if (!row) return row;
+    return Object.fromEntries(
+        Object.entries(row).map(([key, value]) => [
+            key,
+            typeof value === 'bigint' ? Number(value) : value
+        ])
+    );
+}
+
 /**
  * El módulo puede desplegarse antes de que se ejecute la migración. Crear el
  * esquema de forma idempotente evita que una tabla faltante afecte al resto de
@@ -117,7 +127,7 @@ async function listar(filters, user) {
         ORDER BY a.fecha_creacion DESC
         OFFSET ? ROWS FETCH NEXT ? ROWS ONLY`, [...where.params, (page - 1) * pageSize, pageSize]);
     const count = await query(`SELECT COUNT_BIG(1) total FROM dbo.alertas_soporte a WHERE ${where.sql}`, where.params);
-    return { datos: rows, total: Number(count[0]?.total || 0), page, pageSize };
+    return { datos: rows.map(jsonSafe), total: Number(count[0]?.total || 0), page, pageSize };
 }
 
 async function estadisticas(user) {
@@ -152,7 +162,11 @@ async function detalle(id, user) {
     if (!tickets[0]) return null;
     const comentarios = await query(`SELECT * FROM dbo.alertas_soporte_comentarios WHERE alerta_id=? ${user.rol === 'ADMINISTRADOR' ? '' : 'AND es_interno=0'} ORDER BY fecha_creacion`, [Number(id)]);
     const historial = await query('SELECT * FROM dbo.alertas_soporte_historial WHERE alerta_id=? ORDER BY fecha_creacion', [Number(id)]);
-    return { alerta: tickets[0], comentarios, historial };
+    return {
+        alerta: jsonSafe(tickets[0]),
+        comentarios: comentarios.map(jsonSafe),
+        historial: historial.map(jsonSafe)
+    };
 }
 
 async function crear(data, user) {
@@ -188,7 +202,7 @@ async function actualizar(id, changes, user) {
             await cx.query(`INSERT INTO dbo.alertas_soporte_historial(alerta_id,usuario_id,usuario_nombre,accion,valor_nuevo) VALUES (?,?,?,?,?)`, [Number(id), Number(user.id), name, 'Asignación', changes.asignadoNombre || 'Sin asignar']);
         }
         const next = await cx.query('SELECT * FROM dbo.alertas_soporte WHERE id=?', [Number(id)]);
-        return next[0];
+        return jsonSafe(next[0]);
     });
 }
 
@@ -198,7 +212,7 @@ async function comentar(id, comentario, interno, user) {
     const name = user.nombreCompleto || `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.correo;
     await query(`INSERT INTO dbo.alertas_soporte_comentarios(alerta_id,usuario_id,usuario_nombre,rol,comentario,es_interno) VALUES (?,?,?,?,?,?)`, [Number(id), Number(user.id), name, user.rol, comentario, interno ? 1 : 0]);
     await query(`UPDATE dbo.alertas_soporte SET fecha_actualizacion=SYSDATETIME(), fecha_primera_respuesta=CASE WHEN ?=1 THEN COALESCE(fecha_primera_respuesta,SYSDATETIME()) ELSE fecha_primera_respuesta END WHERE id=?`, [user.rol === 'ADMINISTRADOR' ? 1 : 0, Number(id)]);
-    return ticket[0];
+    return jsonSafe(ticket[0]);
 }
 
 module.exports = { ensureSchema, listar, estadisticas, detalle, crear, actualizar, comentar };

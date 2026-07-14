@@ -1,5 +1,6 @@
 const { asyncHandler } = require('../middleware/async-handler');
 const service = require('../services/eventos.service');
+const mediaService = require('../services/eventos-media.service');
 
 const obtenerTodos = asyncHandler(async (req, res) => {
     const permisos = Array.isArray(req.user?.permisos) ? req.user.permisos : [];
@@ -28,6 +29,11 @@ const crearEvento = asyncHandler(async (req, res) => {
     res.status(201).json({ ok: true, mensaje: 'Evento creado correctamente', eventoId });
 });
 
+const subirArchivo = asyncHandler(async (req, res) => {
+    const ruta = await mediaService.saveUpload(req.body, req.headers['content-type']);
+    res.status(201).json({ ok: true, datos: { ruta } });
+});
+
 const cambiarEstado = asyncHandler(async (req, res) => {
     await service.cambiarEstado(req.params.id, req.body.estado);
     res.json({ ok: true, mensaje: 'Estado del evento actualizado correctamente' });
@@ -46,6 +52,7 @@ const eliminarEvento = asyncHandler(async (req, res) => {
 module.exports = {
     obtenerTodos,
     obtenerPorId,
+    subirArchivo,
     crearEvento,
     cambiarEstado,
     actualizarEvento,

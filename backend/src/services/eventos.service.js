@@ -1,4 +1,5 @@
 const repository = require('../repositories/eventos.repository');
+const mediaService = require('./eventos-media.service');
 
 async function obtenerTodos(filtros = {}) {
     return await repository.obtenerTodos({
@@ -46,9 +47,9 @@ async function crearEvento(data) {
         creadoPor: Number(data.creadoPor),
         prioridad: data.prioridad ? data.prioridad.toString().trim() : 'Normal',
         notificar: data.notificar !== false,
-        imagenUrl: data.imagenUrl || null,
+        imagenUrl: mediaService.normalizeStoredUrl(data.imagenUrl, 'image'),
         pdfNombre: data.pdfNombre || null,
-        pdfUrl: data.pdfUrl || null,
+        pdfUrl: mediaService.normalizeStoredUrl(data.pdfUrl, 'pdf'),
         personalIds: Array.isArray(data.personalIds) ? data.personalIds : []
     });
 }

@@ -260,11 +260,11 @@ async function crearVersion(rolId, datosJson, descripcion, creadoPor) {
     const r = await q(`
         INSERT INTO dbo.versiones_configuracion_roles
             (rol_id, version, estado, configuracion_json, comentario, creado_por)
-         OUTPUT INSERTED.*
+         OUTPUT CONVERT(VARCHAR(30), INSERTED.id) AS id
          SELECT ?, COALESCE(MAX(version), 0) + 1, 'borrador', ?, ?, ?
          FROM dbo.versiones_configuracion_roles WHERE rol_id = ?
     `, [rolId, datosJson || '{}', descripcion || '', creadoPor, rolId]);
-    return obtenerVersion(Number(r[0].id));
+    return obtenerVersion(r[0].id);
 }
 
 async function obtenerVersion(versionId) {

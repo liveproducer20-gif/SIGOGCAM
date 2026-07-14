@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/file/file_pick.dart';
 import '../../core/file/file_pick_result.dart';
@@ -90,7 +91,9 @@ class _SupportReportFormState extends State<SupportReportForm> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _title,
-                    maxLength: 200,
+                    inputFormatters: [LengthLimitingTextInputFormatter(200)],
+                    autocorrect: false,
+                    enableSuggestions: false,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Título del problema *',
@@ -130,7 +133,11 @@ class _SupportReportFormState extends State<SupportReportForm> {
                         controller: _detail,
                         minLines: 7,
                         maxLines: 12,
-                        maxLength: 3000,
+                        inputFormatters: [
+                          LengthLimitingTextInputFormatter(3000),
+                        ],
+                        autocorrect: false,
+                        enableSuggestions: false,
                         decoration: const InputDecoration(
                           labelText: 'Detalle del problema *',
                           hintText:

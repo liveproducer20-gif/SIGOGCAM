@@ -92,7 +92,6 @@ class _EvtNewScrState extends State<EvtNewScr> {
 
     try {
       _showCreatingDialog();
-      await Future.delayed(const Duration(seconds: 3));
       await ctl.crearEvento();
 
       if (!mounted) return;
