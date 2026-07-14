@@ -18,13 +18,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl gnupg libgssapi-krb5-2 unixodbc \
-    && curl -fsSL https://packages.microsoft.com/config/debian/12/packages-microsoft-prod.deb -o /tmp/packages-microsoft-prod.deb \
-    && dpkg -i /tmp/packages-microsoft-prod.deb \
-    && rm /tmp/packages-microsoft-prod.deb \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 \
-    && apt-get purge -y --auto-remove curl gnupg \
+    && apt-get install -y --no-install-recommends ca-certificates tdsodbc unixodbc \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules

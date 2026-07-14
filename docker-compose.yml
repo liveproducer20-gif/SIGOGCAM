@@ -17,6 +17,10 @@ services:
         source: ./Backup
         target: /var/opt/mssql/backup
         read_only: true
+      - type: bind
+        source: ./docker/database/mssql.conf
+        target: /var/opt/mssql/mssql.conf
+        read_only: true
     networks:
       - sigo_network
     healthcheck:
@@ -67,8 +71,9 @@ services:
       PORT: 3000
       TRUST_PROXY: 1
       JSON_LIMIT: ${JSON_LIMIT:-25mb}
-      DB_DRIVER: ODBC Driver 18 for SQL Server
-      DB_SERVER: database,1433
+      DB_DRIVER: FreeTDS
+      DB_SERVER: database
+      DB_SQL_PORT: 1433
       DB_DATABASE: ${DB_DATABASE:-BITSAC}
       DB_USER: sa
       DB_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}

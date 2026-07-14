@@ -9,7 +9,7 @@ multiplataforma y una base SQL Server. Flutter tiene destinos Android, iOS,
 Windows, Linux, macOS y Web. Docker ejecuta el destino Web; las aplicaciones
 móviles y de escritorio se siguen compilando con Flutter fuera de Docker.
 
-La API escucha en el puerto `3000`, usa ODBC Driver 18, JWT y SQL Server. Los
+La API escucha en el puerto `3000`, usa ODBC, JWT y SQL Server. Los
 archivos cargados se guardan en `backend/uploads`, mientras que sus rutas se
 registran en la base. El cliente usa `SIGO_API_BASE_URL` mediante
 `String.fromEnvironment`; localmente conserva `http://127.0.0.1:3000/api` y la
@@ -37,14 +37,22 @@ El respaldo heredado no contiene checksums de backup, por lo que la restauració
 no puede usar `RESTORE WITH CHECKSUM`. La integridad se valida inmediatamente
 después mediante `DBCC CHECKDB`.
 
+SQL Server se restringe a TLS 1.2 mediante `docker/database/mssql.conf`. SQL
+Server 2025 también ofrece TLS 1.3, pero el handshake de ODBC 18 sobre Debian se
+bloqueó al negociar con el certificado autofirmado del contenedor. TLS 1.2 es
+una opción soportada y recomendada por Microsoft para clientes compatibles; el
+SQL Server limita el protocolo a TLS 1.2. Dentro de la red privada de Compose,
+el backend usa FreeTDS 7.4; la configuración externa del proyecto conserva
+compatibilidad con Microsoft ODBC Driver 18.
+
 El builder Web parte de la imagen Cirrus Flutter `3.44.0` disponible en GHCR y
 fija el tag oficial Flutter `3.44.4` antes de resolver paquetes. Esto es
 necesario porque el proyecto exige Dart `3.12.2` y GHCR todavía no publica un
 tag de imagen `3.44.4` independiente.
 
-La imagen del backend conserva explícitamente `libgssapi-krb5-2`, dependencia
-dinámica requerida por ODBC Driver 18 en Debian aunque el paquete de Microsoft
-no la mantenga tras una limpieza automática de herramientas de instalación.
+La imagen del backend instala `tdsodbc` y `unixodbc`. FreeTDS evita un bloqueo
+de negociación observado entre Microsoft ODBC Driver 18 y SQL Server 2025 en
+la red Linux de Docker, y fue validado contra la base restaurada.
 
 ## Archivos creados
 
@@ -70,7 +78,7 @@ negocio.
 
 ## Variables y valores que ya eran configurables
 
-- Backend: `PORT`, `DB_DRIVER`, `DB_SERVER`, `DB_DATABASE`, `DB_USER`,
+- Backend: `PORT`, `DB_DRIVER`, `DB_SERVER`, `DB_SQL_PORT`, `DB_DATABASE`, `DB_USER`,
   `DB_PASSWORD`, opciones TLS/ODBC, `DB_CONNECTION_TIMEOUT`, `JWT_SECRET` y
   `JSON_LIMIT`.
 - Flutter: `SIGO_API_BASE_URL`, definida en tiempo de compilación.

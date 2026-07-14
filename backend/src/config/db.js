@@ -3,6 +3,7 @@ const odbc = require('odbc');
 const {
   DB_DRIVER = 'ODBC Driver 18 for SQL Server',
   DB_SERVER,
+  DB_SQL_PORT = '1433',
   DB_DATABASE,
   DB_USER,
   DB_PASSWORD,
@@ -24,18 +25,22 @@ if (errores.length > 0) {
   throw new Error('Variables de entorno inválidas: ' + errores.join(', '));
 }
 
-const connectionString =
-  `Driver={${DB_DRIVER}};` +
-  `Server=${DB_SERVER};` +
-  `Database=${DB_DATABASE};` +
-  `Encrypt=${normalizarEncrypt(DB_ENCRYPT)};` +
-  `TrustServerCertificate=${DB_TRUST_SERVER_CERTIFICATE};` +
-  `Connection Timeout=${timeout};` +
-  (
-    DB_USER
-      ? `UID=${DB_USER};PWD=${DB_PASSWORD || ''};`
-      : `Trusted_Connection=${DB_TRUSTED_CONNECTION};`
-  );
+const credentials = DB_USER
+  ? `UID=${DB_USER};PWD=${DB_PASSWORD || ''};`
+  : `Trusted_Connection=${DB_TRUSTED_CONNECTION};`;
+
+const isFreeTds = DB_DRIVER.trim().toLowerCase() === 'freetds';
+const connectionString = isFreeTds
+  ? `Driver={${DB_DRIVER}};` +
+    `Server=${DB_SERVER};Port=${DB_SQL_PORT};` +
+    `Database=${DB_DATABASE};TDS_Version=7.4;ClientCharset=UTF-8;` +
+    `LoginTimeout=${timeout};${credentials}`
+  : `Driver={${DB_DRIVER}};` +
+    `Server=${DB_SERVER};` +
+    `Database=${DB_DATABASE};` +
+    `Encrypt=${normalizarEncrypt(DB_ENCRYPT)};` +
+    `TrustServerCertificate=${DB_TRUST_SERVER_CERTIFICATE};` +
+    `Connection Timeout=${timeout};${credentials}`;
 
 let poolInstance = null;
 let poolClosing = false;
