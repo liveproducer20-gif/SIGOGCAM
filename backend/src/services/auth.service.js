@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const repository = require('../repositories/auth.repository');
-const { normalizarRol, nombreRol, permisosPorDefecto } = require('../validators/auth.validator');
+const { normalizarRol, nombreRol } = require('../validators/auth.validator');
 
 async function login(correo, password) {
     const login = (correo || '').toString().trim().toLowerCase();
@@ -20,11 +20,9 @@ async function login(correo, password) {
 
     let permisos = [];
     try {
-        const dbPermisos = await repository.obtenerPermisos(nombreRol(rolCodigo));
-        const defaults = permisosPorDefecto(rolCodigo);
-        permisos = [...new Set([...dbPermisos, ...defaults])];
+        permisos = await repository.obtenerPermisos(nombreRol(rolCodigo));
     } catch {
-        permisos = permisosPorDefecto(rolCodigo);
+        permisos = [];
     }
 
     // Por ahora la credencial institucional es fija: correo + cédula.

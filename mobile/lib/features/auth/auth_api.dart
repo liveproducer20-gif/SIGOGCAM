@@ -39,6 +39,8 @@ class AuthApi {
       },
     );
 
-    return response.datos!;
+    final user = response.datos!;
+    AuthSession.setUser(user);
+    return user;
   }
 }

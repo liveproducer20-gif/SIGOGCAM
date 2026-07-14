@@ -13,7 +13,7 @@ import '../mdl/evt_mdl.dart';
 import '../new/scr/evt_new_scr.dart';
 import '../svc/evt_svc.dart';
 import '../wdg/evt_fil_wdg.dart';
-import '../wdg/evt_tbl_wdg.dart';
+import '../wdg/evt_overview_wdg.dart';
 import '../wdg/evt_estado_style.dart';
 import '../../../shared/slc/prs_slc_dlg.dart';
 import '../../../shared/slc/prs_slc_mdl.dart';
@@ -118,6 +118,9 @@ class _EvtLstState extends State<_EvtLst> {
   String buscar = '';
   String estado = 'Todos';
   String tipo = 'Todos';
+  String lugar = '';
+  String prioridad = 'Todas';
+  DateTime? fecha;
 
   @override
   void initState() {
@@ -150,10 +153,13 @@ class _EvtLstState extends State<_EvtLst> {
                     ),
                   ),
                 );
-                const title = PageTtlWdg(
-                  ttl: 'Eventos',
-                  sub:
-                      'Administración de capacitaciones, convocatorias, operativos y reuniones.',
+                final title = PageTtlWdg(
+                  ttl: widget.user.puedeGestionarEventos
+                      ? 'Gestión de eventos'
+                      : 'Eventos programados',
+                  sub: widget.user.puedeGestionarEventos
+                      ? 'Planifica, publica y supervisa la participación institucional.'
+                      : 'Consulta tus convocatorias y toda la información disponible.',
                 );
                 if (compact) {
                   return Column(
@@ -169,13 +175,15 @@ class _EvtLstState extends State<_EvtLst> {
                 }
                 return Row(
                   children: [
-                    const Expanded(child: title),
+                    Expanded(child: title),
                     if (widget.user.puedeGestionarEventos) createButton,
                   ],
                 );
               },
             ),
             const SizedBox(height: 20),
+            EvtStatsWdg(items: snapshot.data ?? const []),
+            const SizedBox(height: 18),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -185,10 +193,15 @@ class _EvtLstState extends State<_EvtLst> {
                 boxShadow: AdmTokens.cardShadow,
               ),
               child: EvtFilWdg(
+                admin: widget.user.puedeGestionarEventos,
                 onBuscar: (v) =>
                     setState(() => buscar = v.trim().toLowerCase()),
                 onEstado: (v) => setState(() => estado = v),
                 onTipo: (v) => setState(() => tipo = v),
+                onLugar: (v) =>
+                    setState(() => lugar = v.trim().toLowerCase()),
+                onPrioridad: (v) => setState(() => prioridad = v),
+                onFecha: (v) => setState(() => fecha = v),
               ),
             ),
             const SizedBox(height: 18),
@@ -206,11 +219,10 @@ class _EvtLstState extends State<_EvtLst> {
                   ),
                 ),
               )
-            else if (!widget.user.puedeGestionarEventos)
-              _EvtAgentPreviewList(items: items)
             else
-              EvtTblWdg(
+              EvtOverviewWdg(
                 items: items,
+                canManage: widget.user.puedeGestionarEventos,
                 onEstado: _cambiarEstado,
                 onEditar: _editarEvento,
                 onEliminar: _eliminarEvento,
@@ -254,8 +266,24 @@ class _EvtLstState extends State<_EvtLst> {
           evt.estado.toLowerCase().contains(buscar);
       final matchEstado = estado == 'Todos' || evt.estado == estado;
       final matchTipo = tipo == 'Todos' || _norm(evt.tipo) == _norm(tipo);
+      final matchLugar =
+          lugar.isEmpty || evt.lugar.toLowerCase().contains(lugar);
+      final matchPrioridad =
+          prioridad == 'Todas' || _norm(evt.prioridad) == _norm(prioridad);
+      final eventDate = DateTime.tryParse(evt.fechaInicioRaw);
+      final matchFecha =
+          fecha == null ||
+          (eventDate != null &&
+              eventDate.year == fecha!.year &&
+              eventDate.month == fecha!.month &&
+              eventDate.day == fecha!.day);
 
-      return matchBuscar && matchEstado && matchTipo;
+      return matchBuscar &&
+          matchEstado &&
+          matchTipo &&
+          matchLugar &&
+          matchPrioridad &&
+          matchFecha;
     }).toList();
   }
 
@@ -667,6 +695,8 @@ class _EvtEditDlgState extends State<_EvtEditDlg> {
   }
 }
 
+// Legacy rich-preview kept for deep-link compatibility with older builds.
+// ignore: unused_element
 class _EvtAgentPreviewList extends StatelessWidget {
   final List<EvtMdl> items;
 

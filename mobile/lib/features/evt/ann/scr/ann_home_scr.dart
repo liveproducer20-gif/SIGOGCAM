@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/auth/app_user.dart';
 import '../../../../core/file/file_pick.dart';
 import '../../../../core/thm/app_thm.dart';
+import '../../../adm/adm_design_tokens.dart';
 import '../../../dash/wdg/page_ttl_wdg.dart';
 import '../mdl/ann_mdl.dart';
 import '../svc/ann_svc.dart';
@@ -54,7 +55,7 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
     return Scaffold(
       backgroundColor: AppThm.bgClr,
       body: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -82,14 +83,28 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
                   ),
               ],
             ),
-            const SizedBox(height: 28),
-            TextField(
-              onChanged: (v) => setState(() => filtro = v.trim()),
-              decoration: InputDecoration(
-                hintText: 'Buscar anuncio...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 20),
+            _AnnSummary(items: visibles),
+            const SizedBox(height: 18),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AdmTokens.grey100),
+                boxShadow: AdmTokens.cardShadow,
+              ),
+              child: TextField(
+                onChanged: (v) => setState(() => filtro = v.trim()),
+                decoration: InputDecoration(
+                  hintText: 'Buscar por título, contenido o prioridad...',
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  filled: true,
+                  fillColor: AdmTokens.grey50,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(11),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
             ),
@@ -216,6 +231,79 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
       );
     }
   }
+}
+
+class _AnnSummary extends StatelessWidget {
+  final List<AnnMdl> items;
+  const _AnnSummary({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final published = items.where((e) => e.publicado).length;
+    final important = items
+        .where((e) => e.prioridad.toLowerCase().contains('important'))
+        .length;
+    final urgent = items
+        .where((e) => e.prioridad.toLowerCase().contains('urgent'))
+        .length;
+    return LayoutBuilder(builder: (context, c) {
+      final width = c.maxWidth >= 720
+          ? (c.maxWidth - 42) / 4
+          : (c.maxWidth - 14) / 2;
+      return Wrap(spacing: 14, runSpacing: 14, children: [
+        _AnnStat(width, Icons.campaign_rounded, 'Total', items.length,
+            AdmTokens.secondary),
+        _AnnStat(width, Icons.visibility_outlined, 'Publicados', published,
+            AdmTokens.success),
+        _AnnStat(width, Icons.priority_high_rounded, 'Importantes', important,
+            AdmTokens.warning),
+        _AnnStat(width, Icons.notification_important_outlined, 'Urgentes',
+            urgent, AdmTokens.error),
+      ]);
+    });
+  }
+}
+
+class _AnnStat extends StatelessWidget {
+  final double width;
+  final IconData icon;
+  final String label;
+  final int value;
+  final Color color;
+  const _AnnStat(this.width, this.icon, this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: width,
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AdmTokens.grey100),
+          boxShadow: AdmTokens.cardShadow,
+        ),
+        child: Row(children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .1),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AdmTokens.bodySmall),
+                Text('$value', style: AdmTokens.h2),
+              ],
+            ),
+          ),
+        ]),
+      );
 }
 
 class _AnnEditDlg extends StatefulWidget {

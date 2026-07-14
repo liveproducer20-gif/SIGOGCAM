@@ -16,6 +16,7 @@ const cartillaFlowRoutes = require('./src/routes/cartilla-flow.routes');
 const insigniasRoutes = require('./src/routes/insignias.routes');
 const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes');
 const soporteRoutes = require('./src/routes/soporte.routes');
+const configuracionRoutes = require('./src/routes/configuracion.routes');
 const soporteRepository = require('./src/repositories/soporte.repository');
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/cartillas', cartillaFlowRoutes);
 app.use('/api/insignias', insigniasRoutes);
 app.use('/api/usuarios', usuariosInsigniasRoutes);
 app.use('/api/soporte', soporteRoutes);
+app.use('/api/configuracion', configuracionRoutes);
 
 app.get('/api', (req, res) => {
     res.json({

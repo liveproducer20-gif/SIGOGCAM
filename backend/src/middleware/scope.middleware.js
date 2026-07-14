@@ -1,0 +1,96 @@
+const { getPool } = require('../config/db');
+
+const CACHE_TTL_MS = 30000;
+let cache = { data: null, timestamp: 0 };
+
+async function cargarAlcances() {
+    const ahora = Date.now();
+    if (cache.data && (ahora - cache.timestamp) < CACHE_TTL_MS) return cache.data;
+
+    const pool = await getPool();
+    const conn = await pool.connect();
+    try {
+        const rows = await conn.query(`
+            SELECT rad.rol_id, rad.modulo, rad.alcance, rad.entidad, rad.condicion_adicional
+            FROM dbo.rol_alcance_datos rad
+            INNER JOIN dbo.roles r ON r.id = rad.rol_id
+            WHERE r.activo = 1
+            ORDER BY rad.rol_id, rad.entidad
+        `);
+        const map = {};
+        for (const row of rows) {
+            if (!map[row.rol_id]) map[row.rol_id] = {};
+            map[row.rol_id][row.entidad] = {
+                modulo: row.modulo,
+                alcance: row.alcance,
+                condicion_adicional: row.condicion_adicional
+                    ? JSON.parse(row.condicion_adicional)
+                    : null
+            };
+        }
+        cache = { data: map, timestamp: ahora };
+        return map;
+    } finally {
+        await conn.close();
+    }
+}
+
+async function scopeMiddleware(req, res, next) {
+    try {
+        const rolCodigo = req.user?.rol;
+        if (!rolCodigo) return next();
+
+        const pool = await getPool();
+        const conn = await pool.connect();
+        try {
+            const rolRow = await conn.query(
+                'SELECT id FROM dbo.roles WHERE codigo = ? AND activo = 1',
+                [rolCodigo]
+            );
+            if (!rolRow[0]) return next();
+
+            const alcances = await cargarAlcances();
+            req.dataScope = alcances[rolRow[0].id] || {};
+        } finally {
+            await conn.close();
+        }
+
+        next();
+    } catch (err) {
+        next(err);
+    }
+}
+
+function getScopeFilter(entity, req) {
+    const scope = req.dataScope?.[entity];
+    if (!scope || scope.alcance === 'todos') return null;
+
+    const userId = Number(req.user.id);
+
+    switch (scope.alcance) {
+        case 'propio':
+            return { sql: 'id = ?', params: [userId] };
+        case 'unidad':
+            return {
+                sql: 'unidad_id IN (SELECT unidad_id FROM dbo.personal WHERE id = ?)',
+                params: [userId]
+            };
+        case 'departamento':
+            return {
+                sql: 'departamento_id IN (SELECT departamento_id FROM dbo.personal WHERE id = ?)',
+                params: [userId]
+            };
+        case 'personalizado':
+            if (scope.condicion_adicional?.sql) {
+                return {
+                    sql: scope.condicion_adicional.sql,
+                    params: scope.condicion_adicional.params || []
+                };
+            }
+            return null;
+        default:
+            return null;
+    }
+}
+
+module.exports = { scopeMiddleware, getScopeFilter, cargarAlcances };

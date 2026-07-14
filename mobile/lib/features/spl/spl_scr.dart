@@ -40,6 +40,7 @@ class _SplScrState extends State<SplScr> {
     if (token != null) {
       try {
         final user = await ProfileApi().getMe();
+        AuthSession.setUser(user);
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -47,6 +48,14 @@ class _SplScrState extends State<SplScr> {
         );
         return;
       } catch (_) {
+        final cachedUser = AuthSession.user;
+        if (cachedUser != null && mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => DashScr(user: cachedUser)),
+          );
+          return;
+        }
         AuthSession.clear();
       }
     }

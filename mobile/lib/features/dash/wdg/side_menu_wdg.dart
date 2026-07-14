@@ -4,18 +4,62 @@ import '../../../core/auth/app_user.dart';
 import '../../../core/thm/app_thm.dart';
 import '../../profile/profile_menu_wdg.dart';
 
+enum SideMenuSection { main, operational, reports, settings, support }
+
+enum SideMenuDestination {
+  events,
+  booklets,
+  badges,
+  services,
+  operations,
+  reports,
+  statistics,
+  administration,
+  support,
+}
+
 class SideMenuItem {
+  final SideMenuDestination destination;
   final String title;
   final IconData icon;
-  final bool enabled;
+  final SideMenuSection section;
+  final List<String> requiredPermissions;
+  final bool requireAllPermissions;
+  final bool available;
+  final bool authorized;
+  final String? unavailableMessage;
   final int badge;
 
   const SideMenuItem({
+    required this.destination,
     required this.title,
     required this.icon,
-    required this.enabled,
+    required this.section,
+    this.requiredPermissions = const [],
+    this.requireAllPermissions = false,
+    this.available = true,
+    this.authorized = true,
+    this.unavailableMessage,
     this.badge = 0,
   });
+
+  bool get enabled => available && authorized;
+
+  SideMenuItem resolveFor(AppUser user, {int? badge}) => SideMenuItem(
+        destination: destination,
+        title: title,
+        icon: icon,
+        section: section,
+        requiredPermissions: requiredPermissions,
+        requireAllPermissions: requireAllPermissions,
+        available: available,
+        authorized: requiredPermissions.isEmpty ||
+            (requireAllPermissions
+                ? user.permissions.containsAll(requiredPermissions)
+                : user.permissions.containsAny(requiredPermissions)),
+        unavailableMessage: unavailableMessage,
+        badge: badge ?? this.badge,
+      );
 }
 
 class SideMenuWdg extends StatelessWidget {
@@ -98,30 +142,34 @@ class SideMenuWdg extends StatelessWidget {
 
   List<Widget> _menuChildren() {
     const groups = [
-      ('MENÚ PRINCIPAL', [0, 1, 2]),
-      ('OPERATIVO', [4, 6]),
-      ('ADMINISTRACIÓN', [3, 5, 7, 8]),
+      (SideMenuSection.main, 'MENÚ PRINCIPAL'),
+      (SideMenuSection.operational, 'OPERATIVO'),
+      (SideMenuSection.reports, 'ANÁLISIS'),
+      (SideMenuSection.settings, 'CONFIGURACIÓN'),
     ];
     return [
       for (final group in groups) ...[
-        if (menuOpen) _SectionLabel(group.$1),
-        for (final index in group.$2)
-          if (index < items.length)
-            _MenuTile(
-              item: items[index],
-              selected: index == idxSel,
-              open: menuOpen,
-              onTap: () => onItemTap(index),
-            ),
-        const SizedBox(height: 8),
+        if (items.any((item) => item.section == group.$1)) ...[
+          if (menuOpen) _SectionLabel(group.$2),
+          for (final entry in items.indexed)
+            if (entry.$2.section == group.$1)
+              _MenuTile(
+                item: entry.$2,
+                selected: entry.$1 == idxSel,
+                open: menuOpen,
+                onTap: () => onItemTap(entry.$1),
+              ),
+          const SizedBox(height: 8),
+        ],
       ],
-      if (items.length > 9) ...[
+      for (final entry in items.indexed)
+        if (entry.$2.section == SideMenuSection.support) ...[
         const Divider(color: Colors.white12, height: 12),
         _MenuTile(
-          item: items[9],
-          selected: idxSel == 9,
+          item: entry.$2,
+          selected: idxSel == entry.$1,
           open: menuOpen,
-          onTap: () => onItemTap(9),
+          onTap: () => onItemTap(entry.$1),
         ),
       ],
     ];

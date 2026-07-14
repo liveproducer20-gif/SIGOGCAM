@@ -17,6 +17,8 @@ import '../evt/wdg/evt_estado_style.dart';
 import 'wdg/dev_card_wdg.dart';
 import 'wdg/page_ttl_wdg.dart';
 import 'wdg/side_menu_wdg.dart';
+import 'wdg/side_menu_config.dart';
+import 'wdg/side_menu_api.dart';
 import 'wdg/top_bar_wdg.dart';
 import '../crt/crt_home_scr.dart';
 import '../crt/svc/crt_api.dart';
@@ -45,66 +47,17 @@ class _DashScrState extends State<DashScr> {
   StreamSubscription<String>? _supportLive;
   Timer? _supportStart, _supportRefreshDebounce;
   bool _supportAttached = false;
+  List<SideMenuItem>? _remoteItems;
 
-  List<SideMenuItem> get items => [
-    const SideMenuItem(
-      title: 'Eventos',
-      icon: Icons.event_outlined,
-      enabled: true,
-    ),
-    const SideMenuItem(
-      title: 'Cartillas',
-      icon: Icons.description_outlined,
-      enabled: true,
-    ),
-    const SideMenuItem(
-      title: 'Mis insignias',
-      icon: Icons.workspace_premium_outlined,
-      enabled: true,
-    ),
-    SideMenuItem(
-      title: 'Administracion',
-      icon: Icons.admin_panel_settings_outlined,
-      enabled: user.puedeVerAdministracion,
-    ),
-    const SideMenuItem(
-      title: 'Servicios',
-      icon: Icons.local_police_outlined,
-      enabled: false,
-    ),
-    const SideMenuItem(
-      title: 'Reportes',
-      icon: Icons.bar_chart_outlined,
-      enabled: false,
-    ),
-    const SideMenuItem(
-      title: 'Operaciones',
-      icon: Icons.security_outlined,
-      enabled: false,
-    ),
-    const SideMenuItem(
-      title: 'Estadísticas',
-      icon: Icons.insights_outlined,
-      enabled: false,
-    ),
-    const SideMenuItem(
-      title: 'Configuración',
-      icon: Icons.settings_outlined,
-      enabled: false,
-    ),
-    SideMenuItem(
-      title: 'Alertas / Soporte',
-      icon: Icons.notifications_active_outlined,
-      enabled: true,
-      badge: _supportPending,
-    ),
-  ];
+  List<SideMenuItem> get items => _remoteItems ??
+      SideMenuConfig.forUser(user, supportBadge: _supportPending);
 
   @override
   void initState() {
     super.initState();
     user = widget.user;
     AuthSession.onSessionExpired = _logout;
+    _loadMenu();
     _supportStart = Timer(const Duration(milliseconds: 700), _startSupport);
   }
 
@@ -123,7 +76,12 @@ class _DashScrState extends State<DashScr> {
   Future<void> _refreshSupportBadge() async {
     try {
       final stats = await SupportApi().stats();
-      if (mounted) setState(() => _supportPending = stats.pending);
+      if (mounted) {
+        setState(() {
+          _supportPending = stats.pending;
+          _remoteItems = _withSupportBadge(_remoteItems, stats.pending);
+        });
+      }
     } catch (_) {}
   }
 
@@ -153,14 +111,14 @@ class _DashScrState extends State<DashScr> {
             menuOpen: menuOpen,
             onMenuTap: () => setState(() => menuOpen = !menuOpen),
             onSel: (i) => setState(() => idxSel = i),
-            onUserChanged: (next) => setState(() => user = next),
+            onUserChanged: _setUser,
             onLogout: _logout,
             onNotifications: _openNotifications,
           )
         : _MobDash(
             items: items,
             user: user,
-            onUserChanged: (next) => setState(() => user = next),
+            onUserChanged: _setUser,
             onLogout: _logout,
             onNotifications: _openNotifications,
           );
@@ -173,6 +131,63 @@ class _DashScrState extends State<DashScr> {
       MaterialPageRoute(builder: (_) => const AuthScr()),
       (_) => false,
     );
+  }
+
+  void _setUser(AppUser next) {
+    AuthSession.setUser(next);
+    setState(() {
+      user = next;
+      _remoteItems = null;
+      final nextItems = SideMenuConfig.forUser(
+        next,
+        supportBadge: _supportPending,
+      );
+      if (idxSel >= nextItems.length) idxSel = 0;
+    });
+    _loadMenu();
+  }
+
+  Future<void> _loadMenu() async {
+    try {
+      final raw = await SideMenuApi().getCurrentStructure();
+      final resolved = SideMenuConfig.fromApi(
+        raw,
+        user,
+        supportBadge: _supportPending,
+      );
+      if (!mounted || resolved.isEmpty) return;
+      setState(() {
+        _remoteItems = resolved;
+        if (idxSel >= resolved.length) idxSel = 0;
+      });
+    } catch (_) {
+      // Compatibility fallback for installations without dynamic-menu tables.
+    }
+  }
+
+  List<SideMenuItem>? _withSupportBadge(
+    List<SideMenuItem>? current,
+    int badge,
+  ) {
+    if (current == null) return null;
+    return current
+        .map(
+          (item) => item.destination == SideMenuDestination.support
+              ? SideMenuItem(
+                  destination: item.destination,
+                  title: item.title,
+                  icon: item.icon,
+                  section: item.section,
+                  requiredPermissions: item.requiredPermissions,
+                  requireAllPermissions: item.requireAllPermissions,
+                  available: item.available,
+                  authorized: item.authorized,
+                  unavailableMessage: item.unavailableMessage,
+                  badge: badge,
+                )
+              : item,
+        )
+        .toList(growable: false);
   }
 
   Future<void> _openNotifications() async {
@@ -240,6 +255,7 @@ class _WebDashState extends State<_WebDash> {
           Expanded(
             child: _WebContent(
               item: item,
+              items: widget.items,
               user: widget.user,
               idxSel: widget.idxSel,
               onUserChanged: widget.onUserChanged,
@@ -255,6 +271,7 @@ class _WebDashState extends State<_WebDash> {
 
 class _WebContent extends StatefulWidget {
   final SideMenuItem item;
+  final List<SideMenuItem> items;
   final AppUser user;
   final int idxSel;
   final ValueChanged<AppUser> onUserChanged;
@@ -263,6 +280,7 @@ class _WebContent extends StatefulWidget {
 
   const _WebContent({
     required this.item,
+    required this.items,
     required this.user,
     required this.idxSel,
     required this.onUserChanged,
@@ -276,27 +294,26 @@ class _WebContent extends StatefulWidget {
 
 class _WebContentState extends State<_WebContent> {
   int _insRefreshKey = 0;
-  late List<Widget?> _pages;
+  final Map<SideMenuDestination, Widget> _pages = {};
   bool _startingSection = false;
 
   @override
   void initState() {
     super.initState();
-    _pages = List<Widget?>.filled(10, null);
   }
 
   @override
   void didUpdateWidget(covariant _WebContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.user, widget.user)) {
-      _pages = List<Widget?>.filled(10, null);
+      _pages.clear();
     }
-    if (oldWidget.idxSel != widget.idxSel && widget.idxSel < _pages.length) {
-      if (widget.idxSel == 2) {
+    if (oldWidget.item.destination != widget.item.destination) {
+      if (widget.item.destination == SideMenuDestination.badges) {
         _insRefreshKey++;
-        _pages[2] = null;
+        _pages.remove(SideMenuDestination.badges);
       }
-      _startingSection = _pages[widget.idxSel] == null;
+      _startingSection = !_pages.containsKey(widget.item.destination);
       if (_startingSection) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _startingSection = false);
@@ -305,34 +322,34 @@ class _WebContentState extends State<_WebContent> {
     }
   }
 
-  Widget _buildPage(int index) {
+  Widget _buildPage(SideMenuItem item) {
     final common = (
       user: widget.user,
       onUserChanged: widget.onUserChanged,
       onLogout: widget.onLogout,
       onNotifications: widget.onNotifications,
     );
-    return switch (index) {
-      0 => EvtHomeScr(
+    return switch (item.destination) {
+      SideMenuDestination.events => EvtHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      1 => CrtHomeScr(
+      SideMenuDestination.booklets => CrtHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      2 => InsHomeScr(
+      SideMenuDestination.badges => InsHomeScr(
         key: ValueKey('ins_$_insRefreshKey'),
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
-      3 =>
+      SideMenuDestination.administration =>
         widget.user.puedeVerAdministracion
             ? AdmHomeScr(
                 user: common.user,
@@ -341,7 +358,7 @@ class _WebContentState extends State<_WebContent> {
                 onNotifications: common.onNotifications,
               )
             : const SizedBox.shrink(),
-      9 => SupHomeScr(
+      SideMenuDestination.support => SupHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
         onLogout: common.onLogout,
@@ -352,13 +369,15 @@ class _WebContentState extends State<_WebContent> {
   }
 
   List<Widget> _buildChildren() {
-    if (widget.idxSel < _pages.length) {
-      _pages[widget.idxSel] ??= _buildPage(widget.idxSel);
-    }
-    return List<Widget>.generate(
-      _pages.length,
-      (index) => _pages[index] ?? const SizedBox.shrink(),
+    _pages.putIfAbsent(
+      widget.item.destination,
+      () => _buildPage(widget.item),
     );
+    return widget.items
+        .map(
+          (item) => _pages[item.destination] ?? const SizedBox.shrink(),
+        )
+        .toList(growable: false);
   }
 
   @override
@@ -1377,7 +1396,12 @@ class _MobDash extends StatelessWidget {
                 onTap: () {
                   if (!item.enabled) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('${item.title} en desarrollo')),
+                      SnackBar(
+                        content: Text(
+                          item.unavailableMessage ??
+                              '${item.title} no está disponible.',
+                        ),
+                      ),
                     );
                     return;
                   }
@@ -1385,50 +1409,39 @@ class _MobDash extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) {
-                        if (item.title == 'Eventos') {
-                          return EvtHomeScr(
+                      builder: (_) => switch (item.destination) {
+                        SideMenuDestination.events => EvtHomeScr(
                             user: user,
                             onUserChanged: onUserChanged,
                             onLogout: onLogout,
                             onNotifications: onNotifications,
-                          );
-                        }
-
-                        if (item.title == 'Mis insignias') {
-                          return InsHomeScr(
+                          ),
+                        SideMenuDestination.badges => InsHomeScr(
                             user: user,
                             onUserChanged: onUserChanged,
                             onLogout: onLogout,
                             onNotifications: onNotifications,
-                          );
-                        }
-
-                        if (item.title == 'Administracion') {
-                          return AdmHomeScr(
+                          ),
+                        SideMenuDestination.administration => AdmHomeScr(
                             user: user,
                             onUserChanged: onUserChanged,
                             onLogout: onLogout,
                             onNotifications: onNotifications,
                             showBack: true,
-                          );
-                        }
-
-                        if (item.title == 'Alertas / Soporte') {
-                          return SupHomeScr(
+                          ),
+                        SideMenuDestination.support => SupHomeScr(
                             user: user,
                             onUserChanged: onUserChanged,
                             onLogout: onLogout,
                             onNotifications: onNotifications,
-                          );
-                        }
-
-                        return CrtHomeScr(
+                          ),
+                        SideMenuDestination.booklets => CrtHomeScr(
                           user: user,
                           onUserChanged: onUserChanged,
                           onLogout: onLogout,
                           onNotifications: onNotifications,
-                        );
+                        ),
+                        _ => const SizedBox.shrink(),
                       },
                     ),
                   );
