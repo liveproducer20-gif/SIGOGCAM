@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class ModuloModel {
   final int id;
   final String nombre;
@@ -21,14 +23,14 @@ class ModuloModel {
 
   factory ModuloModel.fromJson(Map<String, dynamic> json) => ModuloModel(
     id: _asInt(json['id']),
-    nombre: json['nombre'] ?? '',
+    nombre: _decodedText(json['nombre']),
     codigo: json['codigo'] ?? '',
     icono: json['icono'],
     ruta: json['ruta'],
     moduloPadreId: json['modulo_padre_id'] != null
         ? (json['modulo_padre_id'] is int
-            ? json['modulo_padre_id']
-            : int.tryParse(json['modulo_padre_id'].toString()))
+              ? json['modulo_padre_id']
+              : int.tryParse(json['modulo_padre_id'].toString()))
         : null,
     orden: _asInt(json['orden']),
     activo: _asBool(json['activo'], fallback: true),
@@ -74,7 +76,7 @@ class MenuItemModel {
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) => MenuItemModel(
     moduloId: _asInt(json['id']),
-    nombre: json['nombre'] ?? '',
+    nombre: _decodedText(json['nombre']),
     codigo: json['codigo'] ?? '',
     icono: json['icono'],
     ruta: json['ruta'],
@@ -82,8 +84,9 @@ class MenuItemModel {
     nivel: _asInt(json['nivel']),
     orden: _asInt(json['orden']),
     visible: _asBool(json['visible'], fallback: true),
-    etiquetaPersonalizada: json['etiqueta_personalizada'],
-    hijos: (json['hijos'] as List<dynamic>?)
+    etiquetaPersonalizada: _decodedNullable(json['etiqueta_personalizada']),
+    hijos:
+        (json['hijos'] as List<dynamic>?)
             ?.map((e) => MenuItemModel.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [],
@@ -125,8 +128,8 @@ class RolMenuConfigModel {
         nivel: _asInt(json['nivel']),
         orden: _asInt(json['orden']),
         visible: _asBool(json['visible'], fallback: true) ? 1 : 0,
-        etiquetaPersonalizada: json['etiqueta_personalizada'],
-        moduloNombre: json['modulo_nombre'],
+        etiquetaPersonalizada: _decodedNullable(json['etiqueta_personalizada']),
+        moduloNombre: _decodedNullable(json['modulo_nombre']),
         moduloCodigo: json['modulo_codigo'],
         icono: json['icono'],
         ruta: json['ruta'],
@@ -197,11 +200,11 @@ class CampoPermisoModel {
         puedeVer: _asBool(json['puede_ver']),
         puedeEditar: _asBool(json['puede_editar']),
         requerido: _asBool(json['requerido']),
-        campoNombre: json['campo_nombre'],
+        campoNombre: _decodedNullable(json['campo_nombre']),
         campoCodigo: json['campo_codigo'],
         tipoDato: json['tipo_dato'],
         entidad: json['entidad'],
-        seccion: json['seccion'],
+        seccion: _decodedNullable(json['seccion']),
       );
 }
 
@@ -229,7 +232,7 @@ class VersionModel {
     rolId: _asInt(json['rol_id']),
     version: _asInt(json['version']),
     datosJson: json['datos_json'] ?? '{}',
-    descripcion: json['descripcion'],
+    descripcion: _decodedNullable(json['descripcion']),
     creadoPor: json['creado_por'] != null
         ? int.tryParse(json['creado_por'].toString())
         : null,
@@ -269,7 +272,7 @@ class AuditoriaModel {
         : null,
     modulo: json['modulo'] ?? '',
     accion: json['accion'] ?? '',
-    detalle: json['detalle'],
+    detalle: _decodedNullable(json['detalle']),
     usuarioId: json['usuario_id'] != null
         ? int.tryParse(json['usuario_id'].toString())
         : null,
@@ -300,7 +303,7 @@ class RolModel {
 
   factory RolModel.fromJson(Map<String, dynamic> json) => RolModel(
     id: _asInt(json['id']),
-    nombre: json['nombre'] ?? '',
+    nombre: _decodedText(json['nombre']),
     codigo: json['codigo'] ?? '',
     activo: _asBool(json['activo'], fallback: true),
   );
@@ -313,11 +316,13 @@ class EstructuraData {
   EstructuraData({required this.modulos, required this.roles});
 
   factory EstructuraData.fromJson(Map<String, dynamic> json) => EstructuraData(
-    modulos: (json['modulos'] as List<dynamic>?)
+    modulos:
+        (json['modulos'] as List<dynamic>?)
             ?.map((e) => ModuloModel.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [],
-    roles: (json['roles'] as List<dynamic>?)
+    roles:
+        (json['roles'] as List<dynamic>?)
             ?.map((e) => RolModel.fromJson(e as Map<String, dynamic>))
             .toList() ??
         [],
@@ -338,4 +343,19 @@ bool _asBool(Object? value, {bool fallback = false}) {
   if (const {'1', 'true', 'si', 'sí'}.contains(text)) return true;
   if (const {'0', 'false', 'no'}.contains(text)) return false;
   return fallback;
+}
+
+String _decodedText(Object? value) {
+  final text = value?.toString() ?? '';
+  if (!text.contains('Ã') && !text.contains('Â')) return text;
+  try {
+    return utf8.decode(latin1.encode(text));
+  } on FormatException {
+    return text;
+  }
+}
+
+String? _decodedNullable(Object? value) {
+  if (value == null) return null;
+  return _decodedText(value);
 }

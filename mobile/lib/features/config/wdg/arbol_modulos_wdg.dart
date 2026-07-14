@@ -19,39 +19,52 @@ class ArbolModulosWdg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final raices =
-        modulos.where((m) => m.moduloPadreId == null).toList();
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: const Color(0xFF082F6B),
-          child: Row(
-            children: [
-              const Icon(Icons.account_tree_outlined, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text('Módulos del Sistema',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
-                onPressed: onAdd,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
+    final raices = modulos.where((m) => m.moduloPadreId == null).toList();
+    return Material(
+      color: const Color(0xFF0A376F),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFF082F6B),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.account_tree_outlined,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Módulos del Sistema',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  onPressed: onAdd,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
           ),
-        ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.symmetric(vertical: 4),
-            children: [
-              for (final mod in raices) _buildTile(context, mod, 0),
-            ],
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              children: [for (final mod in raices) _buildTile(context, mod, 0)],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -62,6 +75,8 @@ class ArbolModulosWdg extends StatelessWidget {
       children: [
         InkWell(
           onTap: () => onSelect(mod),
+          hoverColor: Colors.white.withValues(alpha: .08),
+          splashColor: AppThm.accClr.withValues(alpha: .16),
           child: Container(
             padding: EdgeInsets.only(
               left: 12.0 + depth * 16,
@@ -70,7 +85,7 @@ class ArbolModulosWdg extends StatelessWidget {
               bottom: 8,
             ),
             decoration: BoxDecoration(
-              color: selected ? const Color(0xFF0D4E9B) : null,
+              color: selected ? const Color(0xFF1259A5) : null,
               border: Border(
                 left: BorderSide(
                   color: selected ? AppThm.accClr : Colors.transparent,
@@ -83,14 +98,18 @@ class ArbolModulosWdg extends StatelessWidget {
                 Icon(
                   _iconFor(mod.icono),
                   size: 16,
-                  color: selected ? AppThm.accClr : Colors.white70,
+                  color: selected
+                      ? AppThm.accClr
+                      : Colors.white.withValues(alpha: .78),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     mod.nombre,
                     style: TextStyle(
-                      color: selected ? Colors.white : Colors.white70,
+                      color: selected
+                          ? Colors.white
+                          : Colors.white.withValues(alpha: .9),
                       fontSize: 13,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                     ),
@@ -98,13 +117,18 @@ class ArbolModulosWdg extends StatelessWidget {
                 ),
                 if (!mod.activo)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: .2),
                       borderRadius: BorderRadius.circular(3),
                     ),
-                    child: const Text('INACT',
-                        style: TextStyle(color: Colors.orange, fontSize: 9)),
+                    child: const Text(
+                      'INACT',
+                      style: TextStyle(color: Colors.orange, fontSize: 9),
+                    ),
                   ),
               ],
             ),
@@ -116,14 +140,14 @@ class ArbolModulosWdg extends StatelessWidget {
   }
 
   IconData _iconFor(String? icono) => switch (icono) {
-        'event_outlined' => Icons.event_outlined,
-        'description_outlined' => Icons.description_outlined,
-        'workspace_premium_outlined' => Icons.workspace_premium_outlined,
-        'admin_panel_settings_outlined' => Icons.admin_panel_settings_outlined,
-        'settings_outlined' => Icons.settings_outlined,
-        'people_outlined' => Icons.people_outlined,
-        'security_outlined' => Icons.security_outlined,
-        'notifications_active_outlined' => Icons.notifications_active_outlined,
-        _ => Icons.folder_outlined,
-      };
+    'event_outlined' => Icons.event_outlined,
+    'description_outlined' => Icons.description_outlined,
+    'workspace_premium_outlined' => Icons.workspace_premium_outlined,
+    'admin_panel_settings_outlined' => Icons.admin_panel_settings_outlined,
+    'settings_outlined' => Icons.settings_outlined,
+    'people_outlined' => Icons.people_outlined,
+    'security_outlined' => Icons.security_outlined,
+    'notifications_active_outlined' => Icons.notifications_active_outlined,
+    _ => Icons.folder_outlined,
+  };
 }
