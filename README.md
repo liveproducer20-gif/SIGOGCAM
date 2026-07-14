@@ -29,6 +29,17 @@ npm install
 npm start              # Inicia en http://localhost:3000
 ```
 
+## Inicio con Docker
+
+La plataforma completa (SQL Server, API y Flutter Web) puede iniciarse con:
+
+```bash
+docker compose up -d
+```
+
+Consulte [README_DOCKER.md](README_DOCKER.md) para la instalación, operación,
+respaldos, actualización y recomendaciones de producción.
+
 ## Base de Datos
 
 Ejecutar los scripts en `database/` en orden cronol\u00f3gico (formato YYYYMMDD).

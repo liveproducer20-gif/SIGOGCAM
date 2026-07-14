@@ -1,0 +1,18 @@
+services:
+  backend:
+    build:
+      target: development
+    environment:
+      NODE_ENV: development
+    command: ["node", "--watch", "index.js"]
+    volumes:
+      - type: bind
+        source: ./backend
+        target: /app
+      - backend_node_modules:/app/node_modules
+      - type: bind
+        source: ./backend/uploads
+        target: /app/uploads
+
+volumes:
+  backend_node_modules:

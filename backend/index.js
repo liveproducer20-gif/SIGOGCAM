@@ -23,6 +23,18 @@ const eventosMedia = require('./src/services/eventos-media.service');
 
 const app = express();
 
+const trustProxy = process.env.TRUST_PROXY?.trim();
+if (trustProxy) {
+    const normalizedTrustProxy = /^\d+$/.test(trustProxy)
+        ? Number(trustProxy)
+        : trustProxy.toLowerCase() === 'true'
+            ? true
+            : trustProxy.toLowerCase() === 'false'
+                ? false
+                : trustProxy;
+    app.set('trust proxy', normalizedTrustProxy);
+}
+
 app.use(cors({
     origin: true,
     credentials: true,

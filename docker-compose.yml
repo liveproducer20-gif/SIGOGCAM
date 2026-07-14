@@ -1,0 +1,133 @@
+name: ${COMPOSE_PROJECT_NAME:-sigo-gcam}
+
+services:
+  database:
+    image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
+    container_name: sigo-gcam-database
+    hostname: database
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: ${MSSQL_PID:-Developer}
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
+    ports:
+      - "${DB_PORT:-1433}:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+      - type: bind
+        source: ./Backup
+        target: /var/opt/mssql/backup
+        read_only: true
+    networks:
+      - sigo_network
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa
+          -P "$${MSSQL_SA_PASSWORD}" -C -Q "SELECT 1" -b -o /dev/null
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    restart: unless-stopped
+    stop_grace_period: 60s
+
+  database-init:
+    image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
+    container_name: sigo-gcam-database-init
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
+      DB_DATABASE: ${DB_DATABASE:-BITSAC}
+      DB_BACKUP_FILE: ${DB_BACKUP_FILE:-BITSAC2}
+    volumes:
+      - type: bind
+        source: ./Backup
+        target: /var/opt/mssql/backup
+        read_only: true
+      - type: bind
+        source: ./docker/database
+        target: /docker-entrypoint-initdb.d
+        read_only: true
+    networks:
+      - sigo_network
+    depends_on:
+      database:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "/docker-entrypoint-initdb.d/init-database.sh"]
+    restart: "no"
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: sigo-gcam-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      TRUST_PROXY: 1
+      JSON_LIMIT: ${JSON_LIMIT:-25mb}
+      DB_DRIVER: ODBC Driver 18 for SQL Server
+      DB_SERVER: database,1433
+      DB_DATABASE: ${DB_DATABASE:-BITSAC}
+      DB_USER: sa
+      DB_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
+      DB_ENCRYPT: "yes"
+      DB_TRUSTED_CONNECTION: "No"
+      DB_TRUST_SERVER_CERTIFICATE: "Yes"
+      DB_CONNECTION_TIMEOUT: ${DB_CONNECTION_TIMEOUT:-30}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en el archivo .env}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - type: bind
+        source: ./backend/uploads
+        target: /app/uploads
+    networks:
+      - sigo_network
+    depends_on:
+      database-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - fetch('http://127.0.0.1:3000/api/probar-db').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+    init: true
+
+  frontend:
+    build:
+      context: ./mobile
+      dockerfile: Dockerfile
+      args:
+        SIGO_API_BASE_URL: ${SIGO_API_BASE_URL:-/api}
+    container_name: sigo-gcam-frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - sigo_network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+networks:
+  sigo_network:
+    name: sigo-gcam-network
+    driver: bridge
+
+volumes:
+  sqlserver_data:
+    name: sigo-gcam-sqlserver-data
