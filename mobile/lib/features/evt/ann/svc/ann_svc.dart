@@ -1,12 +1,16 @@
+import 'dart:convert';
+
 import '../../../../core/api/api_client.dart';
+import '../../../../core/file/file_pick_result.dart';
 import '../mdl/ann_mdl.dart';
 
 class AnnSvc {
   static final ApiClient _client = ApiClient();
   static final Map<int?, List<AnnMdl>> _cache = {};
   static final Map<int?, DateTime> _cacheTime = {};
-  static final Map<int?, Future<List<AnnMdl>>> _inFlight = {};
+  static final Map<String, Future<List<AnnMdl>>> _inFlight = {};
   static const _cacheDuration = Duration(seconds: 30);
+  static int _generation = 0;
 
   static Future<List<AnnMdl>> getLst({int? personalId}) async {
     final cachedAt = _cacheTime[personalId];
@@ -14,7 +18,9 @@ class AnnSvc {
         DateTime.now().difference(cachedAt) < _cacheDuration) {
       return _cache[personalId] ?? const [];
     }
-    final pending = _inFlight[personalId];
+    final generation = _generation;
+    final requestKey = '${personalId ?? 'all'}:$generation';
+    final pending = _inFlight[requestKey];
     if (pending != null) return pending;
 
     final path = personalId == null
@@ -30,55 +36,83 @@ class AnnSvc {
         })
         .then((response) {
           final items = response.datos ?? <AnnMdl>[];
-          _cache[personalId] = items;
-          _cacheTime[personalId] = DateTime.now();
+          if (_generation == generation) {
+            _cache[personalId] = items;
+            _cacheTime[personalId] = DateTime.now();
+          }
           return items;
         })
         .whenComplete(() {
-          _inFlight.remove(personalId);
+          _inFlight.remove(requestKey);
         });
-    _inFlight[personalId] = request;
+    _inFlight[requestKey] = request;
     return request;
   }
 
   static void invalidateCache() {
     _cache.clear();
     _cacheTime.clear();
-    _inFlight.clear();
+    _generation++;
+  }
+
+  static Future<String> uploadImage(FilePickResult image) async {
+    final value = image.dataUrl;
+    if (value == null) {
+      throw Exception('No se pudo leer la imagen seleccionada');
+    }
+    final comma = value.indexOf(',');
+    if (comma < 0) throw Exception('La imagen seleccionada no es válida');
+    final bytes = base64Decode(value.substring(comma + 1));
+    final uploaded = await _client.postBytes<Map<String, dynamic>>(
+      'anuncios/imagenes',
+      bytes,
+      image.mimeType ?? 'image/jpeg',
+      (data) => Map<String, dynamic>.from(data as Map),
+    );
+    final route = uploaded.datos?['ruta']?.toString();
+    if (route == null || route.isEmpty) {
+      throw Exception('El servidor no devolvió la ruta de la imagen');
+    }
+    return route;
   }
 
   static Future<AnnMdl> crear(AnnMdl ann, {required int creadoPor}) async {
     invalidateCache();
-    final response = await _client.post<int>(
-      'anuncios',
-      _toJson(ann, creadoPor: creadoPor),
-      (value) {
-        final map = value as Map<String, dynamic>? ?? {};
-        return map['anuncioId'] as int? ?? 0;
-      },
-    );
+    try {
+      final response = await _client.post<int>(
+        'anuncios',
+        _toJson(ann, creadoPor: creadoPor),
+        (value) {
+          final map = value as Map<String, dynamic>? ?? {};
+          return map['anuncioId'] as int? ?? 0;
+        },
+      );
 
-    return AnnMdl(
-      id: response.datos ?? ann.id,
-      ttl: ann.ttl,
-      desc: ann.desc,
-      img: ann.img,
-      imgNombre: ann.imgNombre,
-      imgUrl: ann.imgUrl,
-      fecPub: ann.fecPub,
-      fecExp: ann.fecExp,
-      personalIds: ann.personalIds,
-      prioridad: ann.prioridad,
-      publicado: ann.publicado,
-      notificar: ann.notificar,
-    );
+      return AnnMdl(
+        id: response.datos ?? ann.id,
+        ttl: ann.ttl,
+        desc: ann.desc,
+        img: ann.img,
+        imgNombre: ann.imgNombre,
+        imgUrl: ann.imgUrl,
+        fecPub: ann.fecPub,
+        fecExp: ann.fecExp,
+        personalIds: ann.personalIds,
+        prioridad: ann.prioridad,
+        publicado: ann.publicado,
+        notificar: ann.notificar,
+      );
+    } finally {
+      invalidateCache();
+    }
   }
 
   static Future<void> actualizar(AnnMdl ann) {
     invalidateCache();
     return _client
         .put<bool>('anuncios/${ann.id}', _toJson(ann), (_) => true)
-        .then((_) {});
+        .then((_) {})
+        .whenComplete(invalidateCache);
   }
 
   static Future<void> cambiarPublicado(int id, bool publicado) {
@@ -87,12 +121,16 @@ class AnnSvc {
         .put<bool>('anuncios/$id/publicado', {
           'publicado': publicado,
         }, (_) => true)
-        .then((_) {});
+        .then((_) {})
+        .whenComplete(invalidateCache);
   }
 
   static Future<void> eliminar(int id) {
     invalidateCache();
-    return _client.delete<bool>('anuncios/$id', (_) => true).then((_) {});
+    return _client
+        .delete<bool>('anuncios/$id', (_) => true)
+        .then((_) {})
+        .whenComplete(invalidateCache);
   }
 
   static Map<String, dynamic> _toJson(AnnMdl ann, {int? creadoPor}) {
@@ -101,7 +139,7 @@ class AnnSvc {
       'descripcion': ann.desc,
       'prioridad': ann.prioridad,
       'imagenNombre': ann.imgNombre,
-      'imagenUrl': ann.imgUrl,
+      'imagenUrl': _storageUrl(ann.imgUrl),
       'fechaExpiracion': ann.fecExp?.toIso8601String(),
       'personalIds': ann.personalIds,
       'publicado': ann.publicado,
@@ -117,7 +155,7 @@ class AnnSvc {
       desc: json['descripcion']?.toString() ?? '',
       img: 'assets/img/auth_bg.jpg',
       imgNombre: _nullableText(json['imagen_nombre']),
-      imgUrl: _nullableText(json['imagen_url']),
+      imgUrl: _absoluteImageUrl(json['imagen_url']),
       fecPub:
           DateTime.tryParse(json['fecha_publicacion']?.toString() ?? '') ??
           DateTime.now(),
@@ -157,6 +195,21 @@ class AnnSvc {
   static String? _nullableText(Object? value) {
     final text = value?.toString().trim();
     if (text == null || text.isEmpty || text == 'null') return null;
+    return text;
+  }
+
+  static String? _absoluteImageUrl(Object? value) {
+    final text = _nullableText(value);
+    return text == null ? null : ApiClient.absoluteUrl(text);
+  }
+
+  static String? _storageUrl(String? value) {
+    final text = value?.trim();
+    if (text == null || text.isEmpty) return null;
+    final uri = Uri.tryParse(text);
+    if (uri != null && uri.path.startsWith('/uploads/anuncios/')) {
+      return uri.path;
+    }
     return text;
   }
 }

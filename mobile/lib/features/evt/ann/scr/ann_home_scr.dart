@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/auth/app_user.dart';
 import '../../../../core/file/file_pick.dart';
+import '../../../../core/file/file_pick_result.dart';
 import '../../../../core/thm/app_thm.dart';
 import '../../../adm/adm_design_tokens.dart';
 import '../../../dash/wdg/page_ttl_wdg.dart';
@@ -45,8 +46,10 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
           !widget.user.esUsuario ||
           ann.personalIds.isEmpty ||
           ann.personalIds.contains(widget.user.id);
-      final matchFocus = widget.focusAnnId == null || ann.id == widget.focusAnnId;
-      final matchFiltro = q.isEmpty ||
+      final matchFocus =
+          widget.focusAnnId == null || ann.id == widget.focusAnnId;
+      final matchFiltro =
+          q.isEmpty ||
           ann.ttl.toLowerCase().contains(q) ||
           ann.desc.toLowerCase().contains(q) ||
           ann.prioridad.toLowerCase().contains(q);
@@ -184,9 +187,9 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
       await _load();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err.toString())));
     }
   }
 
@@ -196,9 +199,9 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
       await _load();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err.toString())));
     }
   }
 
@@ -228,9 +231,9 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
       await _load();
     } catch (err) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(err.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(err.toString())));
     }
   }
 }
@@ -248,21 +251,47 @@ class _AnnSummary extends StatelessWidget {
     final urgent = items
         .where((e) => e.prioridad.toLowerCase().contains('urgent'))
         .length;
-    return LayoutBuilder(builder: (context, c) {
-      final width = c.maxWidth >= 720
-          ? (c.maxWidth - 42) / 4
-          : (c.maxWidth - 14) / 2;
-      return Wrap(spacing: 14, runSpacing: 14, children: [
-        _AnnStat(width, Icons.campaign_rounded, 'Total', items.length,
-            AdmTokens.secondary),
-        _AnnStat(width, Icons.visibility_outlined, 'Publicados', published,
-            AdmTokens.success),
-        _AnnStat(width, Icons.priority_high_rounded, 'Importantes', important,
-            AdmTokens.warning),
-        _AnnStat(width, Icons.notification_important_outlined, 'Urgentes',
-            urgent, AdmTokens.error),
-      ]);
-    });
+    return LayoutBuilder(
+      builder: (context, c) {
+        final width = c.maxWidth >= 720
+            ? (c.maxWidth - 42) / 4
+            : (c.maxWidth - 14) / 2;
+        return Wrap(
+          spacing: 14,
+          runSpacing: 14,
+          children: [
+            _AnnStat(
+              width,
+              Icons.campaign_rounded,
+              'Total',
+              items.length,
+              AdmTokens.secondary,
+            ),
+            _AnnStat(
+              width,
+              Icons.visibility_outlined,
+              'Publicados',
+              published,
+              AdmTokens.success,
+            ),
+            _AnnStat(
+              width,
+              Icons.priority_high_rounded,
+              'Importantes',
+              important,
+              AdmTokens.warning,
+            ),
+            _AnnStat(
+              width,
+              Icons.notification_important_outlined,
+              'Urgentes',
+              urgent,
+              AdmTokens.error,
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -276,36 +305,38 @@ class _AnnStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: width,
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AdmTokens.grey100),
-          boxShadow: AdmTokens.cardShadow,
+    width: width,
+    padding: const EdgeInsets.all(15),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: AdmTokens.grey100),
+      boxShadow: AdmTokens.cardShadow,
+    ),
+    child: Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .1),
+            borderRadius: BorderRadius.circular(11),
+          ),
+          child: Icon(icon, color: color),
         ),
-        child: Row(children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: .1),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(icon, color: color),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: AdmTokens.bodySmall),
+              Text('$value', style: AdmTokens.h2),
+            ],
           ),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label, style: AdmTokens.bodySmall),
-                Text('$value', style: AdmTokens.h2),
-              ],
-            ),
-          ),
-        ]),
-      );
+        ),
+      ],
+    ),
+  );
 }
 
 class _AnnEditDlg extends StatefulWidget {
@@ -323,6 +354,8 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
   String prioridad = 'Normal';
   String? imgNombre;
   String? imgUrl;
+  FilePickResult? pendingImage;
+  bool saving = false;
 
   @override
   void initState() {
@@ -394,7 +427,7 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
               ),
               const SizedBox(height: 16),
               OutlinedButton.icon(
-                onPressed: _pickImage,
+                onPressed: saving ? null : _pickImage,
                 icon: const Icon(Icons.image_outlined),
                 label: Text(imgNombre ?? 'Subir imagen'),
               ),
@@ -411,9 +444,7 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
                       fit: BoxFit.contain,
                       errorBuilder: (_, _, _) => const SizedBox(
                         height: 150,
-                        child: Center(
-                          child: Icon(Icons.broken_image_outlined),
-                        ),
+                        child: Center(child: Icon(Icons.broken_image_outlined)),
                       ),
                     ),
                   ),
@@ -429,9 +460,14 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
           child: const Text('Cancelar'),
         ),
         FilledButton.icon(
-          onPressed: _save,
-          icon: const Icon(Icons.save),
-          label: const Text('Guardar'),
+          onPressed: saving ? null : _save,
+          icon: saving
+              ? const SizedBox.square(
+                  dimension: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.save),
+          label: Text(saving ? 'Subiendo...' : 'Guardar'),
         ),
       ],
     );
@@ -442,30 +478,45 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
     if (file == null) return;
 
     setState(() {
+      pendingImage = file;
       imgNombre = file.name;
       imgUrl = file.dataUrl ?? file.previewUrl;
     });
   }
 
-  void _save() {
+  Future<void> _save() async {
     if (ttlCtl.text.trim().isEmpty || descCtl.text.trim().isEmpty) return;
 
-    Navigator.pop(
-      context,
-      AnnMdl(
-        id: widget.ann?.id ?? 0,
-        ttl: ttlCtl.text.trim(),
-        desc: descCtl.text.trim(),
-        img: widget.ann?.img ?? 'assets/img/auth_bg.jpg',
-        imgNombre: imgNombre,
-        imgUrl: imgUrl,
-        fecPub: widget.ann?.fecPub ?? DateTime.now(),
-        fecExp: widget.ann?.fecExp,
-        personalIds: widget.ann?.personalIds ?? [],
-        prioridad: prioridad,
-        publicado: widget.ann?.publicado ?? true,
-        notificar: widget.ann?.notificar ?? true,
-      ),
-    );
+    setState(() => saving = true);
+    try {
+      final storedImage = pendingImage == null
+          ? imgUrl
+          : await AnnSvc.uploadImage(pendingImage!);
+      if (!mounted) return;
+
+      Navigator.pop(
+        context,
+        AnnMdl(
+          id: widget.ann?.id ?? 0,
+          ttl: ttlCtl.text.trim(),
+          desc: descCtl.text.trim(),
+          img: widget.ann?.img ?? 'assets/img/auth_bg.jpg',
+          imgNombre: imgNombre,
+          imgUrl: storedImage,
+          fecPub: widget.ann?.fecPub ?? DateTime.now(),
+          fecExp: widget.ann?.fecExp,
+          personalIds: widget.ann?.personalIds ?? [],
+          prioridad: prioridad,
+          publicado: widget.ann?.publicado ?? true,
+          notificar: widget.ann?.notificar ?? true,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => saving = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
+    }
   }
 }

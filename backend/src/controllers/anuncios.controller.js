@@ -1,4 +1,5 @@
 const service = require('../services/anuncios.service');
+const imageStorage = require('../services/image-storage.service');
 
 async function obtenerTodos(req, res) {
     try {
@@ -86,10 +87,31 @@ async function eliminar(req, res) {
     }
 }
 
+async function subirImagen(req, res) {
+    try {
+        const ruta = await imageStorage.saveImage(
+            req.body,
+            req.headers['content-type'],
+            'anuncios'
+        );
+        res.status(201).json({
+            ok: true,
+            mensaje: 'Imagen almacenada correctamente',
+            datos: { ruta }
+        });
+    } catch (error) {
+        res.status(error.statusCode || 400).json({
+            ok: false,
+            mensaje: error.message
+        });
+    }
+}
+
 module.exports = {
     obtenerTodos,
     crear,
     actualizar,
     cambiarPublicado,
-    eliminar
+    eliminar,
+    subirImagen
 };

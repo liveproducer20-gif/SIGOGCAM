@@ -16,6 +16,14 @@ router.get(
 );
 
 router.post(
+    '/imagenes',
+    requireAuth,
+    requireAnyPermission(['anuncios.crear', 'anuncios.editar', 'eventos.crear', 'eventos.editar']),
+    express.raw({ type: ['image/png', 'image/jpeg', 'image/webp'], limit: '5mb' }),
+    controller.subirImagen
+);
+
+router.post(
     '/',
     requireAuth,
     requireAnyPermission(['anuncios.crear', 'eventos.crear']),

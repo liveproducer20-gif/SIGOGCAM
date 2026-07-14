@@ -28,14 +28,19 @@ class _AnnCardWdgState extends State<AnnCardWdg> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         transform: Matrix4.translationValues(0, hovered ? -3 : 0, 0),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border(left: BorderSide(color: accent, width: 4), top: const BorderSide(color: AdmTokens.grey100), right: const BorderSide(color: AdmTokens.grey100), bottom: const BorderSide(color: AdmTokens.grey100)), boxShadow: hovered ? AdmTokens.hoverShadow : AdmTokens.cardShadow),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(15), border: Border.all(color: AdmTokens.grey100), boxShadow: hovered ? AdmTokens.hoverShadow : AdmTokens.cardShadow),
         clipBehavior: Clip.antiAlias,
-        child: LayoutBuilder(builder: (context, c) {
-          final compact = c.maxWidth < 620;
-          final image = _AnnImage(ann: ann);
-          final body = _AnnBody(ann: ann, canManage: widget.canManage, onEdit: widget.onEdit, onToggle: widget.onToggle, onDelete: widget.onDelete);
-          return compact ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [SizedBox(height: 190, child: image), body]) : IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [SizedBox(width: 210, child: image), Expanded(child: body)]));
-        }),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border(left: BorderSide(color: accent, width: 4)),
+          ),
+          child: LayoutBuilder(builder: (context, c) {
+            final compact = c.maxWidth < 620;
+            final image = _AnnImage(ann: ann);
+            final body = _AnnBody(ann: ann, canManage: widget.canManage, onEdit: widget.onEdit, onToggle: widget.onToggle, onDelete: widget.onDelete);
+            return compact ? Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [SizedBox(height: 190, child: image), body]) : IntrinsicHeight(child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [SizedBox(width: 210, child: image), Expanded(child: body)]));
+          }),
+        ),
       ),
     );
   }

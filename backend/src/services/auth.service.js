@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const repository = require('../repositories/auth.repository');
-const { normalizarRol, nombreRol } = require('../validators/auth.validator');
+const { normalizarRol } = require('../validators/auth.validator');
 
 async function login(correo, password) {
     const login = (correo || '').toString().trim().toLowerCase();
@@ -20,7 +20,7 @@ async function login(correo, password) {
 
     let permisos = [];
     try {
-        permisos = await repository.obtenerPermisos(nombreRol(rolCodigo));
+        permisos = await repository.obtenerPermisos(persona.rol);
     } catch {
         permisos = [];
     }

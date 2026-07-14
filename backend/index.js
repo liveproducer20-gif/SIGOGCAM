@@ -18,6 +18,7 @@ const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes'
 const soporteRoutes = require('./src/routes/soporte.routes');
 const configuracionRoutes = require('./src/routes/configuracion.routes');
 const soporteRepository = require('./src/repositories/soporte.repository');
+const anunciosImages = require('./src/services/anuncios-images.service');
 
 const app = express();
 
@@ -29,8 +30,8 @@ app.use(cors({
 }));
 app.use('/uploads', express.static(require('path').resolve(__dirname, 'uploads'), {
     fallthrough: false,
-    maxAge: '1d',
-    immutable: false
+    maxAge: '30d',
+    immutable: true
 }));
 
 app.use((req, res, next) => {
@@ -102,4 +103,10 @@ app.listen(PORT, () => {
     soporteRepository.ensureSchema()
         .then(() => console.log('Esquema de Alertas / Soporte verificado'))
         .catch((error) => console.error('No se pudo preparar el esquema de soporte:', error.message));
+    anunciosImages.migrateInlineImages()
+        .then(({ migrated, failures }) => {
+            if (migrated > 0) console.log(`Imágenes de anuncios migradas a archivos: ${migrated}`);
+            if (failures.length > 0) console.error('Imágenes de anuncios no migradas:', failures);
+        })
+        .catch((error) => console.error('No se pudieron migrar las imágenes de anuncios:', error.message));
 });
