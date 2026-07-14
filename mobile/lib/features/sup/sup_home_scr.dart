@@ -9,6 +9,7 @@ import 'sup_api.dart';
 import 'sup_badges.dart';
 import 'sup_mdl.dart';
 import 'sup_report_form.dart';
+import 'sup_realtime.dart';
 import 'sup_ticket_detail.dart';
 
 class SupHomeScr extends StatefulWidget {
@@ -29,7 +30,7 @@ class SupHomeScr extends StatefulWidget {
 class _SupHomeScrState extends State<SupHomeScr> {
   final api = SupportApi();
   StreamSubscription<String>? _live;
-  Timer? _reconnect, _debounce;
+  Timer? _debounce, _liveReload;
   List<SupportTicket> _tickets = const [];
   SupportStats _stats = const SupportStats();
   bool _loading = true;
@@ -50,14 +51,16 @@ class _SupHomeScrState extends State<SupHomeScr> {
   void initState() {
     super.initState();
     _load();
-    _connect();
+    SupportRealtime.instance.attach();
+    _live = SupportRealtime.instance.events.listen(_onLiveEvent);
   }
 
   @override
   void dispose() {
     _live?.cancel();
-    _reconnect?.cancel();
     _debounce?.cancel();
+    _liveReload?.cancel();
+    SupportRealtime.instance.detach();
     super.dispose();
   }
 
@@ -104,45 +107,31 @@ class _SupHomeScrState extends State<SupHomeScr> {
     }
   }
 
-  void _connect() {
-    _live?.cancel();
-    _live = api.realtime().listen(
-      (line) {
-        if (line.startsWith('data:')) {
-          _load();
-          if (admin && line.contains('"titulo"')) {
-            if (!mounted) return;
-            final match = RegExp(r'"titulo":"([^"]+)').firstMatch(line);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Nuevo movimiento de soporte${match == null ? '' : ': ${match.group(1)}'}',
-                ),
-                action: SnackBarAction(
-                  label: 'Ver',
-                  onPressed: () {
-                    setState(() => _page = 1);
-                    _load();
-                  },
-                ),
-              ),
-            );
-          } else if (!admin && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Tu reporte de soporte fue actualizado.'),
-              ),
-            );
-          }
-        }
-      },
-      onError: (_) {
-        _reconnect = Timer(const Duration(seconds: 8), _connect);
-      },
-      onDone: () {
-        _reconnect = Timer(const Duration(seconds: 8), _connect);
-      },
-    );
+  void _onLiveEvent(String line) {
+    _liveReload?.cancel();
+    _liveReload = Timer(const Duration(milliseconds: 350), _load);
+    if (admin && line.contains('"titulo"')) {
+      if (!mounted) return;
+      final match = RegExp(r'"titulo":"([^"]+)').firstMatch(line);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Nuevo movimiento de soporte${match == null ? '' : ': ${match.group(1)}'}',
+          ),
+          action: SnackBarAction(
+            label: 'Ver',
+            onPressed: () {
+              setState(() => _page = 1);
+              _load();
+            },
+          ),
+        ),
+      );
+    } else if (!admin && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tu reporte de soporte fue actualizado.')),
+      );
+    }
   }
 
   @override

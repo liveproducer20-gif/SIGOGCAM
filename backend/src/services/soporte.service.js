@@ -9,16 +9,26 @@ function httpError(message, statusCode = 400) {
 
 function isAdmin(user) { return user?.rol === 'ADMINISTRADOR'; }
 
-async function listar(filters, user) { return repository.listar(filters || {}, user); }
-async function estadisticas(user) { return repository.estadisticas(user); }
+async function ready() { await repository.ensureSchema(); }
+
+async function listar(filters, user) {
+    await ready();
+    return repository.listar(filters || {}, user);
+}
+async function estadisticas(user) {
+    await ready();
+    return repository.estadisticas(user);
+}
 
 async function detalle(id, user) {
+    await ready();
     const value = await repository.detalle(Number(id), user);
     if (!value) throw httpError('Alerta no encontrada o sin acceso', 404);
     return value;
 }
 
 async function crear(body, user) {
+    await ready();
     const titulo = (body.titulo || '').toString().trim();
     const modulo = (body.modulo || '').toString().trim();
     const descripcion = (body.descripcion || '').toString().trim();
@@ -30,6 +40,7 @@ async function crear(body, user) {
 }
 
 async function actualizar(id, body, user) {
+    await ready();
     if (!isAdmin(user)) throw httpError('Solo un administrador puede gestionar alertas', 403);
     const changes = {};
     if (body.estado !== undefined) {
@@ -50,6 +61,7 @@ async function actualizar(id, body, user) {
 }
 
 async function comentar(id, body, user) {
+    await ready();
     const detalleTicket = await repository.detalle(Number(id), user);
     if (!detalleTicket) throw httpError('Alerta no encontrada o sin acceso', 404);
     const comentario = (body.comentario || '').toString().trim();
@@ -59,4 +71,3 @@ async function comentar(id, body, user) {
 }
 
 module.exports = { listar, estadisticas, detalle, crear, actualizar, comentar, isAdmin };
-

@@ -16,6 +16,7 @@ const cartillaFlowRoutes = require('./src/routes/cartilla-flow.routes');
 const insigniasRoutes = require('./src/routes/insignias.routes');
 const usuariosInsigniasRoutes = require('./src/routes/usuarios-insignias.routes');
 const soporteRoutes = require('./src/routes/soporte.routes');
+const soporteRepository = require('./src/repositories/soporte.repository');
 
 const app = express();
 
@@ -91,4 +92,7 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 16) {
 
 app.listen(PORT, () => {
     console.log(`Servidor BITSAC corriendo en puerto ${PORT}`);
+    soporteRepository.ensureSchema()
+        .then(() => console.log('Esquema de Alertas / Soporte verificado'))
+        .catch((error) => console.error('No se pudo preparar el esquema de soporte:', error.message));
 });

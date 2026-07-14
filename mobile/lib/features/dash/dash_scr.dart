@@ -26,6 +26,7 @@ import '../evt/svc/evt_svc.dart';
 import '../ins/ins_home_scr.dart';
 import '../sup/sup_api.dart';
 import '../sup/sup_home_scr.dart';
+import '../sup/sup_realtime.dart';
 
 class DashScr extends StatefulWidget {
   final AppUser user;
@@ -42,7 +43,8 @@ class _DashScrState extends State<DashScr> {
   late AppUser user;
   int _supportPending = 0;
   StreamSubscription<String>? _supportLive;
-  Timer? _supportReconnect;
+  Timer? _supportStart, _supportRefreshDebounce;
+  bool _supportAttached = false;
 
   List<SideMenuItem> get items => [
     const SideMenuItem(
@@ -103,14 +105,15 @@ class _DashScrState extends State<DashScr> {
     super.initState();
     user = widget.user;
     AuthSession.onSessionExpired = _logout;
-    _refreshSupportBadge();
-    _listenSupport();
+    _supportStart = Timer(const Duration(milliseconds: 700), _startSupport);
   }
 
   @override
   void dispose() {
     _supportLive?.cancel();
-    _supportReconnect?.cancel();
+    _supportStart?.cancel();
+    _supportRefreshDebounce?.cancel();
+    if (_supportAttached) SupportRealtime.instance.detach();
     if (AuthSession.onSessionExpired == _logout) {
       AuthSession.onSessionExpired = null;
     }
@@ -124,17 +127,18 @@ class _DashScrState extends State<DashScr> {
     } catch (_) {}
   }
 
-  void _listenSupport() {
-    _supportLive?.cancel();
-    _supportLive = SupportApi().realtime().listen(
-      (line) {
-        if (line.startsWith('data:')) _refreshSupportBadge();
-      },
-      onError: (_) =>
-          _supportReconnect = Timer(const Duration(seconds: 8), _listenSupport),
-      onDone: () =>
-          _supportReconnect = Timer(const Duration(seconds: 8), _listenSupport),
-    );
+  void _startSupport() {
+    if (!mounted) return;
+    SupportRealtime.instance.attach();
+    _supportAttached = true;
+    _supportLive = SupportRealtime.instance.events.listen((_) {
+      _supportRefreshDebounce?.cancel();
+      _supportRefreshDebounce = Timer(
+        const Duration(milliseconds: 350),
+        _refreshSupportBadge,
+      );
+    });
+    _refreshSupportBadge();
   }
 
   @override

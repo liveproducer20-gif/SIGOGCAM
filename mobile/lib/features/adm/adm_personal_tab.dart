@@ -287,7 +287,7 @@ class _PersonalTabState extends State<AdmCrudTab>
                 controller: _searchController,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.search_rounded),
-                  hintText: 'Buscar por cédula, nombre, correo o rol...',
+                  hintText: 'Buscar...',
                   isDense: true,
                 ),
                 onChanged: (value) {

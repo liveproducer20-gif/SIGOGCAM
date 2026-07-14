@@ -157,8 +157,12 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
   }
 
   Future<int> _notificationCount() async {
-    final events = await _safeLoadEvents();
-    final annList = await _safeLoadAnnouncements();
+    final results = await Future.wait([
+      _safeLoadEvents(),
+      _safeLoadAnnouncements(),
+    ]);
+    final events = results[0];
+    final annList = results[1];
     final announcements = annList.where((ann) {
       if (!ann.publicado || !ann.notificar) return false;
       return !widget.user.esUsuario || ann.personalIds.contains(widget.user.id);

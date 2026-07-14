@@ -243,62 +243,66 @@ class _MenuTileState extends State<_MenuTile> {
               ),
             ),
           ),
-          child: ListTile(
-            dense: true,
-            minLeadingWidth: 0,
-            horizontalTitleGap: 12,
-            contentPadding: EdgeInsets.symmetric(
-              horizontal: widget.open ? 12 : 17,
-              vertical: 2,
-            ),
-            leading: Icon(
-              widget.item.icon,
-              size: 21,
-              color: widget.selected ? AppThm.accClr : Colors.white70,
-            ),
-            title: widget.open
-                ? Text(
-                    widget.item.title,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: widget.selected
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                    ),
-                  )
-                : null,
-            trailing: widget.open
-                ? widget.item.badge > 0
-                      ? Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 7,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEF4444),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            widget.item.badge > 99
-                                ? '99+'
-                                : '${widget.item.badge}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(11),
+            child: ListTile(
+              dense: true,
+              minLeadingWidth: 0,
+              horizontalTitleGap: 12,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: widget.open ? 12 : 17,
+                vertical: 2,
+              ),
+              leading: Icon(
+                widget.item.icon,
+                size: 21,
+                color: widget.selected ? AppThm.accClr : Colors.white70,
+              ),
+              title: widget.open
+                  ? Text(
+                      widget.item.title,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: widget.selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    )
+                  : null,
+              trailing: widget.open
+                  ? widget.item.badge > 0
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
                             ),
-                          ),
-                        )
-                      : !widget.item.enabled
-                      ? const Icon(
-                          Icons.lock_outline_rounded,
-                          size: 15,
-                          color: Colors.white54,
-                        )
-                      : null
-                : null,
-            onTap: widget.item.enabled ? widget.onTap : null,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              widget.item.badge > 99
+                                  ? '99+'
+                                  : '${widget.item.badge}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          )
+                        : !widget.item.enabled
+                        ? const Icon(
+                            Icons.lock_outline_rounded,
+                            size: 15,
+                            color: Colors.white54,
+                          )
+                        : null
+                  : null,
+              onTap: widget.item.enabled ? widget.onTap : null,
+            ),
           ),
         ),
       ),

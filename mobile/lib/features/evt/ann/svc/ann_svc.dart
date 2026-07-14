@@ -3,24 +3,52 @@ import '../mdl/ann_mdl.dart';
 
 class AnnSvc {
   static final ApiClient _client = ApiClient();
+  static final Map<int?, List<AnnMdl>> _cache = {};
+  static final Map<int?, DateTime> _cacheTime = {};
+  static final Map<int?, Future<List<AnnMdl>>> _inFlight = {};
+  static const _cacheDuration = Duration(seconds: 30);
 
   static Future<List<AnnMdl>> getLst({int? personalId}) async {
-    final path = personalId == null ? 'anuncios' : 'anuncios?personalId=$personalId';
-    final response = await _client.get<List<AnnMdl>>(
-      path,
-      (value) {
-        final list = value as List<dynamic>? ?? [];
-        return list
-            .whereType<Map>()
-            .map((item) => _fromJson(Map<String, dynamic>.from(item)))
-            .toList();
-      },
-    );
+    final cachedAt = _cacheTime[personalId];
+    if (cachedAt != null &&
+        DateTime.now().difference(cachedAt) < _cacheDuration) {
+      return _cache[personalId] ?? const [];
+    }
+    final pending = _inFlight[personalId];
+    if (pending != null) return pending;
 
-    return response.datos ?? [];
+    final path = personalId == null
+        ? 'anuncios'
+        : 'anuncios?personalId=$personalId';
+    final request = _client
+        .get<List<AnnMdl>>(path, (value) {
+          final list = value as List<dynamic>? ?? [];
+          return list
+              .whereType<Map>()
+              .map((item) => _fromJson(Map<String, dynamic>.from(item)))
+              .toList();
+        })
+        .then((response) {
+          final items = response.datos ?? <AnnMdl>[];
+          _cache[personalId] = items;
+          _cacheTime[personalId] = DateTime.now();
+          return items;
+        })
+        .whenComplete(() {
+          _inFlight.remove(personalId);
+        });
+    _inFlight[personalId] = request;
+    return request;
+  }
+
+  static void invalidateCache() {
+    _cache.clear();
+    _cacheTime.clear();
+    _inFlight.clear();
   }
 
   static Future<AnnMdl> crear(AnnMdl ann, {required int creadoPor}) async {
+    invalidateCache();
     final response = await _client.post<int>(
       'anuncios',
       _toJson(ann, creadoPor: creadoPor),
@@ -47,26 +75,24 @@ class AnnSvc {
   }
 
   static Future<void> actualizar(AnnMdl ann) {
-    return _client.put<bool>(
-      'anuncios/${ann.id}',
-      _toJson(ann),
-      (_) => true,
-    ).then((_) {});
+    invalidateCache();
+    return _client
+        .put<bool>('anuncios/${ann.id}', _toJson(ann), (_) => true)
+        .then((_) {});
   }
 
   static Future<void> cambiarPublicado(int id, bool publicado) {
-    return _client.put<bool>(
-      'anuncios/$id/publicado',
-      {'publicado': publicado},
-      (_) => true,
-    ).then((_) {});
+    invalidateCache();
+    return _client
+        .put<bool>('anuncios/$id/publicado', {
+          'publicado': publicado,
+        }, (_) => true)
+        .then((_) {});
   }
 
   static Future<void> eliminar(int id) {
-    return _client.delete<bool>(
-      'anuncios/$id',
-      (_) => true,
-    ).then((_) {});
+    invalidateCache();
+    return _client.delete<bool>('anuncios/$id', (_) => true).then((_) {});
   }
 
   static Map<String, dynamic> _toJson(AnnMdl ann, {int? creadoPor}) {
@@ -92,7 +118,8 @@ class AnnSvc {
       img: 'assets/img/auth_bg.jpg',
       imgNombre: _nullableText(json['imagen_nombre']),
       imgUrl: _nullableText(json['imagen_url']),
-      fecPub: DateTime.tryParse(json['fecha_publicacion']?.toString() ?? '') ??
+      fecPub:
+          DateTime.tryParse(json['fecha_publicacion']?.toString() ?? '') ??
           DateTime.now(),
       fecExp: DateTime.tryParse(json['fecha_expiracion']?.toString() ?? ''),
       personalIds: _parseIds(json['personal_ids']),

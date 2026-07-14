@@ -147,20 +147,28 @@ class ApiClient {
   }
 
   Stream<String> streamLines(String path) async* {
-    final request = http.Request('GET', _uri(path));
-    request.headers.addAll(_headers());
-    final response = await _client.send(request);
-    if (response.statusCode == 401) {
-      AuthSession.clear();
-      AuthSession.onSessionExpired?.call();
-      throw const UnauthorizedException();
+    try {
+      final request = http.Request('GET', _uri(path));
+      request.headers.addAll(_headers());
+      final response = await _client
+          .send(request)
+          .timeout(const Duration(seconds: 12));
+      if (response.statusCode == 401) {
+        AuthSession.clear();
+        AuthSession.onSessionExpired?.call();
+        throw const UnauthorizedException();
+      }
+      if (response.statusCode >= 400) {
+        return;
+      }
+      yield* response.stream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+    } on TimeoutException {
+      return;
+    } on http.ClientException {
+      return;
     }
-    if (response.statusCode >= 400) {
-      throw Exception('No se pudo conectar al canal en tiempo real');
-    }
-    yield* response.stream
-        .transform(utf8.decoder)
-        .transform(const LineSplitter());
   }
 
   static String absoluteUrl(String? value) {
