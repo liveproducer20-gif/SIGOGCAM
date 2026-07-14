@@ -8,7 +8,10 @@ import 'api_response.dart';
 
 List<Map<String, dynamic>> parseApiList(Object? value) {
   final list = value as List<dynamic>? ?? [];
-  return list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
+  return list
+      .whereType<Map>()
+      .map((e) => Map<String, dynamic>.from(e))
+      .toList();
 }
 
 class UnauthorizedException implements Exception {
@@ -33,12 +36,9 @@ class ApiClient {
     T Function(Object? value) parseDatos,
   ) async {
     try {
-      final response = await _client.get(
-            _uri(path),
-            headers: _headers(),
-          ).timeout(
-            const Duration(seconds: 12),
-          );
+      final response = await _client
+          .get(_uri(path), headers: _headers())
+          .timeout(const Duration(seconds: 12));
       return _parseResponse(response, parseDatos);
     } on TimeoutException {
       throw Exception(
@@ -109,10 +109,7 @@ class ApiClient {
   ) async {
     try {
       final response = await _client
-          .delete(
-            _uri(path),
-            headers: _headers(),
-          )
+          .delete(_uri(path), headers: _headers())
           .timeout(const Duration(seconds: 12));
 
       return _parseResponse(response, parseDatos);
@@ -168,7 +165,9 @@ class ApiClient {
 
   static String absoluteUrl(String? value) {
     final path = value?.trim() ?? '';
-    if (path.isEmpty || path.startsWith('http://') || path.startsWith('https://')) {
+    if (path.isEmpty ||
+        path.startsWith('http://') ||
+        path.startsWith('https://')) {
       return path;
     }
     final api = Uri.parse(baseUrl);
@@ -208,9 +207,7 @@ class ApiClient {
     try {
       raw = jsonDecode(response.body);
     } on FormatException {
-      final preview = response.body
-          .replaceAll(RegExp(r'\s+'), ' ')
-          .trim();
+      final preview = response.body.replaceAll(RegExp(r'\s+'), ' ').trim();
       throw Exception(
         'La API respondió un formato no JSON (${response.statusCode}). '
         '${preview.length > 120 ? preview.substring(0, 120) : preview}',
@@ -228,7 +225,8 @@ class ApiClient {
       AuthSession.clear();
       AuthSession.onSessionExpired?.call();
       throw UnauthorizedException(
-        decoded['mensaje']?.toString() ?? 'Su sesión ha expirado. Por favor inicie sesión nuevamente.',
+        decoded['mensaje']?.toString() ??
+            'Su sesión ha expirado. Por favor inicie sesión nuevamente.',
       );
     }
 

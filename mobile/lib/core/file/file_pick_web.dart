@@ -22,10 +22,7 @@ Future<FilePickResult?> pickPdfImpl() {
   return _pickFile('application/pdf,.pdf', withPreview: true);
 }
 
-Future<FilePickResult?> _pickFile(
-  String accept, {
-  bool withPreview = false,
-}) {
+Future<FilePickResult?> _pickFile(String accept, {bool withPreview = false}) {
   final completer = Completer<FilePickResult?>();
   final input = web.HTMLInputElement()
     ..type = 'file'
@@ -49,11 +46,7 @@ Future<FilePickResult?> _pickFile(
 
     if (!withPreview) {
       completer.complete(
-          FilePickResult(
-            name: file.name,
-            mimeType: file.type,
-            size: file.size,
-          ),
+        FilePickResult(name: file.name, mimeType: file.type, size: file.size),
       );
       return;
     }
@@ -88,9 +81,12 @@ Future<FilePickResult?> _pickFile(
     reader.readAsDataURL(file);
   }
 
-  input.addEventListener('change', ((web.Event _) {
-    complete();
-  }).toJS);
+  input.addEventListener(
+    'change',
+    ((web.Event _) {
+      complete();
+    }).toJS,
+  );
 
   web.document.body?.append(input);
 

@@ -35,8 +35,12 @@ class SupportTicket {
     status: json['estado']?.toString() ?? 'Nuevo',
     image: json['imagen']?.toString(),
     assignedName: json['asignado_nombre']?.toString(),
-    createdAt: DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ?? DateTime.now(),
-    updatedAt: DateTime.tryParse(json['fecha_actualizacion']?.toString() ?? '') ?? DateTime.now(),
+    createdAt:
+        DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ??
+        DateTime.now(),
+    updatedAt:
+        DateTime.tryParse(json['fecha_actualizacion']?.toString() ?? '') ??
+        DateTime.now(),
   );
 }
 
@@ -45,7 +49,15 @@ class SupportComment {
   final String userName, role, text;
   final bool internal;
   final DateTime createdAt;
-  const SupportComment({required this.id, required this.userId, required this.userName, required this.role, required this.text, required this.internal, required this.createdAt});
+  const SupportComment({
+    required this.id,
+    required this.userId,
+    required this.userName,
+    required this.role,
+    required this.text,
+    required this.internal,
+    required this.createdAt,
+  });
   factory SupportComment.fromJson(Map<String, dynamic> json) => SupportComment(
     id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
     userId: int.tryParse(json['usuario_id']?.toString() ?? '') ?? 0,
@@ -53,20 +65,30 @@ class SupportComment {
     role: json['rol']?.toString() ?? '',
     text: json['comentario']?.toString() ?? '',
     internal: json['es_interno'] == true || json['es_interno'] == 1,
-    createdAt: DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ?? DateTime.now(),
+    createdAt:
+        DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ??
+        DateTime.now(),
   );
 }
 
 class SupportHistory {
   final String userName, action, oldValue, newValue;
   final DateTime createdAt;
-  const SupportHistory({required this.userName, required this.action, required this.oldValue, required this.newValue, required this.createdAt});
+  const SupportHistory({
+    required this.userName,
+    required this.action,
+    required this.oldValue,
+    required this.newValue,
+    required this.createdAt,
+  });
   factory SupportHistory.fromJson(Map<String, dynamic> json) => SupportHistory(
     userName: json['usuario_nombre']?.toString() ?? '',
     action: json['accion']?.toString() ?? '',
     oldValue: json['valor_anterior']?.toString() ?? '',
     newValue: json['valor_nuevo']?.toString() ?? '',
-    createdAt: DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ?? DateTime.now(),
+    createdAt:
+        DateTime.tryParse(json['fecha_creacion']?.toString() ?? '') ??
+        DateTime.now(),
   );
 }
 
@@ -74,19 +96,45 @@ class SupportDetail {
   final SupportTicket ticket;
   final List<SupportComment> comments;
   final List<SupportHistory> history;
-  const SupportDetail({required this.ticket, required this.comments, required this.history});
+  const SupportDetail({
+    required this.ticket,
+    required this.comments,
+    required this.history,
+  });
   factory SupportDetail.fromJson(Map<String, dynamic> json) => SupportDetail(
-    ticket: SupportTicket.fromJson(Map<String, dynamic>.from(json['alerta'] as Map)),
-    comments: (json['comentarios'] as List<dynamic>? ?? []).whereType<Map>().map((e) => SupportComment.fromJson(Map<String, dynamic>.from(e))).toList(),
-    history: (json['historial'] as List<dynamic>? ?? []).whereType<Map>().map((e) => SupportHistory.fromJson(Map<String, dynamic>.from(e))).toList(),
+    ticket: SupportTicket.fromJson(
+      Map<String, dynamic>.from(json['alerta'] as Map),
+    ),
+    comments: (json['comentarios'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => SupportComment.fromJson(Map<String, dynamic>.from(e)))
+        .toList(),
+    history: (json['historial'] as List<dynamic>? ?? [])
+        .whereType<Map>()
+        .map((e) => SupportHistory.fromJson(Map<String, dynamic>.from(e)))
+        .toList(),
   );
 }
 
 class SupportStats {
   final int total, critical, high, medium, low, pending, averageMinutes;
-  const SupportStats({this.total=0,this.critical=0,this.high=0,this.medium=0,this.low=0,this.pending=0,this.averageMinutes=0});
+  const SupportStats({
+    this.total = 0,
+    this.critical = 0,
+    this.high = 0,
+    this.medium = 0,
+    this.low = 0,
+    this.pending = 0,
+    this.averageMinutes = 0,
+  });
   factory SupportStats.fromJson(Map<String, dynamic> json) => SupportStats(
-    total: _int(json['total']), critical: _int(json['criticas']), high: _int(json['altas']), medium: _int(json['medias']), low: _int(json['bajas']), pending: _int(json['pendientes']), averageMinutes: _int(json['promedio_minutos']),
+    total: _int(json['total']),
+    critical: _int(json['criticas']),
+    high: _int(json['altas']),
+    medium: _int(json['medias']),
+    low: _int(json['bajas']),
+    pending: _int(json['pendientes']),
+    averageMinutes: _int(json['promedio_minutos']),
   );
   static int _int(Object? value) => int.tryParse(value?.toString() ?? '') ?? 0;
 }
@@ -94,6 +142,10 @@ class SupportStats {
 class SupportPage {
   final List<SupportTicket> tickets;
   final int total, page, pageSize;
-  const SupportPage({required this.tickets, required this.total, required this.page, required this.pageSize});
+  const SupportPage({
+    required this.tickets,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+  });
 }
-

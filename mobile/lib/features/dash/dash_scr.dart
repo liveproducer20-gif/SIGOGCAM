@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -23,6 +24,8 @@ import '../crt/svc/crt_text_generator.dart';
 import '../evt/scr/evt_home_scr.dart';
 import '../evt/svc/evt_svc.dart';
 import '../ins/ins_home_scr.dart';
+import '../sup/sup_api.dart';
+import '../sup/sup_home_scr.dart';
 
 class DashScr extends StatefulWidget {
   final AppUser user;
@@ -37,6 +40,9 @@ class _DashScrState extends State<DashScr> {
   int idxSel = 0;
   bool menuOpen = true;
   late AppUser user;
+  int _supportPending = 0;
+  StreamSubscription<String>? _supportLive;
+  Timer? _supportReconnect;
 
   List<SideMenuItem> get items => [
     const SideMenuItem(
@@ -84,6 +90,12 @@ class _DashScrState extends State<DashScr> {
       icon: Icons.settings_outlined,
       enabled: false,
     ),
+    SideMenuItem(
+      title: 'Alertas / Soporte',
+      icon: Icons.notifications_active_outlined,
+      enabled: true,
+      badge: _supportPending,
+    ),
   ];
 
   @override
@@ -91,14 +103,38 @@ class _DashScrState extends State<DashScr> {
     super.initState();
     user = widget.user;
     AuthSession.onSessionExpired = _logout;
+    _refreshSupportBadge();
+    _listenSupport();
   }
 
   @override
   void dispose() {
+    _supportLive?.cancel();
+    _supportReconnect?.cancel();
     if (AuthSession.onSessionExpired == _logout) {
       AuthSession.onSessionExpired = null;
     }
     super.dispose();
+  }
+
+  Future<void> _refreshSupportBadge() async {
+    try {
+      final stats = await SupportApi().stats();
+      if (mounted) setState(() => _supportPending = stats.pending);
+    } catch (_) {}
+  }
+
+  void _listenSupport() {
+    _supportLive?.cancel();
+    _supportLive = SupportApi().realtime().listen(
+      (line) {
+        if (line.startsWith('data:')) _refreshSupportBadge();
+      },
+      onError: (_) =>
+          _supportReconnect = Timer(const Duration(seconds: 8), _listenSupport),
+      onDone: () =>
+          _supportReconnect = Timer(const Duration(seconds: 8), _listenSupport),
+    );
   }
 
   @override
@@ -242,14 +278,14 @@ class _WebContentState extends State<_WebContent> {
   @override
   void initState() {
     super.initState();
-    _pages = List<Widget?>.filled(4, null);
+    _pages = List<Widget?>.filled(10, null);
   }
 
   @override
   void didUpdateWidget(covariant _WebContent oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.user, widget.user)) {
-      _pages = List<Widget?>.filled(4, null);
+      _pages = List<Widget?>.filled(10, null);
     }
     if (oldWidget.idxSel != widget.idxSel && widget.idxSel < _pages.length) {
       if (widget.idxSel == 2) {
@@ -301,6 +337,12 @@ class _WebContentState extends State<_WebContent> {
                 onNotifications: common.onNotifications,
               )
             : const SizedBox.shrink(),
+      9 => SupHomeScr(
+        user: common.user,
+        onUserChanged: common.onUserChanged,
+        onLogout: common.onLogout,
+        onNotifications: common.onNotifications,
+      ),
       _ => const SizedBox.shrink(),
     };
   }
@@ -1368,6 +1410,15 @@ class _MobDash extends StatelessWidget {
                           );
                         }
 
+                        if (item.title == 'Alertas / Soporte') {
+                          return SupHomeScr(
+                            user: user,
+                            onUserChanged: onUserChanged,
+                            onLogout: onLogout,
+                            onNotifications: onNotifications,
+                          );
+                        }
+
                         return CrtHomeScr(
                           user: user,
                           onUserChanged: onUserChanged,
@@ -1388,6 +1439,27 @@ class _MobDash extends StatelessWidget {
                         size: 34,
                         color: item.enabled ? AppThm.secClr : Colors.black38,
                       ),
+                      if (item.badge > 0)
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              item.badge > 99 ? '99+' : '${item.badge}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
                       const Spacer(),
                       Text(
                         item.title,
