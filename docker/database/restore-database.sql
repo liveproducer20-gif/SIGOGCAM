@@ -11,7 +11,6 @@ BEGIN
         MOVE N'BITSAC' TO N'/var/opt/mssql/data/BITSAC.mdf',
         MOVE N'BITSAC_log' TO N'/var/opt/mssql/data/BITSAC_log.ldf',
         RECOVERY,
-        CHECKSUM,
         STATS = 5;
 END
 ELSE

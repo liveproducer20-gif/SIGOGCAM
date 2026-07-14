@@ -33,10 +33,18 @@ Nginx publica la interfaz y reenvía `/api` y `/uploads` al backend. Los cuatro
 servicios usan una red bridge privada. Los `healthcheck` y las dependencias
 condicionales evitan iniciar la API antes de terminar la restauración.
 
+El respaldo heredado no contiene checksums de backup, por lo que la restauración
+no puede usar `RESTORE WITH CHECKSUM`. La integridad se valida inmediatamente
+después mediante `DBCC CHECKDB`.
+
 El builder Web parte de la imagen Cirrus Flutter `3.44.0` disponible en GHCR y
 fija el tag oficial Flutter `3.44.4` antes de resolver paquetes. Esto es
 necesario porque el proyecto exige Dart `3.12.2` y GHCR todavía no publica un
 tag de imagen `3.44.4` independiente.
+
+La imagen del backend conserva explícitamente `libgssapi-krb5-2`, dependencia
+dinámica requerida por ODBC Driver 18 en Debian aunque el paquete de Microsoft
+no la mantenga tras una limpieza automática de herramientas de instalación.
 
 ## Archivos creados
 

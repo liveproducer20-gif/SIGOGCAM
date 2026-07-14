@@ -1,0 +1,6 @@
+[BITSAC_TEST]
+Driver=ODBC Driver 18 for SQL Server
+Server=database,1433
+Database=BITSAC
+Encrypt=Optional
+TrustServerCertificate=Yes
