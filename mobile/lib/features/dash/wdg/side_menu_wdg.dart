@@ -15,6 +15,7 @@ enum SideMenuDestination {
   reports,
   statistics,
   administration,
+  rolesPermisos,
   support,
 }
 

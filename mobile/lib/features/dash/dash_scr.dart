@@ -26,6 +26,7 @@ import '../crt/svc/crt_text_generator.dart';
 import '../evt/scr/evt_home_scr.dart';
 import '../evt/svc/evt_svc.dart';
 import '../ins/ins_home_scr.dart';
+import '../config/config_editor_scr.dart';
 import '../sup/sup_api.dart';
 import '../sup/sup_home_scr.dart';
 import '../sup/sup_realtime.dart';
@@ -358,6 +359,12 @@ class _WebContentState extends State<_WebContent> {
                 onNotifications: common.onNotifications,
               )
             : const SizedBox.shrink(),
+      SideMenuDestination.rolesPermisos => ConfigEditorScr(
+        user: common.user,
+        onUserChanged: common.onUserChanged,
+        onLogout: common.onLogout,
+        onNotifications: common.onNotifications,
+      ),
       SideMenuDestination.support => SupHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
@@ -1435,6 +1442,12 @@ class _MobDash extends StatelessWidget {
                             onLogout: onLogout,
                             onNotifications: onNotifications,
                           ),
+                        SideMenuDestination.rolesPermisos => ConfigEditorScr(
+                          user: user,
+                          onUserChanged: onUserChanged,
+                          onLogout: onLogout,
+                          onNotifications: onNotifications,
+                        ),
                         SideMenuDestination.booklets => CrtHomeScr(
                           user: user,
                           onUserChanged: onUserChanged,

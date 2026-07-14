@@ -77,6 +77,13 @@ class SideMenuConfig {
       requiredPermissions: ['administracion.ver'],
     ),
     SideMenuItem(
+      destination: SideMenuDestination.rolesPermisos,
+      title: 'Roles, permisos y estructura',
+      icon: Icons.settings_outlined,
+      section: SideMenuSection.settings,
+      requiredPermissions: ['configuracion.roles.gestionar'],
+    ),
+    SideMenuItem(
       destination: SideMenuDestination.support,
       title: 'Alertas / Soporte',
       icon: Icons.notifications_active_outlined,
@@ -164,6 +171,8 @@ class SideMenuConfig {
         'reportes' => SideMenuDestination.reports,
         'estadisticas' => SideMenuDestination.statistics,
         'administracion' => SideMenuDestination.administration,
+        'roles_permisos' => SideMenuDestination.rolesPermisos,
+        'configuracion' => SideMenuDestination.rolesPermisos,
         'soporte' => SideMenuDestination.support,
         _ => null,
       };
@@ -178,6 +187,7 @@ class SideMenuConfig {
         'insights_outlined' => Icons.insights_outlined,
         'admin_panel_settings_outlined' =>
           Icons.admin_panel_settings_outlined,
+        'settings_outlined' => Icons.settings_outlined,
         'notifications_active_outlined' =>
           Icons.notifications_active_outlined,
         _ => null,

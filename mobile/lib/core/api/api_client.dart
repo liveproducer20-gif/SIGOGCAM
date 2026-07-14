@@ -289,4 +289,62 @@ class ApiClient {
       );
     }
   }
+
+  Future<Map<String, dynamic>> postFull(
+    String path, Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _client
+          .post(_uri(path), headers: _headers(json: true), body: jsonEncode(body))
+          .timeout(const Duration(seconds: 12));
+      return _decodeResponse(response);
+    } on TimeoutException {
+      throw NetworkException(
+        'La API no respondió a tiempo. Verifique el backend en $baseUrl',
+      );
+    } on http.ClientException catch (e) {
+      throw NetworkException(
+        'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> putFull(
+    String path, Map<String, dynamic> body,
+  ) async {
+    try {
+      final response = await _client
+          .put(_uri(path), headers: _headers(json: true), body: jsonEncode(body))
+          .timeout(const Duration(seconds: 12));
+      return _decodeResponse(response);
+    } on TimeoutException {
+      throw NetworkException(
+        'La API no respondió a tiempo. Verifique el backend en $baseUrl',
+      );
+    } on http.ClientException catch (e) {
+      throw NetworkException(
+        'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
+      );
+    }
+  }
+
+  Future<Map<String, dynamic>> deleteFull(String path) async {
+    try {
+      final response = await _client
+          .delete(_uri(path), headers: _headers())
+          .timeout(const Duration(seconds: 12));
+      return _decodeResponse(response);
+    } on TimeoutException {
+      throw NetworkException(
+        'La API no respondió a tiempo. Verifique el backend en $baseUrl',
+      );
+    } on http.ClientException catch (e) {
+      throw NetworkException(
+        'No se pudo conectar con la API. Verifique que Node esté corriendo en $baseUrl',
+        e.message,
+      );
+    }
+  }
 }
