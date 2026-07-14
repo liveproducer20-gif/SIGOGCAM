@@ -38,23 +38,31 @@ const connectionString =
   );
 
 let poolInstance = null;
+let poolClosing = false;
+
+async function closePool() {
+  if (poolClosing) return;
+  poolClosing = true;
+  if (poolInstance) {
+    const p = poolInstance;
+    poolInstance = null;
+    try { await p.close(); } catch (_) {}
+  }
+}
 
 async function getPool() {
   if (!poolInstance) {
     poolInstance = await odbc.pool(connectionString, {
-      initialSize: 15,
-      maxSize: 30,
+      initialSize: 5,
+      maxSize: 15,
       connectionTimeout: timeout * 1000,
-    });
-
-    process.on('exit', async () => {
-      if (poolInstance) {
-        try { await poolInstance.close(); } catch (_) {}
-      }
     });
   }
   return poolInstance;
 }
+
+process.on('SIGINT', async () => { await closePool(); process.exit(0); });
+process.on('SIGTERM', async () => { await closePool(); process.exit(0); });
 
 async function query(sql, params) {
   const pool = await getPool();
