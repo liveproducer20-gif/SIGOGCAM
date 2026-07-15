@@ -80,4 +80,12 @@ class CrtApi {
       (_) => true,
     );
   }
+
+  Future<List<Map<String, dynamic>>> getDistritos() async {
+    final resp = await _client.get<List>(
+      'catalogos/DISTRITOS',
+      (value) => value as List,
+    );
+    return (resp.datos ?? []).cast<Map<String, dynamic>>();
+  }
 }

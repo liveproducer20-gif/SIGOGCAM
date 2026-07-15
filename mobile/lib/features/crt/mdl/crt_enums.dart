@@ -11,6 +11,7 @@ enum TipoModuloCartilla {
   cuadrante,
   apoyoSeguridadCiudadana,
   radioperador,
+  supervision,
 }
 
 enum TipoCartilla {
@@ -42,8 +43,6 @@ enum TipoCartilla {
   colaboracionEventos,
   resguardoPersonal,
   colaboracionAtm,
-  radioperador,
-  supervision,
 }
 
 enum Jornada {
@@ -85,6 +84,8 @@ extension TipoModuloCartillaX on TipoModuloCartilla {
         return 'Apoyo a la Seguridad Ciudadana';
       case TipoModuloCartilla.radioperador:
         return 'Radioperador';
+      case TipoModuloCartilla.supervision:
+        return 'Supervisión';
     }
   }
 }
@@ -148,10 +149,6 @@ extension TipoCartillaX on TipoCartilla {
         return 'Resguardo de personal';
       case TipoCartilla.colaboracionAtm:
         return 'Colaboración ATM';
-      case TipoCartilla.radioperador:
-        return 'Radioperador';
-      case TipoCartilla.supervision:
-        return 'Supervisión';
     }
   }
 }

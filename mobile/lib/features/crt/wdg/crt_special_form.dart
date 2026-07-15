@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/app_user.dart';
-import '../../adm/adm_api.dart';
 import '../../ins/ins_api.dart';
 import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
@@ -35,7 +34,6 @@ class CrtSpecialForm extends StatefulWidget {
 class _CrtSpecialFormState extends State<CrtSpecialForm> {
   final _formKey = GlobalKey<FormState>();
   final _api = CrtApi();
-  final _admApi = AdmApi();
   final _controllers = <String, TextEditingController>{};
   List<Map<String, dynamic>> _personal = const [];
   List<Map<String, dynamic>> _moviles = const [];
@@ -98,11 +96,11 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     try {
       final results = await Future.wait([
         _api.getCatalogosOperativos(),
-        _admApi.getCatalogo('DISTRITOS'),
+        _api.getDistritos(),
       ]);
       if (!mounted) return;
       final data = results[0] as Map<String, dynamic>;
-      final distritoResult = results[1] as AdmPaginatedResult;
+      final distritos = results[1] as List<Map<String, dynamic>>;
       setState(() {
         _personal = (data['personal'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
@@ -110,7 +108,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         _moviles = (data['moviles'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        _distritos = distritoResult.datos;
+        _distritos = distritos;
         final currentUserId = widget.user?.id;
         if (currentUserId != null &&
             _personal.any(
@@ -411,7 +409,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
 
   Widget _districtDropdown() {
     final items = _distritos
-        .map((d) => d['valor']?.toString() ?? '')
+        .map((d) => d['nombre']?.toString() ?? '')
         .where((v) => v.isNotEmpty)
         .toList();
     final current = _c('distrito').text;
@@ -441,11 +439,14 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   Widget _movilesSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SwitchListTile(
-        contentPadding: EdgeInsets.zero,
-        title: const Text('¿Móviles en circulación?'),
-        value: _movilesActivos,
-        onChanged: (v) => setState(() => _movilesActivos = v),
+      Material(
+        type: MaterialType.transparency,
+        child: SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          title: const Text('¿Móviles en circulación?'),
+          value: _movilesActivos,
+          onChanged: (v) => setState(() => _movilesActivos = v),
+        ),
       ),
       if (_movilesActivos)
         _field('moviles', 'Móviles en circulación (separados por coma)'),

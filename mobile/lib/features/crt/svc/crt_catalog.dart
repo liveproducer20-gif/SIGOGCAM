@@ -25,8 +25,6 @@ class CrtCatalog {
     TipoCartilla.operativoConjunto,
     TipoCartilla.colaboracionEntidades,
     TipoCartilla.permisoAusentismo,
-    TipoCartilla.radioperador,
-    TipoCartilla.supervision,
     TipoCartilla.accidente,
     TipoCartilla.roboManoArmada,
     TipoCartilla.perdidaBienInmueble,
@@ -187,6 +185,15 @@ class CrtCatalog {
         CrtFieldConfig(key: 'policias', label: 'Policías', required: false),
         CrtFieldConfig(key: 'novedadPersonal', label: 'Novedades de personal', minLines: 3),
         CrtFieldConfig(key: 'novedadMovil', label: 'Novedades de móvil', minLines: 3),
+      ],
+    ),
+    CrtModuleConfig(
+      modulo: TipoModuloCartilla.supervision,
+      tipos: commonTypes,
+      fields: [
+        CrtFieldConfig(key: 'sector', label: 'Sector supervisado'),
+        CrtFieldConfig(key: 'personal', label: 'Personal supervisado'),
+        CrtFieldConfig(key: 'novedad', label: 'Novedad de supervisión', minLines: 4),
       ],
     ),
   ];
@@ -414,19 +421,6 @@ class CrtCatalog {
           CrtFieldConfig(key: 'camara', label: 'Cámara o punto visualizado'),
           CrtFieldConfig(key: 'motivo', label: 'Motivo de revisión'),
           CrtFieldConfig(key: 'resultado', label: 'Resultado de la visualización', minLines: 3),
-        ];
-      case TipoCartilla.radioperador:
-        return const [
-          CrtFieldConfig(key: 'radiooperadores', label: 'Número de radiooperadores', required: false),
-          CrtFieldConfig(key: 'acm_operativos', label: 'Número de ACM operativos', required: false),
-          CrtFieldConfig(key: 'personal_policial', label: 'Personal policial (uno por línea)', required: false, minLines: 3),
-          CrtFieldConfig(key: 'novedad', label: 'Novedades', minLines: 4),
-        ];
-      case TipoCartilla.supervision:
-        return const [
-          CrtFieldConfig(key: 'acm_operativos', label: 'Número de ACM operativos', required: false),
-          CrtFieldConfig(key: 'personal_policial', label: 'Personal policial (uno por línea)', required: false, minLines: 3),
-          CrtFieldConfig(key: 'novedad', label: 'Novedades', minLines: 4),
         ];
       default:
         return const [
