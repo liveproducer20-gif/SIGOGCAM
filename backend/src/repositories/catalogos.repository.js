@@ -7,7 +7,7 @@ async function obtenerCatalogos() {
     try {
         const sql = `
             SELECT id, codigo, nombre
-            FROM catalogos
+            FROM dbo.catalogos
             WHERE estado = 1
             ORDER BY nombre
         `;
@@ -30,8 +30,8 @@ async function obtenerDetallesPorCodigo(codigo) {
                 d.nombre,
                 d.descripcion,
                 d.orden
-            FROM catalogo_detalles d
-            INNER JOIN catalogos c ON c.id = d.catalogo_id
+            FROM dbo.catalogo_detalles d
+            INNER JOIN dbo.catalogos c ON c.id = d.catalogo_id
             WHERE c.codigo = ?
               AND c.estado = 1
               AND d.estado = 1

@@ -93,14 +93,14 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   }
 
   Future<void> _loadCatalogs() async {
+    _loadPersonalMoviles();
+    _loadDistritos();
+  }
+
+  Future<void> _loadPersonalMoviles() async {
     try {
-      final results = await Future.wait([
-        _api.getCatalogosOperativos(),
-        _api.getDistritos(),
-      ]);
+      final data = await _api.getCatalogosOperativos();
       if (!mounted) return;
-      final data = results[0] as Map<String, dynamic>;
-      final distritos = results[1] as List<Map<String, dynamic>>;
       setState(() {
         _personal = (data['personal'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
@@ -108,7 +108,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         _moviles = (data['moviles'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
-        _distritos = distritos;
         final currentUserId = widget.user?.id;
         if (currentUserId != null &&
             _personal.any(
@@ -124,6 +123,16 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       });
     } catch (_) {
       if (mounted) setState(() => _loadingCatalogs = false);
+    }
+  }
+
+  Future<void> _loadDistritos() async {
+    try {
+      final distritos = await _api.getDistritos();
+      if (!mounted) return;
+      setState(() => _distritos = distritos);
+    } catch (_) {
+      if (mounted) _distritos = [];
     }
   }
 

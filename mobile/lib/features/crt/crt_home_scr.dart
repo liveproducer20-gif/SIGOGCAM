@@ -477,58 +477,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final isWide = MediaQuery.of(context).size.width >= 1050;
     final preview = _previewText;
 
-    final formContent = <Widget>[
-      const PageTtlWdg(
-        ttl: 'Generador de cartillas',
-        sub:
-            'Seleccione el modulo operativo y complete solo los campos requeridos.',
-      ),
-      const SizedBox(height: 26),
-      if (_formacionSeleccionada != null)
-        CrtSpecialForm(
-          key: ValueKey(_formacionSeleccionada),
-          kind: CrtSpecialFormKind.formacion,
-          formationType: _formacionSeleccionada,
-          user: widget.user,
-          jefe: _jefeNombre,
-          canCreate: _canCreateFormation,
-        )
-      else if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas)
-        CrtSpecialForm(
-          key: const ValueKey('otras-cartillas'),
-          kind: CrtSpecialFormKind.otras,
-          user: widget.user,
-          jefe: _jefeNombre,
-          canCreate: _canGenerate,
-        )
-      else if (modulo == TipoModuloCartilla.conductor)
-        CrtSpecialForm(
-          kind: CrtSpecialFormKind.conductor,
-          user: widget.user,
-          jefe: _jefeNombre,
-          canCreate: _canCreateConductor,
-        )
-      else if (modulo == TipoModuloCartilla.eas)
-        _buildEasLayout(isWide, preview)
-      else if (isWide)
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 6, child: _formPanel()),
-            const SizedBox(width: 24),
-            Expanded(flex: 5, child: _previewPanel(preview)),
-          ],
-        )
-      else
-        Column(
-          children: [
-            _formPanel(),
-            const SizedBox(height: 20),
-            _previewPanel(preview),
-          ],
-        ),
-    ];
-
     return Scaffold(
       backgroundColor: AppThm.bgClr,
       appBar: TopBarWdg(
@@ -539,59 +487,75 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         onNotifications: widget.onNotifications,
       ),
       body: SafeArea(
-        child: isWide
-            ? Row(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(28),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1440),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 240,
-                    padding: const EdgeInsets.fromLTRB(16, 20, 12, 20),
-                    child: CartillaTypeSelector(
-                      selectedId: _selectedCartillaId,
-                      onSelected: _onCartillaTypeSelected,
-                      canView: _canGenerate,
-                      canCreateFormation: _canCreateFormation,
-                    ),
+                  const PageTtlWdg(
+                    ttl: 'Generador de cartillas',
+                    sub:
+                        'Seleccione el modulo operativo y complete solo los campos requeridos.',
                   ),
-                  VerticalDivider(width: 1, color: Colors.grey.shade300),
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(28),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1200),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: formContent,
-                          ),
-                        ),
-                      ),
-                    ),
+                  const SizedBox(height: 26),
+                  CartillaTypeSelector(
+                    selectedId: _selectedCartillaId,
+                    onSelected: _onCartillaTypeSelected,
+                    canView: _canGenerate,
+                    canCreateFormation: _canCreateFormation,
                   ),
-                ],
-              )
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(28),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1440),
-                    child: Column(
+                  const SizedBox(height: 26),
+                  if (_formacionSeleccionada != null)
+                    CrtSpecialForm(
+                      key: ValueKey(_formacionSeleccionada),
+                      kind: CrtSpecialFormKind.formacion,
+                      formationType: _formacionSeleccionada,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canCreateFormation,
+                    )
+                  else if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas)
+                    CrtSpecialForm(
+                      key: const ValueKey('otras-cartillas'),
+                      kind: CrtSpecialFormKind.otras,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canGenerate,
+                    )
+                  else if (modulo == TipoModuloCartilla.conductor)
+                    CrtSpecialForm(
+                      kind: CrtSpecialFormKind.conductor,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canCreateConductor,
+                    )
+                  else if (modulo == TipoModuloCartilla.eas)
+                    _buildEasLayout(isWide, preview)
+                  else if (isWide)
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 8),
-                        CartillaTypeSelector(
-                          selectedId: _selectedCartillaId,
-                          onSelected: _onCartillaTypeSelected,
-                          canView: _canGenerate,
-                          canCreateFormation: _canCreateFormation,
-                        ),
-                        const SizedBox(height: 26),
-                        ...formContent,
+                        Expanded(flex: 6, child: _formPanel()),
+                        const SizedBox(width: 24),
+                        Expanded(flex: 5, child: _previewPanel(preview)),
+                      ],
+                    )
+                  else
+                    Column(
+                      children: [
+                        _formPanel(),
+                        const SizedBox(height: 20),
+                        _previewPanel(preview),
                       ],
                     ),
-                  ),
-                ),
+                ],
               ),
+            ),
+          ),
+        ),
       ),
     );
   }

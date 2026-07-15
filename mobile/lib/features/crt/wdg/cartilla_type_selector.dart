@@ -40,24 +40,26 @@ class CartillaTypeSelector extends StatelessWidget {
             final cols = maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1);
             final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
 
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                for (final item in CartillaTypeItem.all)
-                  SizedBox(
-                    width: cardWidth,
-                    child: CartillaTypeCard(
-                      icon: item.icon,
-                      title: item.title,
-                      selected: selectedId == item.id,
-                      enabled: item.requiresFormationPermission
-                          ? canCreateFormation
-                          : canView,
-                      onTap: () => onSelected(item.id),
+            return SingleChildScrollView(
+              child: Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: [
+                  for (final item in CartillaTypeItem.all)
+                    SizedBox(
+                      width: cardWidth,
+                      child: CartillaTypeCard(
+                        icon: item.icon,
+                        title: item.title,
+                        selected: selectedId == item.id,
+                        enabled: item.requiresFormationPermission
+                            ? canCreateFormation
+                            : canView,
+                        onTap: () => onSelected(item.id),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             );
           },
         ),
