@@ -52,6 +52,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   TipoFormacion? _formacionSeleccionada;
   bool _otrasCartillasSeleccionada = true;
   String _jefeNombre = '';
+  bool _formExpanded = false;
 
   final crtApi = CrtApi();
 
@@ -514,32 +515,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             clipBehavior: Clip.antiAlias,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const PageTtlWdg(
-                  ttl: 'Generador de cartillas',
-                  sub:
-                      'Seleccione el modulo operativo y complete solo los campos requeridos.',
-                ),
-                const SizedBox(height: 26),
-                CartillaTypeSelector(
-                  compact: true,
-                  selectedId: _selectedCartillaId,
-                  onSelected: _onCartillaTypeSelected,
-                  canView: _canGenerate,
-                  canCreateFormation: _canCreateFormation,
-                ),
-                const SizedBox(height: 26),
-                const Text(
-                  'Datos de la cartilla',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppThm.priClr,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildFormContent(),
-              ],
+              children: _formExpanded
+                  ? _formPanelChildren()
+                  : _selectorPanelChildren(true),
             ),
           ),
         ),
@@ -557,35 +535,110 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const PageTtlWdg(
-            ttl: 'Generador de cartillas',
-            sub:
-                'Seleccione el modulo operativo y complete solo los campos requeridos.',
-          ),
-          const SizedBox(height: 26),
-          CartillaTypeSelector(
-            selectedId: _selectedCartillaId,
-            onSelected: _onCartillaTypeSelected,
-            canView: _canGenerate,
-            canCreateFormation: _canCreateFormation,
-          ),
-          const SizedBox(height: 26),
-          const Text(
-            'Datos de la cartilla',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: AppThm.priClr,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildFormContent(),
-          const SizedBox(height: 24),
-          _buildMobilePreview(preview),
-        ],
+        children: _formExpanded
+            ? [
+                ..._formPanelChildren(),
+                const SizedBox(height: 24),
+                _buildMobilePreview(preview),
+              ]
+            : _selectorPanelChildren(false),
       ),
     );
+  }
+
+  List<Widget> _selectorPanelChildren(bool compact) {
+    return [
+      const PageTtlWdg(
+        ttl: 'Generador de cartillas',
+        sub:
+            'Seleccione el modulo operativo y complete solo los campos requeridos.',
+      ),
+      const SizedBox(height: 26),
+      CartillaTypeSelector(
+        compact: compact,
+        selectedId: _selectedCartillaId,
+        onSelected: _onCartillaTypeSelected,
+        canView: _canGenerate,
+        canCreateFormation: _canCreateFormation,
+      ),
+    ];
+  }
+
+  List<Widget> _formPanelChildren() {
+    return [
+      _buildBackButton(),
+      const SizedBox(height: 16),
+      const Text(
+        'Datos de la cartilla',
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppThm.priClr,
+        ),
+      ),
+      const SizedBox(height: 16),
+      _buildFormContent(),
+      const SizedBox(height: 24),
+      _buildActionBar(),
+    ];
+  }
+
+  Widget _buildBackButton() {
+    return SizedBox(
+      height: 40,
+      child: OutlinedButton.icon(
+        onPressed: _goBackToSelector,
+        icon: const Icon(Icons.arrow_back, size: 18),
+        label: const Text('Volver a tipos de cartilla'),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppThm.priClr,
+          side: const BorderSide(color: AppThm.priClr),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionBar() {
+    if (!_showGlobalActionBar) return const SizedBox.shrink();
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        FilledButton.icon(
+          onPressed: _previewText != null ? null : _doPreview,
+          icon: const Icon(Icons.visibility_outlined),
+          label: const Text('Generar vista previa'),
+        ),
+        if (_previewText != null)
+          FilledButton.icon(
+            onPressed: guardando ? null : () => _generar(_previewText!),
+            icon: guardando
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.copy_outlined),
+            label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+          ),
+        if (_previewText != null)
+          OutlinedButton.icon(
+            onPressed: () {
+              _previewText = null;
+              setState(() {});
+            },
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Seguir editando'),
+          ),
+      ],
+    );
+  }
+
+  void _onCrtPreviewChanged(String text) {
+    setState(() => _previewText = text);
   }
 
   Widget _buildFormContent() {
@@ -598,6 +651,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         jefe: _jefeNombre,
         canCreate: _canCreateFormation,
         hidePreview: true,
+        onPreviewChanged: _onCrtPreviewChanged,
       );
     }
     if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) {
@@ -608,6 +662,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         jefe: _jefeNombre,
         canCreate: _canGenerate,
         hidePreview: true,
+        onPreviewChanged: _onCrtPreviewChanged,
       );
     }
     if (modulo == TipoModuloCartilla.conductor) {
@@ -617,6 +672,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         jefe: _jefeNombre,
         canCreate: _canCreateConductor,
         hidePreview: true,
+        onPreviewChanged: _onCrtPreviewChanged,
       );
     }
     if (modulo == TipoModuloCartilla.eas) {
@@ -669,7 +725,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           Expanded(
             child: _buildDocPanel(preview),
           ),
-          if (preview != null && _isGenericForm) ...[
+          if (preview != null && _showGlobalActionBar) ...[
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerRight,
@@ -705,11 +761,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  bool get _isGenericForm {
+  bool get _showGlobalActionBar {
     if (_formacionSeleccionada != null) return false;
     if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) return false;
     if (modulo == TipoModuloCartilla.conductor) return false;
-    if (modulo == TipoModuloCartilla.eas) return false;
+    if (modulo == TipoModuloCartilla.eas) {
+      // EAS types that have their own generate button inside the wizard
+      if (_isDesalojoFlow) return false;
+      if (_isRetiroTemporalFlow) return false;
+      if (_isColaboracionFlow) return false;
+      if (_isRequerimientoFlow) return false;
+      if (_isColaboracionCiudadanaFlow) return false;
+      if (_isAusentismoFlow) return false;
+      if (_isGenericEasWizardFlow) return false;
+    }
     return true;
   }
 
@@ -739,7 +804,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           padding: const EdgeInsets.all(24),
           child: _buildDocInner(preview),
         ),
-        if (preview != null && _isGenericForm) ...[
+        if (preview != null && _showGlobalActionBar) ...[
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,
@@ -916,8 +981,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           _otrasCartillasSeleccionada = false;
           tipo = _tipoFromId(id);
       }
+      _formExpanded = true;
       _syncFields();
     });
+  }
+
+  void _goBackToSelector() {
+    _invalidatePreview();
+    setState(() => _formExpanded = false);
   }
 
   // ignore: unused_element

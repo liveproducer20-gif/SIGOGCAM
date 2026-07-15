@@ -18,6 +18,7 @@ class CrtSpecialForm extends StatefulWidget {
   final bool canCreate;
   final TipoFormacion? formationType;
   final bool hidePreview;
+  final ValueChanged<String>? onPreviewChanged;
 
   const CrtSpecialForm({
     super.key,
@@ -27,6 +28,7 @@ class CrtSpecialForm extends StatefulWidget {
     required this.canCreate,
     this.formationType,
     this.hidePreview = false,
+    this.onPreviewChanged,
   });
 
   @override
@@ -624,6 +626,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         CrtSpecialFormKind.otras => CrtSpecialTextGenerator.otras(_otrasData()),
       };
       _created = false;
+      widget.onPreviewChanged?.call(_preview!);
     });
   }
 
