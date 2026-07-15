@@ -1,5 +1,3 @@
-enum CrtSection { formacion, otras }
-
 enum TipoFormacion { entrante, saliente }
 
 enum OpcionConductor { entradaPersonal, salidaPersonal, novedadesMovil }

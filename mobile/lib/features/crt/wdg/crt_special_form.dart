@@ -15,6 +15,7 @@ class CrtSpecialForm extends StatefulWidget {
   final AppUser? user;
   final String jefe;
   final bool canCreate;
+  final TipoFormacion? formationType;
 
   const CrtSpecialForm({
     super.key,
@@ -22,6 +23,7 @@ class CrtSpecialForm extends StatefulWidget {
     required this.user,
     required this.jefe,
     required this.canCreate,
+    this.formationType,
   });
 
   @override
@@ -53,6 +55,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   @override
   void initState() {
     super.initState();
+    _tipoFormacion = widget.formationType ?? TipoFormacion.entrante;
     _seedDefaults();
     if (widget.kind == CrtSpecialFormKind.conductor) {
       _loadCatalogs();
@@ -154,19 +157,8 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   Widget _formationFields() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _title(Icons.groups_outlined, 'Formación entrante/saliente'),
+      _title(Icons.groups_outlined, _tipoFormacion.label),
       const SizedBox(height: 18),
-      SegmentedButton<TipoFormacion>(
-        segments: TipoFormacion.values
-            .map((e) => ButtonSegment(value: e, label: Text(e.label)))
-            .toList(),
-        selected: {_tipoFormacion},
-        onSelectionChanged: (value) => setState(() {
-          _tipoFormacion = value.first;
-          _invalidate();
-        }),
-      ),
-      const SizedBox(height: 16),
       _field('distrito', 'Distrito'),
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),

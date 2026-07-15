@@ -46,7 +46,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   RolMovil rolMovil = RolMovil.jp;
   bool guardando = false;
   String? _previewText;
-  CrtSection _section = CrtSection.otras;
+  TipoFormacion? _formacionSeleccionada;
+  bool _otrasCartillasSeleccionada = true;
   String _jefeNombre = '';
 
   final crtApi = CrtApi();
@@ -500,16 +501,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                         'Seleccione el modulo operativo y complete solo los campos requeridos.',
                   ),
                   const SizedBox(height: 26),
-                  _buildSectionCards(),
-                  const SizedBox(height: 24),
-                  if (_section == CrtSection.formacion)
-                    CrtSpecialForm(
-                      kind: CrtSpecialFormKind.formacion,
-                      user: widget.user,
-                      jefe: _jefeNombre,
-                      canCreate: _canCreateFormation,
-                    )
-                  else if (modulo == TipoModuloCartilla.conductor)
+                  if (modulo == TipoModuloCartilla.conductor)
                     CrtSpecialForm(
                       kind: CrtSpecialFormKind.conductor,
                       user: widget.user,
@@ -561,58 +553,25 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     return _canGenerate;
   }
 
-  Widget _buildSectionCards() {
-    final canView =
-        widget.user?.hasAnyPermission(const [
-          'cartillas.ver',
-          'cartillas.generar',
-        ]) ==
-        true;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = 12.0;
-        final width = constraints.maxWidth >= 620
-            ? (constraints.maxWidth - gap) / 2
-            : constraints.maxWidth;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            SizedBox(
-              width: width,
-              child: CartillaTypeCard(
-                icon: Icons.groups_outlined,
-                title: 'Formación entrante/saliente',
-                description: 'Registro de inicio o cierre de jornada',
-                selected: _section == CrtSection.formacion,
-                enabled: _canCreateFormation,
-                onTap: () => setState(() {
-                  _section = CrtSection.formacion;
-                  _invalidatePreview();
-                }),
-              ),
-            ),
-            SizedBox(
-              width: width,
-              child: CartillaTypeCard(
-                icon: Icons.dashboard_customize_outlined,
-                title: 'Otras cartillas',
-                description: 'Acceso a todos los tipos existentes',
-                selected: _section == CrtSection.otras,
-                enabled: canView,
-                onTap: () => setState(() {
-                  _section = CrtSection.otras;
-                  _invalidatePreview();
-                }),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildEasLayout(bool isWide, String? preview) {
+    if (_formacionSeleccionada != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildEasConfigPanel(),
+          const SizedBox(height: 20),
+          CrtSpecialForm(
+            key: ValueKey(_formacionSeleccionada),
+            kind: CrtSpecialFormKind.formacion,
+            formationType: _formacionSeleccionada,
+            user: widget.user,
+            jefe: _jefeNombre,
+            canCreate: _canCreateFormation,
+          ),
+        ],
+      );
+    }
+
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -675,6 +634,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               _invalidatePreview();
               setState(() {
                 modulo = value;
+                _formacionSeleccionada = null;
+                _otrasCartillasSeleccionada = true;
                 final tipos = CrtCatalog.configFor(modulo).tipos;
                 if (!tipos.contains(tipo)) tipo = tipos.first;
                 if (modulo == TipoModuloCartilla.eas) {
@@ -686,58 +647,60 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
           const SizedBox(height: 14),
           _buildEasTypeButtons(),
-          const SizedBox(height: 14),
-          _Drop<CrtEasStation>(
-            value: eas,
-            label: 'EAS',
-            icon: Icons.location_city_outlined,
-            items: CrtCatalog.easStations,
-            itemText: (value) => '${value.codigo} - ${value.nombre}',
-            onChanged: (value) {
-              _invalidatePreview();
-              setState(() {
-                eas = value;
-                movil = _moviles.first.movil;
-                _desaSection = 0;
-                _desaMovil = '';
-                _desaDireccion = '';
-                _desaDireccionOtro = false;
-                _direcciones = [];
-              });
-            },
-          ),
-          const SizedBox(height: 8),
-          _InfoLine(
-            icon: Icons.place_outlined,
-            text: '${eas.nombre}: ${eas.direccion}',
-          ),
-          const SizedBox(height: 14),
-          _Drop<String>(
-            value: movil,
-            label: 'Móvil asignado',
-            icon: Icons.directions_car_outlined,
-            items: _moviles.map((item) => item.movil).toList(),
-            itemText: (value) => 'Móvil $value',
-            onChanged: (value) {
-              _invalidatePreview();
-              setState(() => movil = value);
-            },
-          ),
-          const SizedBox(height: 14),
-          _Drop<RolMovil>(
-            value: rolMovil,
-            label: 'Que rol cumple usted en el movil',
-            icon: Icons.assignment_ind_outlined,
-            items: RolMovil.values,
-            itemText: (value) => value.label,
-            onChanged: (value) {
-              _invalidatePreview();
-              setState(() {
-                rolMovil = value;
-                _autoFillByRole();
-              });
-            },
-          ),
+          if (_formacionSeleccionada == null) ...[
+            const SizedBox(height: 14),
+            _Drop<CrtEasStation>(
+              value: eas,
+              label: 'EAS',
+              icon: Icons.location_city_outlined,
+              items: CrtCatalog.easStations,
+              itemText: (value) => '${value.codigo} - ${value.nombre}',
+              onChanged: (value) {
+                _invalidatePreview();
+                setState(() {
+                  eas = value;
+                  movil = _moviles.first.movil;
+                  _desaSection = 0;
+                  _desaMovil = '';
+                  _desaDireccion = '';
+                  _desaDireccionOtro = false;
+                  _direcciones = [];
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            _InfoLine(
+              icon: Icons.place_outlined,
+              text: '${eas.nombre}: ${eas.direccion}',
+            ),
+            const SizedBox(height: 14),
+            _Drop<String>(
+              value: movil,
+              label: 'Móvil asignado',
+              icon: Icons.directions_car_outlined,
+              items: _moviles.map((item) => item.movil).toList(),
+              itemText: (value) => 'Móvil $value',
+              onChanged: (value) {
+                _invalidatePreview();
+                setState(() => movil = value);
+              },
+            ),
+            const SizedBox(height: 14),
+            _Drop<RolMovil>(
+              value: rolMovil,
+              label: 'Que rol cumple usted en el movil',
+              icon: Icons.assignment_ind_outlined,
+              items: RolMovil.values,
+              itemText: (value) => value.label,
+              onChanged: (value) {
+                _invalidatePreview();
+                setState(() {
+                  rolMovil = value;
+                  _autoFillByRole();
+                });
+              },
+            ),
+          ],
         ],
       ),
     );
@@ -745,8 +708,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Widget _buildEasTypeButtons() {
     const gap = 12.0;
-
-    final items = [
+    final existingItems = [
       (
         icon: Icons.storefront_outlined,
         title: 'Desalojo de vendedores\nautónomos no regularizados',
@@ -788,6 +750,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo: TipoCartilla.permisoAusentismo,
       ),
     ];
+    final canView =
+        widget.user?.hasAnyPermission(const [
+          'cartillas.ver',
+          'cartillas.generar',
+        ]) ==
+        true;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -807,26 +775,100 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             final cols = maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1);
             final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
 
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                for (final item in items)
-                  SizedBox(
-                    width: cardWidth,
-                    child: CartillaTypeCard(
-                      icon: item.icon,
-                      title: item.title,
-                      selected: tipo == item.tipo,
-                      onTap: () {
-                        _invalidatePreview();
-                        setState(() {
-                          tipo = item.tipo;
-                          _syncFields();
-                        });
-                      },
+                Wrap(
+                  spacing: gap,
+                  runSpacing: gap,
+                  children: [
+                    SizedBox(
+                      width: cardWidth,
+                      child: CartillaTypeCard(
+                        icon: Icons.login_outlined,
+                        title: 'Formación entrante',
+                        selected:
+                            _formacionSeleccionada == TipoFormacion.entrante,
+                        enabled: _canCreateFormation,
+                        onTap: () {
+                          _invalidatePreview();
+                          setState(() {
+                            _formacionSeleccionada = TipoFormacion.entrante;
+                            _otrasCartillasSeleccionada = false;
+                          });
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      child: CartillaTypeCard(
+                        icon: Icons.logout_outlined,
+                        title: 'Formación saliente',
+                        selected:
+                            _formacionSeleccionada == TipoFormacion.saliente,
+                        enabled: _canCreateFormation,
+                        onTap: () {
+                          _invalidatePreview();
+                          setState(() {
+                            _formacionSeleccionada = TipoFormacion.saliente;
+                            _otrasCartillasSeleccionada = false;
+                          });
+                        },
+                      ),
+                    ),
+                    SizedBox(
+                      width: cardWidth,
+                      child: CartillaTypeCard(
+                        icon: Icons.dashboard_customize_outlined,
+                        title: 'Otras cartillas',
+                        selected: _otrasCartillasSeleccionada,
+                        enabled: canView,
+                        onTap: () {
+                          _invalidatePreview();
+                          setState(() {
+                            _formacionSeleccionada = null;
+                            _otrasCartillasSeleccionada = true;
+                            _syncFields();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (_otrasCartillasSeleccionada) ...[
+                  const SizedBox(height: 18),
+                  const Text(
+                    'Cartilla específica',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppThm.priClr,
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: gap,
+                    runSpacing: gap,
+                    children: [
+                      for (final item in existingItems)
+                        SizedBox(
+                          width: cardWidth,
+                          child: CartillaTypeCard(
+                            icon: item.icon,
+                            title: item.title,
+                            selected: tipo == item.tipo,
+                            onTap: () {
+                              _invalidatePreview();
+                              setState(() {
+                                tipo = item.tipo;
+                                _syncFields();
+                              });
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             );
           },
