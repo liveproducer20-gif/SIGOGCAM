@@ -8,6 +8,12 @@ class SideMenuConfig {
 
   static const definitions = <SideMenuItem>[
     SideMenuItem(
+      destination: SideMenuDestination.dashboard,
+      title: 'Dashboard',
+      icon: Icons.dashboard_outlined,
+      section: SideMenuSection.main,
+    ),
+    SideMenuItem(
       destination: SideMenuDestination.events,
       title: 'Eventos y anuncios',
       icon: Icons.event_outlined,
@@ -140,7 +146,10 @@ class SideMenuConfig {
             ? supportBadge
             : null,
       );
-      if (!resolved.authorized) continue;
+      // La estructura ya fue autorizada por el backend usando el rol real del
+      // usuario. Los permisos granulares controlan si el destino se puede abrir,
+      // pero no deben ocultar un menu que el administrador hizo visible.
+      final hasAccess = resolved.authorized;
       byDestination[destination] = SideMenuItem(
         destination: destination,
         title: node['etiqueta_personalizada']?.toString().trim().isNotEmpty ==
@@ -153,9 +162,11 @@ class SideMenuConfig {
             : resolved.section,
         requiredPermissions: resolved.requiredPermissions,
         requireAllPermissions: resolved.requireAllPermissions,
-        available: resolved.available,
+        available: resolved.available && hasAccess,
         authorized: true,
-        unavailableMessage: resolved.unavailableMessage,
+        unavailableMessage: hasAccess
+            ? resolved.unavailableMessage
+            : 'No tienes permisos para acceder a este modulo.',
         badge: resolved.badge,
       );
     }
@@ -163,6 +174,7 @@ class SideMenuConfig {
   }
 
   static SideMenuDestination? _destination(String? code) => switch (code) {
+        'dashboard' => SideMenuDestination.dashboard,
         'eventos_anuncios' => SideMenuDestination.events,
         'cartillas' => SideMenuDestination.booklets,
         'insignias' => SideMenuDestination.badges,
@@ -178,6 +190,7 @@ class SideMenuConfig {
       };
 
   static IconData? _icon(String? value) => switch (value) {
+        'dashboard_outlined' => Icons.dashboard_outlined,
         'event_outlined' => Icons.event_outlined,
         'description_outlined' => Icons.description_outlined,
         'workspace_premium_outlined' => Icons.workspace_premium_outlined,

@@ -209,6 +209,46 @@ class _DashScrState extends State<DashScr> {
   }
 }
 
+class _DashboardHome extends StatelessWidget {
+  final AppUser user;
+
+  const _DashboardHome({required this.user});
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: ConstrainedBox(
+      constraints: const BoxConstraints(maxWidth: 620),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.dashboard_outlined,
+              size: 64,
+              color: AppThm.secClr,
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Bienvenido, ${user.nombreCompleto}',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Selecciona una opcion del menu para comenzar.',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
 class _WebDash extends StatefulWidget {
   final List<SideMenuItem> items;
   final AppUser user;
@@ -331,6 +371,7 @@ class _WebContentState extends State<_WebContent> {
       onNotifications: widget.onNotifications,
     );
     return switch (item.destination) {
+      SideMenuDestination.dashboard => _DashboardHome(user: common.user),
       SideMenuDestination.events => EvtHomeScr(
         user: common.user,
         onUserChanged: common.onUserChanged,
@@ -1417,6 +1458,8 @@ class _MobDash extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => switch (item.destination) {
+                        SideMenuDestination.dashboard =>
+                          _DashboardHome(user: user),
                         SideMenuDestination.events => EvtHomeScr(
                             user: user,
                             onUserChanged: onUserChanged,

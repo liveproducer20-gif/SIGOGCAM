@@ -7,6 +7,7 @@ import '../../profile/profile_menu_wdg.dart';
 enum SideMenuSection { main, operational, reports, settings, support }
 
 enum SideMenuDestination {
+  dashboard,
   events,
   booklets,
   badges,
