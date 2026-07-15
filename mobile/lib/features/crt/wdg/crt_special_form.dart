@@ -17,6 +17,7 @@ class CrtSpecialForm extends StatefulWidget {
   final String jefe;
   final bool canCreate;
   final TipoFormacion? formationType;
+  final bool hidePreview;
 
   const CrtSpecialForm({
     super.key,
@@ -25,6 +26,7 @@ class CrtSpecialForm extends StatefulWidget {
     required this.jefe,
     required this.canCreate,
     this.formationType,
+    this.hidePreview = false,
   });
 
   @override
@@ -147,19 +149,35 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   @override
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 1050;
-    final form = _panel(
+
+    Widget buildForm() => _panel(
       AbsorbPointer(
-        absorbing: _preview != null,
+        absorbing: !widget.hidePreview && _preview != null,
         child: Form(
           key: _formKey,
-          child: switch (widget.kind) {
-            CrtSpecialFormKind.formacion => _formationFields(),
-            CrtSpecialFormKind.conductor => _conductorFields(),
-            CrtSpecialFormKind.otras => _otrasFields(),
-          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              switch (widget.kind) {
+                CrtSpecialFormKind.formacion => _formationFields(),
+                CrtSpecialFormKind.conductor => _conductorFields(),
+                CrtSpecialFormKind.otras => _otrasFields(),
+              },
+              if (widget.hidePreview) ...[
+                const SizedBox(height: 24),
+                _actionButtons(),
+              ],
+            ],
+          ),
         ),
       ),
     );
+
+    if (widget.hidePreview) {
+      return buildForm();
+    }
+
+    final form = buildForm();
     final preview = _previewPanel();
     return wide
         ? Row(
@@ -502,64 +520,66 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     onChanged: (_) => _invalidate(),
   );
 
+  Widget _actionButtons() => Wrap(
+    spacing: 8,
+    runSpacing: 8,
+    children: [
+      if (!_created)
+        FilledButton.icon(
+          onPressed: _saving
+              ? null
+              : (_preview == null ? _generatePreview : _create),
+          icon: _saving
+              ? const SizedBox.square(
+                  dimension: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(
+                  _preview == null
+                      ? Icons.visibility_outlined
+                      : Icons.save_outlined,
+                ),
+          label: Text(
+            _preview == null ? 'Generar vista previa' : 'Crear cartilla',
+          ),
+        ),
+      if (_preview != null)
+        OutlinedButton.icon(
+          onPressed: () => setState(_invalidate),
+          icon: const Icon(Icons.edit_outlined),
+          label: const Text('Seguir editando'),
+        ),
+      if (_created) ...[
+        OutlinedButton.icon(
+          onPressed: _copy,
+          icon: const Icon(Icons.copy_outlined),
+          label: const Text('Copiar texto'),
+        ),
+        OutlinedButton.icon(
+          onPressed: _share,
+          icon: const Icon(Icons.share_outlined),
+          label: const Text('Compartir'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () => setState(() {
+            _preview = null;
+            _created = false;
+            _dateTime = DateTime.now();
+          }),
+          icon: const Icon(Icons.add_outlined),
+          label: const Text('Crear otra cartilla'),
+        ),
+      ],
+    ],
+  );
+
   Widget _previewPanel() => _panel(
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _title(Icons.preview_outlined, 'Vista previa'),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            if (!_created)
-              FilledButton.icon(
-                onPressed: _saving
-                    ? null
-                    : (_preview == null ? _generatePreview : _create),
-                icon: _saving
-                    ? const SizedBox.square(
-                        dimension: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        _preview == null
-                            ? Icons.visibility_outlined
-                            : Icons.save_outlined,
-                      ),
-                label: Text(
-                  _preview == null ? 'Generar vista previa' : 'Crear cartilla',
-                ),
-              ),
-            if (_preview != null)
-              OutlinedButton.icon(
-                onPressed: () => setState(_invalidate),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Seguir editando'),
-              ),
-            if (_created) ...[
-              OutlinedButton.icon(
-                onPressed: _copy,
-                icon: const Icon(Icons.copy_outlined),
-                label: const Text('Copiar texto'),
-              ),
-              OutlinedButton.icon(
-                onPressed: _share,
-                icon: const Icon(Icons.share_outlined),
-                label: const Text('Compartir'),
-              ),
-              OutlinedButton.icon(
-                onPressed: () => setState(() {
-                  _preview = null;
-                  _created = false;
-                  _dateTime = DateTime.now();
-                }),
-                icon: const Icon(Icons.add_outlined),
-                label: const Text('Crear otra cartilla'),
-              ),
-            ],
-          ],
-        ),
+        _actionButtons(),
         const SizedBox(height: 18),
         Container(
           width: double.infinity,

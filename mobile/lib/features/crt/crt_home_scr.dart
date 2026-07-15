@@ -597,6 +597,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canCreateFormation,
+        hidePreview: true,
       );
     }
     if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) {
@@ -606,6 +607,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canGenerate,
+        hidePreview: true,
       );
     }
     if (modulo == TipoModuloCartilla.conductor) {
@@ -614,6 +616,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canCreateConductor,
+        hidePreview: true,
       );
     }
     if (modulo == TipoModuloCartilla.eas) {
@@ -666,7 +669,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           Expanded(
             child: _buildDocPanel(preview),
           ),
-          if (preview != null) ...[
+          if (preview != null && _isGenericForm) ...[
             const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerRight,
@@ -702,6 +705,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  bool get _isGenericForm {
+    if (_formacionSeleccionada != null) return false;
+    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) return false;
+    if (modulo == TipoModuloCartilla.conductor) return false;
+    if (modulo == TipoModuloCartilla.eas) return false;
+    return true;
+  }
+
   Widget _buildMobilePreview(String? preview) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -728,7 +739,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           padding: const EdgeInsets.all(24),
           child: _buildDocInner(preview),
         ),
-        if (preview != null) ...[
+        if (preview != null && _isGenericForm) ...[
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,
