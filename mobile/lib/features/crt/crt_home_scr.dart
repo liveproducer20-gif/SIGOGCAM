@@ -909,6 +909,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     });
   }
 
+  // ignore: unused_element
   Widget _buildEasLayout(bool isWide, String? preview) {
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
