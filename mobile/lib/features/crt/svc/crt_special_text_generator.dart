@@ -18,6 +18,25 @@ class CrtSpecialTextGenerator {
     final personalPolicial = policias.isEmpty
         ? ''
         : '\n\n${_twoDigits(policias.length)} Personal Policial\n\n${policias.join('\n')}';
+    final movilesValidos = data.moviles
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    final novedadesSection = novedades.isEmpty
+        ? ''
+        : '\n*NOVEDADES:*\n\n${novedades.join('\n')}\n';
+    final movilesSection = movilesValidos.isEmpty
+        ? ''
+        : '\n*Móviles en circulación:*\n\n${movilesValidos.join('-')}\n';
+    final radioSection = data.radiooperadores > 0
+        ? '\n${_twoDigits(data.radiooperadores)} ACM Radio operadores'
+        : '';
+    final acmSection = data.acmOperativos > 0
+        ? '\n${_twoDigits(data.acmOperativos)} ACM Operativos'
+        : '';
+    final personalHeader = (data.radiooperadores > 0 || data.acmOperativos > 0 || policias.isNotEmpty)
+        ? '\n*Personal participante:*'
+        : '';
 
     return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
 
@@ -39,27 +58,12 @@ class CrtSpecialTextGenerator {
 
 ${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente, le informo que:
 
-Al momento *Forma Personal ${entrante ? 'Entrante' : 'Saliente'} de Radio Operadores del EAS CEIBOS, ACM JP y CONDUCTORES,* se notifican novedades para fines pertinentes, quedando así en constancia que se ${entrante ? 'INICIA' : 'CULMINA'} LA JORNADA LABORAL como se establece la distribución.
-
-*NOVEDADES:*
-
-${novedades.isEmpty ? 'Sin Novedades' : novedades.join('\n')}
-
-*Personal participante:*
-
-${_twoDigits(data.radiooperadores)} ACM Radio operadores
-
-${_twoDigits(data.acmOperativos)} ACM Operativos$personalPolicial
-
-*Móviles en circulación:*
-
-${data.moviles.map((e) => e.trim()).where((e) => e.isNotEmpty).join('-')}
-
+Al momento *Forma Personal ${entrante ? 'Entrante' : 'Saliente'} de Radio Operadores del EAS CEIBOS, ACM JP y CONDUCTORES,* se notifican novedades para fines pertinentes, quedando así en constancia que se ${entrante ? 'INICIA' : 'CULMINA'} LA JORNADA LABORAL como se establece la distribución.$novedadesSection$personalHeader$radioSection$acmSection$personalPolicial$movilesSection
 *Reporta:*
 
 $reportantes
 
-*“Lealtad, Valor y Orden”*
+*"Lealtad, Valor y Orden"*
 
 *Adjunto Fotografía:*''';
   }

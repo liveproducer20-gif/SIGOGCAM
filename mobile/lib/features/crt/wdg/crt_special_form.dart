@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/app_user.dart';
+import '../../adm/adm_api.dart';
 import '../../ins/ins_api.dart';
 import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
@@ -34,9 +35,11 @@ class CrtSpecialForm extends StatefulWidget {
 class _CrtSpecialFormState extends State<CrtSpecialForm> {
   final _formKey = GlobalKey<FormState>();
   final _api = CrtApi();
+  final _admApi = AdmApi();
   final _controllers = <String, TextEditingController>{};
   List<Map<String, dynamic>> _personal = const [];
   List<Map<String, dynamic>> _moviles = const [];
+  List<Map<String, dynamic>> _distritos = const [];
   bool _loadingCatalogs = true;
   bool _saving = false;
   bool _created = false;
@@ -49,6 +52,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   int? _conductorId;
   int? _encargadoId;
   int? _movilId;
+  bool _movilesActivos = true;
 
   TextEditingController _c(String key, [String value = '']) =>
       _controllers.putIfAbsent(key, () => TextEditingController(text: value));
@@ -58,11 +62,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     super.initState();
     _tipoFormacion = widget.formationType ?? TipoFormacion.entrante;
     _seedDefaults();
-    if (widget.kind == CrtSpecialFormKind.conductor) {
-      _loadCatalogs();
-    } else {
-      _loadingCatalogs = false;
-    }
+    _loadCatalogs();
   }
 
   void _seedDefaults() {
@@ -96,8 +96,13 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
 
   Future<void> _loadCatalogs() async {
     try {
-      final data = await _api.getCatalogosOperativos();
+      final results = await Future.wait([
+        _api.getCatalogosOperativos(),
+        _admApi.getCatalogo('DISTRITOS'),
+      ]);
       if (!mounted) return;
+      final data = results[0] as Map<String, dynamic>;
+      final distritoResult = results[1] as AdmPaginatedResult;
       setState(() {
         _personal = (data['personal'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
@@ -105,6 +110,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         _moviles = (data['moviles'] as List? ?? const [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
+        _distritos = distritoResult.datos;
         final currentUserId = widget.user?.id;
         if (currentUserId != null &&
             _personal.any(
@@ -165,7 +171,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     children: [
       _title(Icons.groups_outlined, _tipoFormacion.label),
       const SizedBox(height: 18),
-      _field('distrito', 'Distrito'),
+      _districtDropdown(),
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),
       DropdownButtonFormField<String>(
@@ -190,7 +196,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         },
       ),
       _field('horario', 'Horario'),
-      _dateTimeField(),
+      _autoDateTimeDisplay(),
       _field('novedades', 'Novedades', required: false, lines: 4),
       _field('radiooperadores', 'Número de radiooperadores', digits: true),
       _field('operativos', 'Número de ACM operativos', digits: true),
@@ -200,8 +206,8 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         required: false,
         lines: 3,
       ),
-      _field('moviles', 'Móviles en circulación (separados por coma)'),
-      _field('reportantes', 'Personal que reporta (uno por línea)', lines: 3),
+      _movilesSection(),
+      _reporterDisplay(),
     ].separatedBy(const SizedBox(height: 14)),
   );
 
@@ -294,14 +300,14 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     children: [
       _title(Icons.dashboard_customize_outlined, 'Otras cartillas'),
       const SizedBox(height: 18),
-      _field('distrito', 'Distrito'),
+      _districtDropdown(),
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),
       _field('horario', 'Horario'),
-      _dateTimeField(),
+      _autoDateTimeDisplay(),
       _field('causa', 'Causa'),
       _field('novedad', 'Novedad', lines: 6),
-      _field('reportantes', 'Personal que reporta (uno por línea)', lines: 3),
+      _reporterDisplay(),
     ].separatedBy(const SizedBox(height: 14)),
   );
 
@@ -402,6 +408,61 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       _invalidate();
     });
   }
+
+  Widget _districtDropdown() {
+    final items = _distritos
+        .map((d) => d['valor']?.toString() ?? '')
+        .where((v) => v.isNotEmpty)
+        .toList();
+    final current = _c('distrito').text;
+    return DropdownButtonFormField<String>(
+      initialValue: items.contains(current) ? current : null,
+      isExpanded: true,
+      decoration: _decoration('Distrito', Icons.map_outlined),
+      items: items
+          .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+          .toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() {
+          _c('distrito').text = value;
+          _invalidate();
+        });
+      },
+      validator: (v) => v == null || v.isEmpty ? 'Seleccione un distrito' : null,
+    );
+  }
+
+  Widget _autoDateTimeDisplay() => InputDecorator(
+    decoration: _decoration('Fecha y hora del reporte', Icons.event_outlined),
+    child: Text(_formatDateTime(_dateTime)),
+  );
+
+  Widget _movilesSection() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      SwitchListTile(
+        contentPadding: EdgeInsets.zero,
+        title: const Text('¿Móviles en circulación?'),
+        value: _movilesActivos,
+        onChanged: (v) => setState(() => _movilesActivos = v),
+      ),
+      if (_movilesActivos)
+        _field('moviles', 'Móviles en circulación (separados por coma)'),
+    ],
+  );
+
+  Widget _reporterDisplay() => InputDecorator(
+    decoration: _decoration(
+      'Personal que reporta',
+      Icons.badge_outlined,
+    ),
+    child: Text(
+      widget.user?.nombreCompleto.isNotEmpty == true
+          ? widget.user!.nombreCompleto
+          : '[personal que reporta]',
+    ),
+  );
 
   Widget _field(
     String key,
@@ -597,11 +658,11 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     horario: _c('horario').text.trim(),
     fechaHora: _dateTime,
     novedades: _c('novedades').text,
-    radiooperadores: int.parse(_c('radiooperadores').text),
-    acmOperativos: int.parse(_c('operativos').text),
+    radiooperadores: int.tryParse(_c('radiooperadores').text) ?? 0,
+    acmOperativos: int.tryParse(_c('operativos').text) ?? 0,
     personalPolicial: _split(_c('policias').text),
-    moviles: _split(_c('moviles').text),
-    reportantes: _split(_c('reportantes').text),
+    moviles: _movilesActivos ? _split(_c('moviles').text) : [],
+    reportantes: [widget.user?.nombreCompleto ?? ''],
     jefe: widget.jefe.isEmpty ? 'Jefe de Control Municipal' : widget.jefe,
   );
 
@@ -631,7 +692,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     fechaHora: _dateTime,
     causa: _c('causa').text.trim(),
     novedad: _c('novedad').text,
-    reportantes: _split(_c('reportantes').text),
+    reportantes: [widget.user?.nombreCompleto ?? ''],
     jefe: widget.jefe.isEmpty ? 'Jefe de Control Municipal' : widget.jefe,
   );
 

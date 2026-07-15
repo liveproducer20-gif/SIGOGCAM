@@ -350,6 +350,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool get _isGenericEasWizardFlow {
     if (modulo != TipoModuloCartilla.eas) return false;
     return [
+      TipoCartilla.radioperador,
+      TipoCartilla.supervision,
       TipoCartilla.presenciaAgenteControl,
       TipoCartilla.operativoConjunto,
       TipoCartilla.roboManoArmada,
@@ -596,6 +598,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         return 'retiro_temporal';
       case TipoCartilla.requerimiento:
         return 'requerimiento';
+      case TipoCartilla.radioperador:
+        return 'radioperador';
+      case TipoCartilla.supervision:
+        return 'supervision';
       case TipoCartilla.colaboracionEntidades:
         return 'colaboracion_entidades';
       case TipoCartilla.colaboracionEventos:
@@ -619,6 +625,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         return TipoCartilla.retiroTemporal;
       case 'requerimiento':
         return TipoCartilla.requerimiento;
+      case 'radioperador':
+        return TipoCartilla.radioperador;
+      case 'supervision':
+        return TipoCartilla.supervision;
       case 'colaboracion_entidades':
         return TipoCartilla.colaboracionEntidades;
       case 'colaboracion_ciudadana':

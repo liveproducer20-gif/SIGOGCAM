@@ -42,6 +42,8 @@ enum TipoCartilla {
   colaboracionEventos,
   resguardoPersonal,
   colaboracionAtm,
+  radioperador,
+  supervision,
 }
 
 enum Jornada {
@@ -146,6 +148,10 @@ extension TipoCartillaX on TipoCartilla {
         return 'Resguardo de personal';
       case TipoCartilla.colaboracionAtm:
         return 'Colaboración ATM';
+      case TipoCartilla.radioperador:
+        return 'Radioperador';
+      case TipoCartilla.supervision:
+        return 'Supervisión';
     }
   }
 }

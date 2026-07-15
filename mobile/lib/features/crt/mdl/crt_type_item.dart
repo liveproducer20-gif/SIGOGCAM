@@ -52,9 +52,14 @@ class CartillaTypeItem {
       icon: Icons.backup_outlined,
     ),
     CartillaTypeItem(
-      id: 'requerimiento',
-      title: 'Requerimiento',
-      icon: Icons.receipt_long_outlined,
+      id: 'radioperador',
+      title: 'Radioperador',
+      icon: Icons.radio_outlined,
+    ),
+    CartillaTypeItem(
+      id: 'supervision',
+      title: 'Supervisión',
+      icon: Icons.visibility_outlined,
     ),
     CartillaTypeItem(
       id: 'colaboracion_entidades',
@@ -65,11 +70,6 @@ class CartillaTypeItem {
       id: 'colaboracion_ciudadana',
       title: 'Colaboración\nciudadana',
       icon: Icons.people_outlined,
-    ),
-    CartillaTypeItem(
-      id: 'permiso_ausentismo',
-      title: 'Permiso de\nausentismo',
-      icon: Icons.logout_outlined,
     ),
   ];
 }

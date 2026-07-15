@@ -927,6 +927,8 @@ Adjunto fotografía''';
 
   static bool _isGenericWizardTipo(TipoCartilla tipo) {
     return [
+      TipoCartilla.radioperador,
+      TipoCartilla.supervision,
       TipoCartilla.presenciaAgenteControl,
       TipoCartilla.operativoConjunto,
       TipoCartilla.roboManoArmada,
@@ -1164,11 +1166,17 @@ Adjunto fotografía''';
         'se realizó resguardo de personal en $direccion${persona.isEmpty ? '' : ', correspondiente a $persona'}, manteniendo presencia preventiva y acompañamiento durante el desarrollo de la actividad asignada. ${resultado.isEmpty ? '' : resultado}',
       TipoCartilla.colaboracionAtm =>
         'se brindó colaboración a ATM en $direccion${motivo.isEmpty ? '' : ', por motivo de $motivo'}, manteniendo apoyo preventivo y ordenamiento en el punto hasta la culminación del procedimiento. ${resultado.isEmpty ? '' : resultado}',
+      TipoCartilla.radioperador =>
+        'se reporta la novedad de radioperador correspondiente a la jornada. ${_v(data, 'novedad').isEmpty ? 'Sin novedades que reportar.' : _v(data, 'novedad')}',
+      TipoCartilla.supervision =>
+        'se reporta la novedad de supervisión correspondiente a la jornada. ${_v(data, 'novedad').isEmpty ? 'Sin novedades que reportar.' : _v(data, 'novedad')}',
       _ =>
         'se registra la novedad correspondiente en $direccion${motivo.isEmpty ? '' : ', por motivo de $motivo'}. ${resultado.isEmpty ? 'El procedimiento se atendió sin novedades adicionales.' : resultado}',
     };
 
-    return _compact('$saludo $body$puntoMartillo${detalle.isEmpty ? '' : ' $detalle'}');
+    final puntoMartilloOverrides = [TipoCartilla.radioperador, TipoCartilla.supervision];
+    final pm = puntoMartilloOverrides.contains(data.tipo) ? '' : puntoMartillo;
+    return _compact('$saludo $body$pm${detalle.isEmpty ? '' : ' $detalle'}');
   }
 
   static String _buildDesalojoBody(CrtFormData data, String direccion) {
