@@ -101,6 +101,45 @@ ${data.encargado.trim()}
 $observaciones''';
   }
 
+  static String otras(OtrasCartillasData data) {
+    final reportantes = data.reportantes
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .map((e) => 'ACM. $e')
+        .join('\n');
+    return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
+
+*REPORTE DE RADIOOPERADORES EAS CEIBOS*
+
+*Distrito:* ${data.distrito}
+
+*Circuito:* ${data.circuito}
+
+*Dirección:* ${data.direccion}
+
+*Horario:* ${data.horario}
+
+*Hora:* ${_time12(data.fechaHora)}
+
+*Fecha:* ${_shortDate(data.fechaHora)}
+
+*Causa:* ${data.causa}
+
+${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente me permito informarle que en las instalaciones de EAS CEIBOS se registra la siguiente novedad:
+
+${data.novedad.trim()}
+
+Así mismo, se le informó a la Central para que registre la novedad. Información puesta en conocimiento para los fines pertinentes.
+
+*Reporta:*
+
+$reportantes
+
+*"Lealtad Valor Orden"*
+
+*Adjunto Fotografía:*''';
+  }
+
   static String saludo(DateTime value) {
     if (value.hour < 12) return 'Muy buenos días';
     if (value.hour < 19) return 'Muy buenas tardes';
@@ -118,4 +157,11 @@ $observaciones''';
       '${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   static String _date(DateTime value) =>
       '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+  static String _shortDate(DateTime value) =>
+      '${value.day}/${value.month}/${value.year}';
+  static String _time12(DateTime value) {
+    final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+    final period = value.hour < 12 ? 'a. m.' : 'p. m.';
+    return '${hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')} $period';
+  }
 }

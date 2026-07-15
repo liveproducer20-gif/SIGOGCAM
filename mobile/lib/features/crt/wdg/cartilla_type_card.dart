@@ -28,6 +28,8 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
   static const Color _darkBlue = Color(0xFF1D3F73);
   static const Color _selectedBg = Color(0xFFEAF0F8);
   static const Color _normalBorder = Color(0xFFD1D5DB);
+  static const double _cardHeight = 152;
+  static const double _borderWidth = 1.5;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +53,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
             onTap: widget.enabled ? widget.onTap : null,
             child: AnimatedContainer(
               width: double.infinity,
-              height: widget.description == null ? 128 : 152,
+              height: _cardHeight,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
               padding: const EdgeInsets.all(16),
@@ -66,7 +68,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                       : hovered
                       ? _darkBlue
                       : _normalBorder,
-                  width: selected ? 2 : 1,
+                  width: _borderWidth,
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -94,6 +96,8 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                         const SizedBox(height: 10),
                         Text(
                           widget.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: selected
@@ -110,7 +114,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                           const SizedBox(height: 5),
                           Text(
                             widget.description!,
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             textAlign: TextAlign.center,
                             style: TextStyle(

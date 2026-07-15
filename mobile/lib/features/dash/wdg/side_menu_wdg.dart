@@ -18,6 +18,7 @@ enum SideMenuDestination {
   administration,
   rolesPermisos,
   support,
+  custom,
 }
 
 class SideMenuItem {
@@ -31,6 +32,8 @@ class SideMenuItem {
   final bool authorized;
   final String? unavailableMessage;
   final int badge;
+  final String? moduleCode;
+  final String? route;
 
   const SideMenuItem({
     required this.destination,
@@ -43,25 +46,33 @@ class SideMenuItem {
     this.authorized = true,
     this.unavailableMessage,
     this.badge = 0,
+    this.moduleCode,
+    this.route,
   });
 
   bool get enabled => available && authorized;
 
   SideMenuItem resolveFor(AppUser user, {int? badge}) => SideMenuItem(
-        destination: destination,
-        title: title,
-        icon: icon,
-        section: section,
-        requiredPermissions: requiredPermissions,
-        requireAllPermissions: requireAllPermissions,
-        available: available,
-        authorized: requiredPermissions.isEmpty ||
-            (requireAllPermissions
-                ? user.permissions.containsAll(requiredPermissions)
-                : user.permissions.containsAny(requiredPermissions)),
-        unavailableMessage: unavailableMessage,
-        badge: badge ?? this.badge,
-      );
+    destination: destination,
+    title: title,
+    icon: icon,
+    section: section,
+    requiredPermissions: requiredPermissions,
+    requireAllPermissions: requireAllPermissions,
+    available: available,
+    authorized:
+        requiredPermissions.isEmpty ||
+        (requireAllPermissions
+            ? user.permissions.containsAll(requiredPermissions)
+            : user.permissions.containsAny(requiredPermissions)),
+    unavailableMessage: unavailableMessage,
+    badge: badge ?? this.badge,
+    moduleCode: moduleCode,
+    route: route,
+  );
+
+  String get pageKey =>
+      moduleCode == null ? destination.name : '${destination.name}:$moduleCode';
 }
 
 class SideMenuWdg extends StatelessWidget {
@@ -166,14 +177,14 @@ class SideMenuWdg extends StatelessWidget {
       ],
       for (final entry in items.indexed)
         if (entry.$2.section == SideMenuSection.support) ...[
-        const Divider(color: Colors.white12, height: 12),
-        _MenuTile(
-          item: entry.$2,
-          selected: idxSel == entry.$1,
-          open: menuOpen,
-          onTap: () => onItemTap(entry.$1),
-        ),
-      ],
+          const Divider(color: Colors.white12, height: 12),
+          _MenuTile(
+            item: entry.$2,
+            selected: idxSel == entry.$1,
+            open: menuOpen,
+            onTap: () => onItemTap(entry.$1),
+          ),
+        ],
     ];
   }
 }

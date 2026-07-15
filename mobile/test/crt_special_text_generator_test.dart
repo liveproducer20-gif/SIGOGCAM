@@ -96,4 +96,29 @@ void main() {
     expect(text, contains('Sin novedades'));
     expect(data.toJson()['kilometraje'], 11216);
   });
+
+  test(
+    'otras cartillas respeta plantilla institucional y hora de 12 horas',
+    () {
+      final data = OtrasCartillasData(
+        distrito: '#5 MODELO',
+        circuito: 'EAS 12 CEIBOS',
+        direccion: 'Calle 15 ava y Dr Alberto Dacach Saman',
+        horario: '14:00 A 22:00',
+        fechaHora: DateTime(2026, 7, 14, 19, 25),
+        causa: 'NOVEDAD EN INSTALACIONES',
+        novedad: 'Se registra una novedad de prueba.',
+        reportantes: const ['CALDERON JORGE', 'ZUÑIGA GUILLERMO'],
+        jefe: 'Maldonado Cabrera Freddy',
+      );
+
+      final text = CrtSpecialTextGenerator.otras(data);
+      expect(text, contains('*REPORTE DE RADIOOPERADORES EAS CEIBOS*'));
+      expect(text, contains('*Hora:* 07:25 p. m.'));
+      expect(text, contains('*Fecha:* 14/7/2026'));
+      expect(text, contains('permiso Sr. Maldonado Cabrera Freddy'));
+      expect(text, contains('ACM. CALDERON JORGE\nACM. ZUÑIGA GUILLERMO'));
+      expect(text, contains('*"Lealtad Valor Orden"*'));
+    },
+  );
 }

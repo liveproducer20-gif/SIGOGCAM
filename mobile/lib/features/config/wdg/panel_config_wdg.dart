@@ -12,6 +12,9 @@ class PanelConfigWdg extends StatefulWidget {
   final ValueChanged<int> onAddModulo;
   final ValueChanged<int> onRemoveModulo;
   final ValueChanged<RolMenuConfigModel> onEditItem;
+  final bool hasChanges;
+  final bool saving;
+  final VoidCallback onSave;
 
   const PanelConfigWdg({
     super.key,
@@ -23,6 +26,9 @@ class PanelConfigWdg extends StatefulWidget {
     required this.onAddModulo,
     required this.onRemoveModulo,
     required this.onEditItem,
+    required this.hasChanges,
+    required this.saving,
+    required this.onSave,
   });
 
   @override
@@ -41,8 +47,13 @@ class _PanelConfigWdgState extends State<PanelConfigWdg> {
             children: [
               Icon(Icons.tune_outlined, color: Colors.white, size: 18),
               SizedBox(width: 8),
-              Text('Configuración',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              Text(
+                'Configuración',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -61,9 +72,31 @@ class _PanelConfigWdgState extends State<PanelConfigWdg> {
               ],
               const SizedBox(height: 16),
               if (widget.selectedRolId != null) ...[
-                _sectionLabel('Menú del Rol (${widget.menuConfig.length} items)'),
+                _sectionLabel(
+                  'Menú del Rol (${widget.menuConfig.length} items)',
+                ),
                 const SizedBox(height: 6),
                 ...widget.menuConfig.map(_menuItemTile),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    onPressed: widget.hasChanges && !widget.saving
+                        ? widget.onSave
+                        : null,
+                    icon: widget.saving
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.save_outlined),
+                    label: Text(
+                      widget.hasChanges
+                          ? 'Guardar menú del rol'
+                          : 'Menú guardado',
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -116,8 +149,14 @@ class _PanelConfigWdgState extends State<PanelConfigWdg> {
           children: [
             Text(m.nombre, style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
-            Text('Código: ${m.codigo}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            Text('Ruta: ${m.ruta ?? "-"}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(
+              'Código: ${m.codigo}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
+            Text(
+              'Ruta: ${m.ruta ?? "-"}',
+              style: const TextStyle(color: Colors.grey, fontSize: 12),
+            ),
             if (widget.selectedRolId != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -149,20 +188,21 @@ class _PanelConfigWdgState extends State<PanelConfigWdg> {
           color: item.visible == 1 ? Colors.green : Colors.grey,
         ),
         title: Text(
-          item.etiquetaPersonalizada ?? item.moduloNombre ?? 'Item ${item.moduloId}',
+          item.etiquetaPersonalizada ??
+              item.moduloNombre ??
+              'Item ${item.moduloId}',
           style: const TextStyle(fontSize: 13),
         ),
         subtitle: item.moduloCodigo != null
-            ? Text('Nivel ${item.nivel} · Orden ${item.orden}',
-                style: const TextStyle(fontSize: 10))
+            ? Text(
+                'Nivel ${item.nivel} · Orden ${item.orden}',
+                style: const TextStyle(fontSize: 10),
+              )
             : null,
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _smallBtn(
-              icon: Icons.edit,
-              onTap: () => widget.onEditItem(item),
-            ),
+            _smallBtn(icon: Icons.edit, onTap: () => widget.onEditItem(item)),
             const SizedBox(width: 4),
             _smallBtn(
               icon: Icons.remove_circle_outline,
@@ -194,7 +234,10 @@ class _PanelConfigWdgState extends State<PanelConfigWdg> {
               Icon(icon, size: 16, color: color ?? AppThm.accClr),
               if (label != null) ...[
                 const SizedBox(width: 4),
-                Text(label, style: TextStyle(fontSize: 11, color: color ?? AppThm.accClr)),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: color ?? AppThm.accClr),
+                ),
               ],
             ],
           ),

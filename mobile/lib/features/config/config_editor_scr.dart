@@ -44,6 +44,8 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
   ModuloModel? _selectedModulo;
   RolModel? _selectedRol;
   List<RolMenuConfigModel> _menuConfig = [];
+  bool _menuDirty = false;
+  bool _savingMenu = false;
 
   @override
   void initState() {
@@ -59,7 +61,10 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
   }
 
   Future<void> _loadData() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final data = await _api.getEstructura();
       if (!mounted) return;
@@ -70,7 +75,10 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { _loading = false; _error = e.toString(); });
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
     }
   }
 
@@ -78,67 +86,98 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
     if (_selectedRol == null) return;
     try {
       final config = await _api.getMenuRol(_selectedRol!.id);
-      if (mounted) setState(() => _menuConfig = config);
+      if (mounted) {
+        setState(() {
+          _menuConfig = config;
+          _menuDirty = false;
+        });
+      }
     } catch (_) {}
   }
 
   Future<void> _onRolSelected(RolModel rol) async {
-    setState(() { _selectedRol = rol; _menuConfig = []; });
+    setState(() {
+      _selectedRol = rol;
+      _menuConfig = [];
+      _menuDirty = false;
+    });
     await _loadMenuConfig();
   }
 
-  Future<void> _onAddModulo(int moduloId) async {
+  void _onAddModulo(int moduloId) {
     if (_selectedRol == null) return;
     if (_menuConfig.any((m) => m.moduloId == moduloId)) return;
-    final maxOrden = _menuConfig.isEmpty ? 0 : _menuConfig.map((m) => m.orden).reduce((a, b) => a > b ? a : b);
-    try {
-      final items = [
-        ..._menuConfig.map((m) => {
-              'modulo_id': m.moduloId,
-              'nivel': m.nivel,
-              'orden': m.orden,
-              'visible': m.visible,
-              'etiqueta_personalizada': m.etiquetaPersonalizada,
-            }),
-        {
-          'modulo_id': moduloId,
-          'nivel': 0,
-          'orden': maxOrden + 1,
-          'visible': 1,
-          'etiqueta_personalizada': null,
-        },
+    final modulo = _modulos.firstWhere((m) => m.id == moduloId);
+    final maxOrden = _menuConfig.isEmpty
+        ? 0
+        : _menuConfig.map((m) => m.orden).reduce((a, b) => a > b ? a : b);
+    setState(() {
+      _menuConfig = [
+        ..._menuConfig,
+        RolMenuConfigModel(
+          id: 0,
+          rolId: _selectedRol!.id,
+          moduloId: modulo.id,
+          nivel: 0,
+          orden: maxOrden + 1,
+          visible: 1,
+          moduloNombre: modulo.nombre,
+          moduloCodigo: modulo.codigo,
+          icono: modulo.icono,
+          ruta: modulo.ruta,
+        ),
       ];
-      await _api.guardarMenuRol(_selectedRol!.id, items.cast<Map<String, dynamic>>());
+      _menuDirty = true;
+    });
+  }
+
+  void _onRemoveModulo(int moduloId) {
+    if (_selectedRol == null) return;
+    setState(() {
+      _menuConfig = _menuConfig.where((m) => m.moduloId != moduloId).toList();
+      _menuDirty = true;
+    });
+  }
+
+  Future<void> _guardarMenuRol() async {
+    final rol = _selectedRol;
+    if (rol == null || !_menuDirty || _savingMenu) return;
+    setState(() => _savingMenu = true);
+    try {
+      await _api.guardarMenuRol(rol.id, _menuPayload());
       await _loadMenuConfig();
-    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al agregar módulo al menú')),
+          SnackBar(content: Text('Menú guardado para el rol ${rol.nombre}')),
         );
       }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo guardar el menú: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingMenu = false);
     }
   }
 
-  Future<void> _onRemoveModulo(int moduloId) async {
-    if (_selectedRol == null) return;
-    final items = _menuConfig
-        .where((m) => m.moduloId != moduloId)
-        .map((m) => {
-              'modulo_id': m.moduloId,
-              'nivel': m.nivel,
-              'orden': m.orden,
-              'visible': m.visible,
-              'etiqueta_personalizada': m.etiquetaPersonalizada,
-            })
-        .toList();
-    try {
-      await _api.guardarMenuRol(_selectedRol!.id, items.cast<Map<String, dynamic>>());
-      await _loadMenuConfig();
-    } catch (_) {}
-  }
+  List<Map<String, dynamic>> _menuPayload() => _menuConfig
+      .map(
+        (m) => {
+          'modulo_id': m.moduloId,
+          'nivel': m.nivel,
+          'orden': m.orden,
+          'visible': m.visible,
+          'etiqueta_personalizada': m.etiquetaPersonalizada,
+        },
+      )
+      .toList();
 
   void _onEditItem(RolMenuConfigModel item) {
-    final ctrlEtiqueta = TextEditingController(text: item.etiquetaPersonalizada ?? '');
+    final ctrlEtiqueta = TextEditingController(
+      text: item.etiquetaPersonalizada ?? '',
+    );
     int nivel = item.nivel;
     int orden = item.orden;
     int visible = item.visible;
@@ -165,7 +204,10 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
                   initialValue: nivel,
                   decoration: const InputDecoration(labelText: 'Nivel'),
                   items: [0, 1, 2]
-                      .map((n) => DropdownMenuItem(value: n, child: Text('Nivel $n')))
+                      .map(
+                        (n) =>
+                            DropdownMenuItem(value: n, child: Text('Nivel $n')),
+                      )
                       .toList(),
                   onChanged: (v) => setDlgState(() => nivel = v ?? 0),
                 ),
@@ -176,7 +218,9 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
                       child: TextField(
                         decoration: const InputDecoration(labelText: 'Orden'),
                         keyboardType: TextInputType.number,
-                        controller: TextEditingController(text: orden.toString()),
+                        controller: TextEditingController(
+                          text: orden.toString(),
+                        ),
                         onChanged: (v) => orden = int.tryParse(v) ?? orden,
                       ),
                     ),
@@ -185,41 +229,47 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
                       value: visible == 1,
                       onChanged: (v) => setDlgState(() => visible = v ? 1 : 0),
                     ),
-                    Text(visible == 1 ? 'Visible' : 'Oculto',
-                        style: const TextStyle(fontSize: 12)),
+                    Text(
+                      visible == 1 ? 'Visible' : 'Oculto',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancelar'),
+            ),
             FilledButton(
-              onPressed: () async {
+              onPressed: () {
                 final items = _menuConfig.map((m) {
                   if (m.moduloId == item.moduloId) {
-                    return {
-                      'modulo_id': m.moduloId,
-                      'nivel': nivel,
-                      'orden': orden,
-                      'visible': visible,
-                      'etiqueta_personalizada':
-                          ctrlEtiqueta.text.trim().isNotEmpty ? ctrlEtiqueta.text.trim() : null,
-                    };
+                    return RolMenuConfigModel(
+                      id: m.id,
+                      rolId: m.rolId,
+                      moduloId: m.moduloId,
+                      nivel: nivel,
+                      orden: orden,
+                      visible: visible,
+                      etiquetaPersonalizada: ctrlEtiqueta.text.trim().isEmpty
+                          ? null
+                          : ctrlEtiqueta.text.trim(),
+                      moduloNombre: m.moduloNombre,
+                      moduloCodigo: m.moduloCodigo,
+                      icono: m.icono,
+                      ruta: m.ruta,
+                    );
                   }
-                  return {
-                    'modulo_id': m.moduloId,
-                    'nivel': m.nivel,
-                    'orden': m.orden,
-                    'visible': m.visible,
-                    'etiqueta_personalizada': m.etiquetaPersonalizada,
-                  };
+                  return m;
                 }).toList();
-                try {
-                  await _api.guardarMenuRol(_selectedRol!.id, items.cast<Map<String, dynamic>>());
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  await _loadMenuConfig();
-                } catch (_) {}
+                setState(() {
+                  _menuConfig = items;
+                  _menuDirty = true;
+                });
+                Navigator.pop(ctx);
               },
               child: const Text('Guardar'),
             ),
@@ -244,9 +294,18 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(controller: ctrlNombre, decoration: const InputDecoration(labelText: 'Nombre')),
-              TextField(controller: ctrlCodigo, decoration: const InputDecoration(labelText: 'Código')),
-              TextField(controller: ctrlRuta, decoration: const InputDecoration(labelText: 'Ruta (opcional)')),
+              TextField(
+                controller: ctrlNombre,
+                decoration: const InputDecoration(labelText: 'Nombre'),
+              ),
+              TextField(
+                controller: ctrlCodigo,
+                decoration: const InputDecoration(labelText: 'Código'),
+              ),
+              TextField(
+                controller: ctrlRuta,
+                decoration: const InputDecoration(labelText: 'Ruta (opcional)'),
+              ),
               TextField(
                 controller: ctrlIcono,
                 decoration: const InputDecoration(
@@ -258,13 +317,20 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancelar'),
+          ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, {
               'nombre': ctrlNombre.text.trim(),
               'codigo': ctrlCodigo.text.trim().toUpperCase(),
-              'ruta': ctrlRuta.text.trim().isEmpty ? null : ctrlRuta.text.trim(),
-              'icono': ctrlIcono.text.trim().isEmpty ? null : ctrlIcono.text.trim(),
+              'ruta': ctrlRuta.text.trim().isEmpty
+                  ? null
+                  : ctrlRuta.text.trim(),
+              'icono': ctrlIcono.text.trim().isEmpty
+                  ? null
+                  : ctrlIcono.text.trim(),
             }),
             child: const Text('Guardar'),
           ),
@@ -274,15 +340,30 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
 
     if (result == null) return;
     try {
+      ModuloModel saved;
       if (existing != null) {
-        await _api.actualizarModulo(existing.id, result);
+        saved = await _api.actualizarModulo(existing.id, result);
       } else {
-        await _api.crearModulo(result);
+        saved = await _api.crearModulo(result);
       }
       await _loadData();
+      if (!mounted) return;
+      setState(() => _selectedModulo = saved);
+      if (existing == null && _selectedRol != null) {
+        _onAddModulo(saved.id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Módulo creado y agregado al borrador. Presione Guardar menú del rol.',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -301,45 +382,51 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
       body: _loading
           ? const Center(child: LoadWdg())
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Error: $_error', textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      FilledButton(onPressed: _loadData, child: const Text('Reintentar')),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Error: $_error', textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _loadData,
+                    child: const Text('Reintentar'),
                   ),
-                )
-              : Column(
-                  children: [
-                    TabBar(
-                      controller: _tabCtrl,
-                      isScrollable: true,
-                      labelColor: AppThm.accClr,
-                      unselectedLabelColor: Colors.grey,
-                      tabs: const [
-                        Tab(icon: Icon(Icons.menu_outlined), text: 'Menú'),
-                        Tab(icon: Icon(Icons.visibility_outlined), text: 'Alcance'),
-                        Tab(icon: Icon(Icons.view_column_outlined), text: 'Campos'),
-                        Tab(icon: Icon(Icons.history_outlined), text: 'Versiones'),
-                        Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Auditoría'),
-                      ],
-                    ),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabCtrl,
-                        children: [
-                          _buildMenuEditor(),
-                          AlcanceRolWdg(roles: _roles),
-                          CamposRolWdg(roles: _roles),
-                          VersionesWdg(roles: _roles),
-                          AuditoriaWdg(roles: _roles),
-                        ],
-                      ),
+                ],
+              ),
+            )
+          : Column(
+              children: [
+                TabBar(
+                  controller: _tabCtrl,
+                  isScrollable: true,
+                  labelColor: AppThm.accClr,
+                  unselectedLabelColor: Colors.grey,
+                  tabs: const [
+                    Tab(icon: Icon(Icons.menu_outlined), text: 'Menú'),
+                    Tab(icon: Icon(Icons.visibility_outlined), text: 'Alcance'),
+                    Tab(icon: Icon(Icons.view_column_outlined), text: 'Campos'),
+                    Tab(icon: Icon(Icons.history_outlined), text: 'Versiones'),
+                    Tab(
+                      icon: Icon(Icons.receipt_long_outlined),
+                      text: 'Auditoría',
                     ),
                   ],
                 ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabCtrl,
+                    children: [
+                      _buildMenuEditor(),
+                      AlcanceRolWdg(roles: _roles),
+                      CamposRolWdg(roles: _roles),
+                      VersionesWdg(roles: _roles),
+                      AuditoriaWdg(roles: _roles),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -368,12 +455,18 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
               onAddModulo: _onAddModulo,
               onRemoveModulo: _onRemoveModulo,
               onEditItem: _onEditItem,
+              hasChanges: _menuDirty,
+              saving: _savingMenu,
+              onSave: _guardarMenuRol,
             ),
           ),
           const VerticalDivider(width: 1),
           SizedBox(
             width: 280,
-            child: PreviewMenuWdg(items: _menuConfig, rolNombre: _selectedRol?.nombre),
+            child: PreviewMenuWdg(
+              items: _menuConfig,
+              rolNombre: _selectedRol?.nombre,
+            ),
           ),
         ],
       );
@@ -401,11 +494,17 @@ class _ConfigEditorScrState extends State<ConfigEditorScr>
             onAddModulo: _onAddModulo,
             onRemoveModulo: _onRemoveModulo,
             onEditItem: _onEditItem,
+            hasChanges: _menuDirty,
+            saving: _savingMenu,
+            onSave: _guardarMenuRol,
           ),
           const SizedBox(height: 12),
           SizedBox(
             height: 400,
-            child: PreviewMenuWdg(items: _menuConfig, rolNombre: _selectedRol?.nombre),
+            child: PreviewMenuWdg(
+              items: _menuConfig,
+              rolNombre: _selectedRol?.nombre,
+            ),
           ),
         ],
       ),

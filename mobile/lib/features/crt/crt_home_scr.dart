@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/auth/app_user.dart';
-import 'wdg/cartilla_type_card.dart';
 import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../dash/wdg/top_bar_wdg.dart';
@@ -15,6 +14,7 @@ import 'mdl/crt_special_models.dart';
 import 'svc/crt_api.dart';
 import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
+import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_special_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
@@ -501,7 +501,31 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                         'Seleccione el modulo operativo y complete solo los campos requeridos.',
                   ),
                   const SizedBox(height: 26),
-                  if (modulo == TipoModuloCartilla.conductor)
+                  CartillaTypeSelector(
+                    selectedId: _selectedCartillaId,
+                    onSelected: _onCartillaTypeSelected,
+                    canView: _canGenerate,
+                    canCreateFormation: _canCreateFormation,
+                  ),
+                  const SizedBox(height: 26),
+                  if (_formacionSeleccionada != null)
+                    CrtSpecialForm(
+                      key: ValueKey(_formacionSeleccionada),
+                      kind: CrtSpecialFormKind.formacion,
+                      formationType: _formacionSeleccionada,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canCreateFormation,
+                    )
+                  else if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas)
+                    CrtSpecialForm(
+                      key: const ValueKey('otras-cartillas'),
+                      kind: CrtSpecialFormKind.otras,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canGenerate,
+                    )
+                  else if (modulo == TipoModuloCartilla.conductor)
                     CrtSpecialForm(
                       kind: CrtSpecialFormKind.conductor,
                       user: widget.user,
@@ -553,25 +577,82 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     return _canGenerate;
   }
 
-  Widget _buildEasLayout(bool isWide, String? preview) {
-    if (_formacionSeleccionada != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildEasConfigPanel(),
-          const SizedBox(height: 20),
-          CrtSpecialForm(
-            key: ValueKey(_formacionSeleccionada),
-            kind: CrtSpecialFormKind.formacion,
-            formationType: _formacionSeleccionada,
-            user: widget.user,
-            jefe: _jefeNombre,
-            canCreate: _canCreateFormation,
-          ),
-        ],
-      );
+  String? get _selectedCartillaId {
+    if (_formacionSeleccionada == TipoFormacion.entrante) {
+      return 'formacion_entrante';
     }
+    if (_formacionSeleccionada == TipoFormacion.saliente) {
+      return 'formacion_saliente';
+    }
+    if (_otrasCartillasSeleccionada) return 'otras_cartillas';
+    switch (tipo) {
+      case TipoCartilla.desalojoVendedores:
+        return 'desalojo_vendedores';
+      case TipoCartilla.puntoMartillo:
+        return 'punto_martillo';
+      case TipoCartilla.rondasDisuasivas:
+        return 'rondas_disuasivas';
+      case TipoCartilla.retiroTemporal:
+        return 'retiro_temporal';
+      case TipoCartilla.requerimiento:
+        return 'requerimiento';
+      case TipoCartilla.colaboracionEntidades:
+        return 'colaboracion_entidades';
+      case TipoCartilla.colaboracionEventos:
+        return 'colaboracion_ciudadana';
+      case TipoCartilla.permisoAusentismo:
+        return 'permiso_ausentismo';
+      default:
+        return null;
+    }
+  }
 
+  TipoCartilla _tipoFromId(String id) {
+    switch (id) {
+      case 'desalojo_vendedores':
+        return TipoCartilla.desalojoVendedores;
+      case 'punto_martillo':
+        return TipoCartilla.puntoMartillo;
+      case 'rondas_disuasivas':
+        return TipoCartilla.rondasDisuasivas;
+      case 'retiro_temporal':
+        return TipoCartilla.retiroTemporal;
+      case 'requerimiento':
+        return TipoCartilla.requerimiento;
+      case 'colaboracion_entidades':
+        return TipoCartilla.colaboracionEntidades;
+      case 'colaboracion_ciudadana':
+        return TipoCartilla.colaboracionEventos;
+      case 'permiso_ausentismo':
+        return TipoCartilla.permisoAusentismo;
+      default:
+        return TipoCartilla.puntoMartillo;
+    }
+  }
+
+  void _onCartillaTypeSelected(String id) {
+    _invalidatePreview();
+    setState(() {
+      switch (id) {
+        case 'formacion_entrante':
+          _formacionSeleccionada = TipoFormacion.entrante;
+          _otrasCartillasSeleccionada = false;
+        case 'formacion_saliente':
+          _formacionSeleccionada = TipoFormacion.saliente;
+          _otrasCartillasSeleccionada = false;
+        case 'otras_cartillas':
+          _formacionSeleccionada = null;
+          _otrasCartillasSeleccionada = true;
+        default:
+          _formacionSeleccionada = null;
+          _otrasCartillasSeleccionada = false;
+          tipo = _tipoFromId(id);
+      }
+      _syncFields();
+    });
+  }
+
+  Widget _buildEasLayout(bool isWide, String? preview) {
     final left = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -645,10 +726,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               });
             },
           ),
-          const SizedBox(height: 14),
-          _buildEasTypeButtons(),
-          if (_formacionSeleccionada == null) ...[
-            const SizedBox(height: 14),
+          const SizedBox(height: 12),
+          if (_formacionSeleccionada == null &&
+              !_otrasCartillasSeleccionada) ...[
             _Drop<CrtEasStation>(
               value: eas,
               label: 'EAS',
@@ -703,177 +783,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ],
         ],
       ),
-    );
-  }
-
-  Widget _buildEasTypeButtons() {
-    const gap = 12.0;
-    final existingItems = [
-      (
-        icon: Icons.storefront_outlined,
-        title: 'Desalojo de vendedores\nautónomos no regularizados',
-        tipo: TipoCartilla.desalojoVendedores,
-      ),
-      (
-        icon: Icons.gavel_outlined,
-        title: 'Punto martillo',
-        tipo: TipoCartilla.puntoMartillo,
-      ),
-      (
-        icon: Icons.directions_walk_outlined,
-        title: 'Rondas disuasivas',
-        tipo: TipoCartilla.rondasDisuasivas,
-      ),
-      (
-        icon: Icons.backup_outlined,
-        title: 'Retiro temporal',
-        tipo: TipoCartilla.retiroTemporal,
-      ),
-      (
-        icon: Icons.receipt_long_outlined,
-        title: 'Requerimiento',
-        tipo: TipoCartilla.requerimiento,
-      ),
-      (
-        icon: Icons.groups_outlined,
-        title: 'Colaboración con\notras entidades',
-        tipo: TipoCartilla.colaboracionEntidades,
-      ),
-      (
-        icon: Icons.people_outlined,
-        title: 'Colaboración\nciudadana',
-        tipo: TipoCartilla.colaboracionEventos,
-      ),
-      (
-        icon: Icons.logout_outlined,
-        title: 'Permiso de\nausentismo',
-        tipo: TipoCartilla.permisoAusentismo,
-      ),
-    ];
-    final canView =
-        widget.user?.hasAnyPermission(const [
-          'cartillas.ver',
-          'cartillas.generar',
-        ]) ==
-        true;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Tipo de cartilla',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: AppThm.priClr,
-          ),
-        ),
-        const SizedBox(height: 12),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final maxWidth = constraints.maxWidth;
-            final cols = maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1);
-            final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: gap,
-                  runSpacing: gap,
-                  children: [
-                    SizedBox(
-                      width: cardWidth,
-                      child: CartillaTypeCard(
-                        icon: Icons.login_outlined,
-                        title: 'Formación entrante',
-                        selected:
-                            _formacionSeleccionada == TipoFormacion.entrante,
-                        enabled: _canCreateFormation,
-                        onTap: () {
-                          _invalidatePreview();
-                          setState(() {
-                            _formacionSeleccionada = TipoFormacion.entrante;
-                            _otrasCartillasSeleccionada = false;
-                          });
-                        },
-                      ),
-                    ),
-                    SizedBox(
-                      width: cardWidth,
-                      child: CartillaTypeCard(
-                        icon: Icons.logout_outlined,
-                        title: 'Formación saliente',
-                        selected:
-                            _formacionSeleccionada == TipoFormacion.saliente,
-                        enabled: _canCreateFormation,
-                        onTap: () {
-                          _invalidatePreview();
-                          setState(() {
-                            _formacionSeleccionada = TipoFormacion.saliente;
-                            _otrasCartillasSeleccionada = false;
-                          });
-                        },
-                      ),
-                    ),
-                    SizedBox(
-                      width: cardWidth,
-                      child: CartillaTypeCard(
-                        icon: Icons.dashboard_customize_outlined,
-                        title: 'Otras cartillas',
-                        selected: _otrasCartillasSeleccionada,
-                        enabled: canView,
-                        onTap: () {
-                          _invalidatePreview();
-                          setState(() {
-                            _formacionSeleccionada = null;
-                            _otrasCartillasSeleccionada = true;
-                            _syncFields();
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                if (_otrasCartillasSeleccionada) ...[
-                  const SizedBox(height: 18),
-                  const Text(
-                    'Cartilla específica',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppThm.priClr,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: gap,
-                    runSpacing: gap,
-                    children: [
-                      for (final item in existingItems)
-                        SizedBox(
-                          width: cardWidth,
-                          child: CartillaTypeCard(
-                            icon: item.icon,
-                            title: item.title,
-                            selected: tipo == item.tipo,
-                            onTap: () {
-                              _invalidatePreview();
-                              setState(() {
-                                tipo = item.tipo;
-                                _syncFields();
-                              });
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ],
-            );
-          },
-        ),
-      ],
     );
   }
 
@@ -6330,8 +6239,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 items: TipoModuloCartilla.values,
                 itemText: (value) => value.label,
                 onChanged: (value) {
+                  _invalidatePreview();
                   setState(() {
                     modulo = value;
+                    _formacionSeleccionada = null;
+                    _otrasCartillasSeleccionada = true;
                     final tipos = CrtCatalog.configFor(modulo).tipos;
                     if (!tipos.contains(tipo)) tipo = tipos.first;
                     if (modulo == TipoModuloCartilla.eas) {
@@ -6340,18 +6252,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     _syncFields();
                   });
                 },
-              ),
-              const SizedBox(height: 14),
-              _Drop<TipoCartilla>(
-                value: tipo,
-                label: 'Tipo de cartilla',
-                icon: Icons.description_outlined,
-                items: config.tipos,
-                itemText: (value) => value.label,
-                onChanged: (value) => setState(() {
-                  tipo = value;
-                  _syncFields();
-                }),
               ),
               const SizedBox(height: 14),
             ],

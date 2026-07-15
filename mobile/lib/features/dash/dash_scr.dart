@@ -50,7 +50,8 @@ class _DashScrState extends State<DashScr> {
   bool _supportAttached = false;
   List<SideMenuItem>? _remoteItems;
 
-  List<SideMenuItem> get items => _remoteItems ??
+  List<SideMenuItem> get items =>
+      _remoteItems ??
       SideMenuConfig.forUser(user, supportBadge: _supportPending);
 
   @override
@@ -185,6 +186,8 @@ class _DashScrState extends State<DashScr> {
                   authorized: item.authorized,
                   unavailableMessage: item.unavailableMessage,
                   badge: badge,
+                  moduleCode: item.moduleCode,
+                  route: item.route,
                 )
               : item,
         )
@@ -232,9 +235,9 @@ class _DashboardHome extends StatelessWidget {
             Text(
               'Bienvenido, ${user.nombreCompleto}',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
@@ -335,7 +338,7 @@ class _WebContent extends StatefulWidget {
 
 class _WebContentState extends State<_WebContent> {
   int _insRefreshKey = 0;
-  final Map<SideMenuDestination, Widget> _pages = {};
+  final Map<String, Widget> _pages = {};
   bool _startingSection = false;
 
   @override
@@ -349,12 +352,12 @@ class _WebContentState extends State<_WebContent> {
     if (!identical(oldWidget.user, widget.user)) {
       _pages.clear();
     }
-    if (oldWidget.item.destination != widget.item.destination) {
+    if (oldWidget.item.pageKey != widget.item.pageKey) {
       if (widget.item.destination == SideMenuDestination.badges) {
         _insRefreshKey++;
-        _pages.remove(SideMenuDestination.badges);
+        _pages.remove(SideMenuDestination.badges.name);
       }
-      _startingSection = !_pages.containsKey(widget.item.destination);
+      _startingSection = !_pages.containsKey(widget.item.pageKey);
       if (_startingSection) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) setState(() => _startingSection = false);
@@ -412,19 +415,25 @@ class _WebContentState extends State<_WebContent> {
         onLogout: common.onLogout,
         onNotifications: common.onNotifications,
       ),
+      SideMenuDestination.custom => Scaffold(
+        backgroundColor: AppThm.bgClr,
+        appBar: TopBarWdg(
+          ttl: item.title,
+          user: common.user,
+          onUserChanged: common.onUserChanged,
+          onLogout: common.onLogout,
+          onNotifications: common.onNotifications,
+        ),
+        body: DevCardWdg(ttl: item.title),
+      ),
       _ => const SizedBox.shrink(),
     };
   }
 
   List<Widget> _buildChildren() {
-    _pages.putIfAbsent(
-      widget.item.destination,
-      () => _buildPage(widget.item),
-    );
+    _pages.putIfAbsent(widget.item.pageKey, () => _buildPage(widget.item));
     return widget.items
-        .map(
-          (item) => _pages[item.destination] ?? const SizedBox.shrink(),
-        )
+        .map((item) => _pages[item.pageKey] ?? const SizedBox.shrink())
         .toList(growable: false);
   }
 
@@ -1458,33 +1467,34 @@ class _MobDash extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (_) => switch (item.destination) {
-                        SideMenuDestination.dashboard =>
-                          _DashboardHome(user: user),
+                        SideMenuDestination.dashboard => _DashboardHome(
+                          user: user,
+                        ),
                         SideMenuDestination.events => EvtHomeScr(
-                            user: user,
-                            onUserChanged: onUserChanged,
-                            onLogout: onLogout,
-                            onNotifications: onNotifications,
-                          ),
+                          user: user,
+                          onUserChanged: onUserChanged,
+                          onLogout: onLogout,
+                          onNotifications: onNotifications,
+                        ),
                         SideMenuDestination.badges => InsHomeScr(
-                            user: user,
-                            onUserChanged: onUserChanged,
-                            onLogout: onLogout,
-                            onNotifications: onNotifications,
-                          ),
+                          user: user,
+                          onUserChanged: onUserChanged,
+                          onLogout: onLogout,
+                          onNotifications: onNotifications,
+                        ),
                         SideMenuDestination.administration => AdmHomeScr(
-                            user: user,
-                            onUserChanged: onUserChanged,
-                            onLogout: onLogout,
-                            onNotifications: onNotifications,
-                            showBack: true,
-                          ),
+                          user: user,
+                          onUserChanged: onUserChanged,
+                          onLogout: onLogout,
+                          onNotifications: onNotifications,
+                          showBack: true,
+                        ),
                         SideMenuDestination.support => SupHomeScr(
-                            user: user,
-                            onUserChanged: onUserChanged,
-                            onLogout: onLogout,
-                            onNotifications: onNotifications,
-                          ),
+                          user: user,
+                          onUserChanged: onUserChanged,
+                          onLogout: onLogout,
+                          onNotifications: onNotifications,
+                        ),
                         SideMenuDestination.rolesPermisos => ConfigEditorScr(
                           user: user,
                           onUserChanged: onUserChanged,
@@ -1496,6 +1506,17 @@ class _MobDash extends StatelessWidget {
                           onUserChanged: onUserChanged,
                           onLogout: onLogout,
                           onNotifications: onNotifications,
+                        ),
+                        SideMenuDestination.custom => Scaffold(
+                          backgroundColor: AppThm.bgClr,
+                          appBar: TopBarWdg(
+                            ttl: item.title,
+                            user: user,
+                            onUserChanged: onUserChanged,
+                            onLogout: onLogout,
+                            onNotifications: onNotifications,
+                          ),
+                          body: DevCardWdg(ttl: item.title),
                         ),
                         _ => const SizedBox.shrink(),
                       },

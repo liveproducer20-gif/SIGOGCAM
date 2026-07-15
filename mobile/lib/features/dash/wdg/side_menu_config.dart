@@ -133,47 +133,68 @@ class SideMenuConfig {
     }
 
     collect(raw);
-    final byDestination = <SideMenuDestination, SideMenuItem>{};
+    final items = <SideMenuItem>[];
     for (final node in flattened) {
-      final destination = _destination(node['codigo']?.toString());
-      if (destination == null) continue;
+      final code = node['codigo']?.toString().trim() ?? '';
+      final destination = _destination(code) ?? SideMenuDestination.custom;
+      if (destination == SideMenuDestination.custom) {
+        items.add(
+          SideMenuItem(
+            destination: destination,
+            title:
+                node['etiqueta_personalizada']?.toString().trim().isNotEmpty ==
+                    true
+                ? node['etiqueta_personalizada'].toString()
+                : node['nombre']?.toString() ?? code,
+            icon: _icon(node['icono']?.toString()) ?? Icons.extension_outlined,
+            section: SideMenuSection.main,
+            moduleCode: code,
+            route: node['ruta']?.toString(),
+          ),
+        );
+        continue;
+      }
       final definition = definitions.firstWhere(
         (item) => item.destination == destination,
       );
       final resolved = definition.resolveFor(
         user,
-        badge: destination == SideMenuDestination.support
-            ? supportBadge
-            : null,
+        badge: destination == SideMenuDestination.support ? supportBadge : null,
       );
       // La estructura ya fue autorizada por el backend usando el rol real del
       // usuario. Los permisos granulares controlan si el destino se puede abrir,
       // pero no deben ocultar un menu que el administrador hizo visible.
       final hasAccess = resolved.authorized;
-      byDestination[destination] = SideMenuItem(
-        destination: destination,
-        title: node['etiqueta_personalizada']?.toString().trim().isNotEmpty ==
-                true
-            ? node['etiqueta_personalizada'].toString()
-            : node['nombre']?.toString() ?? resolved.title,
-        icon: _icon(node['icono']?.toString()) ?? resolved.icon,
-        section: destination == SideMenuDestination.administration
-            ? SideMenuSection.settings
-            : resolved.section,
-        requiredPermissions: resolved.requiredPermissions,
-        requireAllPermissions: resolved.requireAllPermissions,
-        available: resolved.available && hasAccess,
-        authorized: true,
-        unavailableMessage: hasAccess
-            ? resolved.unavailableMessage
-            : 'No tienes permisos para acceder a este modulo.',
-        badge: resolved.badge,
+      items.add(
+        SideMenuItem(
+          destination: destination,
+          title:
+              node['etiqueta_personalizada']?.toString().trim().isNotEmpty ==
+                  true
+              ? node['etiqueta_personalizada'].toString()
+              : node['nombre']?.toString() ?? resolved.title,
+          icon: _icon(node['icono']?.toString()) ?? resolved.icon,
+          section: destination == SideMenuDestination.administration
+              ? SideMenuSection.settings
+              : resolved.section,
+          requiredPermissions: resolved.requiredPermissions,
+          requireAllPermissions: resolved.requireAllPermissions,
+          available: resolved.available && hasAccess,
+          authorized: true,
+          unavailableMessage: hasAccess
+              ? resolved.unavailableMessage
+              : 'No tienes permisos para acceder a este modulo.',
+          badge: resolved.badge,
+          moduleCode: code,
+          route: node['ruta']?.toString(),
+        ),
       );
     }
-    return byDestination.values.toList(growable: false);
+    return items.toList(growable: false);
   }
 
-  static SideMenuDestination? _destination(String? code) => switch (code) {
+  static SideMenuDestination? _destination(String? rawCode) =>
+      switch (rawCode?.trim().toLowerCase()) {
         'dashboard' => SideMenuDestination.dashboard,
         'eventos_anuncios' => SideMenuDestination.events,
         'cartillas' => SideMenuDestination.booklets,
@@ -190,19 +211,17 @@ class SideMenuConfig {
       };
 
   static IconData? _icon(String? value) => switch (value) {
-        'dashboard_outlined' => Icons.dashboard_outlined,
-        'event_outlined' => Icons.event_outlined,
-        'description_outlined' => Icons.description_outlined,
-        'workspace_premium_outlined' => Icons.workspace_premium_outlined,
-        'local_police_outlined' => Icons.local_police_outlined,
-        'security_outlined' => Icons.security_outlined,
-        'bar_chart_outlined' => Icons.bar_chart_outlined,
-        'insights_outlined' => Icons.insights_outlined,
-        'admin_panel_settings_outlined' =>
-          Icons.admin_panel_settings_outlined,
-        'settings_outlined' => Icons.settings_outlined,
-        'notifications_active_outlined' =>
-          Icons.notifications_active_outlined,
-        _ => null,
-      };
+    'dashboard_outlined' => Icons.dashboard_outlined,
+    'event_outlined' => Icons.event_outlined,
+    'description_outlined' => Icons.description_outlined,
+    'workspace_premium_outlined' => Icons.workspace_premium_outlined,
+    'local_police_outlined' => Icons.local_police_outlined,
+    'security_outlined' => Icons.security_outlined,
+    'bar_chart_outlined' => Icons.bar_chart_outlined,
+    'insights_outlined' => Icons.insights_outlined,
+    'admin_panel_settings_outlined' => Icons.admin_panel_settings_outlined,
+    'settings_outlined' => Icons.settings_outlined,
+    'notifications_active_outlined' => Icons.notifications_active_outlined,
+    _ => null,
+  };
 }

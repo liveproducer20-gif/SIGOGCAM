@@ -126,3 +126,38 @@ class ConductorData {
     'observaciones': observaciones,
   };
 }
+
+class OtrasCartillasData {
+  final String distrito;
+  final String circuito;
+  final String direccion;
+  final String horario;
+  final DateTime fechaHora;
+  final String causa;
+  final String novedad;
+  final List<String> reportantes;
+  final String jefe;
+
+  const OtrasCartillasData({
+    required this.distrito,
+    required this.circuito,
+    required this.direccion,
+    required this.horario,
+    required this.fechaHora,
+    required this.causa,
+    required this.novedad,
+    required this.reportantes,
+    required this.jefe,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'distrito': distrito,
+    'circuito': circuito,
+    'direccion': direccion,
+    'horario': horario,
+    'fecha_hora': fechaHora.toIso8601String(),
+    'causa': causa,
+    'novedad': novedad,
+    'reportantes': reportantes,
+  };
+}

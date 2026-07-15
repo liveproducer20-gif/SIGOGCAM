@@ -7,13 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   AppUser userWith(List<Object> permissions) => AppUser.fromJson({
-        'id': 7,
-        'cedula': '0900000000',
-        'correo': 'user@sigo.local',
-        'nombreCompleto': 'Usuario Prueba',
-        'rol': 'USUARIO',
-        'permisos': permissions,
-      });
+    'id': 7,
+    'cedula': '0900000000',
+    'correo': 'user@sigo.local',
+    'nombreCompleto': 'Usuario Prueba',
+    'rol': 'USUARIO',
+    'permisos': permissions,
+  });
 
   test('permissions expose module metadata and assigned event scope', () {
     final user = userWith(['eventos.ver_convocado', 'cartillas.ver']);
@@ -29,9 +29,9 @@ void main() {
     final withAdmin = userWith(['administracion.ver']);
 
     expect(
-      SideMenuConfig.forUser(withoutAdmin).any(
-        (item) => item.destination == SideMenuDestination.administration,
-      ),
+      SideMenuConfig.forUser(
+        withoutAdmin,
+      ).any((item) => item.destination == SideMenuDestination.administration),
       isFalse,
     );
     final adminItem = SideMenuConfig.forUser(withAdmin).singleWhere(
@@ -45,14 +45,14 @@ void main() {
     final withServices = userWith(['servicios.ver']);
 
     expect(
-      SideMenuConfig.forUser(withoutServices).any(
-        (item) => item.destination == SideMenuDestination.services,
-      ),
+      SideMenuConfig.forUser(
+        withoutServices,
+      ).any((item) => item.destination == SideMenuDestination.services),
       isFalse,
     );
-    final services = SideMenuConfig.forUser(withServices).singleWhere(
-      (item) => item.destination == SideMenuDestination.services,
-    );
+    final services = SideMenuConfig.forUser(
+      withServices,
+    ).singleWhere((item) => item.destination == SideMenuDestination.services);
     expect(services.authorized, isTrue);
     expect(services.available, isFalse);
   });
@@ -86,6 +86,20 @@ void main() {
     );
   });
 
+  test('API menu accepts uppercase and preserves newly created modules', () {
+    final items = SideMenuConfig.fromApi([
+      {'codigo': 'CARTILLAS', 'nombre': 'Cartillas operativas'},
+      {'codigo': 'NUEVO_MODULO', 'nombre': 'Nuevo módulo', 'ruta': '/nuevo'},
+    ], userWith(['cartillas.ver']));
+
+    expect(items, hasLength(2));
+    expect(items.first.destination, SideMenuDestination.booklets);
+    expect(items.last.destination, SideMenuDestination.custom);
+    expect(items.last.title, 'Nuevo módulo');
+    expect(items.last.moduleCode, 'NUEVO_MODULO');
+    expect(items.last.route, '/nuevo');
+  });
+
   test('session persists and restores user permission metadata', () async {
     SharedPreferences.setMockInitialValues({});
     await AuthSession.init();
@@ -110,10 +124,7 @@ void main() {
     expect(AuthSession.user?.id, original.id);
     expect(AuthSession.user?.puedeVerAdministracion, isTrue);
     expect(
-      AuthSession.user?.permissions
-          .forModule('administracion')
-          .single
-          .label,
+      AuthSession.user?.permissions.forModule('administracion').single.label,
       'Ver administración',
     );
   });

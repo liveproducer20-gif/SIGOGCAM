@@ -6,9 +6,10 @@ import '../../../core/auth/app_user.dart';
 import '../../ins/ins_api.dart';
 import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
+import '../svc/crt_catalog.dart';
 import '../svc/crt_special_text_generator.dart';
 
-enum CrtSpecialFormKind { formacion, conductor }
+enum CrtSpecialFormKind { formacion, conductor, otras }
 
 class CrtSpecialForm extends StatefulWidget {
   final CrtSpecialFormKind kind;
@@ -65,10 +66,13 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   }
 
   void _seedDefaults() {
+    _refreshAutomaticTime();
     _c('distrito', '#5 MODELO');
     _c('circuito', 'EAS 12 CEIBOS');
     _c('direccion', 'Calle 15 ava y Dr Alberto Dacach Saman');
-    _c('horario', '14:00 A 22:30');
+    _c('horario', CrtCatalog.horarioActual(_dateTime));
+    _c('causa');
+    _c('novedad');
     _c('novedades');
     _c('radiooperadores', '2');
     _c('operativos', '6');
@@ -135,9 +139,11 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         absorbing: _preview != null,
         child: Form(
           key: _formKey,
-          child: widget.kind == CrtSpecialFormKind.formacion
-              ? _formationFields()
-              : _conductorFields(),
+          child: switch (widget.kind) {
+            CrtSpecialFormKind.formacion => _formationFields(),
+            CrtSpecialFormKind.conductor => _conductorFields(),
+            CrtSpecialFormKind.otras => _otrasFields(),
+          },
         ),
       ),
     );
@@ -280,6 +286,22 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         required: false,
         lines: 5,
       ),
+    ].separatedBy(const SizedBox(height: 14)),
+  );
+
+  Widget _otrasFields() => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _title(Icons.dashboard_customize_outlined, 'Otras cartillas'),
+      const SizedBox(height: 18),
+      _field('distrito', 'Distrito'),
+      _field('circuito', 'Circuito'),
+      _field('direccion', 'Dirección'),
+      _field('horario', 'Horario'),
+      _dateTimeField(),
+      _field('causa', 'Causa'),
+      _field('novedad', 'Novedad', lines: 6),
+      _field('reportantes', 'Personal que reporta (uno por línea)', lines: 3),
     ].separatedBy(const SizedBox(height: 14)),
   );
 
@@ -500,9 +522,16 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   void _generatePreview() {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
-      _preview = widget.kind == CrtSpecialFormKind.formacion
-          ? CrtSpecialTextGenerator.formacion(_formationData())
-          : CrtSpecialTextGenerator.conductor(_conductorData());
+      _refreshAutomaticTime();
+      _preview = switch (widget.kind) {
+        CrtSpecialFormKind.formacion => CrtSpecialTextGenerator.formacion(
+          _formationData(),
+        ),
+        CrtSpecialFormKind.conductor => CrtSpecialTextGenerator.conductor(
+          _conductorData(),
+        ),
+        CrtSpecialFormKind.otras => CrtSpecialTextGenerator.otras(_otrasData()),
+      };
       _created = false;
     });
   }
@@ -519,14 +548,23 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     setState(() => _saving = true);
     try {
       final formation = widget.kind == CrtSpecialFormKind.formacion;
-      final data = formation
-          ? _formationData().toJson()
-          : _conductorData().toJson();
+      final otras = widget.kind == CrtSpecialFormKind.otras;
+      final data = switch (widget.kind) {
+        CrtSpecialFormKind.formacion => _formationData().toJson(),
+        CrtSpecialFormKind.conductor => _conductorData().toJson(),
+        CrtSpecialFormKind.otras => _otrasData().toJson(),
+      };
       final result = await InsApi().registrarCartilla(
         contenido: preview,
-        causa: formation ? _tipoFormacion.causa : 'REGISTRO VEHICULAR',
-        tipo: formation ? 'FORMACION' : 'CONDUCTOR',
-        subtipo: formation ? _tipoFormacion.name : _opcionConductor.code,
+        causa: formation
+            ? _tipoFormacion.causa
+            : (otras ? _c('causa').text.trim() : 'REGISTRO VEHICULAR'),
+        tipo: formation
+            ? 'FORMACION'
+            : (otras ? 'OTRAS_CARTILLAS' : 'CONDUCTOR'),
+        subtipo: formation
+            ? _tipoFormacion.name
+            : (otras ? 'NOVEDADES_EAS' : _opcionConductor.code),
         datos: data,
       );
       if (!mounted) return;
@@ -584,6 +622,31 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     encargado: _c('encargado').text,
     observaciones: _c('observaciones').text,
   );
+
+  OtrasCartillasData _otrasData() => OtrasCartillasData(
+    distrito: _c('distrito').text.trim(),
+    circuito: _c('circuito').text.trim(),
+    direccion: _c('direccion').text.trim(),
+    horario: _c('horario').text.trim(),
+    fechaHora: _dateTime,
+    causa: _c('causa').text.trim(),
+    novedad: _c('novedad').text,
+    reportantes: _split(_c('reportantes').text),
+    jefe: widget.jefe.isEmpty ? 'Jefe de Control Municipal' : widget.jefe,
+  );
+
+  void _refreshAutomaticTime() {
+    _dateTime = DateTime.now();
+    final jornada = CrtCatalog.jornadaActual(_dateTime);
+    _jornada = switch (jornada.name) {
+      'matutina' => 'Matutina',
+      'vespertina' => 'Vespertina',
+      _ => 'Amanecida',
+    };
+    final horario = CrtCatalog.horarioActual(_dateTime);
+    final controller = _controllers['horario'];
+    if (controller != null) controller.text = horario;
+  }
 
   List<String> _split(String value) => value
       .split(RegExp(r'[,;\r\n]+'))
