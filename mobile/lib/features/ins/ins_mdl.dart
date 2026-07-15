@@ -97,11 +97,13 @@ class CartillaRegistroMdl {
   final int cartillaId;
   final int totalCartillasGeneradas;
   final InsigniaDesbloqueadaMdl? insigniaDesbloqueada;
+  final String? advertencia;
 
   const CartillaRegistroMdl({
     required this.cartillaId,
     required this.totalCartillasGeneradas,
     this.insigniaDesbloqueada,
+    this.advertencia,
   });
 
   factory CartillaRegistroMdl.fromJson(Map<String, dynamic> json) {
@@ -114,6 +116,7 @@ class CartillaRegistroMdl {
               Map<String, dynamic>.from(insignia),
             )
           : null,
+      advertencia: json['advertencia']?.toString(),
     );
   }
 }

@@ -74,7 +74,9 @@ const guardarMenuRol = asyncHandler(async (req, res) => {
 
 // ---- Mi Estructura (menú dinámico) ----
 const miEstructura = asyncHandler(async (req, res) => {
-    const items = await repo.miEstructura(req.user.rol);
+    // Resolver desde el usuario evita depender de alias de rol almacenados en
+    // tokens antiguos (por ejemplo AGENTE/USUARIO o AUDITORIA/AUDITOR).
+    const items = await repo.miEstructura(req.user.id);
     const arbol = construirArbol(items);
     res.json({ ok: true, data: arbol });
 });

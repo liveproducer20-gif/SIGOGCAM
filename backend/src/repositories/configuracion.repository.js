@@ -142,7 +142,7 @@ async function guardarMenuRol(rolId, items) {
 }
 
 // ---- Mi Estructura (menú dinámico) ----
-async function miEstructura(rolCodigo) {
+async function miEstructura(usuarioId) {
     return q(`
         SELECT ms.id,
                COALESCE(NULLIF(rmc.nombre_visual, ''), ms.nombre) AS nombre,
@@ -151,12 +151,13 @@ async function miEstructura(rolCodigo) {
                rmc.nombre_visual AS etiqueta_personalizada,
                rmc.visible, rmc.habilitado, rmc.expandido,
                rmc.mostrar_badge, rmc.color_badge
-        FROM dbo.roles r
+        FROM dbo.personal per
+        INNER JOIN dbo.roles r ON r.id = per.rol_id
         INNER JOIN dbo.rol_menu_configuracion rmc ON rmc.rol_id = r.id
         INNER JOIN dbo.modulos_sistema ms ON ms.id = rmc.modulo_id
-        WHERE r.codigo = ? AND r.activo = 1 AND rmc.visible = 1 AND ms.estado = 1
+        WHERE per.id = ? AND r.activo = 1 AND rmc.visible = 1 AND ms.estado = 1
         ORDER BY rmc.orden
-    `, [rolCodigo]);
+    `, [usuarioId]);
 }
 
 // ---- Alcance de Datos ----

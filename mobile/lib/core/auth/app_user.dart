@@ -101,6 +101,8 @@ class AppUser {
   final String? fechaIngreso;
   final String nombreCompleto;
   final String rol;
+  final int? rolId;
+  final String? rolCodigo;
   final String? estadoPersonal;
   final String? fotoPerfilUrl;
   final PermissionSet permissions;
@@ -116,6 +118,8 @@ class AppUser {
     this.fechaIngreso,
     required this.nombreCompleto,
     required this.rol,
+    this.rolId,
+    this.rolCodigo,
     this.estadoPersonal,
     this.fotoPerfilUrl,
     this.permissions = const PermissionSet.empty(),
@@ -138,6 +142,8 @@ class AppUser {
           ? nombreCompleto!
           : '$nombres $apellidos'.trim(),
       rol: json['rol']?.toString().toUpperCase() ?? 'USUARIO',
+      rolId: int.tryParse(json['rolId']?.toString() ?? ''),
+      rolCodigo: json['rolCodigo']?.toString().toUpperCase(),
       estadoPersonal: json['estadoPersonal']?.toString(),
       fotoPerfilUrl: json['fotoPerfilUrl']?.toString(),
       permissions: PermissionSet.fromJson(
@@ -157,6 +163,8 @@ class AppUser {
         'fechaIngreso': fechaIngreso,
         'nombreCompleto': nombreCompleto,
         'rol': rol,
+        'rolId': rolId,
+        'rolCodigo': rolCodigo,
         'estadoPersonal': estadoPersonal,
         'fotoPerfilUrl': fotoPerfilUrl,
         'permissions': permissions.toJson(),
@@ -187,6 +195,8 @@ class AppUser {
           ? nombreCompleto
           : '$nextNombres $nextApellidos'.trim(),
       rol: rol,
+      rolId: rolId,
+      rolCodigo: rolCodigo,
       estadoPersonal: estadoPersonal,
       fotoPerfilUrl: fotoPerfilUrl ?? this.fotoPerfilUrl,
       permissions: permissions ?? this.permissions,

@@ -40,15 +40,18 @@ async function cargarAlcances() {
 
 async function scopeMiddleware(req, res, next) {
     try {
-        const rolCodigo = req.user?.rol;
-        if (!rolCodigo) return next();
+        const usuarioId = Number(req.user?.id);
+        if (!Number.isInteger(usuarioId) || usuarioId <= 0) return next();
 
         const pool = await getPool();
         const conn = await pool.connect();
         try {
             const rolRow = await conn.query(
-                'SELECT id FROM dbo.roles WHERE codigo = ? AND activo = 1',
-                [rolCodigo]
+                `SELECT r.id
+                 FROM dbo.personal p
+                 INNER JOIN dbo.roles r ON r.id = p.rol_id
+                 WHERE p.id = ? AND r.activo = 1`,
+                [usuarioId]
             );
             if (!rolRow[0]) return next();
 

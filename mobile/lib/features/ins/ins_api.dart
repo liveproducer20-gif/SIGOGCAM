@@ -9,10 +9,17 @@ class InsApi {
   Future<CartillaRegistroMdl> registrarCartilla({
     required String contenido,
     String? causa,
+    String? tipo,
+    String? subtipo,
+    Map<String, dynamic>? datos,
   }) async {
+    final payload = <String, dynamic>{'contenido': contenido, 'causa': causa};
+    if (tipo != null) payload['tipo'] = tipo;
+    if (subtipo != null) payload['subtipo'] = subtipo;
+    if (datos != null) payload['datos'] = datos;
     final response = await _client.post<CartillaRegistroMdl>(
       'cartillas',
-      {'contenido': contenido, 'causa': causa},
+      payload,
       (value) =>
           CartillaRegistroMdl.fromJson(Map<String, dynamic>.from(value as Map)),
     );

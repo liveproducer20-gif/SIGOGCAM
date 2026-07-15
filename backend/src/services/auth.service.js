@@ -16,11 +16,14 @@ async function login(correo, password) {
         throw Object.assign(new Error('Usuario no encontrado o inactivo'), { statusCode: 401 });
     }
 
-    const rolCodigo = normalizarRol(persona.rol);
+    // `rol` conserva el valor historico que consume Flutter. Para las
+    // relaciones RBAC se usan siempre el id y el codigo reales de la BD.
+    const rolCodigo = persona.rol_codigo || normalizarRol(persona.rol);
+    const rolAplicacion = normalizarRol(persona.rol);
 
     let permisos = [];
     try {
-        permisos = await repository.obtenerPermisos(persona.rol);
+        permisos = await repository.obtenerPermisos(persona.rol_id);
     } catch {
         permisos = [];
     }
@@ -38,7 +41,9 @@ async function login(correo, password) {
         nombres: persona.nombres,
         apellidos: persona.apellidos,
         nombreCompleto: persona.nombre_completo,
-        rol: rolCodigo,
+        rol: rolAplicacion,
+        rolId: persona.rol_id ? Number(persona.rol_id) : null,
+        rolCodigo,
         estadoPersonal: persona.estado_personal,
         fotoPerfilUrl: persona.foto_perfil_url || null,
         permisos
@@ -65,6 +70,8 @@ function tokenPayload(user) {
         apellidos: user.apellidos,
         nombreCompleto: user.nombreCompleto,
         rol: user.rol,
+        rolId: user.rolId ? Number(user.rolId) : null,
+        rolCodigo: user.rolCodigo || user.rol,
         permisos: Array.isArray(user.permisos) ? user.permisos : []
     };
 }

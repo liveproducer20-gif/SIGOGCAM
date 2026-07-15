@@ -5,6 +5,14 @@ class CrtApi {
 
   CrtApi({ApiClient? client}) : _client = client ?? ApiClient();
 
+  Future<Map<String, dynamic>> getCatalogosOperativos() async {
+    final resp = await _client.get<Map<String, dynamic>>(
+      'cartillas/catalogos-operativos',
+      (value) => Map<String, dynamic>.from(value as Map),
+    );
+    return resp.datos ?? const {};
+  }
+
   Future<String?> getCp() async {
     final resp = await _client.get<Map<String, dynamic>>(
       'cartillas/temp/cp',

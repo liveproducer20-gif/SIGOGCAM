@@ -11,9 +11,11 @@ import '../ins/ins_badge_dlg.dart';
 import '../ins/ins_mdl.dart';
 import 'mdl/crt_enums.dart';
 import 'mdl/crt_models.dart';
+import 'mdl/crt_special_models.dart';
 import 'svc/crt_api.dart';
 import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
+import 'wdg/crt_special_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -44,6 +46,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   RolMovil rolMovil = RolMovil.jp;
   bool guardando = false;
   String? _previewText;
+  CrtSection _section = CrtSection.otras;
+  String _jefeNombre = '';
 
   final crtApi = CrtApi();
 
@@ -376,8 +380,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
           ? '$ap $nm'
           : '';
+      _jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm Jefe de Control Municipal'
+          : 'Jefe de Control Municipal';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
+      _jefeNombre = 'Jefe de Control Municipal';
     }
   }
 
@@ -492,7 +500,23 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                         'Seleccione el modulo operativo y complete solo los campos requeridos.',
                   ),
                   const SizedBox(height: 26),
-                  if (modulo == TipoModuloCartilla.eas)
+                  _buildSectionCards(),
+                  const SizedBox(height: 24),
+                  if (_section == CrtSection.formacion)
+                    CrtSpecialForm(
+                      kind: CrtSpecialFormKind.formacion,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canCreateFormation,
+                    )
+                  else if (modulo == TipoModuloCartilla.conductor)
+                    CrtSpecialForm(
+                      kind: CrtSpecialFormKind.conductor,
+                      user: widget.user,
+                      jefe: _jefeNombre,
+                      canCreate: _canCreateConductor,
+                    )
+                  else if (modulo == TipoModuloCartilla.eas)
                     _buildEasLayout(isWide, preview)
                   else if (isWide)
                     Row(
@@ -517,6 +541,74 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
         ),
       ),
+    );
+  }
+
+  bool get _canGenerate =>
+      widget.user?.hasPermission('cartillas.generar') == true;
+
+  bool get _canCreateFormation {
+    final role = widget.user?.rol.toUpperCase() ?? '';
+    return _canGenerate &&
+        (role.contains('ADMIN') ||
+            role.contains('ENCARGADO') ||
+            role.contains('RADIOPERADOR'));
+  }
+
+  bool get _canCreateConductor {
+    final role = widget.user?.rol.toUpperCase() ?? '';
+    if (role.contains('AUDITOR')) return false;
+    return _canGenerate;
+  }
+
+  Widget _buildSectionCards() {
+    final canView =
+        widget.user?.hasAnyPermission(const [
+          'cartillas.ver',
+          'cartillas.generar',
+        ]) ==
+        true;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const gap = 12.0;
+        final width = constraints.maxWidth >= 620
+            ? (constraints.maxWidth - gap) / 2
+            : constraints.maxWidth;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            SizedBox(
+              width: width,
+              child: CartillaTypeCard(
+                icon: Icons.groups_outlined,
+                title: 'Formación entrante/saliente',
+                description: 'Registro de inicio o cierre de jornada',
+                selected: _section == CrtSection.formacion,
+                enabled: _canCreateFormation,
+                onTap: () => setState(() {
+                  _section = CrtSection.formacion;
+                  _invalidatePreview();
+                }),
+              ),
+            ),
+            SizedBox(
+              width: width,
+              child: CartillaTypeCard(
+                icon: Icons.dashboard_customize_outlined,
+                title: 'Otras cartillas',
+                description: 'Acceso a todos los tipos existentes',
+                selected: _section == CrtSection.otras,
+                enabled: canView,
+                onTap: () => setState(() {
+                  _section = CrtSection.otras;
+                  _invalidatePreview();
+                }),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

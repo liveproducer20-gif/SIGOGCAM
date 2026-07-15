@@ -13,6 +13,12 @@ const { auditAction } = require('../middleware/audit.middleware');
 router.use(requireAuth);
 
 router.get(
+    '/catalogos-operativos',
+    requireAnyPermission(['cartillas.ver', 'cartillas.generar']),
+    controller.obtenerCatalogosOperativos
+);
+
+router.get(
     '/jefe-control-municipal',
     requireAnyPermission(['personal.ver', 'cartillas.generar']),
     async (req, res) => {

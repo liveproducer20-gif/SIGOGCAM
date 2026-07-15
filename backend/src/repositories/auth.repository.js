@@ -26,11 +26,13 @@ async function buscarPorCorreo(correo) {
         SELECT TOP 1
             vd.id, vd.cedula, vd.correo_institucional,
             vd.nombres, vd.apellidos, vd.nombre_completo,
-            vd.rol, vd.estado_personal, vd.activo
+            vd.rol, p.rol_id, r.codigo AS rol_codigo,
+            vd.estado_personal, vd.activo
             ${extraScalarSelect}
             ${extraLobSelect}
         FROM vw_personal_detalle vd
         LEFT JOIN dbo.personal p ON p.id = vd.id
+        LEFT JOIN dbo.roles r ON r.id = p.rol_id
         WHERE LOWER(vd.correo_institucional) = ?
           AND (vd.activo = 1 OR vd.activo = '1')
         ORDER BY vd.id
@@ -50,18 +52,18 @@ async function buscarPorId(id) {
     return result[0] || null;
 }
 
-async function obtenerPermisos(rolNombre) {
+async function obtenerPermisos(rolId) {
     const sql = `
         SELECT p.codigo
         FROM roles r
         INNER JOIN rol_permiso rp ON rp.rol_id = r.id
         INNER JOIN permisos p ON p.id = rp.permiso_id
-        WHERE r.nombre = ?
+        WHERE r.id = ?
           AND r.activo = 1
           AND p.activo = 1
         ORDER BY p.codigo
     `;
-    const result = await query(sql, [rolNombre]);
+    const result = await query(sql, [rolId]);
     return result.map(item => item.codigo);
 }
 
