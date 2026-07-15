@@ -28,17 +28,41 @@ class InsHomeScr extends StatefulWidget {
   State<InsHomeScr> createState() => _InsHomeScrState();
 }
 
-class _InsHomeScrState extends State<InsHomeScr> {
+class _InsHomeScrState extends State<InsHomeScr> with WidgetsBindingObserver {
   late Future<_InsData> _future;
+  bool _needsRefresh = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _future = _load();
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() => _future = _load());
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final route = ModalRoute.of(context);
+    if (route != null && route.isCurrent && _needsRefresh) {
+      _needsRefresh = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _future = _load());
+      });
+    } else if (route != null && !route.isCurrent) {
+      _needsRefresh = true;
+    }
     return Scaffold(
       backgroundColor: AdmTokens.background,
       appBar: TopBarWdg(

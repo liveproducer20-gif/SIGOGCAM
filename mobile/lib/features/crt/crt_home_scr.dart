@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../core/auth/app_user.dart';
 import '../../core/thm/app_thm.dart';
@@ -725,37 +726,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           Expanded(
             child: _buildDocPanel(preview),
           ),
-          if (preview != null && _showGlobalActionBar) ...[
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: guardando ? null : () => _generar(preview),
-                    icon: guardando
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.copy_outlined),
-                    label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      _previewText = null;
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Seguir editando'),
-                  ),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -804,37 +774,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           padding: const EdgeInsets.all(24),
           child: _buildDocInner(preview),
         ),
-        if (preview != null && _showGlobalActionBar) ...[
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                FilledButton.icon(
-                  onPressed: guardando ? null : () => _generar(preview),
-                  icon: guardando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.copy_outlined),
-                  label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    _previewText = null;
-                    setState(() {});
-                  },
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Seguir editando'),
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
@@ -1859,8 +1798,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
 
@@ -2542,8 +2486,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
 
@@ -2988,8 +2937,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -3732,8 +3686,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -4720,8 +4679,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -5333,8 +5297,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -6469,8 +6438,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -6768,8 +6742,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Cartilla generada. Total: ${result.totalCartillasGeneradas}',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(value),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
 

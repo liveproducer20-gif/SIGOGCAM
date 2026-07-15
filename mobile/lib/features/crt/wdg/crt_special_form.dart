@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../../ins/ins_api.dart';
+import '../../ins/ins_badge_dlg.dart';
 import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
@@ -666,12 +667,28 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            result.advertencia?.isNotEmpty == true
-                ? result.advertencia!
-                : 'Cartilla creada correctamente',
+            'Cartilla generada: total ${result.totalCartillasGeneradas}',
           ),
+          action: SnackBarAction(
+            label: 'Compartir',
+            onPressed: () => Share.share(_preview!),
+          ),
+          duration: const Duration(seconds: 6),
         ),
       );
+      final insignia = result.insigniaDesbloqueada;
+      if (insignia != null) {
+        final nombre = widget.user?.nombreCompleto ?? '';
+        if (!mounted) return;
+        showDialog<void>(
+          context: context,
+          builder: (_) => BadgeUnlockDialog(
+            insignia: insignia,
+            totalCartillas: result.totalCartillasGeneradas,
+            nombreUsuario: nombre,
+          ),
+        );
+      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
