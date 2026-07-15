@@ -9,6 +9,7 @@ class CartillaTypeSelector extends StatelessWidget {
   final ValueChanged<String> onSelected;
   final bool canView;
   final bool canCreateFormation;
+  final bool compact;
 
   const CartillaTypeSelector({
     super.key,
@@ -16,6 +17,7 @@ class CartillaTypeSelector extends StatelessWidget {
     required this.onSelected,
     this.canView = false,
     this.canCreateFormation = false,
+    this.compact = false,
   });
 
   @override
@@ -37,8 +39,11 @@ class CartillaTypeSelector extends StatelessWidget {
         LayoutBuilder(
           builder: (context, constraints) {
             final maxWidth = constraints.maxWidth;
-            final cols = maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1);
+            final cols = compact
+                ? (maxWidth >= 400 ? 2 : 1)
+                : (maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1));
             final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
+            final cardHeight = compact ? 128.0 : 152.0;
 
             return SingleChildScrollView(
               child: Wrap(
@@ -55,6 +60,7 @@ class CartillaTypeSelector extends StatelessWidget {
                         enabled: item.requiresFormationPermission
                             ? canCreateFormation
                             : canView,
+                        height: cardHeight,
                         onTap: () => onSelected(item.id),
                       ),
                     ),

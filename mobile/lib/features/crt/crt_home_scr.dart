@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -46,6 +48,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   RolMovil rolMovil = RolMovil.jp;
   bool guardando = false;
   String? _previewText;
+  Timer? _previewDebounce;
   TipoFormacion? _formacionSeleccionada;
   bool _otrasCartillasSeleccionada = true;
   String _jefeNombre = '';
@@ -469,12 +472,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _ausLugarCtrl.dispose();
     _ausDetalleCtrl.dispose();
     _ausInfoAdicionalCtrl.dispose();
+    _previewDebounce?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 1050;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWide = screenWidth >= 800;
     final preview = _previewText;
 
     return Scaffold(
@@ -487,75 +492,327 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         onNotifications: widget.onNotifications,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(28),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1440),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const PageTtlWdg(
-                    ttl: 'Generador de cartillas',
-                    sub:
-                        'Seleccione el modulo operativo y complete solo los campos requeridos.',
+        child: isWide
+            ? _buildWideLayout(screenWidth, preview)
+            : _buildNarrowLayout(preview),
+      ),
+    );
+  }
+
+  Widget _buildWideLayout(double screenWidth, String? preview) {
+    final isTablet = screenWidth < 1050;
+    final leftFlex = isTablet ? 9 : 10;
+    final rightFlex = isTablet ? 11 : 10;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: leftFlex,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(28, 28, isTablet ? 28 : 12, 28),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const PageTtlWdg(
+                  ttl: 'Generador de cartillas',
+                  sub:
+                      'Seleccione el modulo operativo y complete solo los campos requeridos.',
+                ),
+                const SizedBox(height: 26),
+                CartillaTypeSelector(
+                  compact: true,
+                  selectedId: _selectedCartillaId,
+                  onSelected: _onCartillaTypeSelected,
+                  canView: _canGenerate,
+                  canCreateFormation: _canCreateFormation,
+                ),
+                const SizedBox(height: 26),
+                const Text(
+                  'Datos de la cartilla',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: AppThm.priClr,
                   ),
-                  const SizedBox(height: 26),
-                  CartillaTypeSelector(
-                    selectedId: _selectedCartillaId,
-                    onSelected: _onCartillaTypeSelected,
-                    canView: _canGenerate,
-                    canCreateFormation: _canCreateFormation,
-                  ),
-                  const SizedBox(height: 26),
-                  if (_formacionSeleccionada != null)
-                    CrtSpecialForm(
-                      key: ValueKey(_formacionSeleccionada),
-                      kind: CrtSpecialFormKind.formacion,
-                      formationType: _formacionSeleccionada,
-                      user: widget.user,
-                      jefe: _jefeNombre,
-                      canCreate: _canCreateFormation,
-                    )
-                  else if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas)
-                    CrtSpecialForm(
-                      key: const ValueKey('otras-cartillas'),
-                      kind: CrtSpecialFormKind.otras,
-                      user: widget.user,
-                      jefe: _jefeNombre,
-                      canCreate: _canGenerate,
-                    )
-                  else if (modulo == TipoModuloCartilla.conductor)
-                    CrtSpecialForm(
-                      kind: CrtSpecialFormKind.conductor,
-                      user: widget.user,
-                      jefe: _jefeNombre,
-                      canCreate: _canCreateConductor,
-                    )
-                  else if (modulo == TipoModuloCartilla.eas)
-                    _buildEasLayout(isWide, preview)
-                  else if (isWide)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(flex: 6, child: _formPanel()),
-                        const SizedBox(width: 24),
-                        Expanded(flex: 5, child: _previewPanel(preview)),
-                      ],
-                    )
-                  else
-                    Column(
-                      children: [
-                        _formPanel(),
-                        const SizedBox(height: 20),
-                        _previewPanel(preview),
-                      ],
-                    ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                _buildFormContent(),
+              ],
             ),
           ),
         ),
+        const SizedBox(width: 24),
+        Expanded(
+          flex: rightFlex,
+          child: _buildDesktopPreview(preview),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNarrowLayout(String? preview) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const PageTtlWdg(
+            ttl: 'Generador de cartillas',
+            sub:
+                'Seleccione el modulo operativo y complete solo los campos requeridos.',
+          ),
+          const SizedBox(height: 26),
+          CartillaTypeSelector(
+            selectedId: _selectedCartillaId,
+            onSelected: _onCartillaTypeSelected,
+            canView: _canGenerate,
+            canCreateFormation: _canCreateFormation,
+          ),
+          const SizedBox(height: 26),
+          const Text(
+            'Datos de la cartilla',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppThm.priClr,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildFormContent(),
+          const SizedBox(height: 24),
+          _buildMobilePreview(preview),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormContent() {
+    if (_formacionSeleccionada != null) {
+      return CrtSpecialForm(
+        key: ValueKey(_formacionSeleccionada),
+        kind: CrtSpecialFormKind.formacion,
+        formationType: _formacionSeleccionada,
+        user: widget.user,
+        jefe: _jefeNombre,
+        canCreate: _canCreateFormation,
+      );
+    }
+    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) {
+      return CrtSpecialForm(
+        key: const ValueKey('otras-cartillas'),
+        kind: CrtSpecialFormKind.otras,
+        user: widget.user,
+        jefe: _jefeNombre,
+        canCreate: _canGenerate,
+      );
+    }
+    if (modulo == TipoModuloCartilla.conductor) {
+      return CrtSpecialForm(
+        kind: CrtSpecialFormKind.conductor,
+        user: widget.user,
+        jefe: _jefeNombre,
+        canCreate: _canCreateConductor,
+      );
+    }
+    if (modulo == TipoModuloCartilla.eas) {
+      return _buildEasFormOnly();
+    }
+    return _formPanel();
+  }
+
+  Widget _buildEasFormOnly() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildEasConfigPanel(),
+        const SizedBox(height: 20),
+        if (_isDesalojoFlow)
+          _buildDesalojoWizard()
+        else if (_isPuntoMartilloFlow)
+          _buildPuntoMartilloForm()
+        else if (_isRondasDisuasivasFlow)
+          _buildRondasDisuasivasForm()
+        else if (_isRetiroTemporalFlow)
+          _buildRetiroTemporalWizard()
+        else if (_isColaboracionFlow)
+          _buildColaboracionWizard()
+        else if (_isRequerimientoFlow)
+          _buildRequerimientoWizard()
+        else if (_isColaboracionCiudadanaFlow)
+          _buildColCiudadanaWizard()
+        else if (_isAusentismoFlow)
+          _buildAusentismoWizard()
+        else if (_isGenericEasWizardFlow)
+          _buildGenericEasWizard()
+        else
+          _formPanel(),
+      ],
+    );
+  }
+
+  Widget _buildDesktopPreview(String? preview) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 28, 28, 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PanelTitle(
+            icon: Icons.preview_outlined,
+            title: 'Vista previa',
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: _buildDocPanel(preview),
+          ),
+          if (preview != null) ...[
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    onPressed: guardando ? null : () => _generar(preview),
+                    icon: guardando
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.copy_outlined),
+                    label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      _previewText = null;
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Seguir editando'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobilePreview(String? preview) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _PanelTitle(
+          icon: Icons.preview_outlined,
+          title: 'Vista previa',
+        ),
+        const SizedBox(height: 16),
+        Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(minHeight: 400),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(24),
+          child: _buildDocInner(preview),
+        ),
+        if (preview != null) ...[
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: guardando ? null : () => _generar(preview),
+                  icon: guardando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.copy_outlined),
+                  label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    _previewText = null;
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Seguir editando'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildDocPanel(String? preview) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(24),
+      child: _buildDocInner(preview),
+    );
+  }
+
+  Widget _buildDocInner(String? preview) {
+    if (preview != null) {
+      return SingleChildScrollView(
+        child: SelectableText(
+          preview,
+          style: const TextStyle(
+            color: AppThm.txtClr,
+            height: 1.45,
+            fontFamily: 'monospace',
+            fontSize: 13.5,
+          ),
+        ),
+      );
+    }
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.description_outlined, size: 64, color: Colors.grey[300]),
+          const SizedBox(height: 16),
+          Text(
+            'La vista previa aparecerá aquí',
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Seleccione un tipo de cartilla y complete los campos requeridos.',
+            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -6390,10 +6647,16 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   void _invalidatePreview() {
-    _previewText = null;
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (mounted) {
+        setState(() => _previewText = _buildText());
+      }
+    });
   }
 
   void _doPreview() {
+    _previewDebounce?.cancel();
     _previewText = _buildText();
     setState(() {});
   }

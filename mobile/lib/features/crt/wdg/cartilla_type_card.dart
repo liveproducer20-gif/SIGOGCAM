@@ -7,6 +7,7 @@ class CartillaTypeCard extends StatefulWidget {
   final bool selected;
   final bool enabled;
   final VoidCallback? onTap;
+  final double height;
 
   const CartillaTypeCard({
     super.key,
@@ -16,6 +17,7 @@ class CartillaTypeCard extends StatefulWidget {
     required this.selected,
     this.enabled = true,
     required this.onTap,
+    this.height = 152,
   });
 
   @override
@@ -28,7 +30,6 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
   static const Color _darkBlue = Color(0xFF1D3F73);
   static const Color _selectedBg = Color(0xFFEAF0F8);
   static const Color _normalBorder = Color(0xFFD1D5DB);
-  static const double _cardHeight = 152;
   static const double _borderWidth = 1.5;
 
   @override
@@ -53,7 +54,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
             onTap: widget.enabled ? widget.onTap : null,
             child: AnimatedContainer(
               width: double.infinity,
-              height: _cardHeight,
+              height: widget.height,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
               padding: const EdgeInsets.all(16),
