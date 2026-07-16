@@ -28,7 +28,7 @@ class CrtSpecialTextGenerator {
         : '\n*NOVEDADES:*\n\n${novedades.join('\n')}\n';
     final movilesSection = movilesValidos.isEmpty
         ? ''
-        : '\n*Móviles en circulación:*\n\n${movilesValidos.join('-')}\n';
+        : '\n*MÓVILES EN CIRCULACIÓN:*\n\n${movilesValidos.join('-')}\n';
     final radioSection = data.radiooperadores > 0
         ? '\n${_twoDigits(data.radiooperadores)} ACM Radio operadores'
         : '';
@@ -36,31 +36,31 @@ class CrtSpecialTextGenerator {
         ? '\n${_twoDigits(data.acmOperativos)} ACM Operativos'
         : '';
     final personalHeader = (data.radiooperadores > 0 || data.acmOperativos > 0 || policias.isNotEmpty)
-        ? '\n*Personal participante:*'
+        ? '\n*PERSONAL PARTICIPANTE:*'
         : '';
 
-    final circuitoLine = data.circuito.isEmpty ? '' : '*Circuito:* ${data.circuito}\n\n';
+    final circuitoLine = data.circuito.isEmpty ? '' : '*CIRCUITO:* ${data.circuito}\n\n';
     final causa = data.causa.isNotEmpty ? data.causa : data.tipo.causa;
-    return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
 
-$circuitoLine*Dirección:* ${data.direccion}
+$circuitoLine*DIRECCIÓN:* ${data.direccion}
 
-*Causa:* $causa
+*CAUSA:* $causa
 
-*Hora:* ${_time(data.fechaHora)}
+*HORA:* ${_time(data.fechaHora)}
 
-*Fecha:* ${_date(data.fechaHora)}
+*FECHA:* ${_date(data.fechaHora)}
 
 ${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente, le informo que:
 
 Al momento *Forma Personal ${entrante ? 'Entrante' : 'Saliente'} de Radio Operadores del EAS CEIBOS, ACM JP y CONDUCTORES,* se notifican novedades para fines pertinentes, quedando así en constancia que se ${entrante ? 'INICIA' : 'CULMINA'} LA JORNADA LABORAL como se establece la distribución.$novedadesSection$personalHeader$radioSection$acmSection$personalPolicial$movilesSection
-*Reporta:*
+*REPORTA:*
 
 $reportantes
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-*Adjunto Fotografía:*''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String conductor(ConductorData data) {
@@ -69,33 +69,33 @@ $reportantes
         : data.observaciones.trim();
     return '''*REGISTRO VEHICULAR*
 
-*Nombres del Conductor:* ${data.conductor.trim()}
+*NOMBRES DEL CONDUCTOR:* ${data.conductor.trim()}
 
-*Los cuatro últimos números de la Cédula (XXXXXX0000):* ${data.cedulaUltimos4}
+*LOS CUATRO ÚLTIMOS NÚMEROS DE LA CÉDULA (XXXXXX0000):* ${data.cedulaUltimos4}
 
-*Elige la opción a reportar:* ${data.opcion.label}
+*ELIGE LA OPCIÓN A REPORTAR:* ${data.opcion.label}
 
-*Lugar de la opción a reportar:* ${data.lugar.trim()}
+*LUGAR DE LA OPCIÓN A REPORTAR:* ${data.lugar.trim()}
 
-*No. de Disco del Vehículo:* ${data.disco.trim()}
+*NO. DE DISCO DEL VEHÍCULO:* ${data.disco.trim()}
 
-*Indique fecha y hora del reporte:* ${_date(data.fechaHora)} - ${_time(data.fechaHora)}
+*INDIQUE FECHA Y HORA DEL REPORTE:* ${_date(data.fechaHora)} - ${_time(data.fechaHora)}
 
-*Cantidad del Combustible:* ${data.combustible}
+*CANTIDAD DEL COMBUSTIBLE:* ${data.combustible}
 
-*Kilometraje del odómetro al momento del reporte:*
+*KILOMETRAJE DEL ODÓMETRO AL MOMENTO DEL REPORTE:*
 
 ${data.kilometraje} Km
 
-*Circuito, Ruta o Servicio Asignado:* ${data.servicio.trim()}
+*CIRCUITO, RUTA O SERVICIO ASIGNADO:* ${data.servicio.trim()}
 
-*Horario Asignado:* ${data.horario.trim()}
+*HORARIO ASIGNADO:* ${data.horario.trim()}
 
-*Jefe de Patrulla o Encargado:*
+*JEFE DE PATRULLA O ENCARGADO:*
 
 ${data.encargado.trim()}
 
-*Observaciones y Novedades:*
+*OBSERVACIONES Y NOVEDADES:*
 
 $observaciones''';
   }
@@ -107,32 +107,33 @@ $observaciones''';
         .map((e) => 'ACM. $e')
         .join('\n');
     final header = _buildHeader(data);
-    final circuitoLine = data.circuito.isEmpty ? '' : '*Circuito:* ${data.circuito}\n\n';
-    final horarioLine = data.horario.isEmpty ? '' : '*Horario:* ${data.horario}\n\n';
-    final distritoLine = data.distrito.isEmpty ? '' : '*Distrito:* ${data.distrito}\n\n';
-    return '''$header*CUERPO AGENTE DE CONTROL MUNICIPAL*
+    final circuitoLine = data.circuito.isEmpty ? '' : '*CIRCUITO:* ${data.circuito}\n\n';
+    final horarioLine = data.horario.isEmpty ? '' : '*HORARIO:* ${data.horario}\n\n';
+    final distritoLine = data.distrito.isEmpty ? '' : '*DISTRITO:* ${data.distrito}\n\n';
+    final novedad = data.novedad.trim();
+    final novedadBlock = novedad.isEmpty
+        ? ''
+        : '\n\n$novedad\n\n';
+    return '''$header*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
 
-$distritoLine$circuitoLine*Dirección:* ${data.direccion}
+$distritoLine$circuitoLine*DIRECCIÓN:* ${data.direccion}
 
-*Causa:* ${data.causa}
+*CAUSA:* ${data.causa}
 
-$horarioLine*Hora:* ${_time12(data.fechaHora)}
+$horarioLine*HORA:* ${_time12(data.fechaHora)}
 
-*Fecha:* ${_shortDate(data.fechaHora)}
+*FECHA:* ${_shortDate(data.fechaHora)}
 
-${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente me permito informarle que en las instalaciones de EAS CEIBOS se registra la siguiente novedad:
+${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente me permito informar a usted que, conforme a las actividades operativas desarrolladas en el sector indicado, se ejecutó el procedimiento correspondiente por concepto de la causa registrada, actuando dentro del ámbito de las competencias institucionales y de acuerdo con los protocolos establecidos.$novedadBlock
+Una vez concluido el procedimiento, se deja constancia de la presente actuación para los fines administrativos y operativos correspondientes.
 
-${data.novedad.trim()}
-
-Así mismo, se le informó a la Central para que registre la novedad. Información puesta en conocimiento para los fines pertinentes.
-
-*Reporta:*
+*REPORTA:*
 
 $reportantes
 
-*"Lealtad Valor Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-*Adjunto Fotografía:*''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildHeader(OtrasCartillasData data) {

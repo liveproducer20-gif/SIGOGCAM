@@ -29,7 +29,7 @@ void main() {
 
   test('formación saliente usa causa, cierre, saludo y móviles correctos', () {
     final text = CrtSpecialTextGenerator.formacion(formation());
-    expect(text, contains('*Causa:* FORMACION SALIENTE'));
+    expect(text, contains('*CAUSA:* FORMACION SALIENTE'));
     expect(text, contains('Forma Personal Saliente'));
     expect(text, contains('se CULMINA LA JORNADA LABORAL'));
     expect(text, contains('Muy buenas noches'));
@@ -40,7 +40,7 @@ void main() {
     final text = CrtSpecialTextGenerator.formacion(
       formation(tipo: TipoFormacion.entrante),
     );
-    expect(text, contains('*Causa:* FORMACION ENTRANTE'));
+    expect(text, contains('*CAUSA:* FORMACION ENTRANTE'));
     expect(text, contains('Forma Personal Entrante'));
     expect(text, contains('se INICIA LA JORNADA LABORAL'));
   });
@@ -116,11 +116,11 @@ void main() {
 
       final text = CrtSpecialTextGenerator.otras(data);
       expect(text, contains('*REPORTE DE EAS*'));
-      expect(text, contains('*Hora:* 07:25 p. m.'));
-      expect(text, contains('*Fecha:* 14/7/2026'));
+      expect(text, contains('*HORA:* 07:25 p. m.'));
+      expect(text, contains('*FECHA:* 14/7/2026'));
       expect(text, contains('permiso Sr. Maldonado Cabrera Freddy'));
       expect(text, contains('ACM. CALDERON JORGE\nACM. ZUÑIGA GUILLERMO'));
-      expect(text, contains('*"Lealtad Valor Orden"*'));
+      expect(text, contains('*"LEALTAD, VALOR Y ORDEN"*'));
     },
   );
 }

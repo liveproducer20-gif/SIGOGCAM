@@ -26,11 +26,13 @@ class CrtTextGenerator {
         : '\n\nEn la calle $direccion.';
 
     final causa = data.values['causa']?.trim() ?? '';
-    return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
+    final personal = _personal(data);
+    final movilBlock = _bloqueMovil(data);
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
 *REPORTE DE ${data.modulo.label.toUpperCase()}*
-*Fecha:* ${data.fecha}
-*Hora:* ${data.hora}
-*Horario:* ${data.horario}
+*FECHA:* ${data.fecha}
+*HORA:* ${data.hora}
+*HORARIO:* ${data.horario}
 ${_ubicacionInstitucional(data, direccion)}
 *CAUSA:* $causa
 
@@ -38,16 +40,14 @@ ${_saludo(DateTime.now())}, permiso Sr. $jefeDisplay.
 
 Muy respetuosamente me permito informar que $procedimiento$puntoMartillo
 
-${_personal(data)}
-
-${_bloqueMovil(data)}
-
-*Reporta:*
+$personal
+$movilBlock
+*REPORTA:*
 ${_reporta(data)}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-*Adjunto fotografia:*''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEas(CrtFormData data) {
@@ -124,9 +124,9 @@ $movil
 *CP:* ${cp == null || cp.isEmpty ? '[CP asignado]' : cp}
 *JP:* ${jp == null || jp.isEmpty ? '[JP asignado]' : jp}${policia.isEmpty ? '' : '\n\n*POLICÍA:* $policia'}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasDesalojo(
@@ -180,12 +180,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasPuntoMartillo(
@@ -239,12 +239,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasRondasDisuasivas(
@@ -298,12 +298,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasRetiroTemporal(
@@ -389,12 +389,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasColaboracionEntidad(
@@ -460,12 +460,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasColaboracionAccidente(
@@ -601,12 +601,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasRequerimiento(
@@ -688,12 +688,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasColaboracionCiudadana(
@@ -769,12 +769,12 @@ Información puesta en conocimiento para los fines pertinentes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${rp.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildCiuDenuncia(
@@ -917,12 +917,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${reporta.toString()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static bool _isGenericWizardTipo(TipoCartilla tipo) {
@@ -1030,12 +1030,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${rp.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _buildEasDefaultWizard(
@@ -1096,12 +1096,12 @@ Notifico novedades para fines correspondientes.
 
 $movil
 
-*REPORTA*:
+*REPORTA:*
 ${rp.toString().trimRight()}
 
-*"Lealtad, Valor y Orden"*
+*"LEALTAD, VALOR Y ORDEN"*
 
-Adjunto fotografía''';
+*ADJUNTO FOTOGRAFÍA:*''';
   }
 
   static String _procedimientoEas(CrtFormData data, String direccion) {
@@ -1192,9 +1192,9 @@ Adjunto fotografía''';
 
   static String _ubicacionInstitucional(CrtFormData data, String direccion) {
     if (data.modulo == TipoModuloCartilla.eas && data.eas != null) {
-      return '*Distrito:* #5 MODELO\n*Circuito:* ${data.eas!.codigo} ${data.eas!.nombre}\n*Dirección:* $direccion';
+      return '*DISTRITO:* #5 MODELO\n*CIRCUITO:* ${data.eas!.codigo} ${data.eas!.nombre}\n*DIRECCIÓN:* $direccion';
     }
-    return '*Dirección/Punto:* $direccion';
+    return '*DIRECCIÓN/PUNTO:* $direccion';
   }
 
   static String _direccion(CrtFormData data) {
@@ -1244,8 +1244,8 @@ Adjunto fotografía''';
       data.values['auxiliar'],
     ].whereType<String>().where((value) => value.trim().isNotEmpty).toSet();
 
-    if (values.isEmpty) return '*Personal involucrado:*\nNo registra';
-    return '*Personal involucrado:*\n${values.join('\n')}';
+    if (values.isEmpty) return '';
+    return '*PERSONAL INVOLUCRADO:*\n${values.join('\n')}';
   }
 
   static String _bloqueMovil(CrtFormData data) {
@@ -1278,7 +1278,7 @@ Adjunto fotografía''';
   }
 
   static String _saludo(DateTime now) {
-    if (now.hour < 12) return 'Buenos dias';
+    if (now.hour < 12) return 'Buenos días';
     if (now.hour < 19) return 'Buenas tardes';
     return 'Buenas noches';
   }
