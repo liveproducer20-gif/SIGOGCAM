@@ -19,6 +19,7 @@ import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
 import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_special_form.dart';
+import 'wdg/crt_widgets.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -54,6 +55,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool _otrasCartillasSeleccionada = true;
   String _jefeNombre = '';
   bool _formExpanded = false;
+  int _previewTabIndex = 0;
+  String _lastPreviewUpdate = '';
 
   final crtApi = CrtApi();
   List<Map<String, dynamic>> _crtDistritos = [];
@@ -516,7 +519,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Widget _buildWideLayout(double screenWidth, String? preview) {
     final isTablet = screenWidth < 1050;
     final leftFlex = isTablet ? 9 : 10;
-    final rightFlex = isTablet ? 11 : 10;
+    final rightFlex = isTablet ? 12 : 11;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,7 +537,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             ),
           ),
         ),
-        const SizedBox(width: 24),
+        const SizedBox(width: 20),
         Expanded(
           flex: rightFlex,
           child: _buildDesktopPreview(preview),
@@ -580,53 +583,59 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   List<Widget> _formPanelChildren() {
     return [
       _buildBackButton(),
-      const SizedBox(height: 16),
-      const Text(
-        'Datos de la cartilla',
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-          color: AppThm.priClr,
+      const SizedBox(height: 12),
+      CrtCompactHeader(
+        child: Row(
+          children: [
+            _buildModuloSelectorCompact(),
+            const SizedBox(width: 12),
+            if (modulo == TipoModuloCartilla.eas)
+              Expanded(
+                child: _Drop<CrtEasStation>(
+                  value: eas,
+                  label: 'Distrito',
+                  icon: Icons.location_city_outlined,
+                  items: CrtCatalog.easStations,
+                  itemText: (value) => '${value.codigo} - ${value.nombre}',
+                  onChanged: (value) {
+                    _invalidatePreview();
+                    setState(() {
+                      eas = value;
+                      movil = _moviles.first.movil;
+                    });
+                  },
+                ),
+              ),
+          ],
         ),
       ),
       const SizedBox(height: 16),
-      _buildModuloSelector(),
-      const SizedBox(height: 16),
       _buildFormContent(),
-      const SizedBox(height: 24),
-      _buildActionBar(),
     ];
   }
 
-  Widget _buildModuloSelector() {
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelTitle(icon: Icons.tune_outlined, title: 'Módulo'),
-          const SizedBox(height: 18),
-          _Drop<TipoModuloCartilla>(
-            value: modulo,
-            label: 'Modulo de cartilla',
-            icon: Icons.dashboard_customize_outlined,
-            items: TipoModuloCartilla.values,
-            itemText: (value) => value.label,
-            onChanged: (value) {
-              _invalidatePreview();
-              setState(() {
-                modulo = value;
-                _formacionSeleccionada = null;
-                _otrasCartillasSeleccionada = true;
-                final tipos = CrtCatalog.configFor(modulo).tipos;
-                if (!tipos.contains(tipo)) tipo = tipos.first;
-                if (modulo == TipoModuloCartilla.eas) {
-                  movil = _moviles.first.movil;
-                }
-                _syncFields();
-              });
-            },
-          ),
-        ],
+  Widget _buildModuloSelectorCompact() {
+    return Expanded(
+      child: _Drop<TipoModuloCartilla>(
+        value: modulo,
+        label: 'Módulo',
+        icon: Icons.dashboard_customize_outlined,
+        items: TipoModuloCartilla.values,
+        itemText: (value) => value.label,
+        onChanged: (value) {
+          _invalidatePreview();
+          setState(() {
+            modulo = value;
+            _formacionSeleccionada = null;
+            _otrasCartillasSeleccionada = true;
+            final tipos = CrtCatalog.configFor(modulo).tipos;
+            if (!tipos.contains(tipo)) tipo = tipos.first;
+            if (modulo == TipoModuloCartilla.eas) {
+              movil = _moviles.first.movil;
+            }
+            _syncFields();
+          });
+        },
       ),
     );
   }
@@ -646,42 +655,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildActionBar() {
-    if (!_showGlobalActionBar) return const SizedBox.shrink();
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        FilledButton.icon(
-          onPressed: _previewText != null ? null : _doPreview,
-          icon: const Icon(Icons.visibility_outlined),
-          label: const Text('Generar vista previa'),
-        ),
-        if (_previewText != null)
-          FilledButton.icon(
-            onPressed: guardando ? null : () => _generar(_previewText!),
-            icon: guardando
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.copy_outlined),
-            label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
-          ),
-        if (_previewText != null)
-          OutlinedButton.icon(
-            onPressed: () {
-              _previewText = null;
-              setState(() {});
-            },
-            icon: const Icon(Icons.edit_outlined),
-            label: const Text('Seguir editando'),
-          ),
-      ],
     );
   }
 
@@ -782,11 +755,37 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(
-            icon: Icons.preview_outlined,
-            title: 'Vista previa',
+          Row(
+            children: [
+              const Icon(Icons.preview_outlined, color: AppThm.priClr, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'VISTA PREVIA',
+                style: TextStyle(
+                  color: AppThm.priClr,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const Spacer(),
+              CrtPreviewTabs(
+                selectedIndex: _previewTabIndex,
+                onTabChanged: (i) => setState(() => _previewTabIndex = i),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              CrtStatusBar(
+                lastUpdate: _lastPreviewUpdate,
+              ),
+              const Spacer(),
+              ..._buildPreviewActions(),
+            ],
+          ),
+          const SizedBox(height: 12),
           Expanded(
             child: _buildDocPanel(preview),
           ),
@@ -795,50 +794,60 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  bool get _showGlobalActionBar {
-    if (_formacionSeleccionada != null) return false;
-    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) return false;
-    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.radioperador) return false;
-    if (modulo == TipoModuloCartilla.conductor) return false;
-    if (modulo == TipoModuloCartilla.eas) {
-      // EAS types that have their own generate button inside the wizard
-      if (_isDesalojoFlow) return false;
-      if (_isRetiroTemporalFlow) return false;
-      if (_isColaboracionFlow) return false;
-      if (_isRequerimientoFlow) return false;
-      if (_isColaboracionCiudadanaFlow) return false;
-      if (_isAusentismoFlow) return false;
-      if (_isGenericEasWizardFlow) return false;
-    }
-    return true;
-  }
-
   Widget _buildMobilePreview(String? preview) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _PanelTitle(
-          icon: Icons.preview_outlined,
-          title: 'Vista previa',
+        Row(
+          children: [
+            const Icon(Icons.preview_outlined, color: AppThm.priClr, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'VISTA PREVIA',
+                style: TextStyle(
+                  color: AppThm.priClr,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            CrtPreviewTabs(
+              selectedIndex: _previewTabIndex,
+              onTabChanged: (i) => setState(() => _previewTabIndex = i),
+            ),
+          ],
         ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            CrtStatusBar(lastUpdate: _lastPreviewUpdate),
+            const Spacer(),
+            ..._buildPreviewActions(),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildDocPanel(preview),
         const SizedBox(height: 16),
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 400),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+        if (preview != null)
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              CrtActionButton(
+                icon: Icons.copy_outlined,
+                label: 'Crear cartilla',
+                color: const Color(0xFF059669),
+                onPressed: guardando ? null : () => _generar(preview),
+              ),
+              CrtActionButton(
+                icon: Icons.share_outlined,
+                label: 'Compartir',
+                filled: false,
+                onPressed: () => Share.share(preview),
               ),
             ],
           ),
-          padding: const EdgeInsets.all(24),
-          child: _buildDocInner(preview),
-        ),
       ],
     );
   }
@@ -857,39 +866,58 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       child: _buildDocInner(preview),
     );
   }
 
+  List<Widget> _buildPreviewActions() {
+    if (_previewText == null) return [];
+    return [
+      CrtActionButton(
+        icon: Icons.copy_outlined,
+        label: 'Copiar',
+        filled: false,
+        onPressed: () async {
+          await Clipboard.setData(ClipboardData(text: _previewText!));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Texto copiado')),
+            );
+          }
+        },
+      ),
+      const SizedBox(width: 8),
+      CrtActionButton(
+        icon: Icons.share_outlined,
+        label: 'Compartir',
+        filled: false,
+        onPressed: () => Share.share(_previewText!),
+      ),
+    ];
+  }
+
   Widget _buildDocInner(String? preview) {
     if (preview != null) {
-      return SingleChildScrollView(
-        child: SelectableText(
-          preview,
-          style: const TextStyle(
-            color: AppThm.txtClr,
-            height: 1.45,
-            fontFamily: 'monospace',
-            fontSize: 13.5,
-          ),
-        ),
-      );
+      if (_previewTabIndex == 1) {
+        return CrtWhatsAppPreview(text: preview);
+      }
+      return CrtDocumentPreview(text: preview);
     }
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.description_outlined, size: 64, color: Colors.grey[300]),
-          const SizedBox(height: 16),
+          Icon(Icons.description_outlined, size: 56, color: Colors.grey[300]),
+          const SizedBox(height: 14),
           Text(
             'La vista previa aparecerá aquí',
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
+            style: TextStyle(color: Colors.grey[500], fontSize: 15),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
-            'Seleccione un tipo de cartilla y complete los campos requeridos.',
-            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+            'Complete el formulario y presione "Vista previa"',
+            style: TextStyle(color: Colors.grey[400], fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -6577,62 +6605,208 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _formPanel() {
+    final datosGeneralesFields = <String>{'horario', 'hora', 'circuito'};
+    final ubicacionFields = <String>{
+      'punto', 'ruta', 'area', 'lugar', 'cuadrante', 'sector',
+      'bicicleta', 'movil', 'moviles', 'policia',
+    };
+    final informacionFields = <String>{
+      'novedad', 'procedimiento', 'actividad', 'control', 'motivo',
+      'resultado', 'detalle', 'observaciones', 'novedades',
+      'novedadPersonal', 'novedadMovil',
+    };
+    final personalFields = <String>{
+      'personal', 'agente', 'conductor', 'jp', 'auxiliar',
+      'vehiculo', 'can', 'encargado',
+    };
+
+    final dgFields = activeFields
+        .where((f) => datosGeneralesFields.contains(f.key))
+        .toList();
+    final ubiFields = activeFields
+        .where((f) => ubicacionFields.contains(f.key))
+        .toList();
+    final infoFields = activeFields
+        .where((f) => informacionFields.contains(f.key))
+        .toList();
+    final persFields = activeFields
+        .where((f) => personalFields.contains(f.key))
+        .toList();
+
     return _Panel(
       child: Form(
         key: formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (modulo != TipoModuloCartilla.eas) const SizedBox(height: 14),
+            if (modulo != TipoModuloCartilla.eas) const SizedBox(height: 8),
+
             if (modulo == TipoModuloCartilla.motorizado) ...[
               _buildMotorizadoDistritoDropdown(),
               const SizedBox(height: 14),
             ],
-            _Field(
-              controller: _controller('direccion'),
-              label: 'Dirección',
-              icon: Icons.place_outlined,
-              required: false,
-              onChanged: () {
-                _invalidatePreview();
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 14),
-            _Field(
-              controller: _controller('causa'),
-              label: 'Causa',
-              icon: Icons.description_outlined,
-              required: true,
-              onChanged: () {
-                _invalidatePreview();
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: 14),
-            for (final field in activeFields) ...[
-              _Field(
-                controller: _controller(field.key),
-                label: field.label,
-                icon: _iconFor(field.key),
-                minLines: field.minLines,
-                required: field.required,
-                onChanged: () {
-                  _invalidatePreview();
-                  setState(() {});
-                },
+
+            // ── Section 1: Datos Generales ──────────────────────────
+            if (dgFields.isNotEmpty)
+              CrtSectionCard(
+                icon: Icons.description_outlined,
+                title: 'DATOS GENERALES',
+                headerColor: CrtSectionColors.datosGenerales,
+                backgroundColor: CrtSectionColors.datosGeneralesBg,
+                children: [
+                  for (final field in dgFields) ...[
+                    CrtFormField(
+                      controller: _controller(field.key),
+                      label: field.label,
+                      icon: _iconFor(field.key),
+                      isRequired: field.required,
+                      onChanged: () {
+                        _invalidatePreview();
+                        setState(() {});
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ],
               ),
-              const SizedBox(height: 14),
-            ],
-            _Field(
-              controller: _controller('reporta'),
-              label: 'Persona que reporta',
+            if (dgFields.isNotEmpty) const SizedBox(height: 14),
+
+            // ── Section 2: Ubicación ────────────────────────────────
+            CrtSectionCard(
+              icon: Icons.place_outlined,
+              title: 'UBICACIÓN',
+              headerColor: CrtSectionColors.ubicacion,
+              backgroundColor: CrtSectionColors.ubicacionBg,
+              children: [
+                CrtFormField(
+                  controller: _controller('direccion'),
+                  label: 'Dirección / Punto',
+                  icon: Icons.map_outlined,
+                  isRequired: false,
+                  onChanged: () {
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                for (final field in ubiFields) ...[
+                  const SizedBox(height: 12),
+                  CrtFormField(
+                    controller: _controller(field.key),
+                    label: field.label,
+                    icon: _iconFor(field.key),
+                    isRequired: field.required,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // ── Section 3: Información ──────────────────────────────
+            CrtSectionCard(
+              icon: Icons.info_outline,
+              title: 'INFORMACIÓN',
+              headerColor: CrtSectionColors.informacion,
+              backgroundColor: CrtSectionColors.informacionBg,
+              children: [
+                CrtFormField(
+                  controller: _controller('causa'),
+                  label: 'Causa',
+                  icon: Icons.warning_amber_outlined,
+                  isRequired: true,
+                  onChanged: () {
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                for (final field in infoFields) ...[
+                  const SizedBox(height: 12),
+                  CrtFormField(
+                    controller: _controller(field.key),
+                    label: field.label,
+                    icon: _iconFor(field.key),
+                    isRequired: field.required,
+                    minLines: field.minLines,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 14),
+
+            // ── Section 4: Personal ─────────────────────────────────
+            CrtSectionCard(
               icon: Icons.badge_outlined,
-              required: modulo != TipoModuloCartilla.eas,
-              onChanged: () {
-                _invalidatePreview();
-                setState(() {});
-              },
+              title: 'PERSONAL',
+              headerColor: CrtSectionColors.personal,
+              backgroundColor: CrtSectionColors.personalBg,
+              children: [
+                if (modulo == TipoModuloCartilla.motorizado)
+                  CrtFormField(
+                    controller: _controller('vehiculo'),
+                    label: 'Móvil / Vehículo',
+                    icon: Icons.two_wheeler_outlined,
+                    isRequired: false,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                for (final field in persFields) ...[
+                  if (persFields.first != field) const SizedBox(height: 12),
+                  CrtFormField(
+                    controller: _controller(field.key),
+                    label: field.label,
+                    icon: _iconFor(field.key),
+                    isRequired: field.required,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                ],
+                const SizedBox(height: 12),
+                CrtFormField(
+                  controller: _controller('reporta'),
+                  label: 'Persona que reporta',
+                  icon: Icons.shield_outlined,
+                  isRequired: modulo != TipoModuloCartilla.eas,
+                  onChanged: () {
+                    _invalidatePreview();
+                    setState(() {});
+                  },
+                ),
+                if (modulo == TipoModuloCartilla.motorizado) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'El número de moto o vehículo se mostrará como prefijo en el apartado REPORTA.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '* Campos obligatorios',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -6763,7 +6937,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     _previewDebounce?.cancel();
     _previewDebounce = Timer(const Duration(milliseconds: 400), () {
       if (mounted) {
-        setState(() => _previewText = _buildText());
+        final now = DateTime.now();
+        setState(() {
+          _previewText = _buildText();
+          _lastPreviewUpdate =
+              '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+        });
       }
     });
   }
@@ -6776,7 +6955,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       return;
     }
     _previewDebounce?.cancel();
+    final now = DateTime.now();
     _previewText = _buildText();
+    _lastPreviewUpdate =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
     setState(() {});
   }
 
@@ -7132,20 +7314,27 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   IconData _iconFor(String key) {
-    if (key.contains('movil') || key == 'vehiculo') {
-      return Icons.directions_car_outlined;
-    }
-    if (key.contains('personal') || key.contains('agente')) {
-      return Icons.groups_outlined;
-    }
-    if (key.contains('punto') ||
-        key.contains('sector') ||
-        key.contains('lugar')) {
+    if (key == 'distrito') return Icons.account_balance_outlined;
+    if (key == 'circuito') return Icons.location_on_outlined;
+    if (key == 'fecha') return Icons.calendar_today_outlined;
+    if (key == 'hora') return Icons.access_time_outlined;
+    if (key == 'horario') return Icons.schedule_outlined;
+    if (key == 'direccion') return Icons.map_outlined;
+    if (key == 'causa') return Icons.warning_amber_outlined;
+    if (key == 'novedad' || key == 'novedades') return Icons.edit_note_outlined;
+    if (key == 'procedimiento') return Icons.assignment_outlined;
+    if (key == 'observaciones') return Icons.notes_outlined;
+    if (key == 'vehiculo' || key.contains('movil')) return Icons.two_wheeler_outlined;
+    if (key.contains('personal') || key.contains('agente')) return Icons.groups_outlined;
+    if (key == 'reporta' || key == 'reportantes') return Icons.shield_outlined;
+    if (key == 'conductor') return Icons.person_outline;
+    if (key == 'punto' || key.contains('sector') || key.contains('lugar')) {
       return Icons.place_outlined;
     }
-    if (key.contains('novedad') || key.contains('procedimiento')) {
-      return Icons.notes_outlined;
-    }
+    if (key == 'actividad' || key == 'control') return Icons.security_outlined;
+    if (key == 'motivo' || key == 'resultado') return Icons.info_outline;
+    if (key == 'detalle') return Icons.description_outlined;
+    if (key == 'can') return Icons.pets_outlined;
     return Icons.edit_note_outlined;
   }
 
