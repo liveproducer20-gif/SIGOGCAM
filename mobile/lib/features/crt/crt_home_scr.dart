@@ -56,6 +56,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool _formExpanded = false;
 
   final crtApi = CrtApi();
+  List<Map<String, dynamic>> _crtDistritos = [];
 
   bool _desaCargando = false;
   int _desaSection = 0;
@@ -392,6 +393,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
       _jefeNombre = 'Jefe de Control Municipal';
+    }
+  }
+
+  Future<void> _loadCrtDistritos() async {
+    try {
+      final distritos = await crtApi.getDistritos();
+      if (mounted) {
+        setState(() => _crtDistritos = distritos);
+      }
+    } catch (_) {
+      if (mounted) _crtDistritos = [];
     }
   }
 
@@ -6572,6 +6584,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (modulo != TipoModuloCartilla.eas) const SizedBox(height: 14),
+            if (modulo == TipoModuloCartilla.motorizado) ...[
+              _buildMotorizadoDistritoDropdown(),
+              const SizedBox(height: 14),
+            ],
             _Field(
               controller: _controller('direccion'),
               label: 'Dirección',
@@ -6621,6 +6637,32 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMotorizadoDistritoDropdown() {
+    final items = _crtDistritos
+        .map((d) => d['nombre']?.toString() ?? '')
+        .where((v) => v.isNotEmpty)
+        .toList();
+    final current = _controller('distrito').text;
+    return DropdownButtonFormField<String>(
+      initialValue: items.contains(current) ? current : null,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Distrito',
+        prefixIcon: Icon(Icons.map_outlined),
+        border: OutlineInputBorder(),
+      ),
+      items: items
+          .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+          .toList(),
+      onChanged: (value) {
+        if (value == null) return;
+        _controller('distrito').text = value;
+        _invalidatePreview();
+        setState(() {});
+      },
     );
   }
 
@@ -6976,6 +7018,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       'causa',
       'reporta',
       'direccion',
+      if (modulo == TipoModuloCartilla.motorizado) 'distrito',
     };
     for (final key in keys) {
       controllers.putIfAbsent(key, () => TextEditingController());
@@ -6984,6 +7027,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (controllers['reporta']!.text.isEmpty &&
         widget.user?.nombreCompleto.isNotEmpty == true) {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
+    }
+
+    if (modulo == TipoModuloCartilla.motorizado && _crtDistritos.isEmpty) {
+      _loadCrtDistritos();
     }
 
     if (_isRetiroTemporalFlow) {

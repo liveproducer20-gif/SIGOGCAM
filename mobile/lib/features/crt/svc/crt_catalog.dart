@@ -64,10 +64,8 @@ class CrtCatalog {
         TipoCartilla.operativo,
       ],
       fields: [
-        CrtFieldConfig(key: 'sector', label: 'Sector o punto de servicio'),
-        CrtFieldConfig(key: 'personal', label: 'Personal motorizado'),
+        CrtFieldConfig(key: 'personal', label: 'Personal motorizado', required: false),
         CrtFieldConfig(key: 'vehiculo', label: 'Número de moto o vehículo', required: false),
-        CrtFieldConfig(key: 'procedimiento', label: 'Tipo de procedimiento'),
         CrtFieldConfig(key: 'novedad', label: 'Novedad o apoyo realizado', minLines: 4),
       ],
     ),
