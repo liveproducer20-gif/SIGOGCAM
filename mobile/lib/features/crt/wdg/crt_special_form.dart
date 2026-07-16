@@ -11,6 +11,7 @@ import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
 import '../svc/crt_special_text_generator.dart';
+import 'crt_widgets.dart';
 
 enum CrtSpecialFormKind { formacion, conductor, otras }
 
@@ -583,35 +584,46 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _title(Icons.preview_outlined, 'Vista previa'),
-        const SizedBox(height: 16),
+        Row(
+          children: [
+            const Icon(Icons.preview_outlined, color: Color(0xFF1D3F73), size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'VISTA PREVIA',
+                style: TextStyle(
+                  color: Color(0xFF1D3F73),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         _actionButtons(),
-        const SizedBox(height: 18),
-        Container(
-          width: double.infinity,
-          constraints: const BoxConstraints(minHeight: 560),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF9FAFB),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.black12),
-          ),
-          child: _preview == null
-              ? const Center(
-                  child: Text(
-                    'Complete el formulario y presione "Generar vista previa"',
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              : SelectableText(
-                  _preview!,
-                  style: const TextStyle(
-                    height: 1.45,
-                    fontFamily: 'monospace',
-                    fontSize: 13.5,
+        const SizedBox(height: 14),
+        _preview == null
+            ? Container(
+                width: double.infinity,
+                constraints: const BoxConstraints(minHeight: 400),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.black12),
+                ),
+                child: const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      'Complete el formulario y presione "Generar vista previa"',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF00A6D6), fontSize: 15),
+                    ),
                   ),
                 ),
-        ),
+              )
+            : CrtDocumentPreview(text: _preview!),
       ],
     ),
   );

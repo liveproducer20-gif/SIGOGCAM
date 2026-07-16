@@ -1071,68 +1071,67 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildEasConfigPanel() {
-    return _Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const _PanelTitle(icon: Icons.tune_outlined, title: 'Configuración'),
-          const SizedBox(height: 18),
-          if (_formacionSeleccionada == null &&
-              !_otrasCartillasSeleccionada) ...[
-            _Drop<CrtEasStation>(
-              value: eas,
-              label: 'EAS',
-              icon: Icons.location_city_outlined,
-              items: CrtCatalog.easStations,
-              itemText: (value) => '${value.codigo} - ${value.nombre}',
-              onChanged: (value) {
-                _invalidatePreview();
-                setState(() {
-                  eas = value;
-                  movil = _moviles.first.movil;
-                  _desaSection = 0;
-                  _desaMovil = '';
-                  _desaDireccion = '';
-                  _desaDireccionOtro = false;
-                  _direcciones = [];
-                });
-              },
-            ),
-            const SizedBox(height: 8),
-            _InfoLine(
-              icon: Icons.place_outlined,
-              text: '${eas.nombre}: ${eas.direccion}',
-            ),
-            const SizedBox(height: 14),
-            _Drop<String>(
-              value: movil,
-              label: 'Móvil asignado',
-              icon: Icons.directions_car_outlined,
-              items: _moviles.map((item) => item.movil).toList(),
-              itemText: (value) => 'Móvil $value',
-              onChanged: (value) {
-                _invalidatePreview();
-                setState(() => movil = value);
-              },
-            ),
-            const SizedBox(height: 14),
-            _Drop<RolMovil>(
-              value: rolMovil,
-              label: 'Que rol cumple usted en el movil',
-              icon: Icons.assignment_ind_outlined,
-              items: RolMovil.values,
-              itemText: (value) => value.label,
-              onChanged: (value) {
-                _invalidatePreview();
-                setState(() {
-                  rolMovil = value;
-                  _autoFillByRole();
-                });
-              },
-            ),
-          ],
+    return CrtSectionCard(
+      icon: Icons.tune_outlined,
+      title: 'CONFIGURACIÓN',
+      headerColor: CrtSectionColors.datosGenerales,
+      backgroundColor: CrtSectionColors.datosGeneralesBg,
+      children: [
+        if (_formacionSeleccionada == null &&
+            !_otrasCartillasSeleccionada) ...[
+          _Drop<CrtEasStation>(
+            value: eas,
+            label: 'EAS',
+            icon: Icons.location_city_outlined,
+            items: CrtCatalog.easStations,
+            itemText: (value) => '${value.codigo} - ${value.nombre}',
+            onChanged: (value) {
+              _invalidatePreview();
+              setState(() {
+                eas = value;
+                movil = _moviles.first.movil;
+                _desaSection = 0;
+                _desaMovil = '';
+                _desaDireccion = '';
+                _desaDireccionOtro = false;
+                _direcciones = [];
+              });
+            },
+          ),
+          const SizedBox(height: 8),
+          _InfoLine(
+            icon: Icons.place_outlined,
+            text: '${eas.nombre}: ${eas.direccion}',
+          ),
+          const SizedBox(height: 14),
+          _Drop<String>(
+            value: movil,
+            label: 'Móvil asignado',
+            icon: Icons.directions_car_outlined,
+            items: _moviles.map((item) => item.movil).toList(),
+            itemText: (value) => 'Móvil $value',
+            onChanged: (value) {
+              _invalidatePreview();
+              setState(() => movil = value);
+            },
+          ),
+          const SizedBox(height: 14),
+          _Drop<RolMovil>(
+            value: rolMovil,
+            label: 'Que rol cumple usted en el movil',
+            icon: Icons.assignment_ind_outlined,
+            items: RolMovil.values,
+            itemText: (value) => value.label,
+            onChanged: (value) {
+              _invalidatePreview();
+              setState(() {
+                rolMovil = value;
+                _autoFillByRole();
+              });
+            },
+          ),
         ],
-      ),
+      ],
     );
   }
 
@@ -6845,73 +6844,33 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _PanelTitle(
-            icon: Icons.preview_outlined,
-            title: 'Vista previa',
-          ),
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.end,
-              children: [
-                if (value != null) ...[
-                  FilledButton.icon(
-                    onPressed: guardando ? null : () => _generar(value),
-                    icon: guardando
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.copy_outlined),
-                    label: Text(guardando ? 'Guardando' : 'Crear cartilla'),
+          Row(
+            children: [
+              const Icon(Icons.preview_outlined, color: AppThm.priClr, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'VISTA PREVIA',
+                  style: TextStyle(
+                    color: AppThm.priClr,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      _previewText = null;
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                    icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Seguir editando'),
-                  ),
-                ] else
-                  FilledButton.icon(
-                    onPressed: guardando ? null : () => _doPreview(),
-                    icon: const Icon(Icons.visibility_outlined),
-                    label: const Text('Generar vista previa'),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 18),
-          if (value != null)
-            Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(minHeight: 560),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF9FAFB),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black12),
-              ),
-              child: SelectableText(
-                value,
-                style: const TextStyle(
-                  color: AppThm.txtClr,
-                  height: 1.45,
-                  fontFamily: 'monospace',
-                  fontSize: 13.5,
                 ),
               ),
-            )
+              CrtPreviewTabs(
+                selectedIndex: _previewTabIndex,
+                onTabChanged: (i) => setState(() => _previewTabIndex = i),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (value != null)
+            CrtDocumentPreview(text: value)
           else
             Container(
               width: double.infinity,
-              constraints: const BoxConstraints(minHeight: 560),
+              constraints: const BoxConstraints(minHeight: 400),
               decoration: BoxDecoration(
                 color: const Color(0xFFF9FAFB),
                 borderRadius: BorderRadius.circular(8),
@@ -6921,7 +6880,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 child: Padding(
                   padding: EdgeInsets.all(24),
                   child: Text(
-                    'Complete el formulario y presione "Generar vista previa"',
+                    'Complete el formulario y presione "Vista previa"',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: AppThm.secClr, fontSize: 15),
                   ),
@@ -6945,21 +6904,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         });
       }
     });
-  }
-
-  void _doPreview() {
-    if (_controller('causa').text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('El campo Causa es obligatorio para generar la vista previa')),
-      );
-      return;
-    }
-    _previewDebounce?.cancel();
-    final now = DateTime.now();
-    _previewText = _buildText();
-    _lastPreviewUpdate =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-    setState(() {});
   }
 
   Future<void> _generar(String value) async {
@@ -7375,33 +7319,6 @@ class _Panel extends StatelessWidget {
         ],
       ),
       child: child,
-    );
-  }
-}
-
-class _PanelTitle extends StatelessWidget {
-  final IconData icon;
-  final String title;
-
-  const _PanelTitle({required this.icon, required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, color: AppThm.secClr),
-        const SizedBox(width: 10),
-        Flexible(
-          child: Text(
-            title,
-            style: const TextStyle(
-              color: AppThm.priClr,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
