@@ -25,14 +25,14 @@ class CrtTextGenerator {
         ? ''
         : '\n\nEn la calle $direccion.';
 
+    final causa = data.values['causa']?.trim() ?? '';
     return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
 *REPORTE DE ${data.modulo.label.toUpperCase()}*
-*Tipo de cartilla:* ${data.tipo.label}
 *Fecha:* ${data.fecha}
 *Hora:* ${data.hora}
-*Jornada:* ${data.jornada.label}
 *Horario:* ${data.horario}
 ${_ubicacionInstitucional(data, direccion)}
+*CAUSA:* $causa
 
 ${_saludo(DateTime.now())}, permiso Sr. $jefeDisplay.
 
@@ -1194,7 +1194,7 @@ Adjunto fotografía''';
     if (data.modulo == TipoModuloCartilla.eas && data.eas != null) {
       return '*Distrito:* #5 MODELO\n*Circuito:* ${data.eas!.codigo} ${data.eas!.nombre}\n*Dirección:* $direccion';
     }
-    return '*Area:* ${data.modulo.label}\n*Dirección/Punto:* $direccion';
+    return '*Dirección/Punto:* $direccion';
   }
 
   static String _direccion(CrtFormData data) {

@@ -6583,6 +6583,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               },
             ),
             const SizedBox(height: 14),
+            _Field(
+              controller: _controller('causa'),
+              label: 'Causa',
+              icon: Icons.description_outlined,
+              required: true,
+              onChanged: () {
+                _invalidatePreview();
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 14),
             for (final field in activeFields) ...[
               _Field(
                 controller: _controller(field.key),
@@ -6716,6 +6727,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   void _doPreview() {
+    if (_controller('causa').text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El campo Causa es obligatorio para generar la vista previa')),
+      );
+      return;
+    }
     _previewDebounce?.cancel();
     _previewText = _buildText();
     setState(() {});
@@ -6723,6 +6740,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Future<void> _generar(String value) async {
     if (formKey.currentState != null && !formKey.currentState!.validate()) {
+      return;
+    }
+    if (_controller('causa').text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('El campo Causa es obligatorio')),
+      );
       return;
     }
     if (widget.user == null) {
@@ -6737,7 +6760,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     try {
       final result = await InsApi().registrarCartilla(
         contenido: value,
-        causa: '${modulo.label} - ${tipo.label}',
+        causa: _controller('causa').text.trim(),
       );
       await Clipboard.setData(ClipboardData(text: value));
       if (!mounted) return;
@@ -6950,6 +6973,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   void _syncFields() {
     final keys = {
       ...activeFields.map((field) => field.key),
+      'causa',
       'reporta',
       'direccion',
     };
