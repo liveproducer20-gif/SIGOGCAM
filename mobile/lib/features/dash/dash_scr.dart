@@ -357,6 +357,9 @@ class _WebContentState extends State<_WebContent> {
         _insRefreshKey++;
         _pages.remove(SideMenuDestination.badges.name);
       }
+      if (oldWidget.item.destination == SideMenuDestination.booklets) {
+        _pages.remove(SideMenuDestination.booklets.name);
+      }
       _startingSection = !_pages.containsKey(widget.item.pageKey);
       if (_startingSection) {
         WidgetsBinding.instance.addPostFrameCallback((_) {

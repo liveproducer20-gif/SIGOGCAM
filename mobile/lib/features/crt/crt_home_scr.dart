@@ -578,10 +578,45 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ),
       const SizedBox(height: 16),
+      _buildModuloSelector(),
+      const SizedBox(height: 16),
       _buildFormContent(),
       const SizedBox(height: 24),
       _buildActionBar(),
     ];
+  }
+
+  Widget _buildModuloSelector() {
+    return _Panel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _PanelTitle(icon: Icons.tune_outlined, title: 'Módulo'),
+          const SizedBox(height: 18),
+          _Drop<TipoModuloCartilla>(
+            value: modulo,
+            label: 'Modulo de cartilla',
+            icon: Icons.dashboard_customize_outlined,
+            items: TipoModuloCartilla.values,
+            itemText: (value) => value.label,
+            onChanged: (value) {
+              _invalidatePreview();
+              setState(() {
+                modulo = value;
+                _formacionSeleccionada = null;
+                _otrasCartillasSeleccionada = true;
+                final tipos = CrtCatalog.configFor(modulo).tipos;
+                if (!tipos.contains(tipo)) tipo = tipos.first;
+                if (modulo == TipoModuloCartilla.eas) {
+                  movil = _moviles.first.movil;
+                }
+                _syncFields();
+              });
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildBackButton() {
@@ -984,28 +1019,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         children: [
           const _PanelTitle(icon: Icons.tune_outlined, title: 'Configuración'),
           const SizedBox(height: 18),
-          _Drop<TipoModuloCartilla>(
-            value: modulo,
-            label: 'Modulo de cartilla',
-            icon: Icons.dashboard_customize_outlined,
-            items: TipoModuloCartilla.values,
-            itemText: (value) => value.label,
-            onChanged: (value) {
-              _invalidatePreview();
-              setState(() {
-                modulo = value;
-                _formacionSeleccionada = null;
-                _otrasCartillasSeleccionada = true;
-                final tipos = CrtCatalog.configFor(modulo).tipos;
-                if (!tipos.contains(tipo)) tipo = tipos.first;
-                if (modulo == TipoModuloCartilla.eas) {
-                  movil = _moviles.first.movil;
-                }
-                _syncFields();
-              });
-            },
-          ),
-          const SizedBox(height: 12),
           if (_formacionSeleccionada == null &&
               !_otrasCartillasSeleccionada) ...[
             _Drop<CrtEasStation>(
@@ -1804,7 +1817,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
 
@@ -2492,7 +2505,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
 
@@ -2943,7 +2956,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -3692,7 +3705,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -4685,7 +4698,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -5303,7 +5316,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -6444,7 +6457,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -6540,35 +6553,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (modulo != TipoModuloCartilla.eas) ...[
-              const _PanelTitle(
-                icon: Icons.tune_outlined,
-                title: 'Configuración',
-              ),
-              const SizedBox(height: 18),
-              _Drop<TipoModuloCartilla>(
-                value: modulo,
-                label: 'Modulo de cartilla',
-                icon: Icons.dashboard_customize_outlined,
-                items: TipoModuloCartilla.values,
-                itemText: (value) => value.label,
-                onChanged: (value) {
-                  _invalidatePreview();
-                  setState(() {
-                    modulo = value;
-                    _formacionSeleccionada = null;
-                    _otrasCartillasSeleccionada = true;
-                    final tipos = CrtCatalog.configFor(modulo).tipos;
-                    if (!tipos.contains(tipo)) tipo = tipos.first;
-                    if (modulo == TipoModuloCartilla.eas) {
-                      movil = _moviles.first.movil;
-                    }
-                    _syncFields();
-                  });
-                },
-              ),
-              const SizedBox(height: 14),
-            ],
+            if (modulo != TipoModuloCartilla.eas) const SizedBox(height: 14),
             _Field(
               controller: _controller('direccion'),
               label: 'Dirección',
@@ -6748,7 +6733,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             label: 'Compartir',
             onPressed: () => Share.share(value),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
 

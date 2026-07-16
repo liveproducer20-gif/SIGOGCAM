@@ -224,7 +224,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         },
       ),
       _field('horario', 'Horario'),
-      _autoDateTimeDisplay(),
       _field('novedades', 'Novedades', required: false, lines: 4),
       _field('radiooperadores', 'Número de radiooperadores', digits: true),
       _field('operativos', 'Número de ACM operativos', digits: true),
@@ -274,7 +273,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       ),
       _field('lugar', 'Lugar de la opción a reportar'),
       _mobileSelector(),
-      _dateTimeField(),
       DropdownButtonFormField<String>(
         initialValue: _combustible,
         decoration: _decoration(
@@ -332,7 +330,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),
       _field('horario', 'Horario'),
-      _autoDateTimeDisplay(),
       _field('causa', 'Causa'),
       _field('novedad', 'Novedad', lines: 6),
       _reporterDisplay(),
@@ -404,39 +401,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     );
   }
 
-  Widget _dateTimeField() => InkWell(
-    onTap: _pickDateTime,
-    child: InputDecorator(
-      decoration: _decoration('Fecha y hora del reporte', Icons.event_outlined),
-      child: Text(_formatDateTime(_dateTime)),
-    ),
-  );
-
-  Future<void> _pickDateTime() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _dateTime,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_dateTime),
-    );
-    if (time == null) return;
-    setState(() {
-      _dateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
-        time.hour,
-        time.minute,
-      );
-      _invalidate();
-    });
-  }
-
   Widget _districtDropdown() {
     final items = _distritos
         .map((d) => d['nombre']?.toString() ?? '')
@@ -460,11 +424,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       validator: (v) => v == null || v.isEmpty ? 'Seleccione un distrito' : null,
     );
   }
-
-  Widget _autoDateTimeDisplay() => InputDecorator(
-    decoration: _decoration('Fecha y hora del reporte', Icons.event_outlined),
-    child: Text(_formatDateTime(_dateTime)),
-  );
 
   Widget _movilesSection() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,7 +632,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
             label: 'Compartir',
             onPressed: () => Share.share(_preview!),
           ),
-          duration: const Duration(seconds: 6),
+          duration: const Duration(seconds: 3),
         ),
       );
       final insignia = result.insigniaDesbloqueada;
@@ -779,8 +738,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   }
 
   Future<void> _share() => Share.share(_preview!);
-  String _formatDateTime(DateTime value) =>
-      '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year} - ${value.hour.toString().padLeft(2, '0')}:${value.minute.toString().padLeft(2, '0')}';
   InputDecoration _decoration(String label, IconData icon) => InputDecoration(
     labelText: label,
     prefixIcon: Icon(icon),

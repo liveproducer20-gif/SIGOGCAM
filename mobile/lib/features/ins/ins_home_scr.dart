@@ -48,7 +48,8 @@ class _InsHomeScrState extends State<InsHomeScr> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
-      setState(() => _future = _load());
+      _future = _load();
+      setState(() {});
     }
   }
 
@@ -58,7 +59,10 @@ class _InsHomeScrState extends State<InsHomeScr> with WidgetsBindingObserver {
     if (route != null && route.isCurrent && _needsRefresh) {
       _needsRefresh = false;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _future = _load());
+        if (mounted) {
+          _future = _load();
+          setState(() {});
+        }
       });
     } else if (route != null && !route.isCurrent) {
       _needsRefresh = true;
