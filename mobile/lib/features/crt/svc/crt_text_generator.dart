@@ -23,7 +23,7 @@ class CrtTextGenerator {
     final procedimiento = _procedimiento(data);
     final puntoMartillo = data.tipo == TipoCartilla.ausentismo
         ? ''
-        : '\n\nSe procedió con punto martillo en la calle $direccion.';
+        : '\n\nEn la calle $direccion.';
 
     return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
 *REPORTE DE ${data.modulo.label.toUpperCase()}*

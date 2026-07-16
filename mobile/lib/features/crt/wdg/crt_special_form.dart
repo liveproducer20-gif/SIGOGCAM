@@ -5,6 +5,8 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/auth/app_user.dart';
 import '../../ins/ins_api.dart';
 import '../../ins/ins_badge_dlg.dart';
+import '../mdl/crt_enums.dart';
+import '../mdl/crt_models.dart';
 import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
@@ -14,6 +16,8 @@ enum CrtSpecialFormKind { formacion, conductor, otras }
 
 class CrtSpecialForm extends StatefulWidget {
   final CrtSpecialFormKind kind;
+  final TipoModuloCartilla modulo;
+  final CrtEasStation? easStation;
   final AppUser? user;
   final String jefe;
   final bool canCreate;
@@ -24,6 +28,8 @@ class CrtSpecialForm extends StatefulWidget {
   const CrtSpecialForm({
     super.key,
     required this.kind,
+    required this.modulo,
+    this.easStation,
     required this.user,
     required this.jefe,
     required this.canCreate,
@@ -56,6 +62,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
   int? _encargadoId;
   int? _movilId;
   bool _movilesActivos = true;
+  TimeOfDay? _horarioInicio;
 
   TextEditingController _c(String key, [String value = '']) =>
       _controllers.putIfAbsent(key, () => TextEditingController(text: value));
@@ -202,6 +209,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       _districtDropdown(),
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),
+      _field('causa', 'Causa'),
       DropdownButtonFormField<String>(
         initialValue: _jornada,
         decoration: _decoration('Jornada', Icons.schedule_outlined),
@@ -329,12 +337,48 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       _districtDropdown(),
       _field('circuito', 'Circuito'),
       _field('direccion', 'Dirección'),
-      _field('horario', 'Horario'),
+      if (widget.modulo == TipoModuloCartilla.eas || widget.modulo == TipoModuloCartilla.radioperador)
+        _field('horario', 'Horario')
+      else
+        _horarioTimePicker(),
       _field('causa', 'Causa'),
       _field('novedad', 'Novedad', lines: 6),
       _reporterDisplay(),
     ].separatedBy(const SizedBox(height: 14)),
   );
+
+  Widget _horarioTimePicker() {
+    if (_horarioInicio != null && _c('horario').text.isEmpty) {
+      _c('horario').text = _formatHorario(_horarioInicio!);
+    }
+    return TextFormField(
+      readOnly: true,
+      controller: _c('horario'),
+      decoration: _decoration('Horario', Icons.access_time),
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: context,
+          initialTime: _horarioInicio ?? TimeOfDay.now(),
+        );
+        if (picked != null) {
+          setState(() {
+            _horarioInicio = picked;
+            _c('horario').text = _formatHorario(picked);
+            _invalidate();
+          });
+        }
+      },
+    );
+  }
+
+  String _formatHorario(TimeOfDay start) {
+    final endMin = start.hour * 60 + start.minute + (8 * 60 + 30);
+    final endHour = (endMin ~/ 60) % 24;
+    final endMinute = endMin % 60;
+    final s = '${start.hour.toString().padLeft(2, '0')}:${start.minute.toString().padLeft(2, '0')}';
+    final e = '${endHour.toString().padLeft(2, '0')}:${endMinute.toString().padLeft(2, '0')}';
+    return '$s A $e';
+  }
 
   Widget _personSelector({
     required String label,
@@ -664,6 +708,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     distrito: _c('distrito').text.trim(),
     circuito: _c('circuito').text.trim(),
     direccion: _c('direccion').text.trim(),
+    causa: _c('causa').text.trim(),
     horario: _c('horario').text.trim(),
     fechaHora: _dateTime,
     novedades: _c('novedades').text,
@@ -701,6 +746,8 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     fechaHora: _dateTime,
     causa: _c('causa').text.trim(),
     novedad: _c('novedad').text,
+    modulo: widget.modulo,
+    easStation: widget.easStation,
     reportantes: [widget.user?.nombreCompleto ?? ''],
     jefe: widget.jefe.isEmpty ? 'Jefe de Control Municipal' : widget.jefe,
   );

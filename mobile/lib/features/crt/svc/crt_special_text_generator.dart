@@ -1,3 +1,4 @@
+import '../mdl/crt_enums.dart';
 import '../mdl/crt_special_models.dart';
 
 class CrtSpecialTextGenerator {
@@ -38,23 +39,17 @@ class CrtSpecialTextGenerator {
         ? '\n*Personal participante:*'
         : '';
 
+    final circuitoLine = data.circuito.isEmpty ? '' : '*Circuito:* ${data.circuito}\n\n';
+    final causa = data.causa.isNotEmpty ? data.causa : data.tipo.causa;
     return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
 
-*REPORTE DE FORMACIÓN DE RADIO-OPERADORES*
+$circuitoLine*Dirección:* ${data.direccion}
 
-*Distrito ${data.distrito}*
-
-*Circuito:* ${data.circuito}
-
-*Dirección:* ${data.direccion}
-
-*Horario:* ${data.horario}
+*Causa:* $causa
 
 *Hora:* ${_time(data.fechaHora)}
 
 *Fecha:* ${_date(data.fechaHora)}
-
-*Causa:* ${data.tipo.causa}
 
 ${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente, le informo que:
 
@@ -111,23 +106,19 @@ $observaciones''';
         .where((e) => e.isNotEmpty)
         .map((e) => 'ACM. $e')
         .join('\n');
-    return '''*CUERPO AGENTE DE CONTROL MUNICIPAL*
+    final header = _buildHeader(data);
+    final circuitoLine = data.circuito.isEmpty ? '' : '*Circuito:* ${data.circuito}\n\n';
+    final horarioLine = data.horario.isEmpty ? '' : '*Horario:* ${data.horario}\n\n';
+    final distritoLine = data.distrito.isEmpty ? '' : '*Distrito:* ${data.distrito}\n\n';
+    return '''$header*CUERPO AGENTE DE CONTROL MUNICIPAL*
 
-*REPORTE DE RADIOOPERADORES EAS CEIBOS*
-
-*Distrito:* ${data.distrito}
-
-*Circuito:* ${data.circuito}
-
-*Dirección:* ${data.direccion}
-
-*Horario:* ${data.horario}
-
-*Hora:* ${_time12(data.fechaHora)}
-
-*Fecha:* ${_shortDate(data.fechaHora)}
+$distritoLine$circuitoLine*Dirección:* ${data.direccion}
 
 *Causa:* ${data.causa}
+
+$horarioLine*Hora:* ${_time12(data.fechaHora)}
+
+*Fecha:* ${_shortDate(data.fechaHora)}
 
 ${saludo(data.fechaHora)}, permiso Sr. ${data.jefe}. Muy respetuosamente me permito informarle que en las instalaciones de EAS CEIBOS se registra la siguiente novedad:
 
@@ -144,17 +135,35 @@ $reportantes
 *Adjunto Fotografía:*''';
   }
 
+  static String _buildHeader(OtrasCartillasData data) {
+    if (data.modulo == TipoModuloCartilla.eas) return '*REPORTE DE EAS*\n\n';
+    if (data.modulo == TipoModuloCartilla.radioperador) {
+      final eas = data.easStation;
+      final nombre = eas != null ? eas.nombre.trim() : '';
+      if (nombre.isNotEmpty) return '*REPORTE DE RADIOOPERADORES EAS ($nombre)*\n\n';
+      return '*REPORTE DE RADIOOPERADORES EAS*\n\n';
+    }
+    return '';
+  }
+
   static String saludo(DateTime value) {
     if (value.hour < 12) return 'Muy buenos días';
     if (value.hour < 19) return 'Muy buenas tardes';
     return 'Muy buenas noches';
   }
 
-  static List<String> _lines(String value) => value
-      .split(RegExp(r'[\r\n]+'))
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty && e.toLowerCase() != 'sin novedades')
-      .toList();
+  static List<String> _lines(String value) {
+    final seen = <String>{};
+    return value
+        .split(RegExp(r'[\r\n]+'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .where((e) {
+          if (e.toLowerCase() != 'sin novedades') return true;
+          return seen.add(e.toLowerCase());
+        })
+        .toList();
+  }
 
   static String _twoDigits(int value) => value.toString().padLeft(2, '0');
   static String _time(DateTime value) =>

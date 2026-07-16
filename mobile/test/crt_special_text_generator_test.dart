@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/features/crt/mdl/crt_enums.dart';
 import 'package:mobile/features/crt/mdl/crt_special_models.dart';
 import 'package:mobile/features/crt/svc/crt_special_text_generator.dart';
 
@@ -108,12 +109,13 @@ void main() {
         fechaHora: DateTime(2026, 7, 14, 19, 25),
         causa: 'NOVEDAD EN INSTALACIONES',
         novedad: 'Se registra una novedad de prueba.',
+        modulo: TipoModuloCartilla.eas,
         reportantes: const ['CALDERON JORGE', 'ZUÑIGA GUILLERMO'],
         jefe: 'Maldonado Cabrera Freddy',
       );
 
       final text = CrtSpecialTextGenerator.otras(data);
-      expect(text, contains('*REPORTE DE RADIOOPERADORES EAS CEIBOS*'));
+      expect(text, contains('*REPORTE DE EAS*'));
       expect(text, contains('*Hora:* 07:25 p. m.'));
       expect(text, contains('*Fecha:* 14/7/2026'));
       expect(text, contains('permiso Sr. Maldonado Cabrera Freddy'));

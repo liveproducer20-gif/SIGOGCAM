@@ -1,3 +1,6 @@
+import '../mdl/crt_enums.dart';
+import '../mdl/crt_models.dart';
+
 enum TipoFormacion { entrante, saliente }
 
 enum OpcionConductor { entradaPersonal, salidaPersonal, novedadesMovil }
@@ -33,6 +36,7 @@ class FormacionData {
   final String direccion;
   final String horario;
   final DateTime fechaHora;
+  final String causa;
   final String novedades;
   final int radiooperadores;
   final int acmOperativos;
@@ -48,6 +52,7 @@ class FormacionData {
     required this.direccion,
     required this.horario,
     required this.fechaHora,
+    this.causa = '',
     required this.novedades,
     required this.radiooperadores,
     required this.acmOperativos,
@@ -64,6 +69,7 @@ class FormacionData {
     'direccion': direccion,
     'horario': horario,
     'fecha_hora': fechaHora.toIso8601String(),
+    'causa': causa,
     'novedades': novedades,
     'radiooperadores': radiooperadores,
     'acm_operativos': acmOperativos,
@@ -135,6 +141,8 @@ class OtrasCartillasData {
   final DateTime fechaHora;
   final String causa;
   final String novedad;
+  final TipoModuloCartilla modulo;
+  final CrtEasStation? easStation;
   final List<String> reportantes;
   final String jefe;
 
@@ -146,6 +154,8 @@ class OtrasCartillasData {
     required this.fechaHora,
     required this.causa,
     required this.novedad,
+    required this.modulo,
+    this.easStation,
     required this.reportantes,
     required this.jefe,
   });

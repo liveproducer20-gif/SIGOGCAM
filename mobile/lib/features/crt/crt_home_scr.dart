@@ -682,6 +682,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       return CrtSpecialForm(
         key: ValueKey(_formacionSeleccionada),
         kind: CrtSpecialFormKind.formacion,
+        modulo: modulo,
         formationType: _formacionSeleccionada,
         user: widget.user,
         jefe: _jefeNombre,
@@ -694,6 +695,21 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       return CrtSpecialForm(
         key: const ValueKey('otras-cartillas'),
         kind: CrtSpecialFormKind.otras,
+        modulo: modulo,
+        easStation: eas,
+        user: widget.user,
+        jefe: _jefeNombre,
+        canCreate: _canGenerate,
+        hidePreview: true,
+        onPreviewChanged: _onCrtPreviewChanged,
+      );
+    }
+    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.radioperador) {
+      return CrtSpecialForm(
+        key: const ValueKey('otras-cartillas-rad'),
+        kind: CrtSpecialFormKind.otras,
+        modulo: modulo,
+        easStation: eas,
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canGenerate,
@@ -704,6 +720,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (modulo == TipoModuloCartilla.conductor) {
       return CrtSpecialForm(
         kind: CrtSpecialFormKind.conductor,
+        modulo: modulo,
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canCreateConductor,
@@ -769,6 +786,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool get _showGlobalActionBar {
     if (_formacionSeleccionada != null) return false;
     if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) return false;
+    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.radioperador) return false;
     if (modulo == TipoModuloCartilla.conductor) return false;
     if (modulo == TipoModuloCartilla.eas) {
       // EAS types that have their own generate button inside the wizard
