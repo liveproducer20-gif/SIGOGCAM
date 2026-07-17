@@ -457,28 +457,17 @@ class CrtCatalog {
   static List<CrtFieldConfig> _easSpecificFields(TipoCartilla tipo) {
     switch (tipo) {
       case TipoCartilla.desalojoVendedores:
+      case TipoCartilla.puntoMartillo:
+      case TipoCartilla.rondasDisuasivas:
+      case TipoCartilla.retiroTemporal:
+      case TipoCartilla.requerimiento:
+      case TipoCartilla.colaboracionEventos:
         return const [
+          CrtFieldConfig(key: 'direccion', label: 'Dirección'),
           CrtFieldConfig(
-            key: 'vendedores',
-            label: 'Cantidad o identificación de vendedores',
-          ),
-          CrtFieldConfig(
-            key: 'mercaderia',
-            label: 'Tipo de mercadería que comercializaban',
-          ),
-          CrtFieldConfig(
-            key: 'actitud',
-            label: 'Actitud durante el procedimiento',
-          ),
-          CrtFieldConfig(
-            key: 'incidente',
-            label: 'Incidente durante el procedimiento',
+            key: 'novedad',
+            label: 'Descripción de la novedad',
             required: false,
-            minLines: 2,
-          ),
-          CrtFieldConfig(
-            key: 'resultado',
-            label: 'Resultado del procedimiento',
             minLines: 3,
           ),
         ];
@@ -507,6 +496,15 @@ class CrtCatalog {
           CrtFieldConfig(key: 'motivo', label: 'Tipo o motivo de ausentismo'),
         ];
       case TipoCartilla.colaboracionEntidades:
+        return const [
+          CrtFieldConfig(key: 'direccion', label: 'Dirección'),
+          CrtFieldConfig(
+            key: 'novedad',
+            label: 'Descripción de la novedad',
+            required: false,
+            minLines: 3,
+          ),
+        ];
       case TipoCartilla.operativoConjunto:
       case TipoCartilla.colaboracionAtm:
         return const [

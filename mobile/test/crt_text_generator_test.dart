@@ -274,4 +274,117 @@ void main() {
   test('retiroTemporal is in commonTypes', () {
     expect(CrtCatalog.commonTypes, contains(TipoCartilla.retiroTemporal));
   });
+
+  CrtFormData makeUnifiedEas({
+    required TipoCartilla tipo,
+    String novedad = '',
+    String direccion = 'Av. Carlos Julio Arosemena y Calle Primera',
+  }) =>
+      CrtFormData(
+        modulo: TipoModuloCartilla.eas,
+        tipo: tipo,
+        jornada: Jornada.matutina,
+        horario: '06:00 A 14:00',
+        fecha: '17/07/2026',
+        hora: '08:30',
+        eas: CrtCatalog.easStations.first,
+        values: {
+          'direccion': direccion,
+          'novedad': novedad,
+        },
+      );
+
+  test('unified eas: desalojo uses template with tipo.label as accion', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.desalojoVendedores),
+    );
+    expect(text, contains('se procedió a realizar Desalojo de vendedores autónomos no regularizados.'));
+    expect(text, contains('Asimismo, notifico la presente novedad para los fines correspondientes.'));
+    expect(text, isNot(contains('Móvil')));
+    expect(text, isNot(contains('REPORTA:')));
+  });
+
+  test('unified eas: punto martillo uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.puntoMartillo),
+    );
+    expect(text, contains('se procedió a realizar Punto Martillo.'));
+  });
+
+  test('unified eas: rondas disuasivas uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.rondasDisuasivas),
+    );
+    expect(text, contains('se procedió a realizar Rondas disuasivas.'));
+  });
+
+  test('unified eas: retiro temporal uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.retiroTemporal),
+    );
+    expect(text, contains('se procedió a realizar Retiro temporal.'));
+  });
+
+  test('unified eas: requerimiento uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.requerimiento),
+    );
+    expect(text, contains('se procedió a realizar Requerimiento.'));
+  });
+
+  test('unified eas: colaboracion entidades uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.colaboracionEntidades),
+    );
+    expect(text, contains('se procedió a realizar Colaboración con otras entidades.'));
+  });
+
+  test('unified eas: colaboracion ciudadana uses tipo.label', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.colaboracionEventos),
+    );
+    expect(text, contains('se procedió a realizar Colaboración en eventos.'));
+  });
+
+  test('unified eas: includes novedad when provided', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(
+        tipo: TipoCartilla.rondasDisuasivas,
+        novedad: 'Durante el procedimiento se verificó que no existían novedades adicionales.',
+      ),
+    );
+    expect(text, contains('Durante el procedimiento se verificó que no existían novedades adicionales.'));
+    expect(text, contains('se procedió a realizar Rondas disuasivas.'));
+    expect(text, contains('Asimismo, notifico la presente novedad para los fines correspondientes.'));
+  });
+
+  test('unified eas: omits novedad section when empty', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.puntoMartillo, novedad: ''),
+    );
+    expect(text, contains('se procedió a realizar Punto Martillo.'));
+    expect(text, contains('Asimismo, notifico la presente novedad para los fines correspondientes.'));
+    final pmIndex = text.indexOf('se procedió a realizar Punto Martillo.');
+    final asimismoIndex = text.indexOf('Asimismo, notifico la presente novedad');
+    expect(pmIndex, lessThan(asimismoIndex));
+  });
+
+  test('unified eas: shows jefe name dynamically', () {
+    CrtTextGenerator.jefeNombre = 'Maldonado Cabrera Freddy';
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(tipo: TipoCartilla.desalojoVendedores),
+    );
+    expect(text, contains('Maldonado Cabrera Freddy'));
+    CrtTextGenerator.jefeNombre = '';
+  });
+
+  test('unified eas: shows direccion from values', () {
+    final text = CrtTextGenerator.build(
+      makeUnifiedEas(
+        tipo: TipoCartilla.requerimiento,
+        direccion: 'Av. Víctor Emilio Estrada y Circunvalación Sur',
+      ),
+    );
+    expect(text, contains('a la altura de Av. Víctor Emilio Estrada y Circunvalación Sur'));
+  });
 }

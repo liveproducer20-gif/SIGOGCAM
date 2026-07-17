@@ -61,14 +61,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final crtApi = CrtApi();
   List<Map<String, dynamic>> _crtDistritos = [];
 
-  bool _desaCargando = false;
+  final bool _desaCargando = false;
   int _desaSection = 0;
-  String _desaJp = '';
-  String _desaAux = '';
   bool get _hasPolicia => _desaPoliciaOtro || _desaPoliciaId != null;
   String _desaMovil = '';
   String _desaCp = '';
-  String _desaCpGuardado = '';
+  final String _desaCpGuardado = '';
   int? _desaPoliciaId;
   String _desaPoliciaNombre = '';
   bool _desaPoliciaOtro = false;
@@ -85,12 +83,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final _desaDireccionCtrl = TextEditingController();
   final _ezDetalleCtrl = TextEditingController();
 
-  bool _rtCargando = false;
+  final bool _rtCargando = false;
   int _rtSection = 0;
   String _rtJp = '';
   String _rtMovil = '';
   String _rtCp = '';
-  String _rtCpGuardado = '';
+  final String _rtCpGuardado = '';
   int? _rtPoliciaId;
   String _rtPoliciaNombre = '';
   bool _rtPoliciaOtro = false;
@@ -113,12 +111,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final _rtCantidadCtrl = TextEditingController();
   bool _rtGuardando = false;
 
-  bool _colCargando = false;
+  final bool _colCargando = false;
   int _colSection = 0;
   String _colJp = '';
-  String _colMovil = '';
+  final String _colMovil = '';
   String _colCp = '';
-  String _colCpGuardado = '';
   int? _colPoliciaId;
   String _colPoliciaNombre = '';
   bool _colPoliciaOtro = false;
@@ -158,12 +155,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _colCasaSalud = '';
   bool _colGuardando = false;
 
-  bool _reqCargando = false;
+  final bool _reqCargando = false;
   int _reqSection = 0;
   String _reqJp = '';
-  String _reqMovil = '';
+  final String _reqMovil = '';
   String _reqCp = '';
-  String _reqCpGuardado = '';
   int? _reqPoliciaId;
   String _reqPoliciaNombre = '';
   bool _reqPoliciaOtro = false;
@@ -185,12 +181,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   String _reqInfoAdicional = '';
   bool _reqGuardando = false;
 
-  bool _ciuCargando = false;
+  final bool _ciuCargando = false;
   int _ciuSection = 0;
   String _ciuJp = '';
-  String _ciuMovil = '';
+  final String _ciuMovil = '';
   String _ciuCp = '';
-  String _ciuCpGuardado = '';
   int? _ciuPoliciaId;
   String _ciuPoliciaNombre = '';
   bool _ciuPoliciaOtro = false;
@@ -635,7 +630,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           setState(() {
             modulo = value;
             _formacionSeleccionada = null;
-            _otrasCartillasSeleccionada = true;
+            _otrasCartillasSeleccionada = value == TipoModuloCartilla.eas
+                ? false
+                : true;
             final tipos = CrtCatalog.configFor(modulo).tipos;
             if (!tipos.contains(tipo)) tipo = tipos.first;
             if (modulo == TipoModuloCartilla.eas) {
@@ -727,23 +724,22 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildEasFormOnly() {
+    final isUnifiedEasFlow =
+        _isDesalojoFlow ||
+        _isPuntoMartilloFlow ||
+        _isRondasDisuasivasFlow ||
+        _isRetiroTemporalFlow ||
+        _isColaboracionFlow ||
+        _isRequerimientoFlow ||
+        _isColaboracionCiudadanaFlow;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildEasConfigPanel(),
         const SizedBox(height: 20),
-        if (_isDesalojoFlow)
-          _buildDesalojoWizard()
-        else if (_isPuntoMartilloFlow)
-          _buildPuntoMartilloForm()
-        else if (_isRondasDisuasivasFlow)
-          _buildRondasDisuasivasForm()
-        else if (_isColaboracionFlow)
-          _buildColaboracionWizard()
-        else if (_isRequerimientoFlow)
-          _buildRequerimientoWizard()
-        else if (_isColaboracionCiudadanaFlow)
-          _buildColCiudadanaWizard()
+        if (isUnifiedEasFlow)
+          _formPanel()
         else if (_isAusentismoFlow)
           _buildAusentismoWizard()
         else if (_isGenericEasWizardFlow)
@@ -1174,7 +1170,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: const OutlineInputBorder(),
             ),
             onChanged: (value) {
-              _desaJp = value;
               _invalidatePreview();
               setState(() {});
             },
@@ -1205,7 +1200,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               onChanged: (value) {
-                _desaAux = value;
                 _invalidatePreview();
                 setState(() {});
               },
@@ -1272,7 +1266,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               border: const OutlineInputBorder(),
             ),
             onChanged: (value) {
-              _desaJp = value;
               _invalidatePreview();
               setState(() {});
             },
@@ -1303,7 +1296,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 border: OutlineInputBorder(),
               ),
               onChanged: (value) {
-                _desaAux = value;
                 _invalidatePreview();
                 setState(() {});
               },
@@ -1386,7 +1378,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   border: const OutlineInputBorder(),
                 ),
                 onChanged: (value) {
-                  _desaJp = value;
                   _invalidatePreview();
                   setState(() {});
                 },
@@ -1401,7 +1392,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     border: OutlineInputBorder(),
                   ),
                   onChanged: (value) {
-                    _desaAux = value;
                     _invalidatePreview();
                     setState(() {});
                   },
@@ -1876,78 +1866,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       );
     } finally {
       if (mounted) setState(() => guardando = false);
-    }
-  }
-
-  Future<void> _cargarDatosDesalojo() async {
-    setState(() => _desaCargando = true);
-    try {
-      final easId = _easDbId;
-      final results = await Future.wait([
-        crtApi.getCp(),
-        crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(easId),
-        _cargarDirecciones(),
-      ]);
-
-      final cpGuardado = results[0] as String?;
-      final policiaData = results[1] as Map<String, dynamic>?;
-      final servidores = results[2] as List<Map<String, dynamic>>;
-
-      setState(() {
-        _desaCpGuardado = cpGuardado ?? '';
-        if (_desaCpGuardado.isNotEmpty) {
-          _desaCpCtrl.text = _desaCpGuardado;
-          _desaCp = _desaCpGuardado;
-        }
-        _servidoresPoliciales = servidores;
-        final pid = policiaData?['servidorPolicialId'] as int?;
-        if (pid != null && pid > 0) {
-          _desaPoliciaId = pid;
-          _desaPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
-        }
-      });
-    } catch (_) {
-      // Silently fail on temp data load
-    } finally {
-      if (mounted) setState(() => _desaCargando = false);
-    }
-  }
-
-  Future<void> _cargarDatosRetiroTemporal() async {
-    if (modulo != TipoModuloCartilla.eas) return;
-    setState(() => _rtCargando = true);
-    try {
-      final easId = _easDbId;
-      final results = await Future.wait([
-        crtApi.getCp(),
-        crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(easId),
-        _cargarDirecciones(),
-      ]);
-
-      final cpGuardado = results[0] as String?;
-      final policiaData = results[1] as Map<String, dynamic>?;
-      final servidores = results[2] as List<Map<String, dynamic>>;
-
-      setState(() {
-        _rtCpGuardado = cpGuardado ?? '';
-        if (_rtCpGuardado.isNotEmpty) {
-          _rtCpCtrl.text = _rtCpGuardado;
-          _rtCp = _rtCpGuardado;
-        }
-        _rtServidoresPoliciales = servidores;
-        _rtMovil = _moviles.first.movil;
-        final pid = policiaData?['servidorPolicialId'] as int?;
-        if (pid != null && pid > 0) {
-          _rtPoliciaId = pid;
-          _rtPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
-        }
-      });
-    } catch (_) {
-      // Silently fail on temp data load
-    } finally {
-      if (mounted) setState(() => _rtCargando = false);
     }
   }
 
@@ -3846,41 +3764,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Future<void> _cargarDatosColaboracion() async {
-    setState(() => _colCargando = true);
-    try {
-      final easId = _easDbId;
-      final results = await Future.wait([
-        crtApi.getCp(),
-        crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(easId),
-        _cargarDirecciones(),
-      ]);
-      final cpGuardado = results[0] as String?;
-      final policiaData = results[1] as Map<String, dynamic>?;
-      final servidores = results[2] as List<Map<String, dynamic>>;
-      setState(() {
-        _colCpGuardado = cpGuardado ?? '';
-        if (_colCpGuardado.isNotEmpty) {
-          _colCpCtrl.text = _colCpGuardado;
-          _colCp = _colCpGuardado;
-        }
-        _colServidoresPoliciales = servidores;
-        _colMovil = _moviles.first.movil;
-        _colSubtype = 'entidad';
-        final pid = policiaData?['servidorPolicialId'] as int?;
-        if (pid != null && pid > 0) {
-          _colPoliciaId = pid;
-          _colPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
-        }
-      });
-    } catch (_) {
-      // Silently fail on temp data load
-    } finally {
-      if (mounted) setState(() => _colCargando = false);
-    }
-  }
-
   Widget _buildColaboracionWizard() {
     return _Panel(
       child: Column(
@@ -4820,40 +4703,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Future<void> _cargarDatosRequerimiento() async {
-    setState(() => _reqCargando = true);
-    try {
-      final easId = _easDbId;
-      final results = await Future.wait([
-        crtApi.getCp(),
-        crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(easId),
-        _cargarDirecciones(),
-      ]);
-      final cpGuardado = results[0] as String?;
-      final policiaData = results[1] as Map<String, dynamic>?;
-      final servidores = results[2] as List<Map<String, dynamic>>;
-      setState(() {
-        _reqCpGuardado = cpGuardado ?? '';
-        if (_reqCpGuardado.isNotEmpty) {
-          _reqCpCtrl.text = _reqCpGuardado;
-          _reqCp = _reqCpGuardado;
-        }
-        _reqServidoresPoliciales = servidores;
-        _reqMovil = _moviles.first.movil;
-        final pid = policiaData?['servidorPolicialId'] as int?;
-        if (pid != null && pid > 0) {
-          _reqPoliciaId = pid;
-          _reqPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
-        }
-      });
-    } catch (_) {
-      // Silently fail on temp data load
-    } finally {
-      if (mounted) setState(() => _reqCargando = false);
-    }
-  }
-
   Widget _buildRequerimientoWizard() {
     return _Panel(
       child: Column(
@@ -5418,42 +5267,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         },
       ),
     );
-  }
-
-  Future<void> _cargarDatosColCiudadana() async {
-    setState(() => _ciuCargando = true);
-    try {
-      final easId = _easDbId;
-      final results = await Future.wait([
-        crtApi.getCp(),
-        crtApi.getPolicia(),
-        crtApi.getServidoresPoliciales(easId),
-        _cargarDirecciones(),
-      ]);
-      final cpGuardado = results[0] as String?;
-      final policiaData = results[1] as Map<String, dynamic>?;
-      final servidores = results[2] as List<Map<String, dynamic>>;
-      setState(() {
-        _ciuCpGuardado = cpGuardado ?? '';
-        if (_ciuCpGuardado.isNotEmpty) {
-          _ciuCpCtrl.text = _ciuCpGuardado;
-          _ciuCp = _ciuCpGuardado;
-        }
-        _ciuServidoresPoliciales = servidores;
-        _ciuMovil = _moviles.first.movil;
-        _ciuTipoGeneral = 'denuncia';
-        _ciuTipoEspecifico = '';
-        final pid = policiaData?['servidorPolicialId'] as int?;
-        if (pid != null && pid > 0) {
-          _ciuPoliciaId = pid;
-          _ciuPoliciaNombre = policiaData?['servidorNombre'] as String? ?? '';
-        }
-      });
-    } catch (_) {
-      // Silently fail on temp data load
-    } finally {
-      if (mounted) setState(() => _ciuCargando = false);
-    }
   }
 
   Widget _buildColCiudadanaWizard() {
@@ -6605,6 +6418,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       'movil',
       'moviles',
       'motorizado',
+      'direccion',
       if (showPolicia) 'policia',
     };
     final informacionFields = <String>{
@@ -6836,53 +6650,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ],
             ),
 
-            // ── Section 5: Retiro Temporal ────────────────────────
-            if (_isRetiroTemporalFlow) ...[
-              const SizedBox(height: 14),
-              CrtSectionCard(
-                icon: Icons.backup_outlined,
-                title: 'RETIRO TEMPORAL',
-                headerColor: CrtSectionColors.informacion,
-                backgroundColor: CrtSectionColors.informacionBg,
-                children: [
-                  CrtFormField(
-                    controller: _controller('actividad'),
-                    label: 'Actividad comercial',
-                    icon: Icons.store_outlined,
-                    isRequired: false,
-                    hintText: '¿Qué actividad comercial realizaba?',
-                    onChanged: () {
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CrtFormField(
-                    controller: _controller('elementos'),
-                    label: 'Elementos retirados',
-                    icon: Icons.inventory_2_outlined,
-                    isRequired: false,
-                    minLines: 3,
-                    onChanged: () {
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CrtFormField(
-                    controller: _controller('cantidad'),
-                    label: 'Cantidad aproximada',
-                    icon: Icons.numbers_outlined,
-                    isRequired: false,
-                    onChanged: () {
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                  ),
-                ],
-              ),
-            ],
-
             const SizedBox(height: 12),
             Text(
               '* Campos obligatorios',
@@ -7067,24 +6834,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   String _buildText() {
-    if (_isDesalojoFlow) {
-      return _buildDesalojoText();
-    }
-    if (_isPuntoMartilloFlow) {
-      return _buildPuntoMartilloText();
-    }
-    if (_isRondasDisuasivasFlow) {
-      return _buildRondasDisuasivasText();
-    }
-    if (_isColaboracionFlow) {
-      return _buildColaboracionText();
-    }
-    if (_isRequerimientoFlow) {
-      return _buildRequerimientoText();
-    }
-    if (_isColaboracionCiudadanaFlow) {
-      return _buildColCiudadanaText();
-    }
     if (_isAusentismoFlow) {
       return _buildAusentismoText();
     }
@@ -7108,93 +6857,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             : const {},
         values: {
           for (final entry in controllers.entries) entry.key: entry.value.text,
-        },
-      ),
-    );
-  }
-
-  String _buildDesalojoText() {
-    final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty
-        ? _desaMovil
-        : _moviles.first.movil;
-    return CrtTextGenerator.build(
-      CrtFormData(
-        modulo: TipoModuloCartilla.eas,
-        tipo: TipoCartilla.desalojoVendedores,
-        jornada: CrtCatalog.jornadaActual(now),
-        horario: CrtCatalog.horarioActual(now),
-        fecha: _fmtFecha(now),
-        hora: _fmtHora(now),
-        eas: eas,
-        movil: movilValue,
-        values: {
-          '_desa_jp': _desaJp.isNotEmpty
-              ? _desaJp
-              : (widget.user?.nombreCompleto ?? ''),
-          '_desa_aux': _desaAux,
-          '_desa_movil': movilValue,
-          '_desa_cp': _desaCp,
-          '_desa_policia': _desaPoliciaNombre,
-          '_desa_direccion': _desaDireccion,
-          '_desa_agresivo': _desaAgresivo ? 'si' : 'no',
-          '_desa_colaboracion': _desaColaboracion ? 'si' : 'no',
-        },
-      ),
-    );
-  }
-
-  String _buildPuntoMartilloText() {
-    final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty
-        ? _desaMovil
-        : _moviles.first.movil;
-    return CrtTextGenerator.build(
-      CrtFormData(
-        modulo: TipoModuloCartilla.eas,
-        tipo: TipoCartilla.puntoMartillo,
-        jornada: CrtCatalog.jornadaActual(now),
-        horario: CrtCatalog.horarioActual(now),
-        fecha: _fmtFecha(now),
-        hora: _fmtHora(now),
-        eas: eas,
-        values: {
-          '_pm_jp': _desaJp.isNotEmpty
-              ? _desaJp
-              : (widget.user?.nombreCompleto ?? ''),
-          '_pm_aux': _desaAux,
-          '_pm_movil': movilValue,
-          '_pm_cp': _desaCp,
-          '_pm_policia': _desaPoliciaNombre,
-          '_pm_direccion': _desaDireccion,
-        },
-      ),
-    );
-  }
-
-  String _buildRondasDisuasivasText() {
-    final now = DateTime.now();
-    final movilValue = _desaMovil.isNotEmpty
-        ? _desaMovil
-        : _moviles.first.movil;
-    return CrtTextGenerator.build(
-      CrtFormData(
-        modulo: TipoModuloCartilla.eas,
-        tipo: TipoCartilla.rondasDisuasivas,
-        jornada: CrtCatalog.jornadaActual(now),
-        horario: CrtCatalog.horarioActual(now),
-        fecha: _fmtFecha(now),
-        hora: _fmtHora(now),
-        eas: eas,
-        values: {
-          '_rd_jp': _desaJp.isNotEmpty
-              ? _desaJp
-              : (widget.user?.nombreCompleto ?? ''),
-          '_rd_aux': _desaAux,
-          '_rd_movil': movilValue,
-          '_rd_cp': _desaCp,
-          '_rd_policia': _desaPoliciaNombre,
-          '_rd_direccion': _desaDireccion,
         },
       ),
     );
@@ -7227,7 +6889,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       'causa',
       'reporta',
       'direccion',
-      if (_isRetiroTemporalFlow) ...['actividad', 'elementos', 'cantidad'],
       if (modulo == TipoModuloCartilla.motorizado ||
           _isOtrasCartillas(modulo) ||
           modulo == TipoModuloCartilla.conductor ||
@@ -7251,22 +6912,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       _loadCrtDistritos();
     }
 
-    if (_isRetiroTemporalFlow) {
-      _cargarDatosRetiroTemporal();
-    } else if (_isColaboracionFlow) {
-      _cargarDatosColaboracion();
-    } else if (_isRequerimientoFlow) {
-      _cargarDatosRequerimiento();
-    } else if (_isColaboracionCiudadanaFlow) {
-      _cargarDatosColCiudadana();
-    } else if (_isAusentismoFlow) {
+    if (_isAusentismoFlow) {
       _cargarDatosAusentismo();
     } else if (_isGenericEasWizardFlow) {
       _cargarDatosGenerico();
-    } else if (_isDesalojoFlow ||
-        _isPuntoMartilloFlow ||
-        _isRondasDisuasivasFlow) {
-      _cargarDatosDesalojo();
     }
   }
 
@@ -7322,9 +6971,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         _ausAux1Ctrl.text = name;
         break;
     }
-    _desaJp = _desaJpCtrl.text;
     _desaCp = _desaCpCtrl.text;
-    _desaAux = _desaAuxCtrl.text;
     _rtJp = _rtJpCtrl.text;
     _rtCp = _rtCpCtrl.text;
     _rtAux1 = _rtAux1Ctrl.text;
