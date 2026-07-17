@@ -338,8 +338,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool get _isRondasDisuasivasFlow =>
       modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.rondasDisuasivas;
 
-  bool get _isRetiroTemporalFlow =>
-      modulo == TipoModuloCartilla.eas && tipo == TipoCartilla.retiroTemporal;
+  bool get _isRetiroTemporalFlow => tipo == TipoCartilla.retiroTemporal;
 
   bool get _isColaboracionFlow =>
       modulo == TipoModuloCartilla.eas &&
@@ -371,6 +370,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       TipoCartilla.resguardoPersonal,
       TipoCartilla.colaboracionAtm,
     ].contains(tipo);
+  }
+
+  bool _isOtrasCartillas(TipoModuloCartilla modulo) {
+    return const {
+      TipoModuloCartilla.filaPedestre,
+      TipoModuloCartilla.administrativo,
+      TipoModuloCartilla.ciclista,
+      TipoModuloCartilla.palacio,
+      TipoModuloCartilla.cuadrante,
+      TipoModuloCartilla.apoyoSeguridadCiudadana,
+      TipoModuloCartilla.supervision,
+    }.contains(modulo);
   }
 
   @override
@@ -538,10 +549,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           ),
         ),
         const SizedBox(width: 20),
-        Expanded(
-          flex: rightFlex,
-          child: _buildDesktopPreview(preview),
-        ),
+        Expanded(flex: rightFlex, child: _buildDesktopPreview(preview)),
       ],
     );
   }
@@ -650,9 +658,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppThm.priClr,
           side: const BorderSide(color: AppThm.priClr),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
@@ -689,7 +695,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         onPreviewChanged: _onCrtPreviewChanged,
       );
     }
-    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.radioperador) {
+    if (_otrasCartillasSeleccionada &&
+        modulo == TipoModuloCartilla.radioperador) {
       return CrtSpecialForm(
         key: const ValueKey('otras-cartillas-rad'),
         kind: CrtSpecialFormKind.otras,
@@ -731,8 +738,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           _buildPuntoMartilloForm()
         else if (_isRondasDisuasivasFlow)
           _buildRondasDisuasivasForm()
-        else if (_isRetiroTemporalFlow)
-          _buildRetiroTemporalWizard()
         else if (_isColaboracionFlow)
           _buildColaboracionWizard()
         else if (_isRequerimientoFlow)
@@ -757,7 +762,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         children: [
           Row(
             children: [
-              const Icon(Icons.preview_outlined, color: AppThm.priClr, size: 20),
+              const Icon(
+                Icons.preview_outlined,
+                color: AppThm.priClr,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'VISTA PREVIA',
@@ -778,17 +787,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           const SizedBox(height: 12),
           Row(
             children: [
-              CrtStatusBar(
-                lastUpdate: _lastPreviewUpdate,
-              ),
+              CrtStatusBar(lastUpdate: _lastPreviewUpdate),
               const Spacer(),
               ..._buildPreviewActions(),
             ],
           ),
           const SizedBox(height: 12),
-          Expanded(
-            child: _buildDocPanel(preview),
-          ),
+          Expanded(child: _buildDocPanel(preview)),
         ],
       ),
     );
@@ -990,6 +995,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           _formacionSeleccionada = null;
           _otrasCartillasSeleccionada = false;
           tipo = _tipoFromId(id);
+          if (tipo.autoCausa) {
+            _controller('causa').text = tipo.label;
+          }
       }
       _formExpanded = true;
       _syncFields();
@@ -1014,8 +1022,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           _buildPuntoMartilloForm()
         else if (_isRondasDisuasivasFlow)
           _buildRondasDisuasivasForm()
-        else if (_isRetiroTemporalFlow)
-          _buildRetiroTemporalWizard()
         else if (_isColaboracionFlow)
           _buildColaboracionWizard()
         else if (_isRequerimientoFlow)
@@ -1055,8 +1061,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       headerColor: CrtSectionColors.datosGenerales,
       backgroundColor: CrtSectionColors.datosGeneralesBg,
       children: [
-        if (_formacionSeleccionada == null &&
-            !_otrasCartillasSeleccionada) ...[
+        if (_formacionSeleccionada == null && !_otrasCartillasSeleccionada) ...[
           _Drop<CrtEasStation>(
             value: eas,
             label: 'EAS',
@@ -1910,6 +1915,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _cargarDatosRetiroTemporal() async {
+    if (modulo != TipoModuloCartilla.eas) return;
     setState(() => _rtCargando = true);
     try {
       final easId = _easDbId;
@@ -2009,6 +2015,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
   }
 
+  // ignore: unused_element
   Widget _buildRetiroTemporalWizard() {
     return _Panel(
       child: Column(
@@ -3800,6 +3807,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
+  // ignore: unused_element
   String _buildRetiroTemporalText() {
     final now = DateTime.now();
     final movilValue = _rtMovil.isNotEmpty ? _rtMovil : _moviles.first.movil;
@@ -6582,19 +6590,46 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _formPanel() {
+    final moduleConfig = CrtCatalog.configFor(modulo);
+    final showPolicia = moduleConfig.showPolicia;
+    final vehicleKey = moduleConfig.vehicleFieldKey;
+
     final datosGeneralesFields = <String>{'horario', 'hora', 'circuito'};
     final ubicacionFields = <String>{
-      'punto', 'ruta', 'area', 'lugar', 'cuadrante', 'sector',
-      'bicicleta', 'movil', 'moviles', 'policia',
+      'punto',
+      'ruta',
+      'area',
+      'lugar',
+      'cuadrante',
+      'sector',
+      'movil',
+      'moviles',
+      'motorizado',
+      if (showPolicia) 'policia',
     };
     final informacionFields = <String>{
-      'novedad', 'procedimiento', 'actividad', 'control', 'motivo',
-      'resultado', 'detalle', 'observaciones', 'novedades',
-      'novedadPersonal', 'novedadMovil',
+      'novedad',
+      'procedimiento',
+      'actividad',
+      'control',
+      'motivo',
+      'resultado',
+      'detalle',
+      'observaciones',
+      'novedades',
+      'novedadPersonal',
+      'novedadMovil',
     };
     final personalFields = <String>{
-      'personal', 'agente', 'conductor', 'jp', 'auxiliar',
-      'vehiculo', 'can', 'encargado',
+      'personal',
+      'agente',
+      'conductor',
+      'jp',
+      'auxiliar',
+      'encargado',
+      'auxiliar1',
+      'auxiliar2',
+      ?vehicleKey,
     };
 
     final dgFields = activeFields
@@ -6618,7 +6653,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           children: [
             if (modulo != TipoModuloCartilla.eas) const SizedBox(height: 8),
 
-            if (modulo == TipoModuloCartilla.motorizado) ...[
+            if (modulo == TipoModuloCartilla.motorizado ||
+                _isOtrasCartillas(modulo) ||
+                modulo == TipoModuloCartilla.conductor ||
+                modulo == TipoModuloCartilla.radioperador) ...[
               _buildMotorizadoDistritoDropdown(),
               const SizedBox(height: 14),
             ],
@@ -6725,28 +6763,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               headerColor: CrtSectionColors.personal,
               backgroundColor: CrtSectionColors.personalBg,
               children: [
-                if (modulo == TipoModuloCartilla.motorizado)
-                  CrtFormField(
-                    controller: _controller('vehiculo'),
-                    label: 'Móvil / Vehículo',
-                    icon: Icons.two_wheeler_outlined,
-                    isRequired: false,
-                    onChanged: () {
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                  ),
-                if (modulo == TipoModuloCartilla.k9)
-                  CrtFormField(
-                    controller: _controller('can'),
-                    label: 'Nombre del can',
-                    icon: Icons.pets_outlined,
-                    isRequired: false,
-                    onChanged: () {
-                      _invalidatePreview();
-                      setState(() {});
-                    },
-                  ),
                 for (final field in persFields) ...[
                   if (persFields.first != field) const SizedBox(height: 12),
                   CrtFormField(
@@ -6775,7 +6791,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.grey[500]),
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -6794,7 +6814,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Icon(Icons.info_outline, size: 14, color: Colors.grey[500]),
+                      Icon(
+                        Icons.info_outline,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
@@ -6811,6 +6835,54 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 ],
               ],
             ),
+
+            // ── Section 5: Retiro Temporal ────────────────────────
+            if (_isRetiroTemporalFlow) ...[
+              const SizedBox(height: 14),
+              CrtSectionCard(
+                icon: Icons.backup_outlined,
+                title: 'RETIRO TEMPORAL',
+                headerColor: CrtSectionColors.informacion,
+                backgroundColor: CrtSectionColors.informacionBg,
+                children: [
+                  CrtFormField(
+                    controller: _controller('actividad'),
+                    label: 'Actividad comercial',
+                    icon: Icons.store_outlined,
+                    isRequired: false,
+                    hintText: '¿Qué actividad comercial realizaba?',
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  CrtFormField(
+                    controller: _controller('elementos'),
+                    label: 'Elementos retirados',
+                    icon: Icons.inventory_2_outlined,
+                    isRequired: false,
+                    minLines: 3,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  CrtFormField(
+                    controller: _controller('cantidad'),
+                    label: 'Cantidad aproximada',
+                    icon: Icons.numbers_outlined,
+                    isRequired: false,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                ],
+              ),
+            ],
+
             const SizedBox(height: 12),
             Text(
               '* Campos obligatorios',
@@ -6855,7 +6927,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         children: [
           Row(
             children: [
-              const Icon(Icons.preview_outlined, color: AppThm.priClr, size: 20),
+              const Icon(
+                Icons.preview_outlined,
+                color: AppThm.priClr,
+                size: 20,
+              ),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -6999,9 +7075,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     }
     if (_isRondasDisuasivasFlow) {
       return _buildRondasDisuasivasText();
-    }
-    if (_isRetiroTemporalFlow) {
-      return _buildRetiroTemporalText();
     }
     if (_isColaboracionFlow) {
       return _buildColaboracionText();
@@ -7154,7 +7227,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       'causa',
       'reporta',
       'direccion',
-      if (modulo == TipoModuloCartilla.motorizado) 'distrito',
+      if (_isRetiroTemporalFlow) ...['actividad', 'elementos', 'cantidad'],
+      if (modulo == TipoModuloCartilla.motorizado ||
+          _isOtrasCartillas(modulo) ||
+          modulo == TipoModuloCartilla.conductor ||
+          modulo == TipoModuloCartilla.radioperador)
+        'distrito',
     };
     for (final key in keys) {
       controllers.putIfAbsent(key, () => TextEditingController());
@@ -7165,7 +7243,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       controllers['reporta']!.text = widget.user!.nombreCompleto;
     }
 
-    if (modulo == TipoModuloCartilla.motorizado && _crtDistritos.isEmpty) {
+    if ((modulo == TipoModuloCartilla.motorizado ||
+            _isOtrasCartillas(modulo) ||
+            modulo == TipoModuloCartilla.conductor ||
+            modulo == TipoModuloCartilla.radioperador) &&
+        _crtDistritos.isEmpty) {
       _loadCrtDistritos();
     }
 
@@ -7278,8 +7360,12 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (key == 'novedad' || key == 'novedades') return Icons.edit_note_outlined;
     if (key == 'procedimiento') return Icons.assignment_outlined;
     if (key == 'observaciones') return Icons.notes_outlined;
-    if (key == 'vehiculo' || key.contains('movil')) return Icons.two_wheeler_outlined;
-    if (key.contains('personal') || key.contains('agente')) return Icons.groups_outlined;
+    if (key == 'vehiculo' || key.contains('movil')) {
+      return Icons.two_wheeler_outlined;
+    }
+    if (key.contains('personal') || key.contains('agente')) {
+      return Icons.groups_outlined;
+    }
     if (key == 'reporta' || key == 'reportantes') return Icons.shield_outlined;
     if (key == 'conductor') return Icons.person_outline;
     if (key == 'punto' || key.contains('sector') || key.contains('lugar')) {

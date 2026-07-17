@@ -18,11 +18,17 @@ class CrtModuleConfig {
   final TipoModuloCartilla modulo;
   final List<TipoCartilla> tipos;
   final List<CrtFieldConfig> fields;
+  final bool showPolicia;
+  final String? vehicleFieldKey;
+  final String? vehicleFieldLabel;
 
   const CrtModuleConfig({
     required this.modulo,
     required this.tipos,
     required this.fields,
+    this.showPolicia = false,
+    this.vehicleFieldKey,
+    this.vehicleFieldLabel,
   });
 }
 

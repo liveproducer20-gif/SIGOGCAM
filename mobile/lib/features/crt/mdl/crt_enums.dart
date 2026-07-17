@@ -151,6 +151,19 @@ extension TipoCartillaX on TipoCartilla {
         return 'Colaboración ATM';
     }
   }
+
+  bool get autoCausa {
+    return const {
+      TipoCartilla.puntoMartillo,
+      TipoCartilla.rondasDisuasivas,
+      TipoCartilla.retiroTemporal,
+      TipoCartilla.requerimiento,
+      TipoCartilla.colaboracionEntidades,
+      TipoCartilla.colaboracionEventos,
+      TipoCartilla.permisoAusentismo,
+      TipoCartilla.desalojoVendedores,
+    }.contains(this);
+  }
 }
 
 extension JornadaX on Jornada {
