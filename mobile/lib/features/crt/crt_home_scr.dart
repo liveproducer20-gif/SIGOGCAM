@@ -630,9 +630,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           setState(() {
             modulo = value;
             _formacionSeleccionada = null;
-            _otrasCartillasSeleccionada = value == TipoModuloCartilla.eas
-                ? false
-                : true;
+            _otrasCartillasSeleccionada = false;
+            _formExpanded = false;
             final tipos = CrtCatalog.configFor(modulo).tipos;
             if (!tipos.contains(tipo)) tipo = tipos.first;
             if (modulo == TipoModuloCartilla.eas) {
@@ -675,19 +674,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         user: widget.user,
         jefe: _jefeNombre,
         canCreate: _canCreateFormation,
-        hidePreview: true,
-        onPreviewChanged: _onCrtPreviewChanged,
-      );
-    }
-    if (_otrasCartillasSeleccionada && modulo == TipoModuloCartilla.eas) {
-      return CrtSpecialForm(
-        key: const ValueKey('otras-cartillas'),
-        kind: CrtSpecialFormKind.otras,
-        modulo: modulo,
-        easStation: eas,
-        user: widget.user,
-        jefe: _jefeNombre,
-        canCreate: _canGenerate,
         hidePreview: true,
         onPreviewChanged: _onCrtPreviewChanged,
       );
