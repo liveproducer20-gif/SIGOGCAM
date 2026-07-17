@@ -82,10 +82,7 @@ class CrtCatalog {
         TipoCartilla.operativo,
       ],
       fields: [
-        CrtFieldConfig(key: 'agente', label: 'Nombre del agente'),
         CrtFieldConfig(key: 'can', label: 'Nombre del can'),
-        CrtFieldConfig(key: 'punto', label: 'Punto de servicio'),
-        CrtFieldConfig(key: 'procedimiento', label: 'Tipo de procedimiento'),
         CrtFieldConfig(key: 'novedad', label: 'Novedad o apoyo realizado', minLines: 4),
       ],
     ),
@@ -93,41 +90,32 @@ class CrtCatalog {
       modulo: TipoModuloCartilla.ambiente,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'punto', label: 'Punto de control'),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'control', label: 'Tipo de control ambiental'),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad o procedimiento', minLines: 4),
+        CrtFieldConfig(key: 'novedad', label: 'Descripción de la novedad', minLines: 4),
       ],
     ),
     CrtModuleConfig(
       modulo: TipoModuloCartilla.filaPedestre,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'punto', label: 'Punto de servicio'),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'control', label: 'Tipo de recorrido o control'),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad', minLines: 4),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
       modulo: TipoModuloCartilla.administrativo,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'area', label: 'Area administrativa'),
-        CrtFieldConfig(key: 'personal', label: 'Personal'),
-        CrtFieldConfig(key: 'actividad', label: 'Actividad realizada'),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad', minLines: 4),
+        CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
       modulo: TipoModuloCartilla.ciclista,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'ruta', label: 'Sector o ruta'),
-        CrtFieldConfig(key: 'personal', label: 'Personal ciclista'),
-        CrtFieldConfig(key: 'bicicleta', label: 'Bicicleta o identificación', required: false),
-        CrtFieldConfig(key: 'procedimiento', label: 'Procedimiento o recorrido'),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad', minLines: 4),
+        CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
@@ -146,32 +134,24 @@ class CrtCatalog {
       modulo: TipoModuloCartilla.palacio,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'punto', label: 'Punto especifico dentro de Palacio'),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'control', label: 'Tipo de control o novedad'),
-        CrtFieldConfig(key: 'novedad', label: 'Detalle', minLines: 4),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
       modulo: TipoModuloCartilla.cuadrante,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'cuadrante', label: 'Número o nombre de cuadrante'),
-        CrtFieldConfig(key: 'sector', label: 'Sector'),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'movil', label: 'Móvil', required: false),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad o procedimiento', minLines: 4),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
       modulo: TipoModuloCartilla.apoyoSeguridadCiudadana,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'lugar', label: 'Lugar del apoyo'),
-        CrtFieldConfig(key: 'institucion', label: 'Institución o unidad apoyada', required: false),
         CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
-        CrtFieldConfig(key: 'motivo', label: 'Motivo del apoyo'),
-        CrtFieldConfig(key: 'resultado', label: 'Resultado o novedad', minLines: 4),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
     CrtModuleConfig(
@@ -189,9 +169,8 @@ class CrtCatalog {
       modulo: TipoModuloCartilla.supervision,
       tipos: commonTypes,
       fields: [
-        CrtFieldConfig(key: 'sector', label: 'Sector supervisado'),
-        CrtFieldConfig(key: 'personal', label: 'Personal supervisado'),
-        CrtFieldConfig(key: 'novedad', label: 'Novedad de supervisión', minLines: 4),
+        CrtFieldConfig(key: 'personal', label: 'Personal asignado'),
+        CrtFieldConfig(key: 'novedad', label: 'Procedimiento', minLines: 4),
       ],
     ),
   ];

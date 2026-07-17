@@ -19,7 +19,16 @@ class CrtTextGenerator {
       return _buildEas(data);
     }
     if (data.modulo == TipoModuloCartilla.motorizado) {
-      return _buildMotorizado(data);
+      return _buildPatrulla(data, vehicleKey: 'vehiculo');
+    }
+    if (data.modulo == TipoModuloCartilla.k9) {
+      return _buildPatrulla(data, vehicleKey: 'can');
+    }
+    if (data.modulo == TipoModuloCartilla.ambiente) {
+      return _buildAmbiente(data);
+    }
+    if (_isOtrasCartillas(data.modulo)) {
+      return _buildOtras(data);
     }
 
     final direccion = _direccion(data);
@@ -53,12 +62,12 @@ ${_reporta(data)}
 *ADJUNTO FOTOGRAFÍA:*''';
   }
 
-  static String _buildMotorizado(CrtFormData data) {
+  static String _buildPatrulla(CrtFormData data, {required String vehicleKey}) {
     final causa = data.values['causa']?.trim() ?? '';
     final direccion = _direccion(data);
     final novedad = data.values['novedad']?.trim() ?? '';
-    final personal = _personalMotorizado(data);
-    final reporta = _reportaMotorizado(data);
+    final personal = _personalPatrulla(data);
+    final reporta = _reportaPatrulla(data, vehicleKey);
     final now = DateTime.now();
 
     final bodyText = novedad.isNotEmpty
@@ -73,7 +82,87 @@ ${_reporta(data)}
 ${_ubicacionInstitucional(data, direccion)}
 *CAUSA:* $causa
 
-${_saludoMotorizado(now)}, permiso Sr. $jefeDisplay.
+${_saludoPatrulla(now)}, permiso Sr. $jefeDisplay.
+
+$bodyText
+
+$personal
+*REPORTA:*
+$reporta
+
+*"LEALTAD, VALOR Y ORDEN"*
+
+*ADJUNTO FOTOGRAFÍA:*''';
+  }
+
+  static String _buildAmbiente(CrtFormData data) {
+    final direccion = _direccion(data);
+    final novedad = data.values['novedad']?.trim() ?? '';
+    final personal = _personalAmbiente(data);
+    final reporta = _reporta(data);
+    final now = DateTime.now();
+    final causa = data.tipo.label;
+
+    final bodyText = novedad.isNotEmpty
+        ? novedad
+        : 'Muy respetuosamente me permito informar que se atendió la novedad reportada en $direccion.';
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+*REPORTE DE AMBIENTE GOCAM*
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCIÓN:* $direccion
+
+*CAUSA:* $causa
+
+${_saludoPatrulla(now)}, permiso Sr. $jefeDisplay.
+
+$bodyText
+
+$personal
+*REPORTA:*
+$reporta
+
+*"LEALTAD, VALOR Y ORDEN"*
+
+*ADJUNTO FOTOGRAFÍA:*''';
+  }
+
+  static bool _isOtrasCartillas(TipoModuloCartilla modulo) {
+    return const {
+      TipoModuloCartilla.filaPedestre,
+      TipoModuloCartilla.administrativo,
+      TipoModuloCartilla.ciclista,
+      TipoModuloCartilla.palacio,
+      TipoModuloCartilla.cuadrante,
+      TipoModuloCartilla.apoyoSeguridadCiudadana,
+      TipoModuloCartilla.supervision,
+    }.contains(modulo);
+  }
+
+  static String _buildOtras(CrtFormData data) {
+    final direccion = _direccion(data);
+    final causa = data.values['causa']?.trim() ?? '';
+    final novedad = data.values['novedad']?.trim() ?? '';
+    final personal = _personalOtras(data);
+    final reporta = _reporta(data);
+    final now = DateTime.now();
+
+    final bodyText = novedad.isNotEmpty
+        ? novedad
+        : 'Muy respetuosamente me permito informar que se atendió la novedad reportada en $direccion.';
+
+    return '''*CUERPO DE AGENTES DE CONTROL MUNICIPAL*
+*REPORTE DE ${data.modulo.label.toUpperCase()}*
+*HORARIO:* ${data.horario}
+*HORA:* ${data.hora}
+*FECHA:* ${data.fecha}
+*DIRECCIÓN:* $direccion
+
+*CAUSA:* $causa
+
+${_saludoPatrulla(now)}, permiso Sr. $jefeDisplay.
 
 $bodyText
 
@@ -1237,6 +1326,9 @@ ${rp.toString().trimRight()}
       }
       return '*DIRECCIÓN/PUNTO:* $direccion';
     }
+    if (data.modulo == TipoModuloCartilla.ambiente) {
+      return '*DIRECCIÓN:* $direccion';
+    }
     return '*DIRECCIÓN/PUNTO:* $direccion';
   }
 
@@ -1332,24 +1424,36 @@ ${rp.toString().trimRight()}
     return 'Muy buenas noches';
   }
 
-  static String _saludoMotorizado(DateTime now) {
+  static String _saludoPatrulla(DateTime now) {
     if (now.hour >= 5 && now.hour < 12) return 'Buenos días';
     if (now.hour >= 12 && now.hour < 19) return 'Buenas tardes';
     return 'Buenas noches';
   }
 
-  static String _personalMotorizado(CrtFormData data) {
+  static String _personalPatrulla(CrtFormData data) {
     final personal = data.values['personal']?.trim() ?? '';
     if (personal.isEmpty) return '';
     return '*PERSONAL MOTORIZADO:*\n$personal';
   }
 
-  static String _reportaMotorizado(CrtFormData data) {
+  static String _personalAmbiente(CrtFormData data) {
+    final personal = data.values['personal']?.trim() ?? '';
+    if (personal.isEmpty) return '';
+    return '*PERSONAL ASIGNADO:*\n$personal';
+  }
+
+  static String _personalOtras(CrtFormData data) {
+    final personal = data.values['personal']?.trim() ?? '';
+    if (personal.isEmpty) return '';
+    return '*PERSONAL ASIGNADO:*\n$personal';
+  }
+
+  static String _reportaPatrulla(CrtFormData data, String vehicleKey) {
     final reporta = data.values['reporta']?.trim() ?? '';
-    final vehiculo = data.values['vehiculo']?.trim() ?? '';
+    final vehicle = data.values[vehicleKey]?.trim() ?? '';
     final name = reporta.isEmpty ? '[persona que reporta]' : reporta;
-    if (vehiculo.isNotEmpty) {
-      return '$vehiculo $name';
+    if (vehicle.isNotEmpty) {
+      return '$vehicle $name';
     }
     return name;
   }

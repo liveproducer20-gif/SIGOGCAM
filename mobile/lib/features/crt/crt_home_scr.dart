@@ -830,23 +830,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         _buildDocPanel(preview),
         const SizedBox(height: 16),
         if (preview != null)
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              CrtActionButton(
-                icon: Icons.copy_outlined,
-                label: 'Crear cartilla',
-                color: const Color(0xFF059669),
-                onPressed: guardando ? null : () => _generar(preview),
-              ),
-              CrtActionButton(
-                icon: Icons.share_outlined,
-                label: 'Compartir',
-                filled: false,
-                onPressed: () => Share.share(preview),
-              ),
-            ],
+          Center(
+            child: CrtActionButton(
+              icon: Icons.description_outlined,
+              label: 'GENERAR CARTILLA',
+              color: const Color(0xFF059669),
+              onPressed: guardando ? null : () => _generar(preview),
+              loading: guardando,
+            ),
           ),
       ],
     );
@@ -875,24 +866,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_previewText == null) return [];
     return [
       CrtActionButton(
-        icon: Icons.copy_outlined,
-        label: 'Copiar',
-        filled: false,
-        onPressed: () async {
-          await Clipboard.setData(ClipboardData(text: _previewText!));
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Texto copiado')),
-            );
-          }
-        },
-      ),
-      const SizedBox(width: 8),
-      CrtActionButton(
-        icon: Icons.share_outlined,
-        label: 'Compartir',
-        filled: false,
-        onPressed: () => Share.share(_previewText!),
+        icon: Icons.description_outlined,
+        label: 'GENERAR CARTILLA',
+        color: const Color(0xFF059669),
+        onPressed: guardando ? null : () => _generar(_previewText!),
+        loading: guardando,
       ),
     ];
   }
@@ -6711,16 +6689,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               headerColor: CrtSectionColors.informacion,
               backgroundColor: CrtSectionColors.informacionBg,
               children: [
-                CrtFormField(
-                  controller: _controller('causa'),
-                  label: 'Causa',
-                  icon: Icons.warning_amber_outlined,
-                  isRequired: true,
-                  onChanged: () {
-                    _invalidatePreview();
-                    setState(() {});
-                  },
-                ),
+                if (modulo != TipoModuloCartilla.ambiente)
+                  CrtFormField(
+                    controller: _controller('causa'),
+                    label: 'Causa',
+                    icon: Icons.warning_amber_outlined,
+                    isRequired: true,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
                 for (final field in infoFields) ...[
                   const SizedBox(height: 12),
                   CrtFormField(
@@ -6751,6 +6730,17 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     controller: _controller('vehiculo'),
                     label: 'Móvil / Vehículo',
                     icon: Icons.two_wheeler_outlined,
+                    isRequired: false,
+                    onChanged: () {
+                      _invalidatePreview();
+                      setState(() {});
+                    },
+                  ),
+                if (modulo == TipoModuloCartilla.k9)
+                  CrtFormField(
+                    controller: _controller('can'),
+                    label: 'Nombre del can',
+                    icon: Icons.pets_outlined,
                     isRequired: false,
                     onChanged: () {
                       _invalidatePreview();
@@ -6790,6 +6780,25 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                       Expanded(
                         child: Text(
                           'El número de moto o vehículo se mostrará como prefijo en el apartado REPORTA.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                if (modulo == TipoModuloCartilla.k9) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'El nombre del can se mostrará como prefijo en el apartado REPORTA.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[500],
@@ -6926,25 +6935,16 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     setState(() => guardando = true);
 
     try {
+      await Clipboard.setData(ClipboardData(text: value));
+
       final result = await InsApi().registrarCartilla(
         contenido: value,
         causa: _controller('causa').text.trim(),
       );
-      await Clipboard.setData(ClipboardData(text: value));
+
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cartilla generada: total ${result.totalCartillasGeneradas}',
-          ),
-          action: SnackBarAction(
-            label: 'Compartir',
-            onPressed: () => Share.share(value),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      Share.share(value);
 
       final insignia = result.insigniaDesbloqueada;
       if (insignia != null) {
@@ -6954,6 +6954,16 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           nombreUsuario: widget.user?.nombreCompleto ?? '',
         );
       }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '\u2705 Cartilla generada: total ${result.totalCartillasGeneradas}',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

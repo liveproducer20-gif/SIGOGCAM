@@ -544,10 +544,10 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
               : Icon(
                   _preview == null
                       ? Icons.visibility_outlined
-                      : Icons.save_outlined,
+                      : Icons.description_outlined,
                 ),
           label: Text(
-            _preview == null ? 'Generar vista previa' : 'Crear cartilla',
+            _preview == null ? 'Generar vista previa' : 'GENERAR CARTILLA',
           ),
         ),
       if (_preview != null)
@@ -556,17 +556,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
           icon: const Icon(Icons.edit_outlined),
           label: const Text('Seguir editando'),
         ),
-      if (_created) ...[
-        OutlinedButton.icon(
-          onPressed: _copy,
-          icon: const Icon(Icons.copy_outlined),
-          label: const Text('Copiar texto'),
-        ),
-        OutlinedButton.icon(
-          onPressed: _share,
-          icon: const Icon(Icons.share_outlined),
-          label: const Text('Compartir'),
-        ),
+      if (_created)
         OutlinedButton.icon(
           onPressed: () => setState(() {
             _preview = null;
@@ -576,7 +566,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
           icon: const Icon(Icons.add_outlined),
           label: const Text('Crear otra cartilla'),
         ),
-      ],
     ],
   );
 
@@ -664,6 +653,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
         CrtSpecialFormKind.conductor => _conductorData().toJson(),
         CrtSpecialFormKind.otras => _otrasData().toJson(),
       };
+      await Clipboard.setData(ClipboardData(text: preview));
       final result = await InsApi().registrarCartilla(
         contenido: preview,
         causa: formation
@@ -679,18 +669,7 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
       );
       if (!mounted) return;
       setState(() => _created = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Cartilla generada: total ${result.totalCartillasGeneradas}',
-          ),
-          action: SnackBarAction(
-            label: 'Compartir',
-            onPressed: () => Share.share(_preview!),
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      Share.share(preview);
       final insignia = result.insigniaDesbloqueada;
       if (insignia != null) {
         final nombre = widget.user?.nombreCompleto ?? '';
@@ -704,6 +683,15 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
           ),
         );
       }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '\u2705 Cartilla generada: total ${result.totalCartillasGeneradas}',
+          ),
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -787,16 +775,6 @@ class _CrtSpecialFormState extends State<CrtSpecialForm> {
     _created = false;
   }
 
-  Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: _preview!));
-    if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Texto copiado')));
-    }
-  }
-
-  Future<void> _share() => Share.share(_preview!);
   InputDecoration _decoration(String label, IconData icon) => InputDecoration(
     labelText: label,
     prefixIcon: Icon(icon),
