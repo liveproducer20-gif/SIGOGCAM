@@ -14,6 +14,7 @@ import 'wdg/crt_widgets.dart';
 import 'mdl/crt_special_models.dart';
 import 'wdg/formacion_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
+import 'wdg/formacion_saliente_redesign.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -186,6 +187,14 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         if (_tipoFormacion == TipoFormacion.entrante) ...[
           FormacionEntranteRedesign(
+            user: widget.user,
+            jefeNombre: CrtTextGenerator.jefeDisplay,
+            onPreviewChanged: (text) => setState(() => _previewText = text),
+            onGenerate: _generarCartilla,
+            generando: _generando,
+          ),
+        ] else if (_tipoFormacion == TipoFormacion.saliente) ...[
+          FormacionSalienteRedesign(
             user: widget.user,
             jefeNombre: CrtTextGenerator.jefeDisplay,
             onPreviewChanged: (text) => setState(() => _previewText = text),

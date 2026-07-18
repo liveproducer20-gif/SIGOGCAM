@@ -370,6 +370,7 @@ class _FormacionFormState extends State<FormacionForm> {
   Widget _buildEasDropdown() {
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
+      isExpanded: true,
       decoration: InputDecoration(
         labelText: 'EAS',
         prefixIcon: const Icon(Icons.location_city_outlined, size: 20),
@@ -380,7 +381,10 @@ class _FormacionFormState extends State<FormacionForm> {
           .map(
             (e) => DropdownMenuItem(
               value: e,
-              child: Text('${e.codigo} - ${e.nombre}'),
+              child: Text(
+                '${e.codigo} - ${e.nombre}',
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           )
           .toList(),

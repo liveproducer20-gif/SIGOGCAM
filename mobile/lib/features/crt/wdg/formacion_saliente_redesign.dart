@@ -8,14 +8,14 @@ import '../svc/crt_catalog.dart';
 import '../svc/crt_special_text_generator.dart';
 import '../svc/crt_text_generator.dart';
 
-class FormacionEntranteRedesign extends StatefulWidget {
+class FormacionSalienteRedesign extends StatefulWidget {
   final AppUser? user;
   final String jefeNombre;
   final ValueChanged<String>? onPreviewChanged;
   final VoidCallback? onGenerate;
   final bool generando;
 
-  const FormacionEntranteRedesign({
+  const FormacionSalienteRedesign({
     super.key,
     this.user,
     this.jefeNombre = 'Jefe de Control Municipal',
@@ -25,11 +25,11 @@ class FormacionEntranteRedesign extends StatefulWidget {
   });
 
   @override
-  State<FormacionEntranteRedesign> createState() =>
-      _FormacionEntranteRedesignState();
+  State<FormacionSalienteRedesign> createState() =>
+      _FormacionSalienteRedesignState();
 }
 
-class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
+class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
   final _formKey = GlobalKey<FormState>();
   final _crtApi = CrtApi();
 
@@ -177,9 +177,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           : '[CIRCUITO]';
     }
 
-    final personalLabel = 'entrante';
-    final accionLabel = 'cuenta';
-    final causaLabel = TipoFormacion.entrante.causa;
+    final personalLabel = 'saliente';
+    final accionLabel = 'contó';
+    final causaLabel = TipoFormacion.saliente.causa;
 
     final buf = StringBuffer()
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
@@ -570,7 +570,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.login_outlined,
+              Icons.logout_outlined,
               color: Colors.white,
               size: 22,
             ),
@@ -581,7 +581,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'FORMACIÓN ENTRANTE',
+                  'FORMACIÓN SALIENTE',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -591,7 +591,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Registre la información de la formación entrante del servicio',
+                  'Registre la información de la formación saliente del servicio',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
