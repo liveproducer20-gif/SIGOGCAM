@@ -11,7 +11,8 @@ import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
 import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_widgets.dart';
-import 'wdg/formacion_entrante_form.dart';
+import 'mdl/crt_special_models.dart';
+import 'wdg/formacion_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -37,7 +38,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   CrtEasStation eas = CrtCatalog.easStations.first;
   String movil = '';
   bool _formExpanded = false;
-  bool _isFormacionEntrante = false;
+  TipoFormacion? _tipoFormacion;
   String _previewText = '';
   bool _generando = false;
 
@@ -175,16 +176,19 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   List<Widget> _formPanelChildren() {
-    if (_isFormacionEntrante) {
+    if (_tipoFormacion != null) {
       return [
         _buildBackButton(),
         const SizedBox(height: 12),
-        _buildFormacionEntranteHeader(),
+        _buildFormacionHeader(),
         const SizedBox(height: 16),
-        FormacionEntranteForm(
+        FormacionForm(
+          tipoFormacion: _tipoFormacion!,
           user: widget.user,
           jefeNombre: CrtTextGenerator.jefeDisplay,
           onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
         ),
       ];
     }
@@ -221,7 +225,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       child: OutlinedButton.icon(
         onPressed: () => setState(() {
           _formExpanded = false;
-          _isFormacionEntrante = false;
+          _tipoFormacion = null;
           _previewText = '';
         }),
         icon: const Icon(Icons.arrow_back, size: 18),
@@ -235,18 +239,24 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     );
   }
 
-  Widget _buildFormacionEntranteHeader() {
+  Widget _buildFormacionHeader() {
+    final titulo = _tipoFormacion == TipoFormacion.entrante
+        ? 'FORMACION ENTRANTE'
+        : 'FORMACION SALIENTE';
+    final icono = _tipoFormacion == TipoFormacion.entrante
+        ? Icons.login_outlined
+        : Icons.logout_outlined;
     return _Panel(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
-            const Icon(Icons.login_outlined, color: AppThm.priClr, size: 22),
+            Icon(icono, color: AppThm.priClr, size: 22),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
-                'FORMACION ENTRANTE',
-                style: TextStyle(
+                titulo,
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   color: AppThm.priClr,
@@ -267,13 +277,16 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _generarCartilla() async {
-    if (_generando || _previewText.isEmpty) return;
+    if (_generando || _previewText.isEmpty || _tipoFormacion == null) return;
     setState(() => _generando = true);
     try {
       final insApi = InsApi();
       final result = await insApi.registrarCartilla(
-        tipo: 'formacion_entrante',
+        tipo: 'FORMACION',
+        subtipo: _tipoFormacion!.causa,
+        causa: _tipoFormacion!.causa,
         contenido: _previewText,
+        datos: {'tipo_formacion': _tipoFormacion!.causa},
       );
       if (!mounted) return;
 
@@ -306,7 +319,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Cartilla #${result.cartillaId} generada '
+              'Cartilla #$result.cartillaId generada '
               '(${result.totalCartillasGeneradas} total)',
             ),
             backgroundColor: Colors.green,
@@ -314,7 +327,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         );
         setState(() {
           _formExpanded = false;
-          _isFormacionEntrante = false;
+          _tipoFormacion = null;
           _previewText = '';
         });
       }
@@ -385,7 +398,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPlaceholderPreview() {
-    if (_isFormacionEntrante && _previewText.isNotEmpty) {
+    if (_tipoFormacion != null && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -483,10 +496,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   void _onCartillaTypeSelected(String id) {
     setState(() {
-      _isFormacionEntrante = id == 'formacion_entrante';
       switch (id) {
         case 'formacion_entrante':
-          break;
+          _tipoFormacion = TipoFormacion.entrante;
+        case 'formacion_saliente':
+          _tipoFormacion = TipoFormacion.saliente;
         case 'desalojo_vendedores':
           tipo = TipoCartilla.desalojoVendedores;
         case 'punto_martillo':
