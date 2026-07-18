@@ -201,7 +201,7 @@ class _FormacionFormState extends State<FormacionForm> {
       ..writeln()
       ..writeln(
         'Muy respetuosamente, me permito informar que se procedio con la formacion del personal $personalLabel'
-        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado!.nombre}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
+        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado?.nombre ?? '[EAS]'}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
         ' en $direccion.',
       )
       ..writeln()

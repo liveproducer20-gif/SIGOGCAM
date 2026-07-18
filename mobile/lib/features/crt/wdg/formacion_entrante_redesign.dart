@@ -168,7 +168,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     final String ubicacionLabel;
     final String ubicacionValor;
     if (_needsEasDropdown && _easSeleccionado != null) {
-      ubicacionLabel = '*EAS:*';
+      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _easSeleccionado!.nombre;
     } else {
       ubicacionLabel = '*CIRCUITO:*';
@@ -200,7 +200,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       ..writeln()
       ..writeln(
         'Muy respetuosamente, me permito informar que se procedio con la formacion del personal $personalLabel'
-        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado!.nombre}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
+        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado?.nombre ?? '[EAS]'}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
         ' en $direccion.',
       )
       ..writeln()
@@ -221,7 +221,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       buf.writeln('*VIDEOPERADOR:* ${_videoperadorCtrl.text}');
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
       for (final m in _movilesSeleccionados) {
@@ -243,10 +243,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -415,20 +411,10 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        return Column(
-          children: [
-            _buildEasDropdown(),
-            const SizedBox(height: 10),
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Número de móvil',
-                icon: Icons.directions_car_outlined,
-              ),
-              onChanged: (_) => _actualizarPreview(),
-            ),
-          ],
-        );
+        if (_easSeleccionado != null && _movilesEas.isNotEmpty) {
+          return _buildMovilesCheckboxes();
+        }
+        return const SizedBox.shrink();
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -450,8 +436,10 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            _buildEasDropdown(),
-            const SizedBox(height: 10),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              _buildMovilesCheckboxes(),
+              const SizedBox(height: 10),
+            ],
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
@@ -460,10 +448,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               ),
               onChanged: (_) => _actualizarPreview(),
             ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _buildMovilesCheckboxes(),
-            ],
           ],
         );
       default:
@@ -693,12 +677,21 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                         decoration: _inputDeco(
                           label: 'Distrito',
                           icon: Icons.map_outlined,
+                        ).copyWith(
+                          prefixIconConstraints: const BoxConstraints(
+                            minWidth: 32,
+                            maxWidth: 32,
+                          ),
                         ),
+                        isExpanded: true,
                         items: _distritos
                             .map(
                               (d) => DropdownMenuItem(
                                 value: d['nombre'] as String?,
-                                child: Text(d['nombre'] as String? ?? ''),
+                                child: Text(
+                                  d['nombre'] as String? ?? '',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                             )
                             .toList(),
@@ -744,18 +737,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             ],
           ),
           const SizedBox(height: 12),
-
-          if (_needsEasDropdown)
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Número de móvil (opcional)',
-                icon: Icons.directions_car_outlined,
-                hint: 'Ingrese el número de móvil',
-              ),
-              onChanged: (_) => _actualizarPreview(),
-            ),
-          if (_needsEasDropdown) const SizedBox(height: 12),
 
           if (!_needsEasDropdown) ...[
             TextFormField(
