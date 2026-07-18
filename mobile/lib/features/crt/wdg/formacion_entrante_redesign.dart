@@ -211,15 +211,11 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       buf.writeln(novedades);
     }
 
-    if (_isRadioperador && _videoperadorCtrl.text.isNotEmpty) {
-      buf.writeln();
-      buf.writeln('*VIDEOPERADOR:* ${_videoperadorCtrl.text}');
-    }
-
-    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
+    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
-      for (final m in _movilesSeleccionados) {
+      final sorted = _movilesSeleccionados.toList()..sort();
+      for (final m in sorted) {
         buf.writeln('MOVIL $m');
       }
     }
@@ -238,6 +234,10 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
+        }
+      case 'EAS':
+        if (_movilCtrl.text.isNotEmpty) {
+          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -264,6 +264,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
 
   void _onServicioChanged(String? value) {
     if (value == null) return;
+    final prevNeedsEas = _needsEasDropdown;
     setState(() {
       _servicio = value;
       _motoCtrl.clear();
@@ -272,13 +273,12 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       _bicicletaCtrl.clear();
       _videoperadorCtrl.clear();
       _movilesSeleccionados.clear();
-      if (_needsEasDropdown) {
+      _movilesEas = [];
+      if (prevNeedsEas && !_needsEasDropdown) {
+        _easSeleccionado = null;
         _circuitoCtrl.clear();
       }
     });
-    if (_needsEasDropdown && _easSeleccionado != null) {
-      _actualizarMovilesEas(_easSeleccionado!);
-    }
     _actualizarPreview();
   }
 
@@ -423,10 +423,14 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        if (_easSeleccionado != null && _movilesEas.isNotEmpty) {
-          return _buildMovilesCheckboxes();
-        }
-        return const SizedBox.shrink();
+        return TextFormField(
+          controller: _movilCtrl,
+          decoration: _inputDeco(
+            label: 'Número de móvil',
+            icon: Icons.directions_car_outlined,
+          ),
+          onChanged: (_) => _actualizarPreview(),
+        );
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -455,7 +459,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
-                label: 'Videoperador',
+                label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
               onChanged: (_) => _actualizarPreview(),
@@ -472,7 +476,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       initialValue: _easSeleccionado,
       isExpanded: true,
       decoration: _inputDeco(
-        label: 'EAS',
+        label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
       items: CrtCatalog.easStations

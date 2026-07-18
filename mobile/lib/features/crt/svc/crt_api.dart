@@ -96,4 +96,12 @@ class CrtApi {
     );
     return (resp.datos ?? []).cast<Map<String, dynamic>>();
   }
+
+  Future<List<Map<String, dynamic>>> getTiposServicioLugar() async {
+    final resp = await _client.get<List>(
+      'admin/catalogos/TIPOS_SERVICIO_LUGAR?incluirInactivos=0',
+      (value) => value as List,
+    );
+    return (resp.datos ?? []).cast<Map<String, dynamic>>();
+  }
 }

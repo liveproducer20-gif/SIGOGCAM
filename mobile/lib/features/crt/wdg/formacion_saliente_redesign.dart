@@ -45,6 +45,9 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
+  List<Map<String, dynamic>> _tiposServicio = [];
+  bool _cargandoTiposServicio = true;
+
   final _circuitoCtrl = TextEditingController();
   TimeOfDay _horaIngreso = TimeOfDay.now();
   final _direccionCtrl = TextEditingController();
@@ -68,6 +71,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
+    _cargarTiposServicio();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -120,26 +124,40 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     }
   }
 
+  Future<void> _cargarTiposServicio() async {
+    try {
+      final tipos = await _crtApi.getTiposServicioLugar();
+      if (mounted) {
+        setState(() {
+          _tiposServicio = tipos;
+          _cargandoTiposServicio = false;
+          if (_tiposServicio.isNotEmpty && _servicio.isEmpty) {
+            _servicio = _tiposServicio.first['codigo']?.toString() ?? '';
+          }
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _actualizarPreview();
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _cargandoTiposServicio = false);
+    }
+  }
+
   bool get _isEas => _servicio == 'EAS';
   bool get _isRadioperador => _servicio == 'RADIOPERADOR';
   bool get _needsEasDropdown => _isEas || _isRadioperador;
 
   String _servicioTitle(String servicio) {
-    const titles = {
-      'MOTORIZADO': 'REPORTE DE MOTORIZADO',
-      'K9': 'REPORTE DE K9',
-      'EAS': 'REPORTE DE EAS',
-      'PEDESTRE': 'REPORTE DE PEDESTRE',
-      'TURISMO': 'REPORTE DE TURISMO',
-      'CICLISTA': 'REPORTE DE CICLISTA',
-      'ADMINISTRATIVO': 'REPORTE DE ADMINISTRATIVO',
-      'AMBIENTE': 'REPORTE DE AMBIENTE GOCAM',
-      'ENCARGADO': 'REPORTE DE ENCARGADO',
-      'GESTION DE RIESGOS': 'REPORTE DE GESTION DE RIESGOS',
-      'SUPERVISION': 'REPORTE DE SUPERVISION',
-      'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
-    };
-    return titles[servicio] ?? 'REPORTE DE $servicio';
+    final match = _tiposServicio.firstWhere(
+      (t) => t['codigo']?.toString() == servicio,
+      orElse: () => {},
+    );
+    final nombre = match['nombre']?.toString();
+    if (nombre != null && nombre.isNotEmpty) {
+      return 'REPORTE DE $nombre'.toUpperCase();
+    }
+    return 'REPORTE DE $servicio';
   }
 
   void _actualizarPreview() {
@@ -649,40 +667,28 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           Row(
             children: [
               Expanded(
-                child: DropdownButtonFormField<String>(
-                  initialValue: _servicio,
-                  decoration: _inputDeco(
-                    label: 'Tipo de Servicio',
-                    icon: Icons.category_outlined,
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
-                    DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
-                    DropdownMenuItem(value: 'K9', child: Text('K9')),
-                    DropdownMenuItem(value: 'EAS', child: Text('EAS')),
-                    DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
-                    DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
-                    DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
-                    DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
-                    DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
-                    DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestión de Riesgos')),
-                    DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervisión')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
-                  ],
-                  onChanged: _onServicioChanged,
-                ),
+                child: _cargandoTiposServicio
+                    ? const LinearProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                        initialValue: _servicio,
+                        isExpanded: true,
+                        decoration: _inputDeco(
+                          label: 'Tipo de Servicio',
+                          icon: Icons.category_outlined,
+                        ),
+                        items: _tiposServicio
+                            .map(
+                              (t) => DropdownMenuItem(
+                                value: t['codigo']?.toString() ?? '',
+                                child: Text(
+                                  t['nombre']?.toString() ?? '',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: _onServicioChanged,
+                      ),
               ),
               const SizedBox(width: 12),
               Expanded(
