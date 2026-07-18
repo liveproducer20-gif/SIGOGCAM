@@ -169,7 +169,7 @@ class _FormacionFormState extends State<FormacionForm> {
     final String ubicacionLabel;
     final String ubicacionValor;
     if (_needsEasDropdown && _easSeleccionado != null) {
-      ubicacionLabel = '*EAS:*';
+      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _easSeleccionado!.nombre;
     } else {
       ubicacionLabel = '*CIRCUITO:*';
