@@ -460,24 +460,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
-      decoration: InputDecoration(
-        labelText: 'EAS',
-        filled: true,
-        fillColor: Colors.white,
-        labelStyle: const TextStyle(color: _blueMid, fontSize: 13),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _blueBorder),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _blueBorder),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _blueFocus, width: 1.5),
-        ),
+      decoration: _inputDeco(
+        label: 'EAS',
+        icon: Icons.location_city_outlined,
       ),
       items: CrtCatalog.easStations
           .map(
@@ -750,13 +735,14 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                   onChanged: (_) => _actualizarPreview(),
                 ),
               ),
-              if (_needsEasDropdown) ...[
-                const SizedBox(width: 12),
-                Expanded(child: _buildEasDropdown()),
-              ],
             ],
           ),
           const SizedBox(height: 12),
+
+          if (_needsEasDropdown) ...[
+            _buildEasDropdown(),
+            const SizedBox(height: 12),
+          ],
 
           if (!_needsEasDropdown) ...[
             TextFormField(
