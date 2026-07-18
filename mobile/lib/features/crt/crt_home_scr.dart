@@ -76,6 +76,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Future<void> _cargarJefe() async {
     try {
       final jefe = await crtApi.getJefeControlMunicipal();
+      if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
       CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty

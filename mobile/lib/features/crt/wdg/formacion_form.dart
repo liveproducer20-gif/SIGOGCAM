@@ -67,7 +67,9 @@ class _FormacionFormState extends State<FormacionForm> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
-    _actualizarPreview();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   @override
@@ -95,7 +97,9 @@ class _FormacionFormState extends State<FormacionForm> {
             _distritoSeleccionado = _distritos.first['nombre'] as String?;
           }
         });
-        _actualizarPreview();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _actualizarPreview();
+        });
       }
     } catch (_) {
       if (mounted) setState(() => _cargandoDistritos = false);
@@ -105,6 +109,7 @@ class _FormacionFormState extends State<FormacionForm> {
   Future<void> _cargarJefe() async {
     try {
       final jefe = await _crtApi.getJefeControlMunicipal();
+      if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
       CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
