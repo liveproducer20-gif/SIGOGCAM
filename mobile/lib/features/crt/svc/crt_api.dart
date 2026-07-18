@@ -88,4 +88,12 @@ class CrtApi {
     );
     return (resp.datos ?? []).cast<Map<String, dynamic>>();
   }
+
+  Future<List<Map<String, dynamic>>> getAsignacionesMoviles() async {
+    final resp = await _client.get<List>(
+      'admin/movil-eas-asignaciones',
+      (value) => value as List,
+    );
+    return (resp.datos ?? []).cast<Map<String, dynamic>>();
+  }
 }

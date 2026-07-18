@@ -274,9 +274,11 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       _movilesSeleccionados.clear();
       if (_needsEasDropdown) {
         _circuitoCtrl.clear();
-        if (_easSeleccionado != null) _actualizarMovilesEas(_easSeleccionado!);
       }
     });
+    if (_needsEasDropdown && _easSeleccionado != null) {
+      _actualizarMovilesEas(_easSeleccionado!);
+    }
     _actualizarPreview();
   }
 
@@ -285,14 +287,28 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     setState(() {
       _easSeleccionado = value;
       _movilesSeleccionados.clear();
-      _actualizarMovilesEas(value);
+      _movilesEas = [];
     });
+    _actualizarMovilesEas(value);
     _actualizarPreview();
   }
 
-  void _actualizarMovilesEas(CrtEasStation eas) {
-    final dotacion = CrtCatalog.dotacionEas[eas.nombre];
-    _movilesEas = dotacion?.map((d) => d.movil).toList() ?? [];
+  Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
+    try {
+      final asignaciones = await _crtApi.getAsignacionesMoviles();
+      final asignadas = asignaciones.where((a) {
+        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
+        final activo = a['activo'] == true;
+        return matchEas && activo;
+      }).map((a) => a['numero_movil']?.toString() ?? '')
+        .where((m) => m.isNotEmpty)
+        .toList();
+      if (mounted) {
+        setState(() => _movilesEas = asignadas);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _movilesEas = []);
+    }
   }
 
   void _toggleMovil(String movil) {
