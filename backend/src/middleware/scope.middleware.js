@@ -109,4 +109,4 @@ function parseJson(value) {
     }
 }
 
-module.exports = { scopeMiddleware, getScopeFilter, cargarAlcances };
+module.exports = { scopeMiddleware };

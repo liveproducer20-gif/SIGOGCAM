@@ -6,7 +6,6 @@ class AppThm {
   static const Color priClr = Color(0xFF1D3F73); // Azul SEGURA EP
   static const Color secClr = Color(0xFF00A6D6); // Celeste institucional
   static const Color accClr = Color(0xFFFFC400); // Amarillo
-  static const Color navClr = Color(0xFF2D2A5F); // Azul morado
   static const Color bgClr = Color(0xFFF4F8FB);
   static const Color txtClr = Color(0xFF1F2937);
   static const Color errClr = Color(0xFFD32F2F);

@@ -75,15 +75,6 @@ async function listarPermisosPorModulo(moduloId) {
     `, [moduloId]);
 }
 
-async function listarPermisosNoAsignados(moduloCodigo) {
-    return q(`
-        SELECT * FROM dbo.permisos
-        WHERE (modulo IS NULL OR modulo = '')
-          AND activo = 1
-        ORDER BY codigo
-    `, []);
-}
-
 // ---- Menú por Rol ----
 async function obtenerMenuRol(rolId) {
     return q(`
@@ -355,7 +346,7 @@ function normalizarAccionAuditoria(accion) {
 
 module.exports = {
     listarModulos, obtenerModulo, crearModulo, actualizarModulo, eliminarModulo,
-    listarPermisosPorModulo, listarPermisosNoAsignados,
+    listarPermisosPorModulo,
     obtenerMenuRol, guardarMenuRol,
     miEstructura,
     obtenerAlcanceRol, guardarAlcanceRol,

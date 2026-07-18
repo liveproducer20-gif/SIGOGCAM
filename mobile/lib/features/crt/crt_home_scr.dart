@@ -171,6 +171,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         compact: compact,
         selectedId: _selectedCartillaId,
         onSelected: _onCartillaTypeSelected,
+        canView: true,
+        canCreateFormation: true,
       ),
     ];
   }

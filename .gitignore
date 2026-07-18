@@ -9,8 +9,7 @@ backend/.env
 # Node
 node_modules/
 backend/node_modules/
-backend/runtime.*.log
-backend/backend.*.log
+backend/*.log
 backend/uploads/
 
 # Build
@@ -27,3 +26,9 @@ mobile/.dart_tool/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backup (contains real database data)
+Backup/
+
+# Office temp files
+~$*

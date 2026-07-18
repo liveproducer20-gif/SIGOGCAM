@@ -13,20 +13,4 @@ function normalizarRol(rol) {
     return 'USUARIO';
 }
 
-function nombreRol(rolCodigo) {
-    const mapa = {
-        ADMINISTRADOR: 'Administrador',
-        OPERACIONES: 'Operaciones',
-        SUPERVISOR: 'Supervisor',
-        INSPECTOR: 'Inspector',
-        USUARIO: 'Agente municipal',
-        RADIOPERADOR_SEGURA_EP: 'Radioperador SEGURA EP',
-        ENCARGADO: 'Encargado',
-        COMUNICACIONES: 'Comunicaciones',
-        PERSONAL_OPERATIVO: 'Personal Operativo',
-        AUDITOR: 'Auditor'
-    };
-    return mapa[rolCodigo] || 'Agente';
-}
-
-module.exports = { normalizarRol, nombreRol };
+module.exports = { normalizarRol };

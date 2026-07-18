@@ -66,18 +66,6 @@ async function listarDetalles(codigo, incluirInactivos = false, query = {}) {
     });
 }
 
-async function listarDetallesConConexion(conexion, codigo, incluirInactivos = false) {
-    const sql = `
-        SELECT d.id, d.codigo, d.nombre, d.descripcion, d.orden, d.estado
-        FROM dbo.catalogo_detalles d
-        INNER JOIN dbo.catalogos c ON c.id = d.catalogo_id
-        WHERE c.codigo = ?
-          ${incluirInactivos ? '' : 'AND d.estado = 1'}
-        ORDER BY d.orden, d.nombre
-    `;
-    return conexion.query(sql, [codigo]);
-}
-
 async function crearDetalle(codigoCatalogo, data) {
     return withConnection(async (conexion) => {
         const catalogo = await obtenerCatalogo(conexion, codigoCatalogo);

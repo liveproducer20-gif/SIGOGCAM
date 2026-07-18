@@ -100,8 +100,6 @@ async function transaction(callback) {
 }
 
 module.exports = {
-  odbc,
-  connectionString,
   getPool,
   query,
   transaction,
