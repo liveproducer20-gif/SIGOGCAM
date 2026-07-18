@@ -186,11 +186,8 @@ class _FormacionFormState extends State<FormacionForm> {
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
       ..writeln()
       ..writeln('*$servicio*')
-      ..writeln()
       ..writeln('*DISTRITO:* $distrito')
-      ..writeln()
       ..writeln('$ubicacionLabel $ubicacionValor')
-      ..writeln()
       ..writeln('*HORARIO:* $horario - $horaSalida')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
@@ -198,13 +195,11 @@ class _FormacionFormState extends State<FormacionForm> {
       ..writeln('*CAUSA:* $causaLabel')
       ..writeln()
       ..writeln('$saludo, permiso Sr. $jefe.')
-      ..writeln()
       ..writeln(
         'Muy respetuosamente, me permito informar que se procedio con la formacion del personal $personalLabel'
         '${_needsEasDropdown ? ' del EAS ${_easSeleccionado?.nombre ?? '[EAS]'}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
         ' en $direccion.',
       )
-      ..writeln()
       ..writeln(
         'Asimismo, se informa que para el cumplimiento de las actividades operativas correspondientes se $accionLabel con el siguiente personal asignado:',
       )

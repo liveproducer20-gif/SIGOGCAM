@@ -127,7 +127,6 @@ $reporta
 *HORA:* ${data.hora}
 *FECHA:* ${data.fecha}
 *DIRECCIÓN:* $direccion
-
 *CAUSA:* $causa
 
 ${_saludoPatrulla(now)}, permiso Sr. $jefeDisplay.
@@ -385,15 +384,12 @@ $reporta
 *CAUSA:* $causa
 
 *PROCEDIMIENTO:*
-
 $procedimiento
-
 Notifico novedades para fines correspondientes.
 
 $movil
 
 *REPORTA:*
-
 *CP:* ${cp == null || cp.isEmpty ? '[CP asignado]' : cp}
 *JP:* ${jp == null || jp.isEmpty ? '[JP asignado]' : jp}${policia.isEmpty ? '' : '\n\n*POLICÍA:* $policia'}
 
@@ -495,9 +491,7 @@ $movil
 *CAUSA:* $causa
 
 *PROCEDIMIENTO:*
-
 $saludo, Sr. $jefeDisplay muy respetuosamente me permito informarle que a la altura de la calle "$dir" se procedió con $accion.
-
 Notifico novedades para fines correspondientes.
 
 $movil
@@ -506,7 +500,6 @@ $movil
 ${reporta.toString()}
 
 *"LEALTAD, VALOR Y ORDEN"*
-
 *ADJUNTO FOTOGRAFÍA:*''';
   }
 
@@ -615,7 +608,6 @@ ${reporta.toString()}
 *CAUSA:* $causa
 
 *PROCEDIMIENTO*:
-
 ${procedimiento.toString()}$adicional
 Notifico novedades para fines correspondientes.
 
@@ -625,7 +617,6 @@ $movil
 ${rp.toString().trimRight()}
 
 *"LEALTAD, VALOR Y ORDEN"*
-
 *ADJUNTO FOTOGRAFÍA:*''';
   }
 
