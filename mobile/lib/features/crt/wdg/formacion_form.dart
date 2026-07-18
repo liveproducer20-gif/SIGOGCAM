@@ -222,7 +222,7 @@ class _FormacionFormState extends State<FormacionForm> {
       buf.writeln('*VIDEOPERADOR:* ${_videoperadorCtrl.text}');
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
       for (final m in _movilesSeleccionados) {
@@ -244,10 +244,6 @@ class _FormacionFormState extends State<FormacionForm> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -332,12 +328,10 @@ class _FormacionFormState extends State<FormacionForm> {
         return Column(
           children: [
             _buildEasDropdown(),
-            const SizedBox(height: 12),
-            _buildField(
-              'Numero de movil',
-              _movilCtrl,
-              Icons.directions_car_outlined,
-            ),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildMovilesCheckboxes(),
+            ],
           ],
         );
       case 'CICLISTA':
@@ -356,16 +350,16 @@ class _FormacionFormState extends State<FormacionForm> {
         return Column(
           children: [
             _buildEasDropdown(),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildMovilesCheckboxes(),
+            ],
             const SizedBox(height: 12),
             _buildField(
               'Videoperador',
               _videoperadorCtrl,
               Icons.videocam_outlined,
             ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _buildMovilesCheckboxes(),
-            ],
           ],
         );
       default:
@@ -397,7 +391,7 @@ class _FormacionFormState extends State<FormacionForm> {
   Widget _buildMovilesCheckboxes() {
     return CrtSectionCard(
       icon: Icons.directions_car_outlined,
-      title: 'MOVILES EN CIRCULACION',
+      title: 'MOVILES DISPONIBLES',
       headerColor: CrtSectionColors.datosGenerales,
       backgroundColor: CrtSectionColors.datosGeneralesBg,
       children: [
@@ -534,10 +528,14 @@ class _FormacionFormState extends State<FormacionForm> {
                         .map(
                           (d) => DropdownMenuItem(
                             value: d['nombre'] as String?,
-                            child: Text(d['nombre'] as String? ?? ''),
+                            child: Text(
+                              d['nombre'] as String? ?? '',
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         )
                         .toList(),
+                    isExpanded: true,
                     onChanged: (v) {
                       setState(() => _distritoSeleccionado = v);
                       _actualizarPreview();
