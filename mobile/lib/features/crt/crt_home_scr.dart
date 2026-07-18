@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/auth/app_user.dart';
 import '../../core/thm/app_thm.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
+import '../ins/ins_api.dart';
 import 'mdl/crt_enums.dart';
 import 'mdl/crt_models.dart';
 import 'svc/crt_api.dart';
@@ -10,6 +11,7 @@ import 'svc/crt_catalog.dart';
 import 'svc/crt_text_generator.dart';
 import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_widgets.dart';
+import 'wdg/formacion_entrante_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -35,6 +37,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   CrtEasStation eas = CrtCatalog.easStations.first;
   String movil = '';
   bool _formExpanded = false;
+  bool _isFormacionEntrante = false;
+  String _previewText = '';
+  bool _generando = false;
 
   final crtApi = CrtApi();
 
@@ -72,8 +77,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       final jefe = await crtApi.getJefeControlMunicipal();
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -169,6 +175,19 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   List<Widget> _formPanelChildren() {
+    if (_isFormacionEntrante) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        _buildFormacionEntranteHeader(),
+        const SizedBox(height: 16),
+        FormacionEntranteForm(
+          user: widget.user,
+          jefeNombre: CrtTextGenerator.jefeDisplay,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -200,7 +219,11 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     return SizedBox(
       height: 40,
       child: OutlinedButton.icon(
-        onPressed: () => setState(() => _formExpanded = false),
+        onPressed: () => setState(() {
+          _formExpanded = false;
+          _isFormacionEntrante = false;
+          _previewText = '';
+        }),
         icon: const Icon(Icons.arrow_back, size: 18),
         label: const Text('Volver a tipos de cartilla'),
         style: OutlinedButton.styleFrom(
@@ -210,6 +233,99 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ),
     );
+  }
+
+  Widget _buildFormacionEntranteHeader() {
+    return _Panel(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: Row(
+          children: [
+            const Icon(Icons.login_outlined, color: AppThm.priClr, size: 22),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'FORMACION ENTRANTE',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppThm.priClr,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            if (_generando)
+              const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generarCartilla() async {
+    if (_generando || _previewText.isEmpty) return;
+    setState(() => _generando = true);
+    try {
+      final insApi = InsApi();
+      final result = await insApi.registrarCartilla(
+        tipo: 'formacion_entrante',
+        contenido: _previewText,
+      );
+      if (!mounted) return;
+
+      if (result.insigniaDesbloqueada != null) {
+        final badge = result.insigniaDesbloqueada!;
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => AlertDialog(
+              title: Row(
+                children: [
+                  const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+                  const SizedBox(width: 8),
+                  Text(badge.titulo),
+                ],
+              ),
+              content: Text(badge.mensaje),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Aceptar'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Cartilla #${result.cartillaId} generada '
+              '(${result.totalCartillasGeneradas} total)',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        setState(() {
+          _formExpanded = false;
+          _isFormacionEntrante = false;
+          _previewText = '';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _generando = false);
+    }
   }
 
   Widget _buildModuloSelectorCompact() {
@@ -269,6 +385,78 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPlaceholderPreview() {
+    if (_isFormacionEntrante && _previewText.isNotEmpty) {
+      return _Panel(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.preview_outlined,
+                    color: AppThm.priClr,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'VISTA PREVIA',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppThm.priClr,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (!_generando)
+                    FilledButton.icon(
+                      onPressed: _generarCartilla,
+                      icon: const Icon(Icons.send_outlined, size: 18),
+                      label: const Text('GENERAR CARTILLA'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppThm.priClr,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                    )
+                  else
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Text(
+                  _previewText,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    height: 1.6,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return _Panel(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -295,7 +483,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   void _onCartillaTypeSelected(String id) {
     setState(() {
+      _isFormacionEntrante = id == 'formacion_entrante';
       switch (id) {
+        case 'formacion_entrante':
+          break;
         case 'desalojo_vendedores':
           tipo = TipoCartilla.desalojoVendedores;
         case 'punto_martillo':
