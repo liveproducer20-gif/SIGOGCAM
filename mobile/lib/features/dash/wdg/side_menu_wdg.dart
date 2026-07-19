@@ -122,8 +122,8 @@ class SideMenuWdg extends StatelessWidget {
                   child: IgnorePointer(
                     child: Image.asset(
                       'assets/img/menud.png',
-                      width: 190,
-                      height: 190,
+                      width: 400,
+                      height: 490,
                       fit: BoxFit.contain,
                       opacity: const AlwaysStoppedAnimation(0.6),
                     ),
