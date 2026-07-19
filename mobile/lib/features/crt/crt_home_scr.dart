@@ -14,6 +14,7 @@ import 'wdg/crt_widgets.dart';
 import 'mdl/crt_special_models.dart';
 import 'wdg/formacion_form.dart';
 import 'wdg/ausentismo_form.dart';
+import 'wdg/colaboracion_entidades_form.dart';
 import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
 import 'wdg/formacion_saliente_redesign.dart';
@@ -188,7 +189,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
-        tipo == TipoCartilla.retiroTemporal;
+        tipo == TipoCartilla.retiroTemporal ||
+        tipo == TipoCartilla.colaboracionEntidades;
     if ((!_formExpanded) ||
         (_tipoFormacion == null && !isEasCartilla)) {
       return const SizedBox.shrink();
@@ -400,6 +402,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
+    if (tipo == TipoCartilla.colaboracionEntidades) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        ColaboracionEntidadesForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -491,7 +505,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
-        tipo == TipoCartilla.retiroTemporal;
+        tipo == TipoCartilla.retiroTemporal ||
+        tipo == TipoCartilla.colaboracionEntidades;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
@@ -627,7 +642,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
-        tipo == TipoCartilla.retiroTemporal;
+        tipo == TipoCartilla.retiroTemporal ||
+        tipo == TipoCartilla.colaboracionEntidades;
     if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../core/auth/auth_session.dart';
 import '../../core/notif/notif_read_store.dart';
 import '../../core/thm/app_thm.dart';
+import '../../core/wdg/responsive.dart';
 import '../../core/auth/app_user.dart';
 import '../auth/auth_scr.dart';
 import '../adm/adm_home_scr.dart';
@@ -218,38 +219,48 @@ class _DashboardHome extends StatelessWidget {
   const _DashboardHome({required this.user});
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 620),
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.dashboard_outlined,
-              size: 64,
-              color: AppThm.secClr,
-            ),
-            const SizedBox(height: 18),
-            Text(
-              'Bienvenido, ${user.nombreCompleto}',
-              textAlign: TextAlign.center,
-              style: Theme.of(
-                context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Selecciona una opcion del menu para comenzar.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          ],
+  Widget build(BuildContext context) {
+    final isMobile = AppResponsive.isMobile(context);
+    final iconSize = isMobile ? 48.0 : 64.0;
+    final titleSize = isMobile ? 20.0 : 24.0;
+    final padding = isMobile ? 16.0 : 24.0;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 620),
+        child: Padding(
+          padding: EdgeInsets.all(padding),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.dashboard_outlined,
+                size: iconSize,
+                color: AppThm.secClr,
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'Bienvenido, ${user.nombreCompleto}',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: titleSize,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Selecciona una opcion del menu para comenzar.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: isMobile ? 14 : 16,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _WebDash extends StatefulWidget {
@@ -1070,11 +1081,14 @@ class _NotifDialogState extends State<_NotifDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final dialogWidth = AppResponsive.dialogMaxWidth(context);
+    final dialogHeight = AppResponsive.dialogMaxHeight(context);
+
     return AlertDialog(
       title: const Text('Notificaciones'),
       content: SizedBox(
-        width: 560,
-        height: 420,
+        width: dialogWidth,
+        height: dialogHeight,
         child: FutureBuilder<List<_NotifItem>>(
           future: future,
           builder: (context, snapshot) {
@@ -1162,10 +1176,12 @@ class _NotifDetailDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dialogWidth = AppResponsive.dialogMaxWidth(context);
+
     return AlertDialog(
       title: Text(item.title),
       content: SizedBox(
-        width: 620,
+        width: dialogWidth,
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1429,6 +1445,11 @@ class _MobDash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isSmall = screenWidth < 400;
+    final crossAxisCount = isSmall ? 2 : (screenWidth < 600 ? 2 : 3);
+    final childAspectRatio = isSmall ? 1.1 : 1.2;
+
     return Scaffold(
       appBar: TopBarWdg(
         ttl: 'SIGO-GCAM',
@@ -1438,21 +1459,22 @@ class _MobDash extends StatelessWidget {
         onNotifications: onNotifications,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isSmall ? 12 : 16),
         child: GridView.builder(
           itemCount: items.length,
-          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-            maxCrossAxisExtent: 260,
-            mainAxisSpacing: 18,
-            crossAxisSpacing: 18,
-            childAspectRatio: 1.25,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            mainAxisSpacing: isSmall ? 10 : 14,
+            crossAxisSpacing: isSmall ? 10 : 14,
+            childAspectRatio: childAspectRatio,
           ),
           itemBuilder: (context, index) {
             final item = items[index];
 
             return Card(
+              clipBehavior: Clip.antiAlias,
               child: InkWell(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 onTap: () {
                   if (!item.enabled) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -1527,49 +1549,55 @@ class _MobDash extends StatelessWidget {
                   );
                 },
                 child: Padding(
-                  padding: const EdgeInsets.all(18),
+                  padding: EdgeInsets.all(isSmall ? 12 : 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        item.icon,
-                        size: 34,
-                        color: item.enabled ? AppThm.secClr : Colors.black38,
-                      ),
-                      if (item.badge > 0)
-                        Align(
-                          alignment: Alignment.topRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              item.badge > 99 ? '99+' : '${item.badge}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w800,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(
+                            item.icon,
+                            size: isSmall ? 28 : 32,
+                            color: item.enabled ? AppThm.secClr : Colors.black38,
+                          ),
+                          if (item.badge > 0)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                item.badge > 99 ? '99+' : '${item.badge}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
-                          ),
-                        ),
+                        ],
+                      ),
                       const Spacer(),
                       Text(
                         item.title,
-                        style: const TextStyle(
-                          fontSize: 18,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: isSmall ? 13 : 15,
                           fontWeight: FontWeight.bold,
                           color: AppThm.priClr,
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         item.enabled ? 'Disponible' : 'En desarrollo',
                         style: TextStyle(
+                          fontSize: isSmall ? 11 : 12,
                           color: item.enabled ? AppThm.okClr : Colors.black45,
                         ),
                       ),

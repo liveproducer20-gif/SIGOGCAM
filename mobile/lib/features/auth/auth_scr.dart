@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/cnst/app_cnst.dart';
 import '../../core/thm/app_thm.dart';
+import '../../core/wdg/responsive.dart';
 import '../dash/dash_scr.dart';
 import 'auth_api.dart';
 
@@ -135,10 +136,19 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = AppResponsive.isMobile(context);
+    final horizontalPad = isMobile ? 24.0 : 60.0;
+    final verticalPad = isMobile ? 20.0 : 36.0;
+    final logoSize = isMobile ? 70.0 : 100.0;
+    final titleSize = isMobile ? 26.0 : 38.0;
+
     return SafeArea(
       child: Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 36),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontalPad,
+            vertical: verticalPad,
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Column(
@@ -148,11 +158,11 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                   children: [
                     Image.asset(
                       'assets/img/logo_sigo_gcam.png',
-                      height: 100,
-                      width: 100,
+                      height: logoSize,
+                      width: logoSize,
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
@@ -160,7 +170,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                           'Bienvenido Agente',
                           style: TextStyle(
                             color: AppThm.priClr,
-                            fontSize: 38,
+                            fontSize: titleSize,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -178,9 +188,12 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                   ),
                 ),
                 const SizedBox(height: 28),
-                const Text(
+                Text(
                   'Inicia sesión para continuar',
-                  style: TextStyle(color: Colors.black54, fontSize: 18),
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: isMobile ? 15 : 18,
+                  ),
                 ),
                 const SizedBox(height: 36),
                 const Text(
@@ -193,6 +206,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 const SizedBox(height: 10),
                 TextField(
                   controller: usuarioCtl,
+                  keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
                   decoration: InputDecoration(
                     hintText: 'usuario@institucion.gob.ec',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -213,6 +228,7 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 TextField(
                   controller: passCtl,
                   obscureText: !showPassword,
+                  textInputAction: TextInputAction.done,
                   onSubmitted: (_) => loading ? null : _login(),
                   decoration: InputDecoration(
                     hintText: 'Ingresa tu contraseña',
@@ -236,14 +252,17 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: loading ? null : _login,
-                  icon: Icon(
-                    loading ? Icons.hourglass_top : Icons.lock_outline,
-                  ),
-                  label: Text(
-                    loading ? 'Ingresando...' : 'Iniciar sesión',
-                    style: const TextStyle(fontSize: 17),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: loading ? null : _login,
+                    icon: Icon(
+                      loading ? Icons.hourglass_top : Icons.lock_outline,
+                    ),
+                    label: Text(
+                      loading ? 'Ingresando...' : 'Iniciar sesión',
+                      style: TextStyle(fontSize: isMobile ? 15 : 17),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 42),
@@ -252,8 +271,8 @@ class _AuthFrmPanelState extends State<_AuthFrmPanel> {
                 Center(
                   child: Image.asset(
                     'assets/img/sigo_gcam.png',
-                    height: 240,
-                    width: 240,
+                    height: isMobile ? 160 : 240,
+                    width: isMobile ? 160 : 240,
                   ),
                 ),
                 const SizedBox(height: 8),
