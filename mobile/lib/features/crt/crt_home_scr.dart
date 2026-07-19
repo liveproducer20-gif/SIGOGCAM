@@ -145,9 +145,15 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _formExpanded
-            ? _formPanelChildren()
-            : _selectorPanelChildren(false),
+        children: [
+          ..._formExpanded
+              ? _formPanelChildren()
+              : _selectorPanelChildren(false),
+          if (_formExpanded) ...[
+            const SizedBox(height: 20),
+            _buildPreviewSectionNarrow(),
+          ],
+        ],
       ),
     );
   }
@@ -157,9 +163,104 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
       padding: const EdgeInsets.all(28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _formExpanded
-            ? _formPanelChildren()
-            : _selectorPanelChildren(false),
+        children: [
+          ..._formExpanded
+              ? _formPanelChildren()
+              : _selectorPanelChildren(false),
+          if (_formExpanded) ...[
+            const SizedBox(height: 20),
+            _buildPreviewSectionNarrow(),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewSectionNarrow() {
+    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+        tipo == TipoCartilla.rondasDisuasivas;
+    if ((!_formExpanded) ||
+        (_tipoFormacion == null && !isEasCartilla)) {
+      return const SizedBox.shrink();
+    }
+    return _Panel(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.preview_outlined,
+                  color: AppThm.priClr,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'VISTA PREVIA',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppThm.priClr,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                if (!_generando)
+                  Flexible(
+                    child: FilledButton.icon(
+                      onPressed: _generarCartilla,
+                      icon: const Icon(Icons.send_outlined, size: 18),
+                      label: const Text('GENERAR'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppThm.priClr,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+              ],
+            ),
+            const Divider(height: 16),
+            if (_previewText.isNotEmpty)
+              Text(
+                _previewText,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.6,
+                  fontFamily: 'monospace',
+                ),
+              )
+            else
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Text(
+                    'Vista previa pendiente',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
