@@ -123,8 +123,10 @@ El override de desarrollo monta el código y usa el modo watch de Node.js:
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
-Flutter móvil conserva como valor local
-`http://127.0.0.1:3000/api`. Para un dispositivo físico indique la IP del equipo:
+Flutter usa como valor local `http://127.0.0.1:3000/api`. En Chrome conserva
+esa dirección y en el emulador Android la convierte automáticamente a
+`http://10.0.2.2:3000/api`, por lo que no es necesario cambiar valores entre
+ambos destinos. Para un dispositivo físico indique la IP del equipo:
 
 ```bash
 flutter run --dart-define=SIGO_API_BASE_URL=http://192.168.1.20:3000/api

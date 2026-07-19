@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../auth/auth_session.dart';
@@ -36,10 +37,28 @@ class NetworkException implements Exception {
   String toString() => message;
 }
 
+String resolveApiUrl(
+  String value, {
+  required bool isWeb,
+  required TargetPlatform platform,
+}) {
+  final uri = Uri.parse(value);
+  final isAndroidEmulator = !isWeb && platform == TargetPlatform.android;
+  final isLoopback = uri.host == '127.0.0.1' || uri.host == 'localhost';
+
+  if (!isAndroidEmulator || !isLoopback) return value;
+  return uri.replace(host: '10.0.2.2').toString();
+}
+
 class ApiClient {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _configuredBaseUrl = String.fromEnvironment(
     'SIGO_API_BASE_URL',
     defaultValue: 'http://127.0.0.1:3000/api',
+  );
+  static final String baseUrl = resolveApiUrl(
+    _configuredBaseUrl,
+    isWeb: kIsWeb,
+    platform: defaultTargetPlatform,
   );
 
   final http.Client _client;
@@ -191,10 +210,13 @@ class ApiClient {
 
   static String absoluteUrl(String? value) {
     final path = value?.trim() ?? '';
-    if (path.isEmpty ||
-        path.startsWith('http://') ||
-        path.startsWith('https://')) {
-      return path;
+    if (path.isEmpty) return path;
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return resolveApiUrl(
+        path,
+        isWeb: kIsWeb,
+        platform: defaultTargetPlatform,
+      );
     }
     final api = Uri.parse(baseUrl);
     return api.replace(path: path, query: null, fragment: null).toString();
