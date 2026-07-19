@@ -125,7 +125,7 @@ class SideMenuWdg extends StatelessWidget {
                       width: 400,
                       height: 490,
                       fit: BoxFit.contain,
-                      opacity: const AlwaysStoppedAnimation(0.3),
+                      opacity: const AlwaysStoppedAnimation(0.1),
                     ),
                   ),
                 ),
