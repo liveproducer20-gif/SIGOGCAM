@@ -338,23 +338,33 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     setState(() => _cargandoMoviles = true);
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
+      debugPrint('[CRT] Asignaciones totales: ${asignaciones.length}');
+      if (asignaciones.isNotEmpty) {
+        debugPrint('[CRT] Primera: ${asignaciones.first}');
+      }
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
+      debugPrint('[CRT] Buscando: codigo="$codigoLower" nombre="$nombreLower"');
       final asignadas = asignaciones.where((a) {
-        final matchCodigo = a['eas_codigo']?.toString().toLowerCase() == codigoLower;
-        final matchNombre = a['eas']?.toString().toLowerCase() == nombreLower;
-        final activo = a['activo'] == true;
-        return (matchCodigo || matchNombre) && activo;
+        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+        final match = easCodigo == codigoLower || easNombre == nombreLower;
+        if (match) {
+          debugPrint('[CRT] Match: eas_codigo="$easCodigo" eas="$easNombre" movil=${a['numero_movil']}');
+        }
+        return match;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();
+      debugPrint('[CRT] Moviles encontrados: $asignadas');
       if (mounted) {
         setState(() {
           _movilesEas = asignadas;
           _cargandoMoviles = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[CRT] Error cargando moviles: $e');
       if (mounted) {
         setState(() {
           _movilesEas = [];

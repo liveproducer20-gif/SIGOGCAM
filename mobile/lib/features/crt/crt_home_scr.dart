@@ -187,7 +187,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
-        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal;
     if ((!_formExpanded) ||
         (_tipoFormacion == null && !isEasCartilla)) {
@@ -364,7 +364,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
-    if (tipo == TipoCartilla.ausentismo) {
+    if (tipo == TipoCartilla.permisoAusentismo) {
       return [
         _buildBackButton(),
         const SizedBox(height: 12),
@@ -490,7 +490,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
-        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
@@ -626,7 +626,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
-        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal;
     if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(

@@ -321,10 +321,9 @@ class _FormacionFormState extends State<FormacionForm> {
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
       final asignadas = asignaciones.where((a) {
-        final matchCodigo = a['eas_codigo']?.toString().toLowerCase() == codigoLower;
-        final matchNombre = a['eas']?.toString().toLowerCase() == nombreLower;
-        final activo = a['activo'] == true;
-        return (matchCodigo || matchNombre) && activo;
+        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+        return easCodigo == codigoLower || easNombre == nombreLower;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();

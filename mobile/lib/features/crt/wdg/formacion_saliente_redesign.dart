@@ -338,23 +338,28 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     setState(() => _cargandoMoviles = true);
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
+      debugPrint('[CRT-SAL] Asignaciones totales: ${asignaciones.length}');
+      if (asignaciones.isNotEmpty) {
+        debugPrint('[CRT-SAL] Primera: ${asignaciones.first}');
+      }
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
       final asignadas = asignaciones.where((a) {
-        final matchCodigo = a['eas_codigo']?.toString().toLowerCase() == codigoLower;
-        final matchNombre = a['eas']?.toString().toLowerCase() == nombreLower;
-        final activo = a['activo'] == true;
-        return (matchCodigo || matchNombre) && activo;
+        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+        return easCodigo == codigoLower || easNombre == nombreLower;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();
+      debugPrint('[CRT-SAL] Moviles encontrados: $asignadas');
       if (mounted) {
         setState(() {
           _movilesEas = asignadas;
           _cargandoMoviles = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[CRT-SAL] Error cargando moviles: $e');
       if (mounted) {
         setState(() {
           _movilesEas = [];
