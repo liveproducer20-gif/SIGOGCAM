@@ -13,6 +13,7 @@ import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_widgets.dart';
 import 'mdl/crt_special_models.dart';
 import 'wdg/formacion_form.dart';
+import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
 import 'wdg/formacion_saliente_redesign.dart';
 
@@ -215,6 +216,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ],
       ];
     }
+    if (tipo == TipoCartilla.desalojoVendedores) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        DesalojoForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -300,16 +313,21 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _generarCartilla() async {
-    if (_generando || _previewText.isEmpty || _tipoFormacion == null) return;
+    if (_generando || _previewText.isEmpty) return;
+    final bool isDesalojo = tipo == TipoCartilla.desalojoVendedores;
+    if (_tipoFormacion == null && !isDesalojo) return;
     setState(() => _generando = true);
     try {
       final insApi = InsApi();
       final result = await insApi.registrarCartilla(
-        tipo: 'FORMACION',
-        subtipo: _tipoFormacion!.causa,
-        causa: _tipoFormacion!.causa,
+        tipo: isDesalojo ? 'CARTILLA' : 'FORMACION',
+        subtipo: isDesalojo ? tipo.label : _tipoFormacion!.causa,
+        causa: isDesalojo ? tipo.label : _tipoFormacion!.causa,
         contenido: _previewText,
-        datos: {'tipo_formacion': _tipoFormacion!.causa},
+        datos: {
+          if (isDesalojo) 'tipo_cartilla': tipo.label,
+          if (!isDesalojo) 'tipo_formacion': _tipoFormacion!.causa,
+        },
       );
       if (!mounted) return;
 
@@ -421,7 +439,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPlaceholderPreview() {
-    if (_tipoFormacion != null && _previewText.isNotEmpty) {
+    final bool isDesalojo = tipo == TipoCartilla.desalojoVendedores;
+    if ((_tipoFormacion != null || isDesalojo) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
