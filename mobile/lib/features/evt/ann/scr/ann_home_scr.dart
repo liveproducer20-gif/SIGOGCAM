@@ -4,6 +4,7 @@ import '../../../../core/auth/app_user.dart';
 import '../../../../core/file/file_pick.dart';
 import '../../../../core/file/file_pick_result.dart';
 import '../../../../core/thm/app_thm.dart';
+import '../../../../core/wdg/responsive.dart';
 import '../../../adm/adm_design_tokens.dart';
 import '../../../dash/wdg/page_ttl_wdg.dart';
 import '../mdl/ann_mdl.dart';
@@ -60,33 +61,50 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
     return Scaffold(
       backgroundColor: AppThm.bgClr,
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
+        padding: AppResponsive.pagePadding(context),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: PageTtlWdg(
-                    ttl: widget.focusAnnId == null ? 'Anuncios' : 'Anuncio',
-                    sub: widget.focusAnnId == null
-                        ? 'Administración de noticias, comunicados y publicaciones institucionales.'
-                        : 'Publicación abierta desde notificaciones.',
-                  ),
-                ),
-                if (widget.showExit)
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                    tooltip: 'Salir',
-                  ),
-                if (widget.user.puedeGestionarAnuncios)
-                  FilledButton.icon(
-                    onPressed: () => _openDlg(),
-                    icon: const Icon(Icons.add_photo_alternate_outlined),
-                    label: const Text('Nuevo anuncio'),
-                  ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 620;
+                final title = PageTtlWdg(
+                  ttl: widget.focusAnnId == null ? 'Anuncios' : 'Anuncio',
+                  sub: widget.focusAnnId == null
+                      ? 'Administración de noticias, comunicados y publicaciones institucionales.'
+                      : 'Publicación abierta desde notificaciones.',
+                );
+                final actions = Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (widget.showExit)
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        tooltip: 'Salir',
+                      ),
+                    if (widget.user.puedeGestionarAnuncios)
+                      FilledButton.icon(
+                        onPressed: () => _openDlg(),
+                        icon: const Icon(Icons.add_photo_alternate_outlined),
+                        label: const Text('Nuevo anuncio'),
+                      ),
+                  ],
+                );
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [title, const SizedBox(height: 14), actions],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(child: title),
+                    actions,
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 20),
             _AnnSummary(items: visibles),

@@ -53,4 +53,21 @@ router.get(
     }
 );
 
+router.get(
+    '/eas',
+    requireAnyPermission(['cartillas.ver', 'cartillas.generar']),
+    async (req, res) => {
+        try {
+            const result = await adminRepo.listarEas();
+            const rows = result.datos.filter(
+                (eas) => eas.activo === true || Number(eas.activo) === 1
+            );
+            res.json({ ok: true, datos: rows });
+        } catch (error) {
+            console.error('Error al obtener EAS para cartillas:', error.message);
+            res.status(500).json({ ok: false, mensaje: error.message });
+        }
+    }
+);
+
 module.exports = router;

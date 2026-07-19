@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 class AppBreakpoints {
   AppBreakpoints._();
 
+  static const double compact = 360;
   static const double mobile = 600;
-  static const double tablet = 900;
-  static const double desktop = 1200;
+  static const double tablet = 1024;
+  static const double desktop = 1280;
 }
 
 enum ScreenSize { mobile, tablet, desktop }
@@ -34,8 +35,7 @@ class AppResponsive {
   static bool isWide(BuildContext context) =>
       MediaQuery.sizeOf(context).width >= AppBreakpoints.desktop;
 
-  static double width(BuildContext context) =>
-      MediaQuery.sizeOf(context).width;
+  static double width(BuildContext context) => MediaQuery.sizeOf(context).width;
 
   static double height(BuildContext context) =>
       MediaQuery.sizeOf(context).height;
@@ -128,7 +128,18 @@ class AppResponsive {
 
   static double dialogMaxHeight(BuildContext context) {
     final h = MediaQuery.sizeOf(context).height;
-    return (h * 0.80).clamp(300.0, 600.0);
+    return (h * 0.82).clamp(240.0, 680.0);
+  }
+
+  static bool isCompact(BuildContext context) =>
+      MediaQuery.sizeOf(context).width < AppBreakpoints.compact;
+
+  static EdgeInsets pagePadding(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width < AppBreakpoints.compact) return const EdgeInsets.all(10);
+    if (width < AppBreakpoints.mobile) return const EdgeInsets.all(16);
+    if (width < AppBreakpoints.tablet) return const EdgeInsets.all(20);
+    return const EdgeInsets.all(28);
   }
 }
 
@@ -166,5 +177,36 @@ class ResponsiveLayout extends StatelessWidget {
       case ScreenSize.desktop:
         return desktop ?? tablet ?? mobile;
     }
+  }
+}
+
+/// Keeps long dialog content inside the visible, keyboard-adjusted viewport.
+class ResponsiveDialogBody extends StatelessWidget {
+  final Widget child;
+  final double? maxWidth;
+  final bool scrollable;
+
+  const ResponsiveDialogBody({
+    super.key,
+    required this.child,
+    this.maxWidth,
+    this.scrollable = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final content = scrollable
+        ? SingleChildScrollView(
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            child: child,
+          )
+        : child;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: maxWidth ?? AppResponsive.dialogMaxWidth(context),
+        maxHeight: AppResponsive.dialogMaxHeight(context),
+      ),
+      child: content,
+    );
   }
 }

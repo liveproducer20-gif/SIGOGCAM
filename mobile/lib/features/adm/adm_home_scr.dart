@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/auth/app_user.dart';
+import '../../core/wdg/responsive.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import 'adm_api.dart';
 import 'adm_asignaciones_tab.dart';
@@ -188,7 +189,7 @@ class _AdmHomeScrState extends State<AdmHomeScr> with TickerProviderStateMixin {
             : null,
       ),
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        padding: AppResponsive.pagePadding(context),
         child: Container(
           decoration: BoxDecoration(
             color: AdmTokens.surface,

@@ -104,7 +104,7 @@ class _DashScrState extends State<DashScr> {
 
   @override
   Widget build(BuildContext context) {
-    final isWeb = MediaQuery.of(context).size.width >= 900;
+    final isWeb = MediaQuery.sizeOf(context).width >= AppBreakpoints.tablet;
 
     return isWeb
         ? _WebDash(
@@ -251,9 +251,7 @@ class _DashboardHome extends StatelessWidget {
               Text(
                 'Selecciona una opcion del menu para comenzar.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: isMobile ? 14 : 16,
-                ),
+                style: TextStyle(fontSize: isMobile ? 14 : 16),
               ),
             ],
           ),
@@ -1445,11 +1443,6 @@ class _MobDash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.sizeOf(context).width;
-    final isSmall = screenWidth < 400;
-    final crossAxisCount = isSmall ? 2 : (screenWidth < 600 ? 2 : 3);
-    final childAspectRatio = isSmall ? 1.1 : 1.2;
-
     return Scaffold(
       appBar: TopBarWdg(
         ttl: 'SIGO-GCAM',
@@ -1458,153 +1451,171 @@ class _MobDash extends StatelessWidget {
         onLogout: onLogout,
         onNotifications: onNotifications,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(isSmall ? 12 : 16),
-        child: GridView.builder(
-          itemCount: items.length,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: isSmall ? 10 : 14,
-            crossAxisSpacing: isSmall ? 10 : 14,
-            childAspectRatio: childAspectRatio,
-          ),
-          itemBuilder: (context, index) {
-            final item = items[index];
+      body: SafeArea(
+        top: false,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < AppBreakpoints.compact;
+            final columns = compact
+                ? 1
+                : constraints.maxWidth < 720
+                ? 2
+                : 3;
+            final gap = compact ? 10.0 : 14.0;
+            return GridView.builder(
+              padding: AppResponsive.pagePadding(context),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              itemCount: items.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                mainAxisSpacing: gap,
+                crossAxisSpacing: gap,
+                mainAxisExtent: compact ? 116 : 142,
+              ),
+              itemBuilder: (context, index) {
+                final item = items[index];
 
-            return Card(
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () {
-                  if (!item.enabled) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          item.unavailableMessage ??
-                              '${item.title} no está disponible.',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => switch (item.destination) {
-                        SideMenuDestination.dashboard => _DashboardHome(
-                          user: user,
-                        ),
-                        SideMenuDestination.events => EvtHomeScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                        ),
-                        SideMenuDestination.badges => InsHomeScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                        ),
-                        SideMenuDestination.administration => AdmHomeScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                          showBack: true,
-                        ),
-                        SideMenuDestination.support => SupHomeScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                        ),
-                        SideMenuDestination.rolesPermisos => ConfigEditorScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                        ),
-                        SideMenuDestination.booklets => CrtHomeScr(
-                          user: user,
-                          onUserChanged: onUserChanged,
-                          onLogout: onLogout,
-                          onNotifications: onNotifications,
-                        ),
-                        SideMenuDestination.custom => Scaffold(
-                          backgroundColor: AppThm.bgClr,
-                          appBar: TopBarWdg(
-                            ttl: item.title,
-                            user: user,
-                            onUserChanged: onUserChanged,
-                            onLogout: onLogout,
-                            onNotifications: onNotifications,
-                          ),
-                          body: DevCardWdg(ttl: item.title),
-                        ),
-                        _ => const SizedBox.shrink(),
-                      },
-                    ),
-                  );
-                },
-                child: Padding(
-                  padding: EdgeInsets.all(isSmall ? 12 : 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Icon(
-                            item.icon,
-                            size: isSmall ? 28 : 32,
-                            color: item.enabled ? AppThm.secClr : Colors.black38,
-                          ),
-                          if (item.badge > 0)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                item.badge > 99 ? '99+' : '${item.badge}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
+                return Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () {
+                      if (!item.enabled) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              item.unavailableMessage ??
+                                  '${item.title} no está disponible.',
                             ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => switch (item.destination) {
+                            SideMenuDestination.dashboard => _DashboardHome(
+                              user: user,
+                            ),
+                            SideMenuDestination.events => EvtHomeScr(
+                              user: user,
+                              onUserChanged: onUserChanged,
+                              onLogout: onLogout,
+                              onNotifications: onNotifications,
+                            ),
+                            SideMenuDestination.badges => InsHomeScr(
+                              user: user,
+                              onUserChanged: onUserChanged,
+                              onLogout: onLogout,
+                              onNotifications: onNotifications,
+                            ),
+                            SideMenuDestination.administration => AdmHomeScr(
+                              user: user,
+                              onUserChanged: onUserChanged,
+                              onLogout: onLogout,
+                              onNotifications: onNotifications,
+                              showBack: true,
+                            ),
+                            SideMenuDestination.support => SupHomeScr(
+                              user: user,
+                              onUserChanged: onUserChanged,
+                              onLogout: onLogout,
+                              onNotifications: onNotifications,
+                            ),
+                            SideMenuDestination.rolesPermisos =>
+                              ConfigEditorScr(
+                                user: user,
+                                onUserChanged: onUserChanged,
+                                onLogout: onLogout,
+                                onNotifications: onNotifications,
+                              ),
+                            SideMenuDestination.booklets => CrtHomeScr(
+                              user: user,
+                              onUserChanged: onUserChanged,
+                              onLogout: onLogout,
+                              onNotifications: onNotifications,
+                            ),
+                            SideMenuDestination.custom => Scaffold(
+                              backgroundColor: AppThm.bgClr,
+                              appBar: TopBarWdg(
+                                ttl: item.title,
+                                user: user,
+                                onUserChanged: onUserChanged,
+                                onLogout: onLogout,
+                                onNotifications: onNotifications,
+                              ),
+                              body: DevCardWdg(ttl: item.title),
+                            ),
+                            _ => const SizedBox.shrink(),
+                          },
+                        ),
+                      );
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.all(compact ? 14 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Icon(
+                                item.icon,
+                                size: compact ? 28 : 32,
+                                color: item.enabled
+                                    ? AppThm.secClr
+                                    : Colors.black38,
+                              ),
+                              if (item.badge > 0)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    item.badge > 99 ? '99+' : '${item.badge}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const Spacer(),
+                          Text(
+                            item.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: compact ? 15 : 15,
+                              fontWeight: FontWeight.bold,
+                              color: AppThm.priClr,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            item.enabled ? 'Disponible' : 'En desarrollo',
+                            style: TextStyle(
+                              fontSize: compact ? 12 : 12,
+                              color: item.enabled
+                                  ? AppThm.okClr
+                                  : Colors.black45,
+                            ),
+                          ),
                         ],
                       ),
-                      const Spacer(),
-                      Text(
-                        item.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: isSmall ? 13 : 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppThm.priClr,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        item.enabled ? 'Disponible' : 'En desarrollo',
-                        style: TextStyle(
-                          fontSize: isSmall ? 11 : 12,
-                          color: item.enabled ? AppThm.okClr : Colors.black45,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         ),

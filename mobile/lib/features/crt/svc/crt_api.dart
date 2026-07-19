@@ -107,7 +107,7 @@ class CrtApi {
 
   Future<List<Map<String, dynamic>>> getEasStations() async {
     final resp = await _client.get<List>(
-      'admin/eas',
+      'cartillas/eas',
       (value) => value as List,
     );
     return (resp.datos ?? []).cast<Map<String, dynamic>>();

@@ -4,6 +4,7 @@ import '../../../core/auth/app_user.dart';
 import '../../../core/pdf/pdf_preview.dart';
 import '../../../core/thm/app_thm.dart';
 import '../../../core/url/open_url.dart';
+import '../../../core/wdg/responsive.dart';
 import '../../adm/adm_design_tokens.dart';
 import '../../dash/wdg/page_ttl_wdg.dart';
 import '../../dash/wdg/top_bar_wdg.dart';
@@ -54,8 +55,11 @@ class _EvtHomeScrState extends State<EvtHomeScr>
     final initial = widget.initialTab.clamp(0, 1);
     _eventsOpened = initial == 0;
     _announcementsOpened = initial == 1;
-    _tabController = TabController(length: 2, initialIndex: initial, vsync: this)
-      ..addListener(_openSelectedTab);
+    _tabController = TabController(
+      length: 2,
+      initialIndex: initial,
+      vsync: this,
+    )..addListener(_openSelectedTab);
   }
 
   void _openSelectedTab() {
@@ -98,7 +102,11 @@ class _EvtHomeScrState extends State<EvtHomeScr>
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+            padding: EdgeInsets.only(
+              left: AppResponsive.pagePadding(context).left,
+              top: 12,
+              right: AppResponsive.pagePadding(context).right,
+            ),
             child: Container(
               height: 58,
               decoration: BoxDecoration(
@@ -178,7 +186,8 @@ class _EvtLstState extends State<_EvtLst> {
         final items = _filtrar(snapshot.data ?? []);
 
         return ListView(
-          padding: const EdgeInsets.fromLTRB(24, 22, 24, 28),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: AppResponsive.pagePadding(context),
           children: [
             LayoutBuilder(
               builder: (context, constraints) {
@@ -239,8 +248,7 @@ class _EvtLstState extends State<_EvtLst> {
                     setState(() => buscar = v.trim().toLowerCase()),
                 onEstado: (v) => setState(() => estado = v),
                 onTipo: (v) => setState(() => tipo = v),
-                onLugar: (v) =>
-                    setState(() => lugar = v.trim().toLowerCase()),
+                onLugar: (v) => setState(() => lugar = v.trim().toLowerCase()),
                 onPrioridad: (v) => setState(() => prioridad = v),
                 onFecha: (v) => setState(() => fecha = v),
               ),

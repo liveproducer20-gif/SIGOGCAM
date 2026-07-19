@@ -1,7 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart' show Share;
 
 import '../../core/auth/app_user.dart';
 import '../../core/thm/app_thm.dart';
+import '../../core/wdg/responsive.dart';
 import '../dash/wdg/page_ttl_wdg.dart';
 import '../ins/ins_api.dart';
 import 'mdl/crt_enums.dart';
@@ -50,7 +55,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   bool _formExpanded = false;
   TipoFormacion? _tipoFormacion;
   String _previewText = '';
+  final ValueNotifier<String> _previewNotifier = ValueNotifier<String>('');
+  Timer? _previewDebounce;
   bool _generando = false;
+  final _colaboracionCiudadanaKey = GlobalKey<ColaboracionCiudadanaFormState>();
 
   final crtApi = CrtApi();
 
@@ -83,6 +91,29 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   void initState() {
     super.initState();
     _cargarJefe();
+  }
+
+  @override
+  void dispose() {
+    _previewDebounce?.cancel();
+    _previewNotifier.dispose();
+    super.dispose();
+  }
+
+  void _onPreviewChanged(String text) {
+    _previewText = text;
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 160), () {
+      if (mounted && _previewNotifier.value != text) {
+        _previewNotifier.value = text;
+      }
+    });
+  }
+
+  void _clearPreview() {
+    _previewDebounce?.cancel();
+    _previewText = '';
+    _previewNotifier.value = '';
   }
 
   Future<void> _cargarJefe() async {
@@ -150,7 +181,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Widget _buildTabletLayout() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: AppResponsive.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -168,7 +200,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Widget _buildNarrowLayout() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: AppResponsive.pagePadding(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -185,15 +218,16 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPreviewSectionNarrow() {
-    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+    final bool isEasCartilla =
+        tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal ||
-        tipo == TipoCartilla.colaboracionEntidades;
-    if ((!_formExpanded) ||
-        (_tipoFormacion == null && !isEasCartilla)) {
+        tipo == TipoCartilla.colaboracionEntidades ||
+        tipo == TipoCartilla.colaboracionEventos;
+    if ((!_formExpanded) || (_tipoFormacion == null && !isEasCartilla)) {
       return const SizedBox.shrink();
     }
     return _Panel(
@@ -250,28 +284,30 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               ],
             ),
             const Divider(height: 16),
-            if (_previewText.isNotEmpty)
-              Text(
-                _previewText,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.6,
-                  fontFamily: 'monospace',
-                ),
-              )
-            else
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Text(
-                    'Vista previa pendiente',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
+            ValueListenableBuilder<String>(
+              valueListenable: _previewNotifier,
+              builder: (context, previewText, _) {
+                if (previewText.isNotEmpty) {
+                  return Text(
+                    previewText,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.6,
+                      fontFamily: 'monospace',
+                    ),
+                  );
+                }
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      'Vista previa pendiente',
+                      style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                     ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -305,7 +341,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           FormacionEntranteRedesign(
             user: widget.user,
             jefeNombre: CrtTextGenerator.jefeDisplay,
-            onPreviewChanged: (text) => setState(() => _previewText = text),
+            onPreviewChanged: _onPreviewChanged,
             onGenerate: _generarCartilla,
             generando: _generando,
           ),
@@ -313,7 +349,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           FormacionSalienteRedesign(
             user: widget.user,
             jefeNombre: CrtTextGenerator.jefeDisplay,
-            onPreviewChanged: (text) => setState(() => _previewText = text),
+            onPreviewChanged: _onPreviewChanged,
             onGenerate: _generarCartilla,
             generando: _generando,
           ),
@@ -324,7 +360,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
             tipoFormacion: _tipoFormacion!,
             user: widget.user,
             jefeNombre: CrtTextGenerator.jefeDisplay,
-            onPreviewChanged: (text) => setState(() => _previewText = text),
+            onPreviewChanged: _onPreviewChanged,
             onGenerate: _generarCartilla,
             generando: _generando,
           ),
@@ -337,7 +373,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         DesalojoForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -349,7 +385,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         RondaDisuasivaForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -361,7 +397,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         PuntoMartilloForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -373,7 +409,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         AusentismoForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -385,7 +421,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         RequerimientoForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -397,7 +433,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         RetiroTemporalForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -409,7 +445,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         const SizedBox(height: 12),
         ColaboracionEntidadesForm(
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -420,8 +456,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         _buildBackButton(),
         const SizedBox(height: 12),
         ColaboracionCiudadanaForm(
+          key: _colaboracionCiudadanaKey,
           user: widget.user,
-          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onPreviewChanged: _onPreviewChanged,
           onGenerate: _generarCartilla,
           generando: _generando,
         ),
@@ -461,7 +498,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         onPressed: () => setState(() {
           _formExpanded = false;
           _tipoFormacion = null;
-          _previewText = '';
+          _clearPreview();
         }),
         icon: const Icon(Icons.arrow_back, size: 18),
         label: const Text('Volver a tipos de cartilla'),
@@ -512,75 +549,104 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Future<void> _generarCartilla() async {
-    if (_generando || _previewText.isEmpty) return;
-    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+    if (_generando) return;
+    if (tipo == TipoCartilla.colaboracionEventos &&
+        !(_colaboracionCiudadanaKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    if (_previewText.isEmpty) return;
+    final bool isEasCartilla =
+        tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal ||
-        tipo == TipoCartilla.colaboracionEntidades;
+        tipo == TipoCartilla.colaboracionEntidades ||
+        tipo == TipoCartilla.colaboracionEventos;
+    final isColaboracionCiudadana = tipo == TipoCartilla.colaboracionEventos;
+    final cartillaLabel = isColaboracionCiudadana
+        ? 'COLABORACIÓN CIUDADANA'
+        : tipo.label;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
       final insApi = InsApi();
       final result = await insApi.registrarCartilla(
         tipo: isEasCartilla ? 'CARTILLA' : 'FORMACION',
-        subtipo: isEasCartilla ? tipo.label : _tipoFormacion!.causa,
-        causa: isEasCartilla ? tipo.label : _tipoFormacion!.causa,
+        subtipo: isEasCartilla ? cartillaLabel : _tipoFormacion!.causa,
+        causa: isEasCartilla ? cartillaLabel : _tipoFormacion!.causa,
         contenido: _previewText,
         datos: {
-          if (isEasCartilla) 'tipo_cartilla': tipo.label,
+          if (isEasCartilla) 'tipo_cartilla': cartillaLabel,
           if (!isEasCartilla) 'tipo_formacion': _tipoFormacion!.causa,
         },
       );
       if (!mounted) return;
 
+      final previewGenerada = _previewText;
+      await Clipboard.setData(ClipboardData(text: previewGenerada));
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Cartilla generada correctamente: '
+            'TOTAL ${result.totalCartillasGeneradas}',
+          ),
+          backgroundColor: Colors.green,
+        ),
+      );
+
       if (result.insigniaDesbloqueada != null) {
         final badge = result.insigniaDesbloqueada!;
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: Row(
-                children: [
-                  const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      badge.titulo,
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
+        await showDialog<void>(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: Row(
+              children: [
+                const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    badge.titulo,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
-                ],
-              ),
-              content: Text(badge.mensaje),
-              actions: [
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Aceptar'),
                 ),
               ],
             ),
-          );
-        }
+            content: Text(badge.mensaje),
+            actions: [
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Aceptar'),
+              ),
+            ],
+          ),
+        );
       }
 
-      if (mounted) {
+      if (!mounted) return;
+      try {
+        await Share.share(previewGenerada, subject: 'Cartilla generada');
+      } catch (error) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Cartilla #$result.cartillaId generada '
-              '(${result.totalCartillasGeneradas} total)',
+              'La cartilla fue copiada, pero no se pudo abrir el menú para '
+              'compartir: $error',
             ),
-            backgroundColor: Colors.green,
           ),
         );
+      }
+
+      if (mounted) {
         setState(() {
           _formExpanded = false;
           _tipoFormacion = null;
-          _previewText = '';
+          _clearPreview();
         });
       }
     } catch (e) {
@@ -650,14 +716,24 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPlaceholderPreview() {
-    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+    return ValueListenableBuilder<String>(
+      valueListenable: _previewNotifier,
+      builder: (context, previewText, _) =>
+          _buildPlaceholderPreviewContent(previewText),
+    );
+  }
+
+  Widget _buildPlaceholderPreviewContent(String previewText) {
+    final bool isEasCartilla =
+        tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
         tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal ||
-        tipo == TipoCartilla.colaboracionEntidades;
-    if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
+        tipo == TipoCartilla.colaboracionEntidades ||
+        tipo == TipoCartilla.colaboracionEventos;
+    if ((_tipoFormacion != null || isEasCartilla) && previewText.isNotEmpty) {
       return _Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -720,7 +796,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  _previewText,
+                  previewText,
                   style: const TextStyle(
                     fontSize: 13,
                     height: 1.6,
@@ -759,6 +835,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   void _onCartillaTypeSelected(String id) {
     setState(() {
+      _clearPreview();
       switch (id) {
         case 'formacion_entrante':
           _tipoFormacion = TipoFormacion.entrante;

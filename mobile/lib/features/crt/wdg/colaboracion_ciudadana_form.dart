@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../mdl/crt_models.dart';
 import '../svc/crt_api.dart';
-import '../svc/crt_catalog.dart';
-import '../svc/crt_special_text_generator.dart';
+import '../svc/colaboracion_ciudadana_text.dart';
 import '../svc/crt_text_generator.dart';
 
 class ColaboracionCiudadanaForm extends StatefulWidget {
@@ -23,10 +23,10 @@ class ColaboracionCiudadanaForm extends StatefulWidget {
 
   @override
   State<ColaboracionCiudadanaForm> createState() =>
-      _ColaboracionCiudadanaFormState();
+      ColaboracionCiudadanaFormState();
 }
 
-class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
+class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   final _formKey = GlobalKey<FormState>();
   final _crtApi = CrtApi();
 
@@ -48,7 +48,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   final _nombreCiudadanoCtrl = TextEditingController();
   final _cedulaCtrl = TextEditingController();
   final _contactoCtrl = TextEditingController();
-  String _motivo = 'ROBO O HURTO';
+  String _motivo = ColaboracionCiudadanaText.motivos.first;
   final _otroMotivoCtrl = TextEditingController();
   final _accionCtrl = TextEditingController();
   final _resultadoCtrl = TextEditingController();
@@ -62,6 +62,8 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   final _videoperadorCtrl = TextEditingController();
 
   CrtEasStation? _easSeleccionado;
+  List<CrtEasStation> _easStations = [];
+  bool _cargandoEas = true;
   List<String> _movilesEas = [];
   final Set<String> _movilesSeleccionados = {};
 
@@ -71,6 +73,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   void initState() {
     super.initState();
     _cargarDistritos();
+    _cargarEas();
     _cargarJefe();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
@@ -122,10 +125,34 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
+    }
+    if (mounted) _actualizarPreview();
+  }
+
+  Future<void> _cargarEas() async {
+    try {
+      final rows = await _crtApi.getEasStations();
+      if (!mounted) return;
+      setState(() {
+        _easStations = rows
+            .map(
+              (json) => CrtEasStation(
+                codigo: json['codigo']?.toString().trim() ?? '',
+                nombre: json['nombre']?.toString().trim() ?? '',
+                direccion: json['direccion']?.toString().trim() ?? '',
+              ),
+            )
+            .where((eas) => eas.codigo.isNotEmpty && eas.nombre.isNotEmpty)
+            .toList();
+        _cargandoEas = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _cargandoEas = false);
     }
   }
 
@@ -144,158 +171,83 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
       'ADMINISTRATIVO': 'REPORTE DE ADMINISTRATIVO',
       'AMBIENTE': 'REPORTE DE AMBIENTE GOCAM',
       'ENCARGADO': 'REPORTE DE ENCARGADO',
-      'GESTION DE RIESGOS': 'REPORTE DE GESTION DE RIESGOS',
-      'SUPERVISION': 'REPORTE DE SUPERVISION',
-      'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
+      'GESTION DE RIESGOS': 'REPORTE DE GESTIÓN DE RIESGOS',
+      'SUPERVISION': 'REPORTE DE SUPERVISIÓN',
+      'RADIOPERADOR': 'REPORTE DE RADIOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
   }
 
   void _actualizarPreview() {
-    final now = DateTime.now();
-    final jefe = CrtTextGenerator.jefeDisplay;
-    final reporta = widget.user?.nombreCompleto ?? 'ACM';
-    final distrito = _distritoSeleccionado ?? '';
-    final servicio = _servicioTitle(_servicio);
-    final hora =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final fecha =
-        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
-    final saludo = CrtSpecialTextGenerator.saludo(now);
-    const causa = 'COLABORACION CIUDADANA';
-
-    final String ubicacionValor;
-    if (_needsEasDropdown && _easSeleccionado != null) {
-      ubicacionValor = _easSeleccionado!.nombre;
-    } else {
-      ubicacionValor = _circuitoCtrl.text.isNotEmpty
-          ? _circuitoCtrl.text
-          : '[CIRCUITO]';
-    }
-
-    final nombreCiudadano = _nombreCiudadanoCtrl.text.trim();
-    final cedula = _cedulaCtrl.text.trim();
-    final contacto = _contactoCtrl.text.trim();
-    final accion = _accionCtrl.text.trim();
-    final resultado = _resultadoCtrl.text.trim();
-    final novedad = _novedadCtrl.text.trim();
-
-    String motivoTexto;
-    if (_motivo == 'OTRO MOTIVO') {
-      final otro = _otroMotivoCtrl.text.trim();
-      motivoTexto = otro.isNotEmpty ? otro : 'otro motivo';
-    } else {
-      motivoTexto = _motivo.toLowerCase();
-    }
-
-    final buf = StringBuffer()
-      ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
-      ..writeln()
-      ..writeln('*$servicio*')
-      ..writeln('*DISTRITO:* $distrito')
-      ..writeln('*CIRCUITO:* $ubicacionValor')
-      ..writeln('*HORA:* $hora')
-      ..writeln('*FECHA:* $fecha')
-      ..writeln('*DIRECCION:* $direccion')
-      ..writeln('*CAUSA:* $causa')
-      ..writeln()
-      ..writeln('$saludo, permiso Sr. $jefe Jefe de Control Municipal.')
-      ..writeln()
-      ..write(
-        'Muy respetuosamente me permito informar que se procedio a brindar colaboracion ciudadana en el sector de $direccion',
-      );
-
-    if (nombreCiudadano.isNotEmpty) {
-      String ciudadanoTexto = 'atendiendo el requerimiento realizado por el ciudadano $nombreCiudadano';
-      if (cedula.isNotEmpty) {
-        ciudadanoTexto += ', portador de la cedula de identidad $cedula';
-      }
-      if (contacto.isNotEmpty) {
-        ciudadanoTexto += ' y numero de contacto $contacto';
-      }
-      buf.write(', $ciudadanoTexto');
-    }
-
-    buf.write(', quien solicito apoyo por motivo de $motivoTexto.');
-
-    if (accion.isNotEmpty) {
-      buf.write(
-        ' Durante el procedimiento, personal de Agentes de Control Municipal realizo $accion',
-      );
-      if (resultado.isNotEmpty) {
-        buf.write(', permitiendo $resultado');
-      }
-      buf.write('.');
-    }
-
-    if (_estadoFinal == 'SIN NOVEDADES') {
-      buf.write(' La colaboracion culmino sin novedades.');
-    } else {
-      if (novedad.isNotEmpty) {
-        buf.write(
-          ' La colaboracion culmino con novedades, registrandose $novedad.',
-        );
-      } else {
-        buf.write(' La colaboracion culmino con novedades.');
-      }
-    }
-
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
-      buf.writeln();
-      buf.writeln();
-      buf.writeln(
-        '*MOVILES EN CIRCULACION:* ${(_movilesSeleccionados.toList()..sort()).join(', ')}',
-      );
-    }
-
-    buf.writeln();
-    buf.writeln();
-    buf.writeln('*REPORTA:*');
-    buf.writeln('ACM. $reporta');
-
-    switch (_servicio) {
-      case 'MOTORIZADO':
-        if (_motoCtrl.text.isNotEmpty) {
-          buf.writeln('*MOTO:* ${_motoCtrl.text}');
-        }
-      case 'K9':
-        if (_canCtrl.text.isNotEmpty) {
-          buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
-        }
-      case 'CICLISTA':
-        if (_bicicletaCtrl.text.isNotEmpty) {
-          buf.writeln('*BICICLETA:* ${_bicicletaCtrl.text}');
-        }
-      case 'SUPERVISION':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
-        }
-      case 'RADIOPERADOR':
-        if (_videoperadorCtrl.text.isNotEmpty) {
-          buf.writeln('*VIDEOPERADOR:* ${_videoperadorCtrl.text}');
-        }
-    }
-
-    buf.writeln();
-    buf.writeln('"LEALTAD, VALOR Y ORDEN"');
-    buf.writeln();
-    buf.writeln('*ADJUNTO FOTOGRAFIA:*');
-
-    _previewText = buf.toString();
+    final motivo = _motivo == 'Otro motivo'
+        ? _otroMotivoCtrl.text
+        : _motivo.toLowerCase();
+    final extras = <String, String?>{
+      'MOTORIZADO': _motoCtrl.text,
+      'K9': _canCtrl.text,
+      'EAS': _movilCtrl.text,
+      'CICLISTA': _bicicletaCtrl.text,
+      'SUPERVISION': _movilCtrl.text,
+    };
+    _previewText = ColaboracionCiudadanaText.build(
+      ColaboracionCiudadanaData(
+        servicio: _servicioTitle(_servicio).replaceFirst('REPORTE DE ', ''),
+        distrito: _distritoSeleccionado ?? '',
+        circuito: _needsEasDropdown
+            ? (_easSeleccionado == null
+                  ? ''
+                  : '${_easSeleccionado!.codigo} ${_easSeleccionado!.nombre}')
+            : _circuitoCtrl.text,
+        fechaHora: DateTime.now(),
+        direccion: _direccionCtrl.text,
+        jefe: CrtTextGenerator.jefeDisplay,
+        reporta: widget.user?.nombreCompleto ?? '',
+        nombreCiudadano: _nombreCiudadanoCtrl.text,
+        cedula: _cedulaCtrl.text,
+        contacto: _contactoCtrl.text,
+        motivo: motivo,
+        accion: _accionCtrl.text,
+        resultado: _resultadoCtrl.text,
+        conNovedades: _estadoFinal == 'CON NOVEDADES',
+        detalleNovedad: _novedadCtrl.text,
+        moto: _servicio == 'MOTORIZADO' ? extras[_servicio] : null,
+        can: _servicio == 'K9' ? extras[_servicio] : null,
+        movil: _servicio == 'EAS' || _servicio == 'SUPERVISION'
+            ? extras[_servicio]
+            : null,
+        bicicleta: _servicio == 'CICLISTA' ? extras[_servicio] : null,
+        videoperador: _isRadioperador ? _videoperadorCtrl.text : null,
+        movilesEnCirculacion: _isRadioperador
+            ? (_movilesSeleccionados.toList()..sort())
+            : const [],
+      ),
+    );
     widget.onPreviewChanged?.call(_previewText);
+  }
+
+  bool validate() {
+    final valid = _formKey.currentState?.validate() ?? false;
+    if (!valid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Complete correctamente los campos obligatorios.'),
+        ),
+      );
+    }
+    return valid;
+  }
+
+  String? _required(String? value, String label) {
+    if (value == null || value.trim().isEmpty) return '$label es obligatorio.';
+    return null;
   }
 
   void _onServicioChanged(String? value) {
     if (value == null) return;
-    final prevNeedsEas = _needsEasDropdown;
     setState(() {
       _servicio = value;
+      _circuitoCtrl.clear();
+      _easSeleccionado = null;
       _motoCtrl.clear();
       _canCtrl.clear();
       _movilCtrl.clear();
@@ -303,14 +255,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
       _videoperadorCtrl.clear();
       _movilesSeleccionados.clear();
       _movilesEas = [];
-      if (prevNeedsEas && !_needsEasDropdown) {
-        _easSeleccionado = null;
-        _circuitoCtrl.clear();
-      }
     });
-    if (_needsEasDropdown && _easSeleccionado != null) {
-      _actualizarMovilesEas(_easSeleccionado!);
-    }
     _actualizarPreview();
   }
 
@@ -328,13 +273,16 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
-      final asignadas = asignaciones.where((a) {
-        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
-        final activo = a['activo'] == true;
-        return matchEas && activo;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final matchEas = a['eas_codigo']?.toString() == eas.codigo;
+            final movilActivo = a['movil_activo']?.toString().toLowerCase();
+            return matchEas &&
+                (movilActivo == 'true' || movilActivo == '1');
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       if (mounted) {
         setState(() => _movilesEas = asignadas);
       }
@@ -427,7 +375,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
         return TextFormField(
           controller: _motoCtrl,
           decoration: _inputDeco(
-            label: 'Numero de moto',
+            label: 'Número de moto',
             icon: Icons.two_wheeler_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -447,7 +395,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             TextFormField(
               controller: _movilCtrl,
               decoration: _inputDeco(
-                label: 'Numero de movil',
+                label: 'Número de móvil',
                 icon: Icons.directions_car_outlined,
               ),
               onChanged: (_) => _actualizarPreview(),
@@ -462,7 +410,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
         return TextFormField(
           controller: _bicicletaCtrl,
           decoration: _inputDeco(
-            label: 'Numero de bicicleta',
+            label: 'Número de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -471,7 +419,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
         return TextFormField(
           controller: _movilCtrl,
           decoration: _inputDeco(
-            label: 'Numero de movil',
+            label: 'Número de móvil',
             icon: Icons.directions_car_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -499,6 +447,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   }
 
   Widget _buildEasDropdown() {
+    if (_cargandoEas) return const LinearProgressIndicator();
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -506,7 +455,8 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
         label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
-      items: CrtCatalog.easStations
+      validator: (value) => value == null ? 'Seleccione un EAS.' : null,
+      items: _easStations
           .map(
             (e) => DropdownMenuItem(
               value: e,
@@ -533,7 +483,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'MOVILES EN CIRCULACION',
+            'MÓVILES EN CIRCULACIÓN',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -549,12 +499,11 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               final selected = _movilesSeleccionados.contains(movil);
               return FilterChip(
                 label: Text(
-                  'MOVIL $movil',
+                  'MÓVIL $movil',
                   style: TextStyle(
                     fontSize: 12,
                     color: selected ? _blue : Colors.grey[700],
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
                 selected: selected,
@@ -623,7 +572,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'COLABORACION CIUDADANA',
+                  'COLABORACIÓN CIUDADANA',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -633,11 +582,8 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Registro de colaboracion brindada al ciudadano',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  'Registro de colaboración brindada al ciudadano',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -646,10 +592,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -688,31 +631,48 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestión de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestion de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervisión'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervision')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
+                  validator: (value) =>
+                      value == null ? 'Seleccione el tipo de servicio.' : null,
                 ),
               ),
               const SizedBox(width: 12),
@@ -741,6 +701,8 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                           setState(() => _distritoSeleccionado = v);
                           _actualizarPreview();
                         },
+                        validator: (value) =>
+                            value == null ? 'Seleccione un distrito.' : null,
                       ),
               ),
             ],
@@ -760,6 +722,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 icon: Icons.route_outlined,
               ),
               onChanged: (_) => _actualizarPreview(),
+              validator: (value) => _required(value, 'Circuito'),
             ),
             const SizedBox(height: 12),
           ],
@@ -767,10 +730,11 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
           TextFormField(
             controller: _direccionCtrl,
             decoration: _inputDeco(
-              label: 'Direccion',
+              label: 'Dirección',
               icon: Icons.location_on_outlined,
             ),
             onChanged: (_) => _actualizarPreview(),
+            validator: (value) => _required(value, 'Dirección'),
           ),
           const SizedBox(height: 12),
 
@@ -808,6 +772,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               icon: Icons.person_outlined,
             ),
             onChanged: (_) => _actualizarPreview(),
+            validator: (value) => _required(value, 'Nombre del ciudadano'),
           ),
           const SizedBox(height: 12),
 
@@ -817,11 +782,19 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 child: TextFormField(
                   controller: _cedulaCtrl,
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: _inputDeco(
-                    label: 'Numero de cedula',
+                    label: 'Número de cédula',
                     icon: Icons.badge_outlined,
                   ),
                   onChanged: (_) => _actualizarPreview(),
+                  validator: (value) =>
+                      ColaboracionCiudadanaText.cedulaValida(value ?? '')
+                      ? null
+                      : 'Ingrese una cédula de 10 dígitos.',
                 ),
               ),
               const SizedBox(width: 12),
@@ -829,107 +802,53 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 child: TextFormField(
                   controller: _contactoCtrl,
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(10),
+                  ],
                   decoration: _inputDeco(
-                    label: 'Numero de contacto',
+                    label: 'Número de contacto',
                     icon: Icons.phone_outlined,
                   ),
                   onChanged: (_) => _actualizarPreview(),
+                  validator: (value) =>
+                      ColaboracionCiudadanaText.telefonoValido(value ?? '')
+                      ? null
+                      : 'Ingrese un teléfono válido de 10 dígitos.',
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
 
-          _sectionBadge(3, 'DETALLE DE LA COLABORACION'),
+          _sectionBadge(3, 'DETALLE DE LA COLABORACIÓN'),
           const SizedBox(height: 16),
 
           DropdownButtonFormField<String>(
             initialValue: _motivo,
             decoration: _inputDeco(
-              label: 'Motivo de colaboracion',
+              label: 'Motivo de colaboración',
               icon: Icons.help_outline,
             ),
             isExpanded: true,
-            items: const [
-              DropdownMenuItem(
-                  value: 'ROBO O HURTO', child: Text('Robo o hurto')),
-              DropdownMenuItem(
-                  value: 'PERSONA EXTRAVIADA',
-                  child: Text('Persona extraviada')),
-              DropdownMenuItem(
-                  value: 'PERSONA DESORIENTADA',
-                  child: Text('Persona desorientada')),
-              DropdownMenuItem(
-                  value: 'LOCALIZACION DE FAMILIAR',
-                  child: Text('Localizacion de familiar')),
-              DropdownMenuItem(
-                  value: 'ADULTO MAYOR', child: Text('Adulto mayor')),
-              DropdownMenuItem(
-                  value: 'PERSONA CON DISCAPACIDAD',
-                  child: Text('Persona con discapacidad')),
-              DropdownMenuItem(
-                  value: 'MENOR DE EDAD', child: Text('Menor de edad')),
-              DropdownMenuItem(
-                  value: 'PERSONA VULNERABLE',
-                  child: Text('Persona vulnerable')),
-              DropdownMenuItem(
-                  value: 'PERSONA EN SITUACION DE CALLE',
-                  child: Text('Persona en situacion de calle')),
-              DropdownMenuItem(
-                  value: 'PERDIDA DE PERTENENCIAS',
-                  child: Text('Perdida de pertenencias')),
-              DropdownMenuItem(
-                  value: 'OBJETO EXTRAVIADO',
-                  child: Text('Objeto extraviado')),
-              DropdownMenuItem(
-                  value: 'CAIDA O ACCIDENTE MENOR',
-                  child: Text('Caida o accidente menor')),
-              DropdownMenuItem(
-                  value: 'PRIMEROS AUXILIOS',
-                  child: Text('Primeros auxilios')),
-              DropdownMenuItem(
-                  value: 'PROBLEMA DE MOVILIDAD',
-                  child: Text('Problema de movilidad')),
-              DropdownMenuItem(
-                  value: 'CONTACTAR A FAMILIARES',
-                  child: Text('Contactar a familiares')),
-              DropdownMenuItem(
-                  value: 'ASISTENCIA A TURISTA',
-                  child: Text('Asistencia a turista')),
-              DropdownMenuItem(
-                  value: 'SITUACION DE RIESGO',
-                  child: Text('Situacion de riesgo')),
-              DropdownMenuItem(
-                  value: 'ACOMPANAMIENTO PREVENTIVO',
-                  child: Text('Acompanamiento preventivo')),
-              DropdownMenuItem(
-                  value: 'TRASLADO A PUNTO SEGURO',
-                  child: Text('Traslado a punto seguro')),
-              DropdownMenuItem(
-                  value: 'VEHICULO AVERIADO',
-                  child: Text('Vehiculo averiado')),
-              DropdownMenuItem(
-                  value: 'CONFLICTO ENTRE CIUDADANOS',
-                  child: Text('Conflicto entre ciudadanos')),
-              DropdownMenuItem(
-                  value: 'CRISIS EMOCIONAL',
-                  child: Text('Crisis emocional')),
-              DropdownMenuItem(
-                  value: 'RECUPERACION DE DOCUMENTOS',
-                  child: Text('Recuperacion de documentos')),
-              DropdownMenuItem(
-                  value: 'SOLICITUD DE AYUDA',
-                  child: Text('Solicitud de ayuda')),
-              DropdownMenuItem(
-                  value: 'OTRO MOTIVO', child: Text('Otro motivo')),
-            ],
+            items: ColaboracionCiudadanaText.motivos
+                .map(
+                  (motivo) =>
+                      DropdownMenuItem(value: motivo, child: Text(motivo)),
+                )
+                .toList(),
             onChanged: (v) {
-              setState(() => _motivo = v ?? 'ROBO O HURTO');
+              setState(() {
+                _motivo = v ?? ColaboracionCiudadanaText.motivos.first;
+                if (_motivo != 'Otro motivo') _otroMotivoCtrl.clear();
+              });
               _actualizarPreview();
             },
+            validator: (value) =>
+                value == null ? 'Seleccione el motivo.' : null,
           ),
 
-          if (_motivo == 'OTRO MOTIVO') ...[
+          if (_motivo == 'Otro motivo') ...[
             const SizedBox(height: 12),
             TextFormField(
               controller: _otroMotivoCtrl,
@@ -938,6 +857,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 icon: Icons.edit_outlined,
               ),
               onChanged: (_) => _actualizarPreview(),
+              validator: (value) => _required(value, 'El motivo específico'),
             ),
           ],
 
@@ -948,11 +868,12 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             minLines: 2,
             maxLines: 4,
             decoration: _inputDeco(
-              label: 'Accion realizada',
+              label: 'Acción realizada',
               icon: Icons.gavel_outlined,
               hint: 'Ej: se realizo la verificacion correspondiente...',
             ).copyWith(alignLabelWithHint: true),
             onChanged: (_) => _actualizarPreview(),
+            validator: (value) => _required(value, 'Acción realizada'),
           ),
           const SizedBox(height: 12),
 
@@ -966,6 +887,8 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               hint: 'Ej: se logro localizar al familiar...',
             ).copyWith(alignLabelWithHint: true),
             onChanged: (_) => _actualizarPreview(),
+            validator: (value) =>
+                _required(value, 'Resultado del procedimiento'),
           ),
           const SizedBox(height: 12),
 
@@ -977,14 +900,23 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'SIN NOVEDADES', child: Text('Sin novedades')),
+                value: 'SIN NOVEDADES',
+                child: Text('Sin novedades'),
+              ),
               DropdownMenuItem(
-                  value: 'CON NOVEDADES', child: Text('Con novedades')),
+                value: 'CON NOVEDADES',
+                child: Text('Con novedades'),
+              ),
             ],
             onChanged: (v) {
-              setState(() => _estadoFinal = v ?? 'SIN NOVEDADES');
+              setState(() {
+                _estadoFinal = v ?? 'SIN NOVEDADES';
+                if (_estadoFinal != 'CON NOVEDADES') _novedadCtrl.clear();
+              });
               _actualizarPreview();
             },
+            validator: (value) =>
+                value == null ? 'Seleccione el estado final.' : null,
           ),
 
           if (_estadoFinal == 'CON NOVEDADES') ...[
@@ -998,6 +930,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 icon: Icons.warning_amber_outlined,
               ).copyWith(alignLabelWithHint: true),
               onChanged: (_) => _actualizarPreview(),
+              validator: (value) => _required(value, 'Detalle de la novedad'),
             ),
           ],
 
@@ -1051,7 +984,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'AGREGAR FOTOGRAFIA',
+                    'AGREGAR FOTOGRAFÍA',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -1062,10 +995,7 @@ class _ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                   const SizedBox(height: 4),
                   Text(
                     'Formatos: JPG, PNG (Max. 5MB)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),

@@ -808,7 +808,7 @@ async function obtenerJefeControlMunicipal() {
 async function listarAsignacionesActivasPorEas() {
     return withConnection((conexion) => conexion.query(`
         SELECT e.codigo AS eas_codigo, e.nombre AS eas,
-               m.numero_movil, a.activo
+               m.numero_movil, a.activo, m.activo AS movil_activo
         FROM dbo.movil_eas_asignaciones a
         INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
         INNER JOIN dbo.moviles m ON m.id = a.movil_id
