@@ -13,11 +13,13 @@ import 'wdg/cartilla_type_selector.dart';
 import 'wdg/crt_widgets.dart';
 import 'mdl/crt_special_models.dart';
 import 'wdg/formacion_form.dart';
+import 'wdg/ausentismo_form.dart';
 import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
 import 'wdg/formacion_saliente_redesign.dart';
 import 'wdg/punto_martillo_form.dart';
 import 'wdg/requerimiento_form.dart';
+import 'wdg/retiro_temporal_form.dart';
 import 'wdg/ronda_disuasiva_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
@@ -62,6 +64,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         return 'retiro_temporal';
       case TipoCartilla.requerimiento:
         return 'requerimiento';
+      case TipoCartilla.ausentismo:
+        return 'ausentismo';
       case TipoCartilla.colaboracionEntidades:
         return 'colaboracion_entidades';
       case TipoCartilla.colaboracionEventos:
@@ -182,7 +186,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
-        tipo == TipoCartilla.requerimiento;
+        tipo == TipoCartilla.requerimiento ||
+        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.retiroTemporal;
     if ((!_formExpanded) ||
         (_tipoFormacion == null && !isEasCartilla)) {
       return const SizedBox.shrink();
@@ -358,11 +364,35 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
+    if (tipo == TipoCartilla.ausentismo) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        AusentismoForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     if (tipo == TipoCartilla.requerimiento) {
       return [
         _buildBackButton(),
         const SizedBox(height: 12),
         RequerimientoForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
+    if (tipo == TipoCartilla.retiroTemporal) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        RetiroTemporalForm(
           user: widget.user,
           onPreviewChanged: (text) => setState(() => _previewText = text),
           onGenerate: _generarCartilla,
@@ -459,7 +489,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
-        tipo == TipoCartilla.requerimiento;
+        tipo == TipoCartilla.requerimiento ||
+        tipo == TipoCartilla.ausentismo;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
@@ -593,7 +624,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
-        tipo == TipoCartilla.requerimiento;
+        tipo == TipoCartilla.requerimiento ||
+        tipo == TipoCartilla.ausentismo;
     if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(
