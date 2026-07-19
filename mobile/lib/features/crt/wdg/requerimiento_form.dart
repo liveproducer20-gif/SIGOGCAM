@@ -2,34 +2,30 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../mdl/crt_models.dart';
-import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
 import '../svc/crt_special_text_generator.dart';
 import '../svc/crt_text_generator.dart';
 
-class FormacionEntranteRedesign extends StatefulWidget {
+class RequerimientoForm extends StatefulWidget {
   final AppUser? user;
-  final String jefeNombre;
   final ValueChanged<String>? onPreviewChanged;
   final VoidCallback? onGenerate;
   final bool generando;
 
-  const FormacionEntranteRedesign({
+  const RequerimientoForm({
     super.key,
     this.user,
-    this.jefeNombre = 'Jefe de Control Municipal',
     this.onPreviewChanged,
     this.onGenerate,
     this.generando = false,
   });
 
   @override
-  State<FormacionEntranteRedesign> createState() =>
-      _FormacionEntranteRedesignState();
+  State<RequerimientoForm> createState() => _RequerimientoFormState();
 }
 
-class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
+class _RequerimientoFormState extends State<RequerimientoForm> {
   final _formKey = GlobalKey<FormState>();
   final _crtApi = CrtApi();
 
@@ -45,15 +41,12 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
-  List<CrtEasStation> _easFromApi = [];
-
-  List<Map<String, dynamic>> _tiposServicio = [];
-
   final _circuitoCtrl = TextEditingController();
-  TimeOfDay _horaIngreso = TimeOfDay.now();
   final _direccionCtrl = TextEditingController();
-  final _acmCtrl = TextEditingController(text: '1');
-  final _novedadesCtrl = TextEditingController();
+  final _solicitanteCtrl = TextEditingController();
+  final _motivoCtrl = TextEditingController();
+  final _accionCtrl = TextEditingController();
+  final _resultadoCtrl = TextEditingController();
 
   final _motoCtrl = TextEditingController();
   final _canCtrl = TextEditingController();
@@ -63,7 +56,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
 
   CrtEasStation? _easSeleccionado;
   List<String> _movilesEas = [];
-  bool _cargandoMoviles = false;
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
@@ -73,8 +65,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
-    _cargarEas();
-    _cargarTiposServicio();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -84,8 +74,10 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   void dispose() {
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
-    _acmCtrl.dispose();
-    _novedadesCtrl.dispose();
+    _solicitanteCtrl.dispose();
+    _motivoCtrl.dispose();
+    _accionCtrl.dispose();
+    _resultadoCtrl.dispose();
     _motoCtrl.dispose();
     _canCtrl.dispose();
     _movilCtrl.dispose();
@@ -127,56 +119,26 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     }
   }
 
-  Future<void> _cargarEas() async {
-    try {
-      final easList = await _crtApi.getEasStations();
-      if (mounted) {
-        setState(() {
-          _easFromApi = easList
-              .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
-              .toList();
-        });
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _cargarTiposServicio() async {
-    try {
-      final tipos = await _crtApi.getTiposServicioLugar();
-      if (mounted) {
-        setState(() {
-          _tiposServicio = tipos;
-          if (_tiposServicio.isNotEmpty && _servicio.isEmpty) {
-            _servicio = _tiposServicio.first['codigo']?.toString() ?? '';
-          }
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _actualizarPreview();
-        });
-      }
-    } catch (_) {}
-  }
-
   bool get _isEas => _servicio == 'EAS';
   bool get _isRadioperador => _servicio == 'RADIOPERADOR';
   bool get _needsEasDropdown => _isEas || _isRadioperador;
 
   String _servicioTitle(String servicio) {
-    if (_tiposServicio.isNotEmpty) {
-      final match = _tiposServicio.firstWhere(
-        (t) => t['codigo']?.toString() == servicio,
-        orElse: () => {},
-      );
-      if (match.isNotEmpty) {
-        return match['nombre']?.toString().toUpperCase() ?? 'REPORTE DE $servicio';
-      }
-    }
-    return 'REPORTE DE $servicio';
+    const titles = {
+      'MOTORIZADO': 'REPORTE DE MOTORIZADO',
+      'K9': 'REPORTE DE K9',
+      'EAS': 'REPORTE DE EAS',
+      'PEDESTRE': 'REPORTE DE PEDESTRE',
+      'TURISMO': 'REPORTE DE TURISMO',
+      'CICLISTA': 'REPORTE DE CICLISTA',
+      'ADMINISTRATIVO': 'REPORTE DE ADMINISTRATIVO',
+      'AMBIENTE': 'REPORTE DE AMBIENTE GOCAM',
+      'ENCARGADO': 'REPORTE DE ENCARGADO',
+      'GESTION DE RIESGOS': 'REPORTE DE GESTION DE RIESGOS',
+      'SUPERVISION': 'REPORTE DE SUPERVISION',
+      'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
+    };
+    return titles[servicio] ?? 'REPORTE DE $servicio';
   }
 
   void _actualizarPreview() {
@@ -185,68 +147,55 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
     final servicio = _servicioTitle(_servicio);
-    final horario =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
-    );
-    final horaSalida =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
     final direccion =
         _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
-    final acm = _acmCtrl.text.isNotEmpty ? _acmCtrl.text : '0';
     final saludo = CrtSpecialTextGenerator.saludo(now);
+    const causa = 'REQUERIMIENTO';
 
-    final String ubicacionLabel;
     final String ubicacionValor;
     if (_needsEasDropdown && _easSeleccionado != null) {
-      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _easSeleccionado!.nombre;
     } else {
-      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _circuitoCtrl.text.isNotEmpty
           ? _circuitoCtrl.text
           : '[CIRCUITO]';
     }
 
-    final personalLabel = 'entrante';
-    final accionLabel = 'cuenta';
-    final causaLabel = TipoFormacion.entrante.causa;
+    final solicitante = _solicitanteCtrl.text.trim();
+    final motivo = _motivoCtrl.text.trim();
+    final accion = _accionCtrl.text.trim();
+    final resultado = _resultadoCtrl.text.trim();
 
     final buf = StringBuffer()
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
       ..writeln()
       ..writeln('*$servicio*')
       ..writeln('*DISTRITO:* $distrito')
-      ..writeln('$ubicacionLabel $ubicacionValor')
-      ..writeln('*HORARIO:* $horario - $horaSalida')
+      ..writeln('*CIRCUITO:* $ubicacionValor')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')
-      ..writeln('*CAUSA:* $causaLabel')
+      ..writeln('*CAUSA:* $causa')
       ..writeln()
-      ..writeln('$saludo, permiso Sr. $jefe.')
+      ..writeln('$saludo, permiso Sr. $jefe Jefe de Control Municipal.')
+      ..writeln()
       ..writeln(
-        'Muy respetuosamente, me permito informar que se procedio con la formacion del personal $personalLabel'
-        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado?.nombre ?? '[EAS]'}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
-        ' en $direccion.',
-      )
-      ..writeln(
-        'Asimismo, se informa que para el cumplimiento de las actividades operativas correspondientes se $accionLabel con el siguiente personal asignado:',
+        'Muy respetuosamente me permito informar que, mediante requerimiento realizado por ${solicitante.isNotEmpty ? solicitante : '[SOLICITANTE]'}, se procedio a brindar atencion en el sector de $direccion, debido a ${motivo.isNotEmpty ? motivo : '[MOTIVO]'}.',
       )
       ..writeln()
-      ..writeln('*$acm ACM*');
-
-    final novedades = _novedadesCtrl.text.trim();
-    if (novedades.isNotEmpty) {
-      buf.writeln();
-      buf.writeln(novedades);
-    }
+      ..writeln(
+        'Una vez en el lugar, personal de Agentes de Control Municipal realizo la verificacion correspondiente y procedio a ${accion.isNotEmpty ? accion : '[ACCION REALIZADA]'}.',
+      )
+      ..writeln()
+      ..writeln(
+        'Como resultado de la intervencion, ${resultado.isNotEmpty ? resultado : '[RESULTADO]'}.',
+      )
+      ..writeln()
+      ..writeln('Sin mas novedades que informar.');
 
     if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
@@ -257,8 +206,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       }
     }
 
-    buf.writeln();
-    buf.writeln('Sin mas novedades que informar.');
     buf.writeln();
     buf.writeln('*REPORTA:*');
     buf.writeln('ACM. $reporta');
@@ -334,33 +281,20 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   }
 
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
-    if (!mounted) return;
-    setState(() => _cargandoMoviles = true);
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
-      final codigoLower = eas.codigo.toLowerCase();
-      final nombreLower = eas.nombre.toLowerCase();
       final asignadas = asignaciones.where((a) {
-        final matchCodigo = a['eas_codigo']?.toString().toLowerCase() == codigoLower;
-        final matchNombre = a['eas']?.toString().toLowerCase() == nombreLower;
+        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
         final activo = a['activo'] == true;
-        return (matchCodigo || matchNombre) && activo;
+        return matchEas && activo;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();
       if (mounted) {
-        setState(() {
-          _movilesEas = asignadas;
-          _cargandoMoviles = false;
-        });
+        setState(() => _movilesEas = asignadas);
       }
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _movilesEas = [];
-          _cargandoMoviles = false;
-        });
-      }
+      if (mounted) setState(() => _movilesEas = []);
     }
   }
 
@@ -373,17 +307,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       }
     });
     _actualizarPreview();
-  }
-
-  Future<void> _selectHoraIngreso() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _horaIngreso,
-    );
-    if (picked != null) {
-      setState(() => _horaIngreso = picked);
-      _actualizarPreview();
-    }
   }
 
   InputDecoration _inputDeco({
@@ -424,12 +347,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           height: 26,
           decoration: const BoxDecoration(
             color: _blue,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(6),
-              bottomLeft: Radius.circular(6),
-              topRight: Radius.circular(6),
-              bottomRight: Radius.circular(6),
-            ),
+            borderRadius: BorderRadius.all(Radius.circular(6)),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -464,7 +382,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         return TextFormField(
           controller: _motoCtrl,
           decoration: _inputDeco(
-            label: 'Número de moto',
+            label: 'Numero de moto',
             icon: Icons.two_wheeler_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -479,12 +397,27 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        return _buildMovilesCheckboxes();
+        return Column(
+          children: [
+            TextFormField(
+              controller: _movilCtrl,
+              decoration: _inputDeco(
+                label: 'Numero de movil',
+                icon: Icons.directions_car_outlined,
+              ),
+              onChanged: (_) => _actualizarPreview(),
+            ),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildMovilesCheckboxes(),
+            ],
+          ],
+        );
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
           decoration: _inputDeco(
-            label: 'Número de bicicleta',
+            label: 'Numero de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -493,7 +426,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         return TextFormField(
           controller: _movilCtrl,
           decoration: _inputDeco(
-            label: 'Número de móvil',
+            label: 'Numero de movil',
             icon: Icons.directions_car_outlined,
           ),
           onChanged: (_) => _actualizarPreview(),
@@ -501,8 +434,10 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            _buildMovilesCheckboxes(),
-            const SizedBox(height: 10),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              _buildMovilesCheckboxes(),
+              const SizedBox(height: 10),
+            ],
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
@@ -519,15 +454,14 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
       decoration: _inputDeco(
-        label: 'EAS',
+        label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
-      items: easList
+      items: CrtCatalog.easStations
           .map(
             (e) => DropdownMenuItem(
               value: e,
@@ -554,7 +488,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'MÓVILES DISPONIBLES',
+            'MOVILES EN CIRCULACION',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -563,53 +497,33 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             ),
           ),
           const SizedBox(height: 8),
-          if (_cargandoMoviles)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: LinearProgressIndicator(),
-            )
-          else if (_movilesEas.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                _easSeleccionado != null
-                    ? 'No hay móviles asignados a este EAS'
-                    : 'Seleccione un EAS para ver móviles',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                  fontStyle: FontStyle.italic,
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: _movilesEas.map((movil) {
+              final selected = _movilesSeleccionados.contains(movil);
+              return FilterChip(
+                label: Text(
+                  'MOVIL $movil',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: selected ? _blue : Colors.grey[700],
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.normal,
+                  ),
                 ),
-              ),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: _movilesEas.map((movil) {
-                final selected = _movilesSeleccionados.contains(movil);
-                return FilterChip(
-                  label: Text(
-                    'MOVIL $movil',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: selected ? _blue : Colors.grey[700],
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                  selected: selected,
-                  onSelected: (_) => _toggleMovil(movil),
-                  selectedColor: _blueLight,
-                  side: BorderSide(
-                    color: selected ? _blueMid : Colors.grey[300]!,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                );
-              }).toList(),
-            ),
+                selected: selected,
+                onSelected: (_) => _toggleMovil(movil),
+                selectedColor: _blueLight,
+                side: BorderSide(
+                  color: selected ? _blueMid : Colors.grey[300]!,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              );
+            }).toList(),
+          ),
         ],
       ),
     );
@@ -653,7 +567,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.login_outlined,
+              Icons.assignment_outlined,
               color: Colors.white,
               size: 22,
             ),
@@ -664,7 +578,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'FORMACIÓN ENTRANTE',
+                  'REQUERIMIENTO',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -674,7 +588,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Registre la información de la formación entrante del servicio',
+                  'Registro de requerimiento del servicio',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -715,7 +629,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionBadge(1, 'INFORMACIÓN DEL SERVICIO'),
+          _sectionBadge(1, 'INFORMACION DEL SERVICIO'),
           const SizedBox(height: 16),
 
           Row(
@@ -747,9 +661,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                         value: 'ENCARGADO', child: Text('Encargado')),
                     DropdownMenuItem(
                         value: 'GESTION DE RIESGOS',
-                        child: Text('Gestión de Riesgos')),
+                        child: Text('Gestion de Riesgos')),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervisión')),
+                        value: 'SUPERVISION', child: Text('Supervision')),
                     DropdownMenuItem(
                         value: 'RADIOPERADOR', child: Text('Radioperador')),
                   ],
@@ -765,11 +679,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                         decoration: _inputDeco(
                           label: 'Distrito',
                           icon: Icons.map_outlined,
-                        ).copyWith(
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 32,
-                            maxWidth: 32,
-                          ),
                         ),
                         isExpanded: true,
                         items: _distritos
@@ -793,35 +702,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           ),
           const SizedBox(height: 12),
 
-          _buildHoraField(),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            controller: _direccionCtrl,
-            decoration: _inputDeco(
-              label: 'Dirección',
-              icon: Icons.location_on_outlined,
-            ),
-            onChanged: (_) => _actualizarPreview(),
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _acmCtrl,
-                  decoration: _inputDeco(
-                    label: 'Número de ACM',
-                    icon: Icons.people_outlined,
-                  ),
-                  onChanged: (_) => _actualizarPreview(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
           if (_needsEasDropdown) ...[
             _buildEasDropdown(),
             const SizedBox(height: 12),
@@ -839,22 +719,17 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             const SizedBox(height: 12),
           ],
 
-          _buildServiceFields(),
-          const SizedBox(height: 12),
-
           TextFormField(
-            controller: _novedadesCtrl,
-            minLines: 3,
-            maxLines: 5,
+            controller: _direccionCtrl,
             decoration: _inputDeco(
-              label: 'Detalle del personal y/o novedades',
-              icon: Icons.notes_outlined,
-              hint: 'Describa el personal asignado y/o novedades relevantes...',
-            ).copyWith(
-              alignLabelWithHint: true,
+              label: 'Direccion',
+              icon: Icons.location_on_outlined,
             ),
             onChanged: (_) => _actualizarPreview(),
           ),
+          const SizedBox(height: 12),
+
+          _buildServiceFields(),
         ],
       ),
     );
@@ -878,13 +753,88 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionBadge(2, 'EVIDENCIA FOTOGRÁFICA'),
+          _sectionBadge(2, 'DETALLE DEL REQUERIMIENTO'),
+          const SizedBox(height: 16),
+
+          TextFormField(
+            controller: _solicitanteCtrl,
+            decoration: _inputDeco(
+              label: 'Solicitante del requerimiento',
+              icon: Icons.person_outlined,
+            ),
+            onChanged: (_) => _actualizarPreview(),
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _motivoCtrl,
+            minLines: 2,
+            maxLines: 4,
+            decoration: _inputDeco(
+              label: 'Motivo del requerimiento',
+              icon: Icons.help_outline,
+              hint: 'Describa el motivo del requerimiento...',
+            ).copyWith(
+              alignLabelWithHint: true,
+            ),
+            onChanged: (_) => _actualizarPreview(),
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _accionCtrl,
+            minLines: 2,
+            maxLines: 4,
+            decoration: _inputDeco(
+              label: 'Accion realizada',
+              icon: Icons.gavel_outlined,
+              hint: 'Describa la accion realizada...',
+            ).copyWith(
+              alignLabelWithHint: true,
+            ),
+            onChanged: (_) => _actualizarPreview(),
+          ),
+          const SizedBox(height: 12),
+
+          TextFormField(
+            controller: _resultadoCtrl,
+            minLines: 2,
+            maxLines: 4,
+            decoration: _inputDeco(
+              label: 'Resultado del requerimiento',
+              icon: Icons.check_circle_outline,
+              hint: 'Describa el resultado de la intervencion...',
+            ).copyWith(
+              alignLabelWithHint: true,
+            ),
+            onChanged: (_) => _actualizarPreview(),
+          ),
+          const SizedBox(height: 16),
+
+          _buildSection3(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection3() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _blueLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _blueBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionBadge(3, 'EVIDENCIA FOTOGRAFICA'),
           const SizedBox(height: 14),
           InkWell(
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Funcionalidad disponible próximamente'),
+                  content: Text('Funcionalidad disponible proximamente'),
                 ),
               );
             },
@@ -893,7 +843,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 24),
               decoration: BoxDecoration(
-                color: _blueLight,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: _blueMid,
@@ -910,7 +860,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'AGREGAR FOTOGRAFÍA',
+                    'AGREGAR FOTOGRAFIA',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -920,7 +870,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Formatos: JPG, PNG (Máx. 5MB)',
+                    'Formatos: JPG, PNG (Max. 5MB)',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.grey[500],
@@ -932,50 +882,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHoraField() {
-    final horaStr =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
-    );
-    final horaSalidaStr =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
-
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: _selectHoraIngreso,
-            child: InputDecorator(
-              decoration: _inputDeco(
-                label: 'Hora de Ingreso',
-                icon: Icons.access_time,
-              ),
-              child: Text(
-                horaStr,
-                style: const TextStyle(fontSize: 14, color: _blue),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: InputDecorator(
-            decoration: _inputDeco(
-              label: 'Hora de Salida (auto)',
-              icon: Icons.access_time_filled,
-            ),
-            child: Text(
-              horaSalidaStr,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

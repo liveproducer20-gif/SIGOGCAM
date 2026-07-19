@@ -17,6 +17,7 @@ import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
 import 'wdg/formacion_saliente_redesign.dart';
 import 'wdg/punto_martillo_form.dart';
+import 'wdg/requerimiento_form.dart';
 import 'wdg/ronda_disuasiva_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
@@ -180,7 +181,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Widget _buildPreviewSectionNarrow() {
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
-        tipo == TipoCartilla.puntoMartillo;
+        tipo == TipoCartilla.puntoMartillo ||
+        tipo == TipoCartilla.requerimiento;
     if ((!_formExpanded) ||
         (_tipoFormacion == null && !isEasCartilla)) {
       return const SizedBox.shrink();
@@ -356,6 +358,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
+    if (tipo == TipoCartilla.requerimiento) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        RequerimientoForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -444,7 +458,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
     if (_generando || _previewText.isEmpty) return;
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
-        tipo == TipoCartilla.puntoMartillo;
+        tipo == TipoCartilla.puntoMartillo ||
+        tipo == TipoCartilla.requerimiento;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
@@ -577,7 +592,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   Widget _buildPlaceholderPreview() {
     final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
         tipo == TipoCartilla.rondasDisuasivas ||
-        tipo == TipoCartilla.puntoMartillo;
+        tipo == TipoCartilla.puntoMartillo ||
+        tipo == TipoCartilla.requerimiento;
     if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(

@@ -42,6 +42,8 @@ class _FormacionFormState extends State<FormacionForm> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
+  List<CrtEasStation> _easFromApi = [];
+
   final _circuitoCtrl = TextEditingController();
   TimeOfDay _horaIngreso = TimeOfDay.now();
   final _direccionCtrl = TextEditingController();
@@ -67,6 +69,7 @@ class _FormacionFormState extends State<FormacionForm> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
+    _cargarEas();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -118,6 +121,24 @@ class _FormacionFormState extends State<FormacionForm> {
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
+  }
+
+  Future<void> _cargarEas() async {
+    try {
+      final easList = await _crtApi.getEasStations();
+      if (mounted) {
+        setState(() {
+          _easFromApi = easList
+              .where((e) => e['activo'] == true)
+              .map((e) => CrtEasStation(
+                    codigo: e['codigo']?.toString() ?? '',
+                    nombre: e['nombre']?.toString() ?? '',
+                    direccion: e['direccion']?.toString() ?? '',
+                  ))
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   bool get _isEas => _servicio == 'EAS';
@@ -297,10 +318,13 @@ class _FormacionFormState extends State<FormacionForm> {
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
+      final codigoLower = eas.codigo.toLowerCase();
+      final nombreLower = eas.nombre.toLowerCase();
       final asignadas = asignaciones.where((a) {
-        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
+        final matchCodigo = a['eas_codigo']?.toString().toLowerCase() == codigoLower;
+        final matchNombre = a['eas']?.toString().toLowerCase() == nombreLower;
         final activo = a['activo'] == true;
-        return matchEas && activo;
+        return (matchCodigo || matchNombre) && activo;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();
@@ -377,6 +401,7 @@ class _FormacionFormState extends State<FormacionForm> {
   }
 
   Widget _buildEasDropdown() {
+    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -386,7 +411,7 @@ class _FormacionFormState extends State<FormacionForm> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      items: CrtCatalog.easStations
+      items: easList
           .map(
             (e) => DropdownMenuItem(
               value: e,
