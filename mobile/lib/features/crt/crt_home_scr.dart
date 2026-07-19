@@ -16,6 +16,7 @@ import 'wdg/formacion_form.dart';
 import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
 import 'wdg/formacion_saliente_redesign.dart';
+import 'wdg/ronda_disuasiva_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -228,6 +229,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
+    if (tipo == TipoCartilla.rondasDisuasivas) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        RondaDisuasivaForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -314,19 +327,20 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   Future<void> _generarCartilla() async {
     if (_generando || _previewText.isEmpty) return;
-    final bool isDesalojo = tipo == TipoCartilla.desalojoVendedores;
-    if (_tipoFormacion == null && !isDesalojo) return;
+    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+        tipo == TipoCartilla.rondasDisuasivas;
+    if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
       final insApi = InsApi();
       final result = await insApi.registrarCartilla(
-        tipo: isDesalojo ? 'CARTILLA' : 'FORMACION',
-        subtipo: isDesalojo ? tipo.label : _tipoFormacion!.causa,
-        causa: isDesalojo ? tipo.label : _tipoFormacion!.causa,
+        tipo: isEasCartilla ? 'CARTILLA' : 'FORMACION',
+        subtipo: isEasCartilla ? tipo.label : _tipoFormacion!.causa,
+        causa: isEasCartilla ? tipo.label : _tipoFormacion!.causa,
         contenido: _previewText,
         datos: {
-          if (isDesalojo) 'tipo_cartilla': tipo.label,
-          if (!isDesalojo) 'tipo_formacion': _tipoFormacion!.causa,
+          if (isEasCartilla) 'tipo_cartilla': tipo.label,
+          if (!isEasCartilla) 'tipo_formacion': _tipoFormacion!.causa,
         },
       );
       if (!mounted) return;
@@ -341,7 +355,13 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                 children: [
                   const Icon(Icons.emoji_events, color: Colors.amber, size: 28),
                   const SizedBox(width: 8),
-                  Text(badge.titulo),
+                  Expanded(
+                    child: Text(
+                      badge.titulo,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  ),
                 ],
               ),
               content: Text(badge.mensaje),
@@ -439,8 +459,9 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   }
 
   Widget _buildPlaceholderPreview() {
-    final bool isDesalojo = tipo == TipoCartilla.desalojoVendedores;
-    if ((_tipoFormacion != null || isDesalojo) && _previewText.isNotEmpty) {
+    final bool isEasCartilla = tipo == TipoCartilla.desalojoVendedores ||
+        tipo == TipoCartilla.rondasDisuasivas;
+    if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -455,30 +476,34 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
                     size: 20,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'VISTA PREVIA',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppThm.priClr,
-                      letterSpacing: 0.5,
+                  const Expanded(
+                    child: Text(
+                      'VISTA PREVIA',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppThm.priClr,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
-                  const Spacer(),
                   if (!_generando)
-                    FilledButton.icon(
-                      onPressed: _generarCartilla,
-                      icon: const Icon(Icons.send_outlined, size: 18),
-                      label: const Text('GENERAR CARTILLA'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppThm.priClr,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
+                    Flexible(
+                      child: FilledButton.icon(
+                        onPressed: _generarCartilla,
+                        icon: const Icon(Icons.send_outlined, size: 18),
+                        label: const Text('GENERAR'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppThm.priClr,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
                         ),
                       ),
                     )

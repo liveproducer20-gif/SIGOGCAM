@@ -251,13 +251,16 @@ class _DesalojoFormState extends State<DesalojoForm> {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _blue,
-            letterSpacing: 0.3,
+        Expanded(
+          child: Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _blue,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ],

@@ -81,13 +81,16 @@ class CrtSectionCard extends StatelessWidget {
             child: Icon(icon, size: 18, color: headerColor),
           ),
           const SizedBox(width: 10),
-          Text(
-            title,
-            style: TextStyle(
-              color: headerColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
+          Expanded(
+            child: Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: headerColor,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
             ),
           ),
         ],
@@ -377,11 +380,14 @@ class CrtStatusBar extends StatelessWidget {
         const SizedBox(width: 12),
         Icon(Icons.access_time, size: 13, color: Colors.grey[500]),
         const SizedBox(width: 4),
-        Text(
-          lastUpdate,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[500],
+        Flexible(
+          child: Text(
+            lastUpdate,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[500],
+            ),
           ),
         ),
       ],

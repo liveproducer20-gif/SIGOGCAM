@@ -279,6 +279,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         _circuitoCtrl.clear();
       }
     });
+    if (_needsEasDropdown && _easSeleccionado != null) {
+      _actualizarMovilesEas(_easSeleccionado!);
+    }
     _actualizarPreview();
   }
 
@@ -389,13 +392,16 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           ),
         ),
         const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            color: _blue,
-            letterSpacing: 0.3,
+        Expanded(
+          child: Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _blue,
+              letterSpacing: 0.3,
+            ),
           ),
         ),
       ],
@@ -423,13 +429,21 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        return TextFormField(
-          controller: _movilCtrl,
-          decoration: _inputDeco(
-            label: 'Número de móvil',
-            icon: Icons.directions_car_outlined,
-          ),
-          onChanged: (_) => _actualizarPreview(),
+        return Column(
+          children: [
+            TextFormField(
+              controller: _movilCtrl,
+              decoration: _inputDeco(
+                label: 'Número de móvil',
+                icon: Icons.directions_car_outlined,
+              ),
+              onChanged: (_) => _actualizarPreview(),
+            ),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildMovilesCheckboxes(),
+            ],
+          ],
         );
       case 'CICLISTA':
         return TextFormField(

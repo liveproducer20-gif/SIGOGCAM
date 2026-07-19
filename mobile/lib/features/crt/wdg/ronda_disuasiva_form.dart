@@ -2,42 +2,38 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../mdl/crt_models.dart';
-import '../mdl/crt_special_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
 import '../svc/crt_special_text_generator.dart';
 import '../svc/crt_text_generator.dart';
 
-class FormacionSalienteRedesign extends StatefulWidget {
+class RondaDisuasivaForm extends StatefulWidget {
   final AppUser? user;
-  final String jefeNombre;
   final ValueChanged<String>? onPreviewChanged;
   final VoidCallback? onGenerate;
   final bool generando;
 
-  const FormacionSalienteRedesign({
+  const RondaDisuasivaForm({
     super.key,
     this.user,
-    this.jefeNombre = 'Jefe de Control Municipal',
     this.onPreviewChanged,
     this.onGenerate,
     this.generando = false,
   });
 
   @override
-  State<FormacionSalienteRedesign> createState() =>
-      _FormacionSalienteRedesignState();
+  State<RondaDisuasivaForm> createState() => _RondaDisuasivaFormState();
 }
 
-class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
+class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
   final _formKey = GlobalKey<FormState>();
   final _crtApi = CrtApi();
 
-  static const _blue = Color(0xFF1D5F33);
-  static const _blueLight = Color(0xFFE8F5EC);
-  static const _blueMid = Color(0xFF2E8B57);
-  static const _blueBorder = Color(0xFFB8D4C8);
-  static const _blueFocus = Color(0xFF236B3E);
+  static const _blue = Color(0xFF1D3F73);
+  static const _blueLight = Color(0xFFEBF0F9);
+  static const _blueMid = Color(0xFF3B68B9);
+  static const _blueBorder = Color(0xFFB8CCE4);
+  static const _blueFocus = Color(0xFF2956A3);
 
   String _servicio = 'PEDESTRE';
 
@@ -45,13 +41,8 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
-  List<Map<String, dynamic>> _tiposServicio = [];
-  bool _cargandoTiposServicio = true;
-
   final _circuitoCtrl = TextEditingController();
-  TimeOfDay _horaIngreso = TimeOfDay.now();
   final _direccionCtrl = TextEditingController();
-  final _acmCtrl = TextEditingController(text: '1');
   final _novedadesCtrl = TextEditingController();
 
   final _motoCtrl = TextEditingController();
@@ -71,7 +62,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
-    _cargarTiposServicio();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -81,7 +71,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
   void dispose() {
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
-    _acmCtrl.dispose();
     _novedadesCtrl.dispose();
     _motoCtrl.dispose();
     _canCtrl.dispose();
@@ -124,40 +113,26 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     }
   }
 
-  Future<void> _cargarTiposServicio() async {
-    try {
-      final tipos = await _crtApi.getTiposServicioLugar();
-      if (mounted) {
-        setState(() {
-          _tiposServicio = tipos;
-          _cargandoTiposServicio = false;
-          if (_tiposServicio.isNotEmpty && _servicio.isEmpty) {
-            _servicio = _tiposServicio.first['codigo']?.toString() ?? '';
-          }
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) _actualizarPreview();
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _cargandoTiposServicio = false);
-    }
-  }
-
   bool get _isEas => _servicio == 'EAS';
   bool get _isRadioperador => _servicio == 'RADIOPERADOR';
   bool get _needsEasDropdown => _isEas || _isRadioperador;
 
   String _servicioTitle(String servicio) {
-    final match = _tiposServicio.firstWhere(
-      (t) => t['codigo']?.toString() == servicio,
-      orElse: () => {},
-    );
-    final nombre = match['nombre']?.toString();
-    if (nombre != null && nombre.isNotEmpty) {
-      return 'REPORTE DE $nombre'.toUpperCase();
-    }
-    return 'REPORTE DE $servicio';
+    const titles = {
+      'MOTORIZADO': 'REPORTE DE MOTORIZADO',
+      'K9': 'REPORTE DE K9',
+      'EAS': 'REPORTE DE EAS',
+      'PEDESTRE': 'REPORTE DE PEDESTRE',
+      'TURISMO': 'REPORTE DE TURISMO',
+      'CICLISTA': 'REPORTE DE CICLISTA',
+      'ADMINISTRATIVO': 'REPORTE DE ADMINISTRATIVO',
+      'AMBIENTE': 'REPORTE DE AMBIENTE GOCAM',
+      'ENCARGADO': 'REPORTE DE ENCARGADO',
+      'GESTION DE RIESGOS': 'REPORTE DE GESTION DE RIESGOS',
+      'SUPERVISION': 'REPORTE DE SUPERVISION',
+      'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
+    };
+    return titles[servicio] ?? 'REPORTE DE $servicio';
   }
 
   void _actualizarPreview() {
@@ -167,10 +142,10 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     final distrito = _distritoSeleccionado ?? '';
     final servicio = _servicioTitle(_servicio);
     final horario =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
+      hour: (now.hour + 8) % 24,
+      minute: (now.minute + 30) % 60,
     );
     final horaSalida =
         '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
@@ -180,48 +155,39 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
     final direccion =
         _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
-    final acm = _acmCtrl.text.isNotEmpty ? _acmCtrl.text : '0';
     final saludo = CrtSpecialTextGenerator.saludo(now);
+    const causa = 'RONDA DISUASIVA';
 
-    final String ubicacionLabel;
     final String ubicacionValor;
     if (_needsEasDropdown && _easSeleccionado != null) {
-      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _easSeleccionado!.nombre;
     } else {
-      ubicacionLabel = '*CIRCUITO:*';
       ubicacionValor = _circuitoCtrl.text.isNotEmpty
           ? _circuitoCtrl.text
           : '[CIRCUITO]';
     }
-
-    final personalLabel = 'saliente';
-    final accionLabel = 'contó';
-    final causaLabel = TipoFormacion.saliente.causa;
 
     final buf = StringBuffer()
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
       ..writeln()
       ..writeln('*$servicio*')
       ..writeln('*DISTRITO:* $distrito')
-      ..writeln('$ubicacionLabel $ubicacionValor')
+      ..writeln('*CIRCUITO:* $ubicacionValor')
       ..writeln('*HORARIO:* $horario - $horaSalida')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')
-      ..writeln('*CAUSA:* $causaLabel')
+      ..writeln('*CAUSA:* $causa')
       ..writeln()
-      ..writeln('$saludo, permiso Sr. $jefe.')
       ..writeln(
-        'Muy respetuosamente, me permito informar que se procedio con la formacion del personal $personalLabel'
-        '${_needsEasDropdown ? ' del EAS ${_easSeleccionado?.nombre ?? '[EAS]'}' : ' asignado al circuito ${_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : "[CIRCUITO]"}'},'
-        ' en $direccion.',
+        '$saludo, permiso Sr. $jefe.',
       )
       ..writeln(
-        'Asimismo, se informa que para el cumplimiento de las actividades operativas correspondientes se $accionLabel con el siguiente personal asignado:',
+        'Muy respetuosamente me permito informar que se procedio a realizar una ronda disuasiva en el sector de $direccion, con la finalidad de mantener presencia preventiva de los Agentes de Control Municipal, precautelar el buen uso del espacio publico y prevenir posibles novedades en el sector.',
       )
-      ..writeln()
-      ..writeln('*$acm ACM*');
+      ..writeln(
+        'Durante el recorrido se realizo presencia institucional y control preventivo, manteniendose vigilancia en los diferentes puntos del sector.',
+      );
 
     final novedades = _novedadesCtrl.text.trim();
     if (novedades.isNotEmpty) {
@@ -229,15 +195,11 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
       buf.writeln(novedades);
     }
 
-    if (_isRadioperador && _videoperadorCtrl.text.isNotEmpty) {
-      buf.writeln();
-      buf.writeln('*VIDEOPERADOR:* ${_videoperadorCtrl.text}');
-    }
-
-    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
+    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
-      for (final m in _movilesSeleccionados) {
+      final sorted = _movilesSeleccionados.toList()..sort();
+      for (final m in sorted) {
         buf.writeln('MOVIL $m');
       }
     }
@@ -256,6 +218,10 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
+        }
+      case 'EAS':
+        if (_movilCtrl.text.isNotEmpty) {
+          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -282,6 +248,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
 
   void _onServicioChanged(String? value) {
     if (value == null) return;
+    final prevNeedsEas = _needsEasDropdown;
     setState(() {
       _servicio = value;
       _motoCtrl.clear();
@@ -290,7 +257,9 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
       _bicicletaCtrl.clear();
       _videoperadorCtrl.clear();
       _movilesSeleccionados.clear();
-      if (_needsEasDropdown) {
+      _movilesEas = [];
+      if (prevNeedsEas && !_needsEasDropdown) {
+        _easSeleccionado = null;
         _circuitoCtrl.clear();
       }
     });
@@ -340,17 +309,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
     _actualizarPreview();
   }
 
-  Future<void> _selectHoraIngreso() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _horaIngreso,
-    );
-    if (picked != null) {
-      setState(() => _horaIngreso = picked);
-      _actualizarPreview();
-    }
-  }
-
   InputDecoration _inputDeco({
     required String label,
     required IconData icon,
@@ -389,12 +347,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           height: 26,
           decoration: const BoxDecoration(
             color: _blue,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(6),
-              bottomLeft: Radius.circular(6),
-              topRight: Radius.circular(6),
-              bottomRight: Radius.circular(6),
-            ),
+            borderRadius: BorderRadius.all(Radius.circular(6)),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -444,10 +397,22 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        if (_easSeleccionado != null && _movilesEas.isNotEmpty) {
-          return _buildMovilesCheckboxes();
-        }
-        return const SizedBox.shrink();
+        return Column(
+          children: [
+            TextFormField(
+              controller: _movilCtrl,
+              decoration: _inputDeco(
+                label: 'Número de móvil',
+                icon: Icons.directions_car_outlined,
+              ),
+              onChanged: (_) => _actualizarPreview(),
+            ),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildMovilesCheckboxes(),
+            ],
+          ],
+        );
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -476,7 +441,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
-                label: 'Videoperador',
+                label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
               onChanged: (_) => _actualizarPreview(),
@@ -493,7 +458,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
       initialValue: _easSeleccionado,
       isExpanded: true,
       decoration: _inputDeco(
-        label: 'EAS',
+        label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
       items: CrtCatalog.easStations
@@ -602,7 +567,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              Icons.logout_outlined,
+              Icons.shield_outlined,
               color: Colors.white,
               size: 22,
             ),
@@ -613,7 +578,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'FORMACIÓN SALIENTE',
+                  'RONDA DISUASIVA',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -623,7 +588,7 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Registre la información de la formación saliente del servicio',
+                  'Registro de ronda disuasiva del servicio',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -670,28 +635,40 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           Row(
             children: [
               Expanded(
-                child: _cargandoTiposServicio
-                    ? const LinearProgressIndicator()
-                    : DropdownButtonFormField<String>(
-                        initialValue: _servicio,
-                        isExpanded: true,
-                        decoration: _inputDeco(
-                          label: 'Tipo de Servicio',
-                          icon: Icons.category_outlined,
-                        ),
-                        items: _tiposServicio
-                            .map(
-                              (t) => DropdownMenuItem(
-                                value: t['codigo']?.toString() ?? '',
-                                child: Text(
-                                  t['nombre']?.toString() ?? '',
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: _onServicioChanged,
-                      ),
+                child: DropdownButtonFormField<String>(
+                  initialValue: _servicio,
+                  decoration: _inputDeco(
+                    label: 'Tipo de Servicio',
+                    icon: Icons.category_outlined,
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                        value: 'PEDESTRE', child: Text('Pedestre')),
+                    DropdownMenuItem(
+                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                    DropdownMenuItem(value: 'K9', child: Text('K9')),
+                    DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(
+                        value: 'TURISMO', child: Text('Turismo')),
+                    DropdownMenuItem(
+                        value: 'CICLISTA', child: Text('Ciclista')),
+                    DropdownMenuItem(
+                        value: 'ADMINISTRATIVO',
+                        child: Text('Administrativo')),
+                    DropdownMenuItem(
+                        value: 'AMBIENTE', child: Text('Ambiente')),
+                    DropdownMenuItem(
+                        value: 'ENCARGADO', child: Text('Encargado')),
+                    DropdownMenuItem(
+                        value: 'GESTION DE RIESGOS',
+                        child: Text('Gestión de Riesgos')),
+                    DropdownMenuItem(
+                        value: 'SUPERVISION', child: Text('Supervisión')),
+                    DropdownMenuItem(
+                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                  ],
+                  onChanged: _onServicioChanged,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -730,9 +707,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           ),
           const SizedBox(height: 12),
 
-          _buildHoraField(),
-          const SizedBox(height: 12),
-
           TextFormField(
             controller: _direccionCtrl,
             decoration: _inputDeco(
@@ -740,22 +714,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
               icon: Icons.location_on_outlined,
             ),
             onChanged: (_) => _actualizarPreview(),
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _acmCtrl,
-                  decoration: _inputDeco(
-                    label: 'Número de ACM',
-                    icon: Icons.people_outlined,
-                  ),
-                  onChanged: (_) => _actualizarPreview(),
-                ),
-              ),
-            ],
           ),
           const SizedBox(height: 12),
 
@@ -869,50 +827,6 @@ class _FormacionSalienteRedesignState extends State<FormacionSalienteRedesign> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildHoraField() {
-    final horaStr =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
-    );
-    final horaSalidaStr =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
-
-    return Row(
-      children: [
-        Expanded(
-          child: InkWell(
-            onTap: _selectHoraIngreso,
-            child: InputDecorator(
-              decoration: _inputDeco(
-                label: 'Hora de Ingreso',
-                icon: Icons.access_time,
-              ),
-              child: Text(
-                horaStr,
-                style: const TextStyle(fontSize: 14, color: _blue),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: InputDecorator(
-            decoration: _inputDeco(
-              label: 'Hora de Salida (auto)',
-              icon: Icons.access_time_filled,
-            ),
-            child: Text(
-              horaSalidaStr,
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
