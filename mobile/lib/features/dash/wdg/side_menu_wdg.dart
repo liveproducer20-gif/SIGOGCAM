@@ -116,13 +116,17 @@ class SideMenuWdg extends StatelessWidget {
             ),
             child: Stack(
               children: [
-                const Positioned(
+                Positioned(
                   right: -28,
                   bottom: 120,
-                  child: Icon(
-                    Icons.location_city_rounded,
-                    size: 190,
-                    color: Color(0x0FFFFFFF),
+                  child: IgnorePointer(
+                    child: Image.asset(
+                      'assets/img/menud.png',
+                      width: 190,
+                      height: 190,
+                      fit: BoxFit.contain,
+                      opacity: const AlwaysStoppedAnimation(0.6),
+                    ),
                   ),
                 ),
                 Column(

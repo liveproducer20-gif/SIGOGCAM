@@ -438,7 +438,7 @@ class _FormacionFormState extends State<FormacionForm> {
           children: _movilesEas.map((movil) {
             final selected = _movilesSeleccionados.contains(movil);
             return FilterChip(
-              label: Text('MOVIL $movil'),
+              label: Text(movil),
               selected: selected,
               onSelected: (_) => _toggleMovil(movil),
               selectedColor: AppThm.priClr.withValues(alpha: 0.15),

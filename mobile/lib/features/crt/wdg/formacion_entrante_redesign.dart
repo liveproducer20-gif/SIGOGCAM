@@ -600,7 +600,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 final selected = _movilesSeleccionados.contains(movil);
                 return FilterChip(
                   label: Text(
-                    'MOVIL $movil',
+                    movil,
                     style: TextStyle(
                       fontSize: 12,
                       color: selected ? _blue : Colors.grey[700],

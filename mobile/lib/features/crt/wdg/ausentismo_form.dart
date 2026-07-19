@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
-import '../../adm/adm_api.dart';
 import '../mdl/crt_models.dart';
 import '../svc/crt_api.dart';
 import '../svc/crt_catalog.dart';
@@ -42,9 +41,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
-  List<Map<String, dynamic>> _personal = [];
-  Map<String, dynamic>? _servidorSeleccionado;
-  bool _cargandoPersonal = true;
+  List<CrtEasStation> _easFromApi = [];
 
   final _circuitoCtrl = TextEditingController();
   final _direccionCtrl = TextEditingController();
@@ -71,8 +68,8 @@ class _AusentismoFormState extends State<AusentismoForm> {
   void initState() {
     super.initState();
     _cargarDistritos();
-    _cargarPersonal();
     _cargarJefe();
+    _cargarEas();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -107,20 +104,6 @@ class _AusentismoFormState extends State<AusentismoForm> {
     }
   }
 
-  Future<void> _cargarPersonal() async {
-    try {
-      final lista = await AdmApi().getPersonalList();
-      if (mounted) {
-        setState(() {
-          _personal = lista;
-          _cargandoPersonal = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) setState(() => _cargandoPersonal = false);
-    }
-  }
-
   Future<void> _cargarJefe() async {
     try {
       final jefe = await _crtApi.getJefeControlMunicipal();
@@ -132,6 +115,24 @@ class _AusentismoFormState extends State<AusentismoForm> {
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
+  }
+
+  Future<void> _cargarEas() async {
+    try {
+      final easList = await _crtApi.getEasStations();
+      if (mounted) {
+        setState(() {
+          _easFromApi = easList
+              .where((e) => e['activo'] == true)
+              .map((e) => CrtEasStation(
+                    codigo: e['codigo']?.toString() ?? '',
+                    nombre: e['nombre']?.toString() ?? '',
+                    direccion: e['direccion']?.toString() ?? '',
+                  ))
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   bool get _isEas => _servicio == 'EAS';
@@ -154,13 +155,6 @@ class _AusentismoFormState extends State<AusentismoForm> {
       'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
-  }
-
-  String _formatName(Map<String, dynamic> p) {
-    final ap = (p['apellidos'] as String? ?? '').trim();
-    final nm = (p['nombres'] as String? ?? '').trim();
-    if (ap.isEmpty && nm.isEmpty) return 'Sin nombre';
-    return '$ap $nm';
   }
 
   String _formatFecha(DateTime f) {
@@ -190,9 +184,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
           : '[CIRCUITO]';
     }
 
-    final servidorNombre = _servidorSeleccionado != null
-        ? _formatName(_servidorSeleccionado!)
-        : '[SERVIDOR]';
+    final servidorNombre = widget.user?.nombreCompleto ?? 'ACM';
 
     String motivoTexto;
     if (_motivo == 'OTRO') {
@@ -435,6 +427,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
   }
 
   Widget _buildEasDropdown() {
+    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -442,7 +435,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
         label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
-      items: CrtCatalog.easStations
+      items: easList
           .map(
             (e) => DropdownMenuItem(
               value: e,
@@ -754,30 +747,14 @@ class _AusentismoFormState extends State<AusentismoForm> {
           ),
           const SizedBox(height: 12),
 
-          _cargandoPersonal
-              ? const LinearProgressIndicator()
-              : DropdownButtonFormField<Map<String, dynamic>>(
-                  decoration: _inputDeco(
-                    label: 'Servidor / Personal',
-                    icon: Icons.person_outlined,
-                  ),
-                  isExpanded: true,
-                  items: _personal
-                      .map(
-                        (p) => DropdownMenuItem(
-                          value: p,
-                          child: Text(
-                            _formatName(p),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => _servidorSeleccionado = v);
-                    _actualizarPreview();
-                  },
-                ),
+          TextFormField(
+            initialValue: widget.user?.nombreCompleto ?? 'ACM',
+            readOnly: true,
+            decoration: _inputDeco(
+              label: 'Servidor / Personal',
+              icon: Icons.person_outlined,
+            ),
+          ),
         ],
       ),
     );

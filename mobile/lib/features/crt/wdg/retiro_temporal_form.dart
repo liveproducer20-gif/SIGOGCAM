@@ -41,6 +41,8 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
 
+  List<CrtEasStation> _easFromApi = [];
+
   final _circuitoCtrl = TextEditingController();
   final _direccionCtrl = TextEditingController();
   final _actividadCtrl = TextEditingController();
@@ -64,6 +66,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
     super.initState();
     _cargarDistritos();
     _cargarJefe();
+    _cargarEas();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _actualizarPreview();
     });
@@ -115,6 +118,24 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
+  }
+
+  Future<void> _cargarEas() async {
+    try {
+      final easList = await _crtApi.getEasStations();
+      if (mounted) {
+        setState(() {
+          _easFromApi = easList
+              .where((e) => e['activo'] == true)
+              .map((e) => CrtEasStation(
+                    codigo: e['codigo']?.toString() ?? '',
+                    nombre: e['nombre']?.toString() ?? '',
+                    direccion: e['direccion']?.toString() ?? '',
+                  ))
+              .toList();
+        });
+      }
+    } catch (_) {}
   }
 
   bool get _isEas => _servicio == 'EAS';
@@ -289,10 +310,12 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
+      final codigoLower = eas.codigo.toLowerCase();
+      final nombreLower = eas.nombre.toLowerCase();
       final asignadas = asignaciones.where((a) {
-        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
-        final activo = a['activo'] == true;
-        return matchEas && activo;
+        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+        return easCodigo == codigoLower || easNombre == nombreLower;
       }).map((a) => a['numero_movil']?.toString() ?? '')
         .where((m) => m.isNotEmpty)
         .toList();
@@ -460,6 +483,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
   }
 
   Widget _buildEasDropdown() {
+    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -467,7 +491,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
         label: 'Circuito / EAS',
         icon: Icons.location_city_outlined,
       ),
-      items: CrtCatalog.easStations
+      items: easList
           .map(
             (e) => DropdownMenuItem(
               value: e,
@@ -510,7 +534,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               final selected = _movilesSeleccionados.contains(movil);
               return FilterChip(
                 label: Text(
-                  'MOVIL $movil',
+                  movil,
                   style: TextStyle(
                     fontSize: 12,
                     color: selected ? _blue : Colors.grey[700],
