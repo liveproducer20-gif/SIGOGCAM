@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../../../core/thm/app_thm.dart';
+import '../../../core/wdg/responsive.dart';
 import '../../profile/profile_menu_wdg.dart';
 
 class TopBarWdg extends StatelessWidget implements PreferredSizeWidget {
@@ -23,10 +24,12 @@ class TopBarWdg extends StatelessWidget implements PreferredSizeWidget {
   });
 
   @override
-  Size get preferredSize => const Size.fromHeight(64);
+  Size get preferredSize => const Size.fromHeight(56);
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = AppResponsive.isMobile(context);
+
     return AppBar(
       backgroundColor: AppThm.priClr,
       elevation: 0,
@@ -36,9 +39,10 @@ class TopBarWdg extends StatelessWidget implements PreferredSizeWidget {
         ttl,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.bold,
           color: Colors.white,
+          fontSize: isMobile ? 17 : 20,
         ),
       ),
       actions: [

@@ -14,6 +14,7 @@ import 'wdg/crt_widgets.dart';
 import 'mdl/crt_special_models.dart';
 import 'wdg/formacion_form.dart';
 import 'wdg/ausentismo_form.dart';
+import 'wdg/colaboracion_ciudadana_form.dart';
 import 'wdg/colaboracion_entidades_form.dart';
 import 'wdg/desalojo_form.dart';
 import 'wdg/formacion_entrante_redesign.dart';
@@ -407,6 +408,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         _buildBackButton(),
         const SizedBox(height: 12),
         ColaboracionEntidadesForm(
+          user: widget.user,
+          onPreviewChanged: (text) => setState(() => _previewText = text),
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
+    if (tipo == TipoCartilla.colaboracionEventos) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        ColaboracionCiudadanaForm(
           user: widget.user,
           onPreviewChanged: (text) => setState(() => _previewText = text),
           onGenerate: _generarCartilla,

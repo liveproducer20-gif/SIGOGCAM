@@ -4,6 +4,7 @@ import '../../core/auth/app_user.dart';
 import '../../core/file/file_pick.dart';
 import '../../core/notif/notif_read_store.dart';
 import '../../core/thm/app_thm.dart';
+import '../../core/wdg/responsive.dart';
 import '../evt/ann/svc/ann_svc.dart';
 import '../evt/svc/evt_svc.dart';
 import 'profile_api.dart';
@@ -269,24 +270,34 @@ class _ProfileDialogState extends State<ProfileDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isMobile = AppResponsive.isMobile(context);
+
     return AlertDialog(
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 12 : 16,
+        vertical: isMobile ? 16 : 24,
+      ),
       scrollable: true,
       title: Row(
         children: [
           _ProfileAvatar(
             imageUrl: fotoPerfilUrl,
             initials: _initials(),
-            radius: 24,
+            radius: isMobile ? 20 : 24,
           ),
           const SizedBox(width: 14),
           Expanded(
-            child: Text(editando ? 'Editar perfil' : 'Perfil de usuario'),
+            child: Text(
+              editando ? 'Editar perfil' : 'Perfil de usuario',
+              style: TextStyle(fontSize: isMobile ? 17 : 20),
+            ),
           ),
         ],
       ),
       content: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 540),
+        constraints: BoxConstraints(
+          maxWidth: AppResponsive.dialogMaxWidth(context),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -350,10 +361,13 @@ class _ProfileDialogState extends State<ProfileDialog> {
             ),
             if (editando) ...[
               const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.photo_camera_outlined),
-                label: const Text('Cambiar foto'),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.photo_camera_outlined),
+                  label: const Text('Cambiar foto'),
+                ),
               ),
             ],
           ],
