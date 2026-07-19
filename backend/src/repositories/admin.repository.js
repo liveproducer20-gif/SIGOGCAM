@@ -805,6 +805,18 @@ async function obtenerJefeControlMunicipal() {
     });
 }
 
+async function listarAsignacionesActivasPorEas() {
+    return withConnection((conexion) => conexion.query(`
+        SELECT e.codigo AS eas_codigo, e.nombre AS eas,
+               m.numero_movil, a.activo
+        FROM dbo.movil_eas_asignaciones a
+        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
+        INNER JOIN dbo.moviles m ON m.id = a.movil_id
+        WHERE a.activo = 1
+        ORDER BY e.codigo, m.numero_movil
+    `));
+}
+
 module.exports = {
     withConnection,
     listarCatalogos,
@@ -851,5 +863,6 @@ module.exports = {
     obtenerAlertasMantenimiento,
     listarMantenimientos,
     crearMantenimiento,
-    obtenerJefeControlMunicipal
+    obtenerJefeControlMunicipal,
+    listarAsignacionesActivasPorEas
 };

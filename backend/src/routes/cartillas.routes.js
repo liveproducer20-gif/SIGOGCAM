@@ -44,16 +44,7 @@ router.get(
     requireAnyPermission(['cartillas.ver', 'cartillas.generar']),
     async (req, res) => {
         try {
-            const { withConnection } = require('../db');
-            const rows = await withConnection((conexion) => conexion.query(`
-                SELECT e.codigo AS eas_codigo, e.nombre AS eas,
-                       m.numero_movil, a.activo
-                FROM dbo.movil_eas_asignaciones a
-                INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id
-                INNER JOIN dbo.moviles m ON m.id = a.movil_id
-                WHERE a.activo = 1
-                ORDER BY e.codigo, m.numero_movil
-            `));
+            const rows = await adminRepo.listarAsignacionesActivasPorEas();
             res.json({ ok: true, datos: rows });
         } catch (error) {
             console.error('Error al obtener asignaciones EAS-Moviles:', error.message);

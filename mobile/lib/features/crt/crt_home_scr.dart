@@ -490,7 +490,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
-        tipo == TipoCartilla.ausentismo;
+        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.retiroTemporal;
     if (_tipoFormacion == null && !isEasCartilla) return;
     setState(() => _generando = true);
     try {
@@ -625,7 +626,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.rondasDisuasivas ||
         tipo == TipoCartilla.puntoMartillo ||
         tipo == TipoCartilla.requerimiento ||
-        tipo == TipoCartilla.ausentismo;
+        tipo == TipoCartilla.ausentismo ||
+        tipo == TipoCartilla.retiroTemporal;
     if ((_tipoFormacion != null || isEasCartilla) && _previewText.isNotEmpty) {
       return _Panel(
         child: Column(
