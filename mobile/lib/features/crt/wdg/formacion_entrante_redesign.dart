@@ -59,6 +59,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
 
   CrtEasStation? _easSeleccionado;
   List<String> _movilesEas = [];
+  bool _cargandoMoviles = false;
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
@@ -297,6 +298,8 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   }
 
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
+    if (!mounted) return;
+    setState(() => _cargandoMoviles = true);
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
       final asignadas = asignaciones.where((a) {
@@ -307,10 +310,18 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         .where((m) => m.isNotEmpty)
         .toList();
       if (mounted) {
-        setState(() => _movilesEas = asignadas);
+        setState(() {
+          _movilesEas = asignadas;
+          _cargandoMoviles = false;
+        });
       }
     } catch (_) {
-      if (mounted) setState(() => _movilesEas = []);
+      if (mounted) {
+        setState(() {
+          _movilesEas = [];
+          _cargandoMoviles = false;
+        });
+      }
     }
   }
 
@@ -429,22 +440,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
           onChanged: (_) => _actualizarPreview(),
         );
       case 'EAS':
-        return Column(
-          children: [
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Número de móvil',
-                icon: Icons.directions_car_outlined,
-              ),
-              onChanged: (_) => _actualizarPreview(),
-            ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildMovilesCheckboxes(),
-            ],
-          ],
-        );
+        return _buildMovilesCheckboxes();
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -466,10 +462,8 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              _buildMovilesCheckboxes(),
-              const SizedBox(height: 10),
-            ],
+            _buildMovilesCheckboxes(),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
@@ -520,7 +514,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'MÓVILES EN CIRCULACIÓN',
+            'MÓVILES DISPONIBLES',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -529,33 +523,53 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             ),
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: _movilesEas.map((movil) {
-              final selected = _movilesSeleccionados.contains(movil);
-              return FilterChip(
-                label: Text(
-                  'MOVIL $movil',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: selected ? _blue : Colors.grey[700],
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+          if (_cargandoMoviles)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(),
+            )
+          else if (_movilesEas.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                _easSeleccionado != null
+                    ? 'No hay móviles asignados a este EAS'
+                    : 'Seleccione un EAS para ver móviles',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _movilesEas.map((movil) {
+                final selected = _movilesSeleccionados.contains(movil);
+                return FilterChip(
+                  label: Text(
+                    'MOVIL $movil',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? _blue : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
-                ),
-                selected: selected,
-                onSelected: (_) => _toggleMovil(movil),
-                selectedColor: _blueLight,
-                side: BorderSide(
-                  color: selected ? _blueMid : Colors.grey[300]!,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              );
-            }).toList(),
-          ),
+                  selected: selected,
+                  onSelected: (_) => _toggleMovil(movil),
+                  selectedColor: _blueLight,
+                  side: BorderSide(
+                    color: selected ? _blueMid : Colors.grey[300]!,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
