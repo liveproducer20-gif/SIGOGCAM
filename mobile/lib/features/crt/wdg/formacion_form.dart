@@ -130,11 +130,13 @@ class _FormacionFormState extends State<FormacionForm> {
         setState(() {
           _easFromApi = easList
               .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
+              .map(
+                (e) => CrtEasStation(
+                  codigo: e['codigo']?.toString() ?? '',
+                  nombre: e['nombre']?.toString() ?? '',
+                  direccion: e['direccion']?.toString() ?? '',
+                ),
+              )
               .toList();
         });
       }
@@ -320,13 +322,15 @@ class _FormacionFormState extends State<FormacionForm> {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
-      final asignadas = asignaciones.where((a) {
-        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
-        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
-        return easCodigo == codigoLower || easNombre == nombreLower;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            return easCodigo == codigoLower || easNombre == nombreLower;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       if (mounted) {
         setState(() => _movilesEas = asignadas);
       }
@@ -400,7 +404,9 @@ class _FormacionFormState extends State<FormacionForm> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
+    final easList = _easFromApi.isNotEmpty
+        ? _easFromApi
+        : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -502,6 +508,7 @@ class _FormacionFormState extends State<FormacionForm> {
 
             DropdownButtonFormField<String>(
               initialValue: _servicio,
+              isExpanded: true,
               decoration: InputDecoration(
                 labelText: 'Tipo de Servicio',
                 prefixIcon: const Icon(Icons.category_outlined, size: 20),

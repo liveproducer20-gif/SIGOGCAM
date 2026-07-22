@@ -110,8 +110,9 @@ class _AusentismoFormState extends State<AusentismoForm> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -124,11 +125,13 @@ class _AusentismoFormState extends State<AusentismoForm> {
         setState(() {
           _easFromApi = easList
               .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
+              .map(
+                (e) => CrtEasStation(
+                  codigo: e['codigo']?.toString() ?? '',
+                  nombre: e['nombre']?.toString() ?? '',
+                  direccion: e['direccion']?.toString() ?? '',
+                ),
+              )
               .toList();
         });
       }
@@ -170,8 +173,9 @@ class _AusentismoFormState extends State<AusentismoForm> {
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha = _formatFecha(now);
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
+    final direccion = _direccionCtrl.text.isNotEmpty
+        ? _direccionCtrl.text
+        : '[DIRECCION]';
     final saludo = CrtSpecialTextGenerator.saludo(now);
     const causa = 'AUSENTISMO';
 
@@ -205,9 +209,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
       ..writeln('*DIRECCION:* $direccion')
       ..writeln('*CAUSA:* $causa')
       ..writeln()
-      ..writeln(
-        '$saludo, permiso Sr. $jefe Jefe de Control Municipal.',
-      )
+      ..writeln('$saludo, permiso Sr. $jefe Jefe de Control Municipal.')
       ..writeln();
 
     switch (_tipoAusentismo) {
@@ -221,9 +223,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
             'Muy respetuosamente me permito informar que el ACM. $servidorNombre se ausenta de su lugar de servicio por motivo de $motivoTexto.',
           )
           ..writeln()
-          ..writeln(
-            'La ausencia corresponde desde $hSalida hasta $hRetorno.',
-          )
+          ..writeln('La ausencia corresponde desde $hSalida hasta $hRetorno.')
           ..writeln()
           ..writeln(
             'Se deja constancia de la novedad para los fines pertinentes.',
@@ -236,9 +236,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
             'Muy respetuosamente me permito informar que el ACM. $servidorNombre se ausenta de su lugar de servicio por motivo de $motivoTexto.',
           )
           ..writeln()
-          ..writeln(
-            'El permiso corresponde desde el $fInicio hasta el $fFin.',
-          )
+          ..writeln('El permiso corresponde desde el $fInicio hasta el $fFin.')
           ..writeln()
           ..writeln(
             'Se deja constancia de la novedad para los fines pertinentes.',
@@ -427,7 +425,9 @@ class _AusentismoFormState extends State<AusentismoForm> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
+    final easList = _easFromApi.isNotEmpty
+        ? _easFromApi
+        : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -607,10 +607,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
                 const SizedBox(height: 2),
                 Text(
                   'Registro de ausentismo del personal',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -619,10 +616,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -655,35 +649,51 @@ class _AusentismoFormState extends State<AusentismoForm> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestion de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestion de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervision'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervision')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
                 ),
@@ -788,13 +798,12 @@ class _AusentismoFormState extends State<AusentismoForm> {
               icon: Icons.timer_outlined,
             ),
             items: const [
+              DropdownMenuItem(value: 'POR HORAS', child: Text('Por Horas')),
+              DropdownMenuItem(value: 'POR DIAS', child: Text('Por Dias')),
               DropdownMenuItem(
-                  value: 'POR HORAS', child: Text('Por Horas')),
-              DropdownMenuItem(
-                  value: 'POR DIAS', child: Text('Por Dias')),
-              DropdownMenuItem(
-                  value: 'TRASLADO',
-                  child: Text('Traslado a Casa de Salud')),
+                value: 'TRASLADO',
+                child: Text('Traslado a Casa de Salud'),
+              ),
             ],
             onChanged: _onTipoAusentismoChanged,
           ),
@@ -808,20 +817,21 @@ class _AusentismoFormState extends State<AusentismoForm> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'EXAMENES MEDICOS',
-                  child: Text('Examenes medicos')),
+                value: 'EXAMENES MEDICOS',
+                child: Text('Examenes medicos'),
+              ),
               DropdownMenuItem(
-                  value: 'PERMISO MEDICO',
-                  child: Text('Permiso medico')),
+                value: 'PERMISO MEDICO',
+                child: Text('Permiso medico'),
+              ),
               DropdownMenuItem(value: 'NACIMIENTO', child: Text('Nacimiento')),
-              DropdownMenuItem(
-                  value: 'PATERNIDAD', child: Text('Paternidad')),
-              DropdownMenuItem(
-                  value: 'MATERNIDAD', child: Text('Maternidad')),
+              DropdownMenuItem(value: 'PATERNIDAD', child: Text('Paternidad')),
+              DropdownMenuItem(value: 'MATERNIDAD', child: Text('Maternidad')),
               DropdownMenuItem(value: 'ESTUDIOS', child: Text('Estudios')),
               DropdownMenuItem(
-                  value: 'CALAMIDAD DOMESTICA',
-                  child: Text('Calamidad domestica')),
+                value: 'CALAMIDAD DOMESTICA',
+                child: Text('Calamidad domestica'),
+              ),
               DropdownMenuItem(value: 'OTRO', child: Text('Otro')),
             ],
             onChanged: _onMotivoChanged,

@@ -277,8 +277,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
           .where((a) {
             final matchEas = a['eas_codigo']?.toString() == eas.codigo;
             final movilActivo = a['movil_activo']?.toString().toLowerCase();
-            return matchEas &&
-                (movilActivo == 'true' || movilActivo == '1');
+            return matchEas && (movilActivo == 'true' || movilActivo == '1');
           })
           .map((a) => a['numero_movil']?.toString() ?? '')
           .where((m) => m.isNotEmpty)
@@ -625,6 +624,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,

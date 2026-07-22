@@ -286,8 +286,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -388,7 +389,10 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     if (todos.length == 2) {
       return '${todos.first.toLowerCase()} y ${todos.last.toLowerCase()}';
     }
-    final resto = todos.sublist(0, todos.length - 1).map((e) => e.toLowerCase()).join(', ');
+    final resto = todos
+        .sublist(0, todos.length - 1)
+        .map((e) => e.toLowerCase())
+        .join(', ');
     return '$resto y ${todos.last.toLowerCase()}';
   }
 
@@ -396,7 +400,8 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     final partes = <String>[];
     for (final entidad in _entidadesSeleccionadas) {
       if (entidad == 'OTRA ENTIDAD') {
-        final nombreEntidad = _otraEntidadNombreControllers[entidad]?.text.trim();
+        final nombreEntidad = _otraEntidadNombreControllers[entidad]?.text
+            .trim();
         final motivo = _otraEntidadMotivoControllers[entidad]?.text.trim();
         if (nombreEntidad != null && nombreEntidad.isNotEmpty) {
           String parte = nombreEntidad;
@@ -418,7 +423,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       }
     }
     if (partes.isEmpty) return '';
-    if (partes.length == 1) return 'contando con la presencia de ${partes.first}';
+    if (partes.length == 1) {
+      return 'contando con la presencia de ${partes.first}';
+    }
     if (partes.length == 2) {
       return 'contando con la presencia de ${partes.first} y ${partes.last}';
     }
@@ -430,12 +437,16 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
   String _obtenerPersonasNarrativo() {
     final partes = <String>[];
     for (final persona in _personasInvolucradas) {
-      final nombre = (persona['nombreCtrl'] as TextEditingController).text.trim();
+      final nombre = (persona['nombreCtrl'] as TextEditingController).text
+          .trim();
       final condicion = persona['condicion'] as String? ?? '';
-      final detalle = (persona['detalleCtrl'] as TextEditingController).text.trim();
-      final accion = (persona['accionCtrl'] as TextEditingController).text.trim();
+      final detalle = (persona['detalleCtrl'] as TextEditingController).text
+          .trim();
+      final accion = (persona['accionCtrl'] as TextEditingController).text
+          .trim();
       final trasladado = persona['trasladado'] as bool? ?? false;
-      final casaSalud = (persona['casaSaludCtrl'] as TextEditingController).text.trim();
+      final casaSalud = (persona['casaSaludCtrl'] as TextEditingController).text
+          .trim();
 
       if (nombre.isEmpty && condicion.isEmpty) continue;
 
@@ -448,7 +459,8 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       }
 
       if (condicion.isNotEmpty) {
-        parte += ', quien result${nombre.isNotEmpty ? 'o' : 'a'} ${condicion.toLowerCase()}';
+        parte +=
+            ', quien result${nombre.isNotEmpty ? 'o' : 'a'} ${condicion.toLowerCase()}';
       }
       if (detalle.isNotEmpty) {
         parte += ' y presentaba $detalle';
@@ -457,14 +469,20 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
         parte += '; $accion';
       }
       if (trasladado && casaSalud.isNotEmpty) {
-        parte += ' y posteriormente trasladado al $casaSalud para recibir atencion medica';
+        parte +=
+            ' y posteriormente trasladado al $casaSalud para recibir atencion medica';
       }
       partes.add(parte);
     }
     if (partes.isEmpty) return '';
-    if (partes.length == 1) return 'Durante el procedimiento se identifico ${partes.first}.';
+    if (partes.length == 1) {
+      return 'Durante el procedimiento se identifico ${partes.first}.';
+    }
     final primera = partes.first;
-    final resto = partes.sublist(1).map((p) => 'Asimismo, se identifico $p').join('. ');
+    final resto = partes
+        .sublist(1)
+        .map((p) => 'Asimismo, se identifico $p')
+        .join('. ');
     return 'Durante el procedimiento se identifico $primera. $resto.';
   }
 
@@ -478,8 +496,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
+    final direccion = _direccionCtrl.text.isNotEmpty
+        ? _direccionCtrl.text
+        : '[DIRECCION]';
     final saludo = CrtSpecialTextGenerator.saludo(now);
     const causa = 'COLABORACION CON OTRAS ENTIDADES';
 
@@ -511,7 +530,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       ..writeln()
       ..writeln('$saludo, permiso Sr. $jefe Jefe de Control Municipal.')
       ..writeln()
-      ..write('Muy respetuosamente me permito informar que se procedio a brindar colaboracion interinstitucional en el sector de $direccion');
+      ..write(
+        'Muy respetuosamente me permito informar que se procedio a brindar colaboracion interinstitucional en el sector de $direccion',
+      );
 
     if (entidadesNarrativo.isNotEmpty) {
       buf.write(', $entidadesNarrativo');
@@ -527,9 +548,13 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     }
 
     if (resultado.isNotEmpty) {
-      buf.write(' Las instituciones participantes realizaron las acciones correspondientes de manera coordinada, $resultado');
+      buf.write(
+        ' Las instituciones participantes realizaron las acciones correspondientes de manera coordinada, $resultado',
+      );
     } else {
-      buf.write(' Las instituciones participantes realizaron las acciones correspondientes de manera coordinada');
+      buf.write(
+        ' Las instituciones participantes realizaron las acciones correspondientes de manera coordinada',
+      );
     }
 
     if (_estadoFinal == 'SIN NOVEDADES') {
@@ -538,7 +563,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     } else {
       buf.write(', manteniendo el orden y la seguridad en el sector');
       if (novedad.isNotEmpty) {
-        buf.write('. La colaboracion culmino con novedades, registrandose $novedad.');
+        buf.write(
+          '. La colaboracion culmino con novedades, registrandose $novedad.',
+        );
       } else {
         buf.write('. La colaboracion culmino con novedades.');
       }
@@ -547,7 +574,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln();
-      buf.writeln('*MOVILES EN CIRCULACION:* ${_movilesSeleccionados.toList()..sort((a, b) => a.compareTo(b))}');
+      buf.writeln(
+        '*MOVILES EN CIRCULACION:* ${_movilesSeleccionados.toList()..sort((a, b) => a.compareTo(b))}',
+      );
     }
 
     buf.writeln();
@@ -628,13 +657,15 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
   Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
     try {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
-      final asignadas = asignaciones.where((a) {
-        final matchEas = a['eas_codigo']?.toString() == eas.codigo;
-        final activo = a['activo'] == true;
-        return matchEas && activo;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final matchEas = a['eas_codigo']?.toString() == eas.codigo;
+            final activo = a['activo'] == true;
+            return matchEas && activo;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       if (mounted) {
         setState(() => _movilesEas = asignadas);
       }
@@ -853,8 +884,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                   style: TextStyle(
                     fontSize: 12,
                     color: selected ? _blue : Colors.grey[700],
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
                 selected: selected,
@@ -958,7 +988,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               children: procedimientos.map((proc) {
                 final selected =
                     _procedimientosSeleccionados[entidad]?.contains(proc) ??
-                        false;
+                    false;
                 return FilterChip(
                   label: Text(
                     proc,
@@ -1013,7 +1043,11 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: Colors.red,
+                ),
                 onPressed: () => _eliminarPersona(index),
               ),
             ],
@@ -1036,23 +1070,32 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'Persona sospechosa', child: Text('Persona sospechosa')),
+                value: 'Persona sospechosa',
+                child: Text('Persona sospechosa'),
+              ),
               DropdownMenuItem(
-                  value: 'Presunto delincuente',
-                  child: Text('Presunto delincuente')),
+                value: 'Presunto delincuente',
+                child: Text('Presunto delincuente'),
+              ),
               DropdownMenuItem(value: 'Victima', child: Text('Victima')),
               DropdownMenuItem(
-                  value: 'Persona herida', child: Text('Persona herida')),
+                value: 'Persona herida',
+                child: Text('Persona herida'),
+              ),
               DropdownMenuItem(
-                  value: 'Persona inconsciente',
-                  child: Text('Persona inconsciente')),
+                value: 'Persona inconsciente',
+                child: Text('Persona inconsciente'),
+              ),
               DropdownMenuItem(value: 'Conductor', child: Text('Conductor')),
               DropdownMenuItem(value: 'Peaton', child: Text('Peaton')),
               DropdownMenuItem(
-                  value: 'Ciudadano resguardado',
-                  child: Text('Ciudadano resguardado')),
+                value: 'Ciudadano resguardado',
+                child: Text('Ciudadano resguardado'),
+              ),
               DropdownMenuItem(
-                  value: 'Persona fallecida', child: Text('Persona fallecida')),
+                value: 'Persona fallecida',
+                child: Text('Persona fallecida'),
+              ),
               DropdownMenuItem(value: 'Testigo', child: Text('Testigo')),
               DropdownMenuItem(value: 'Otro', child: Text('Otro')),
             ],
@@ -1178,10 +1221,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 const SizedBox(height: 2),
                 Text(
                   'Registro de colaboracion interinstitucional',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -1190,10 +1230,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -1226,35 +1263,51 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestion de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestion de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervision'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervision')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
                 ),
@@ -1348,41 +1401,45 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
           Wrap(
             spacing: 8,
             runSpacing: 4,
-            children: [
-              'POLICIA NACIONAL',
-              'CUERPO DE BOMBEROS',
-              'ATM',
-              'SEGURA EP',
-              'DIRECCION DE JUSTICIA Y VIGILANCIA',
-              'GESTION DE RIESGOS',
-              'MINISTERIO DE SALUD',
-              'FUERZAS ARMADAS',
-              'OTRA ENTIDAD',
-            ].map((entidad) {
-              final selected = _entidadesSeleccionadas.contains(entidad);
-              return FilterChip(
-                label: Text(
-                  entidad,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: selected ? _blue : Colors.grey[700],
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-                selected: selected,
-                onSelected: (_) => _toggleEntidad(entidad),
-                selectedColor: _blueLight,
-                side: BorderSide(
-                  color: selected ? _blueMid : Colors.grey[300]!,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              );
-            }).toList(),
+            children:
+                [
+                  'POLICIA NACIONAL',
+                  'CUERPO DE BOMBEROS',
+                  'ATM',
+                  'SEGURA EP',
+                  'DIRECCION DE JUSTICIA Y VIGILANCIA',
+                  'GESTION DE RIESGOS',
+                  'MINISTERIO DE SALUD',
+                  'FUERZAS ARMADAS',
+                  'OTRA ENTIDAD',
+                ].map((entidad) {
+                  final selected = _entidadesSeleccionadas.contains(entidad);
+                  return FilterChip(
+                    label: Text(
+                      entidad,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: selected ? _blue : Colors.grey[700],
+                        fontWeight: selected
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    selected: selected,
+                    onSelected: (_) => _toggleEntidad(entidad),
+                    selectedColor: _blueLight,
+                    side: BorderSide(
+                      color: selected ? _blueMid : Colors.grey[300]!,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  );
+                }).toList(),
           ),
 
-          for (final entidad in _entidadesSeleccionadas) _buildEntidadBlock(entidad),
+          for (final entidad in _entidadesSeleccionadas)
+            _buildEntidadBlock(entidad),
 
           const SizedBox(height: 16),
           _sectionBadge(3, 'PERSONAS INVOLUCRADAS'),
@@ -1430,9 +1487,13 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             ),
             items: const [
               DropdownMenuItem(
-                  value: 'SIN NOVEDADES', child: Text('Sin novedades')),
+                value: 'SIN NOVEDADES',
+                child: Text('Sin novedades'),
+              ),
               DropdownMenuItem(
-                  value: 'CON NOVEDADES', child: Text('Con novedades')),
+                value: 'CON NOVEDADES',
+                child: Text('Con novedades'),
+              ),
             ],
             onChanged: (v) {
               setState(() => _estadoFinal = v ?? 'SIN NOVEDADES');
@@ -1515,10 +1576,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                   const SizedBox(height: 4),
                   Text(
                     'Formatos: JPG, PNG (Max. 5MB)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),

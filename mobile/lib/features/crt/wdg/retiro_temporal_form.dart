@@ -113,8 +113,9 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -127,11 +128,13 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
         setState(() {
           _easFromApi = easList
               .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
+              .map(
+                (e) => CrtEasStation(
+                  codigo: e['codigo']?.toString() ?? '',
+                  nombre: e['nombre']?.toString() ?? '',
+                  direccion: e['direccion']?.toString() ?? '',
+                ),
+              )
               .toList();
         });
       }
@@ -170,8 +173,9 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
+    final direccion = _direccionCtrl.text.isNotEmpty
+        ? _direccionCtrl.text
+        : '[DIRECCION]';
     final saludo = CrtSpecialTextGenerator.saludo(now);
     const causa = 'RETIRO TEMPORAL';
 
@@ -312,13 +316,15 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
-      final asignadas = asignaciones.where((a) {
-        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
-        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
-        return easCodigo == codigoLower || easNombre == nombreLower;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            return easCodigo == codigoLower || easNombre == nombreLower;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       if (mounted) {
         setState(() => _movilesEas = asignadas);
       }
@@ -483,7 +489,9 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
+    final easList = _easFromApi.isNotEmpty
+        ? _easFromApi
+        : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -538,8 +546,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                   style: TextStyle(
                     fontSize: 12,
                     color: selected ? _blue : Colors.grey[700],
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
                 selected: selected,
@@ -619,10 +626,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                 const SizedBox(height: 2),
                 Text(
                   'Registro de retiro temporal de mercaderia',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -631,10 +635,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -667,35 +668,51 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestion de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestion de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervision'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervision')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
                 ),
@@ -805,9 +822,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               label: 'Elementos retirados',
               icon: Icons.inventory_2_outlined,
               hint: 'Describa los elementos retirados...',
-            ).copyWith(
-              alignLabelWithHint: true,
-            ),
+            ).copyWith(alignLabelWithHint: true),
             onChanged: (_) => _actualizarPreview(),
           ),
           const SizedBox(height: 12),
@@ -883,10 +898,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                   const SizedBox(height: 4),
                   Text(
                     'Formatos: JPG, PNG (Max. 5MB)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),

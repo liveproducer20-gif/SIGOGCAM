@@ -120,8 +120,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -134,11 +135,13 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         setState(() {
           _easFromApi = easList
               .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
+              .map(
+                (e) => CrtEasStation(
+                  codigo: e['codigo']?.toString() ?? '',
+                  nombre: e['nombre']?.toString() ?? '',
+                  direccion: e['direccion']?.toString() ?? '',
+                ),
+              )
               .toList();
         });
       }
@@ -173,7 +176,8 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         orElse: () => {},
       );
       if (match.isNotEmpty) {
-        return match['nombre']?.toString().toUpperCase() ?? 'REPORTE DE $servicio';
+        return match['nombre']?.toString().toUpperCase() ??
+            'REPORTE DE $servicio';
       }
     }
     return 'REPORTE DE $servicio';
@@ -197,8 +201,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
+    final direccion = _direccionCtrl.text.isNotEmpty
+        ? _direccionCtrl.text
+        : '[DIRECCION]';
     final acm = _acmCtrl.text.isNotEmpty ? _acmCtrl.text : '0';
     final saludo = CrtSpecialTextGenerator.saludo(now);
 
@@ -345,17 +350,21 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
       debugPrint('[CRT] Buscando: codigo="$codigoLower" nombre="$nombreLower"');
-      final asignadas = asignaciones.where((a) {
-        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
-        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
-        final match = easCodigo == codigoLower || easNombre == nombreLower;
-        if (match) {
-          debugPrint('[CRT] Match: eas_codigo="$easCodigo" eas="$easNombre" movil=${a['numero_movil']}');
-        }
-        return match;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            final match = easCodigo == codigoLower || easNombre == nombreLower;
+            if (match) {
+              debugPrint(
+                '[CRT] Match: eas_codigo="$easCodigo" eas="$easNombre" movil=${a['numero_movil']}',
+              );
+            }
+            return match;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       debugPrint('[CRT] Moviles encontrados: $asignadas');
       if (mounted) {
         setState(() {
@@ -529,14 +538,13 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
+    final easList = _easFromApi.isNotEmpty
+        ? _easFromApi
+        : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
-      decoration: _inputDeco(
-        label: 'EAS',
-        icon: Icons.location_city_outlined,
-      ),
+      decoration: _inputDeco(label: 'EAS', icon: Icons.location_city_outlined),
       items: easList
           .map(
             (e) => DropdownMenuItem(
@@ -604,8 +612,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                     style: TextStyle(
                       fontSize: 12,
                       color: selected ? _blue : Colors.grey[700],
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: selected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                   selected: selected,
@@ -685,10 +694,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 const SizedBox(height: 2),
                 Text(
                   'Registre la información de la formación entrante del servicio',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -697,10 +703,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -733,35 +736,51 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestión de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestión de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervisión'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervisión')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
                 ),
@@ -772,15 +791,16 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                     ? const LinearProgressIndicator()
                     : DropdownButtonFormField<String>(
                         initialValue: _distritoSeleccionado,
-                        decoration: _inputDeco(
-                          label: 'Distrito',
-                          icon: Icons.map_outlined,
-                        ).copyWith(
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 32,
-                            maxWidth: 32,
-                          ),
-                        ),
+                        decoration:
+                            _inputDeco(
+                              label: 'Distrito',
+                              icon: Icons.map_outlined,
+                            ).copyWith(
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 32,
+                                maxWidth: 32,
+                              ),
+                            ),
                         isExpanded: true,
                         items: _distritos
                             .map(
@@ -860,9 +880,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               label: 'Detalle del personal y/o novedades',
               icon: Icons.notes_outlined,
               hint: 'Describa el personal asignado y/o novedades relevantes...',
-            ).copyWith(
-              alignLabelWithHint: true,
-            ),
+            ).copyWith(alignLabelWithHint: true),
             onChanged: (_) => _actualizarPreview(),
           ),
         ],
@@ -931,10 +949,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                   const SizedBox(height: 4),
                   Text(
                     'Formatos: JPG, PNG (Máx. 5MB)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),

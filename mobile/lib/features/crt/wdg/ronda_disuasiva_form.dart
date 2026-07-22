@@ -109,8 +109,9 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       if (!mounted) return;
       final ap = (jefe?['apellidos'] as String? ?? '').trim();
       final nm = (jefe?['nombres'] as String? ?? '').trim();
-      CrtTextGenerator.jefeNombre =
-          ap.isNotEmpty && nm.isNotEmpty ? '$ap $nm' : '';
+      CrtTextGenerator.jefeNombre = ap.isNotEmpty && nm.isNotEmpty
+          ? '$ap $nm'
+          : '';
     } catch (_) {
       CrtTextGenerator.jefeNombre = '';
     }
@@ -123,11 +124,13 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
         setState(() {
           _easFromApi = easList
               .where((e) => e['activo'] == true)
-              .map((e) => CrtEasStation(
-                    codigo: e['codigo']?.toString() ?? '',
-                    nombre: e['nombre']?.toString() ?? '',
-                    direccion: e['direccion']?.toString() ?? '',
-                  ))
+              .map(
+                (e) => CrtEasStation(
+                  codigo: e['codigo']?.toString() ?? '',
+                  nombre: e['nombre']?.toString() ?? '',
+                  direccion: e['direccion']?.toString() ?? '',
+                ),
+              )
               .toList();
         });
       }
@@ -174,8 +177,9 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
-    final direccion =
-        _direccionCtrl.text.isNotEmpty ? _direccionCtrl.text : '[DIRECCION]';
+    final direccion = _direccionCtrl.text.isNotEmpty
+        ? _direccionCtrl.text
+        : '[DIRECCION]';
     final saludo = CrtSpecialTextGenerator.saludo(now);
     const causa = 'RONDA DISUASIVA';
 
@@ -200,9 +204,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       ..writeln('*DIRECCION:* $direccion')
       ..writeln('*CAUSA:* $causa')
       ..writeln()
-      ..writeln(
-        '$saludo, permiso Sr. $jefe.',
-      )
+      ..writeln('$saludo, permiso Sr. $jefe.')
       ..writeln(
         'Muy respetuosamente me permito informar que se procedio a realizar una ronda disuasiva en el sector de $direccion, con la finalidad de mantener presencia preventiva de los Agentes de Control Municipal, precautelar el buen uso del espacio publico y prevenir posibles novedades en el sector.',
       )
@@ -306,13 +308,15 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       final asignaciones = await _crtApi.getAsignacionesMoviles();
       final codigoLower = eas.codigo.toLowerCase();
       final nombreLower = eas.nombre.toLowerCase();
-      final asignadas = asignaciones.where((a) {
-        final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
-        final easNombre = a['eas']?.toString().toLowerCase() ?? '';
-        return easCodigo == codigoLower || easNombre == nombreLower;
-      }).map((a) => a['numero_movil']?.toString() ?? '')
-        .where((m) => m.isNotEmpty)
-        .toList();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            return easCodigo == codigoLower || easNombre == nombreLower;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
       if (mounted) {
         setState(() => _movilesEas = asignadas);
       }
@@ -477,7 +481,9 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
   }
 
   Widget _buildEasDropdown() {
-    final easList = _easFromApi.isNotEmpty ? _easFromApi : CrtCatalog.easStations;
+    final easList = _easFromApi.isNotEmpty
+        ? _easFromApi
+        : CrtCatalog.easStations;
     return DropdownButtonFormField<CrtEasStation>(
       initialValue: _easSeleccionado,
       isExpanded: true,
@@ -532,8 +538,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
                   style: TextStyle(
                     fontSize: 12,
                     color: selected ? _blue : Colors.grey[700],
-                    fontWeight:
-                        selected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                   ),
                 ),
                 selected: selected,
@@ -613,10 +618,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
                 const SizedBox(height: 2),
                 Text(
                   'Registro de ronda disuasiva del servicio',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -625,10 +627,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
             const SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: _blue,
-              ),
+              child: CircularProgressIndicator(strokeWidth: 2, color: _blue),
             ),
         ],
       ),
@@ -661,35 +660,51 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
               Expanded(
                 child: DropdownButtonFormField<String>(
                   initialValue: _servicio,
+                  isExpanded: true,
                   decoration: _inputDeco(
                     label: 'Tipo de Servicio',
                     icon: Icons.category_outlined,
                   ),
                   items: const [
                     DropdownMenuItem(
-                        value: 'PEDESTRE', child: Text('Pedestre')),
+                      value: 'PEDESTRE',
+                      child: Text('Pedestre'),
+                    ),
                     DropdownMenuItem(
-                        value: 'MOTORIZADO', child: Text('Motorizado')),
+                      value: 'MOTORIZADO',
+                      child: Text('Motorizado'),
+                    ),
                     DropdownMenuItem(value: 'K9', child: Text('K9')),
                     DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
                     DropdownMenuItem(
-                        value: 'TURISMO', child: Text('Turismo')),
+                      value: 'CICLISTA',
+                      child: Text('Ciclista'),
+                    ),
                     DropdownMenuItem(
-                        value: 'CICLISTA', child: Text('Ciclista')),
+                      value: 'ADMINISTRATIVO',
+                      child: Text('Administrativo'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ADMINISTRATIVO',
-                        child: Text('Administrativo')),
+                      value: 'AMBIENTE',
+                      child: Text('Ambiente'),
+                    ),
                     DropdownMenuItem(
-                        value: 'AMBIENTE', child: Text('Ambiente')),
+                      value: 'ENCARGADO',
+                      child: Text('Encargado'),
+                    ),
                     DropdownMenuItem(
-                        value: 'ENCARGADO', child: Text('Encargado')),
+                      value: 'GESTION DE RIESGOS',
+                      child: Text('Gestión de Riesgos'),
+                    ),
                     DropdownMenuItem(
-                        value: 'GESTION DE RIESGOS',
-                        child: Text('Gestión de Riesgos')),
+                      value: 'SUPERVISION',
+                      child: Text('Supervisión'),
+                    ),
                     DropdownMenuItem(
-                        value: 'SUPERVISION', child: Text('Supervisión')),
-                    DropdownMenuItem(
-                        value: 'RADIOPERADOR', child: Text('Radioperador')),
+                      value: 'RADIOPERADOR',
+                      child: Text('Radioperador'),
+                    ),
                   ],
                   onChanged: _onServicioChanged,
                 ),
@@ -700,15 +715,16 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
                     ? const LinearProgressIndicator()
                     : DropdownButtonFormField<String>(
                         initialValue: _distritoSeleccionado,
-                        decoration: _inputDeco(
-                          label: 'Distrito',
-                          icon: Icons.map_outlined,
-                        ).copyWith(
-                          prefixIconConstraints: const BoxConstraints(
-                            minWidth: 32,
-                            maxWidth: 32,
-                          ),
-                        ),
+                        decoration:
+                            _inputDeco(
+                              label: 'Distrito',
+                              icon: Icons.map_outlined,
+                            ).copyWith(
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 32,
+                                maxWidth: 32,
+                              ),
+                            ),
                         isExpanded: true,
                         items: _distritos
                             .map(
@@ -769,9 +785,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
               label: 'Detalle del personal y/o novedades',
               icon: Icons.notes_outlined,
               hint: 'Describa el personal asignado y/o novedades relevantes...',
-            ).copyWith(
-              alignLabelWithHint: true,
-            ),
+            ).copyWith(alignLabelWithHint: true),
             onChanged: (_) => _actualizarPreview(),
           ),
         ],
@@ -840,10 +854,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
                   const SizedBox(height: 4),
                   Text(
                     'Formatos: JPG, PNG (Máx. 5MB)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),
