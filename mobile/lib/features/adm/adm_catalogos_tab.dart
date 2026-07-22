@@ -65,7 +65,7 @@ class _CatalogosTabState extends State<AdmCrudTab>
 
   Future<void> _load() async {
     final request = _fetch();
-    if (mounted) setState(() => _future = request);
+    if (mounted) setState(() { _future = request; });
     await request;
   }
 
@@ -111,86 +111,83 @@ class _CatalogosTabState extends State<AdmCrudTab>
         return LayoutBuilder(
           builder: (context, constraints) {
             final desktop = constraints.maxWidth >= 1180;
-            return SingleChildScrollView(
+            return ListView(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildBreadcrumb(),
-                  const SizedBox(height: 12),
-                  const Text('Catálogos Maestros', style: AdmTokens.h1),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Gestione los catálogos utilizados por todo el sistema.',
-                    style: AdmTokens.subtitle,
-                  ),
-                  const SizedBox(height: 24),
-                  if (loading)
-                    const _CatalogSkeleton(height: 116)
-                  else
-                    _buildKpis(),
-                  const SizedBox(height: 20),
-                  _buildToolbar(),
-                  const SizedBox(height: 16),
-                  _buildSelectedCatalog(),
-                  const SizedBox(height: 12),
-                  if (desktop)
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: _buildTableArea(
-                            items,
-                            loading: loading,
-                            mobile: false,
-                          ),
+              children: [
+                _buildBreadcrumb(),
+                const SizedBox(height: 12),
+                const Text('Catálogos Maestros', style: AdmTokens.h1),
+                const SizedBox(height: 4),
+                const Text(
+                  'Gestione los catálogos utilizados por todo el sistema.',
+                  style: AdmTokens.subtitle,
+                ),
+                const SizedBox(height: 24),
+                if (loading)
+                  const _CatalogSkeleton(height: 116)
+                else
+                  _buildKpis(),
+                const SizedBox(height: 20),
+                _buildToolbar(),
+                const SizedBox(height: 16),
+                _buildSelectedCatalog(),
+                const SizedBox(height: 12),
+                if (desktop)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _buildTableArea(
+                          items,
+                          loading: loading,
+                          mobile: false,
                         ),
-                        const SizedBox(width: 20),
-                        SizedBox(
-                          width: 300,
-                          child: _CatalogDetailPanel(
-                            item: selected,
-                            onEdit: selected == null
-                                ? null
-                                : () => _edit(selected),
-                            onDuplicate: selected == null
-                                ? null
-                                : () => _duplicate(selected),
-                            onToggle: selected == null
-                                ? null
-                                : () => _toggle(selected),
-                            onDelete: selected == null
-                                ? null
-                                : () => _deleteSelected(selected),
-                          ),
+                      ),
+                      const SizedBox(width: 20),
+                      SizedBox(
+                        width: 300,
+                        child: _CatalogDetailPanel(
+                          item: selected,
+                          onEdit: selected == null
+                              ? null
+                              : () => _edit(selected),
+                          onDuplicate: selected == null
+                              ? null
+                              : () => _duplicate(selected),
+                          onToggle: selected == null
+                              ? null
+                              : () => _toggle(selected),
+                          onDelete: selected == null
+                              ? null
+                              : () => _deleteSelected(selected),
                         ),
-                      ],
-                    )
-                  else ...[
-                    _buildTableArea(
-                      items,
-                      loading: loading,
-                      mobile: constraints.maxWidth < 700,
-                    ),
-                    if (constraints.maxWidth >= 700) ...[
-                      const SizedBox(height: 20),
-                      _CatalogDetailPanel(
-                        item: selected,
-                        onEdit: selected == null ? null : () => _edit(selected),
-                        onDuplicate: selected == null
-                            ? null
-                            : () => _duplicate(selected),
-                        onToggle: selected == null
-                            ? null
-                            : () => _toggle(selected),
-                        onDelete: selected == null
-                            ? null
-                            : () => _deleteSelected(selected),
                       ),
                     ],
+                  )
+                else ...[
+                  _buildTableArea(
+                    items,
+                    loading: loading,
+                    mobile: constraints.maxWidth < 700,
+                  ),
+                  if (constraints.maxWidth >= 700) ...[
+                    const SizedBox(height: 20),
+                    _CatalogDetailPanel(
+                      item: selected,
+                      onEdit: selected == null ? null : () => _edit(selected),
+                      onDuplicate: selected == null
+                          ? null
+                          : () => _duplicate(selected),
+                      onToggle: selected == null
+                          ? null
+                          : () => _toggle(selected),
+                      onDelete: selected == null
+                          ? null
+                          : () => _deleteSelected(selected),
+                    ),
                   ],
                 ],
-              ),
+              ],
             );
           },
         );
@@ -496,105 +493,108 @@ class _CatalogosTabState extends State<AdmCrudTab>
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              headingRowHeight: 52,
-              dataRowMinHeight: 58,
-              dataRowMaxHeight: 64,
-              horizontalMargin: 14,
-              columnSpacing: 28,
-              showCheckboxColumn: true,
-              headingRowColor: WidgetStateProperty.all(AdmTokens.primary),
-              headingTextStyle: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-              ),
-              dataRowColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return AdmTokens.primarySoft;
-                }
-                if (states.contains(WidgetState.hovered)) {
-                  return AdmTokens.primarySoft;
-                }
-                return null;
-              }),
-              columns: const [
-                DataColumn(label: Text('Código')),
-                DataColumn(label: Text('Nombre')),
-                DataColumn(label: Text('Orden')),
-                DataColumn(label: Text('Estado')),
-                DataColumn(label: Text('Fecha creación')),
-                DataColumn(label: Text('Acciones')),
-              ],
-              rows: [
-                for (final item in items)
-                  DataRow(
-                    selected:
-                        _selectedIds.contains(admId(item)) ||
-                        (_selected != null && admId(_selected!) == admId(item)),
-                    onSelectChanged: (selected) {
-                      setState(() {
-                        _selected = item;
-                        if (selected == true) {
-                          _selectedIds.add(admId(item));
-                        } else {
-                          _selectedIds.remove(admId(item));
-                        }
-                      });
-                      if (mobile) _showMobileDetails(item);
-                    },
-                    cells: [
-                      DataCell(_CodeCell(item: item)),
-                      DataCell(
-                        SizedBox(width: 170, child: admText(item['nombre'])),
-                      ),
-                      DataCell(Center(child: admText(item['orden']))),
-                      DataCell(
-                        AdmStateChip(active: admIsActive(item, key: 'estado')),
-                      ),
-                      const DataCell(Text('—', style: AdmTokens.bodySmall)),
-                      DataCell(
-                        Row(
-                          children: [
-                            _IconAction(
-                              Icons.edit_outlined,
-                              'Editar',
-                              () => _edit(item),
-                            ),
-                            _IconAction(
-                              Icons.copy_outlined,
-                              'Duplicar',
-                              () => _duplicate(item),
-                            ),
-                            PopupMenuButton<String>(
-                              tooltip: 'Más opciones',
-                              icon: const Icon(
-                                Icons.more_vert_rounded,
-                                size: 20,
-                              ),
-                              onSelected: (value) {
-                                if (value == 'toggle') _toggle(item);
-                                if (value == 'delete') _deleteSelected(item);
-                              },
-                              itemBuilder: (_) => const [
-                                PopupMenuItem(
-                                  value: 'toggle',
-                                  child: Text('Cambiar estado'),
-                                ),
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Text('Eliminar'),
-                                ),
-                              ],
-                            ),
-                          ],
+          Scrollbar(
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                headingRowHeight: 52,
+                dataRowMinHeight: 58,
+                dataRowMaxHeight: 64,
+                horizontalMargin: 14,
+                columnSpacing: 28,
+                showCheckboxColumn: true,
+                headingRowColor: WidgetStateProperty.all(AdmTokens.primary),
+                headingTextStyle: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 12,
+                ),
+                dataRowColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return AdmTokens.primarySoft;
+                  }
+                  if (states.contains(WidgetState.hovered)) {
+                    return AdmTokens.primarySoft;
+                  }
+                  return null;
+                }),
+                columns: const [
+                  DataColumn(label: Text('Código')),
+                  DataColumn(label: Text('Nombre')),
+                  DataColumn(label: Text('Orden')),
+                  DataColumn(label: Text('Estado')),
+                  DataColumn(label: Text('Fecha creación')),
+                  DataColumn(label: Text('Acciones')),
+                ],
+                rows: [
+                  for (final item in items)
+                    DataRow(
+                      selected:
+                          _selectedIds.contains(admId(item)) ||
+                          (_selected != null && admId(_selected!) == admId(item)),
+                      onSelectChanged: (selected) {
+                        setState(() {
+                          _selected = item;
+                          if (selected == true) {
+                            _selectedIds.add(admId(item));
+                          } else {
+                            _selectedIds.remove(admId(item));
+                          }
+                        });
+                        if (mobile) _showMobileDetails(item);
+                      },
+                      cells: [
+                        DataCell(_CodeCell(item: item)),
+                        DataCell(
+                          SizedBox(width: 170, child: admText(item['nombre'])),
                         ),
-                      ),
-                    ],
-                  ),
-              ],
+                        DataCell(Center(child: admText(item['orden']))),
+                        DataCell(
+                          AdmStateChip(active: admIsActive(item, key: 'estado')),
+                        ),
+                        const DataCell(Text('—', style: AdmTokens.bodySmall)),
+                        DataCell(
+                          Row(
+                            children: [
+                              _IconAction(
+                                Icons.edit_outlined,
+                                'Editar',
+                                () => _edit(item),
+                              ),
+                              _IconAction(
+                                Icons.copy_outlined,
+                                'Duplicar',
+                                () => _duplicate(item),
+                              ),
+                              PopupMenuButton<String>(
+                                tooltip: 'Más opciones',
+                                icon: const Icon(
+                                  Icons.more_vert_rounded,
+                                  size: 20,
+                                ),
+                                onSelected: (value) {
+                                  if (value == 'toggle') _toggle(item);
+                                  if (value == 'delete') _deleteSelected(item);
+                                },
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'toggle',
+                                    child: Text('Cambiar estado'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'delete',
+                                    child: Text('Eliminar'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
           _buildPagination(items.length),

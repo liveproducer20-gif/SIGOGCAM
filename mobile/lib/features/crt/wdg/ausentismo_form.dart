@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -63,6 +65,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
   CrtEasStation? _easSeleccionado;
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _motivoOtroCtrl.dispose();
@@ -162,6 +166,13 @@ class _AusentismoFormState extends State<AusentismoForm> {
 
   String _formatFecha(DateTime f) {
     return '${f.day.toString().padLeft(2, '0')}/${f.month.toString().padLeft(2, '0')}/${f.year}';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -540,7 +551,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
             icon: Icons.local_hospital_outlined,
             hint: 'Ej: Hospital del IESS',
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       default:
         return const SizedBox.shrink();
@@ -742,7 +753,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],
@@ -753,7 +764,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
               label: 'Direccion',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -845,7 +856,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
                 label: 'Especifique el motivo',
                 icon: Icons.edit_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],

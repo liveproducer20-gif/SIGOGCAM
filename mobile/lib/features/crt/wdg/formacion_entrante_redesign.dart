@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -67,6 +69,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -82,6 +85,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _acmCtrl.dispose();
@@ -181,6 +185,13 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       }
     }
     return 'REPORTE DE $servicio';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -486,7 +497,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             label: 'Número de moto',
             icon: Icons.two_wheeler_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'K9':
         return TextFormField(
@@ -495,7 +506,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             label: 'Nombre del Can',
             icon: Icons.pets_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
         return _buildMovilesCheckboxes();
@@ -506,7 +517,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             label: 'Número de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'SUPERVISION':
         return TextFormField(
@@ -515,7 +526,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
             label: 'Número de móvil',
             icon: Icons.directions_car_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'RADIOPERADOR':
         return Column(
@@ -528,7 +539,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         );
@@ -832,7 +843,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               label: 'Dirección',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -845,7 +856,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                     label: 'Número de ACM',
                     icon: Icons.people_outlined,
                   ),
-                  onChanged: (_) => _actualizarPreview(),
+                  onChanged: (_) => _schedulePreviewUpdate(),
                 ),
               ),
             ],
@@ -864,7 +875,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],
@@ -881,7 +892,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
               icon: Icons.notes_outlined,
               hint: 'Describa el personal asignado y/o novedades relevantes...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
         ],
       ),

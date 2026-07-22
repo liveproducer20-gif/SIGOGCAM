@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -50,6 +52,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
   bool _necesitaColaboracion = false;
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -63,6 +66,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _direccionCtrl.dispose();
     _direccionDesalojoCtrl.dispose();
     _acmCtrl.dispose();
@@ -107,6 +111,13 @@ class _DesalojoFormState extends State<DesalojoForm> {
     if (value == null) return;
     setState(() => _easSeleccionado = value);
     _actualizarPreview();
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -406,7 +417,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
               label: 'Dirección general',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -438,7 +449,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
               label: 'Número de ACM',
               icon: Icons.people_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
         ],
       ),
@@ -473,7 +484,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
               icon: Icons.storefront_outlined,
               hint: 'Calle específica donde se realiza el desalojo',
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 14),
 
@@ -543,7 +554,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
             ).copyWith(
               alignLabelWithHint: true,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
         ],
       ),

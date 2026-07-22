@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -60,6 +62,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -74,6 +77,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _actividadCtrl.dispose();
@@ -161,6 +165,13 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
       'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -420,7 +431,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
             label: 'Numero de moto',
             icon: Icons.two_wheeler_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'K9':
         return TextFormField(
@@ -429,7 +440,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
             label: 'Nombre del Can',
             icon: Icons.pets_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
         return Column(
@@ -440,7 +451,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                 label: 'Numero de movil',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -455,7 +466,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
             label: 'Numero de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'SUPERVISION':
         return TextFormField(
@@ -464,7 +475,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
             label: 'Numero de movil',
             icon: Icons.directions_car_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'RADIOPERADOR':
         return Column(
@@ -479,7 +490,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                 label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         );
@@ -761,7 +772,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],
@@ -772,7 +783,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               label: 'Direccion',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -810,7 +821,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               icon: Icons.store_outlined,
               hint: 'Ej: Venta de frutas',
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -823,7 +834,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               icon: Icons.inventory_2_outlined,
               hint: 'Describa los elementos retirados...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -834,7 +845,7 @@ class _RetiroTemporalFormState extends State<RetiroTemporalForm> {
               label: 'Cantidad aproximada',
               icon: Icons.numbers_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 16),
 

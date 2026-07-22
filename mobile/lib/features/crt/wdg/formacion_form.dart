@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -61,6 +63,7 @@ class _FormacionFormState extends State<FormacionForm> {
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   bool get _isEntrante => widget.tipoFormacion == TipoFormacion.entrante;
 
@@ -77,6 +80,7 @@ class _FormacionFormState extends State<FormacionForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _acmCtrl.dispose();
@@ -163,6 +167,13 @@ class _FormacionFormState extends State<FormacionForm> {
       'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -479,7 +490,7 @@ class _FormacionFormState extends State<FormacionForm> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-      onChanged: (_) => _actualizarPreview(),
+      onChanged: (_) => _schedulePreviewUpdate(),
     );
   }
 

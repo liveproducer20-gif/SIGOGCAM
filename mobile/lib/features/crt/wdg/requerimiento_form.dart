@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -61,6 +63,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -75,6 +78,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _solicitanteCtrl.dispose();
@@ -163,6 +167,13 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
       'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -414,7 +425,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
             label: 'Numero de moto',
             icon: Icons.two_wheeler_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'K9':
         return TextFormField(
@@ -423,7 +434,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
             label: 'Nombre del Can',
             icon: Icons.pets_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
         return Column(
@@ -434,7 +445,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
                 label: 'Numero de movil',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -449,7 +460,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
             label: 'Numero de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'SUPERVISION':
         return TextFormField(
@@ -458,7 +469,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
             label: 'Numero de movil',
             icon: Icons.directions_car_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'RADIOPERADOR':
         return Column(
@@ -473,7 +484,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
                 label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         );
@@ -755,7 +766,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],
@@ -766,7 +777,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
               label: 'Direccion',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -803,7 +814,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
               label: 'Solicitante del requerimiento',
               icon: Icons.person_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -816,7 +827,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
               icon: Icons.help_outline,
               hint: 'Describa el motivo del requerimiento...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -829,7 +840,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
               icon: Icons.gavel_outlined,
               hint: 'Describa la accion realizada...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -842,7 +853,7 @@ class _RequerimientoFormState extends State<RequerimientoForm> {
               icon: Icons.check_circle_outline,
               hint: 'Describa el resultado de la intervencion...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 16),
 

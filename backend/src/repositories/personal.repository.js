@@ -483,6 +483,7 @@ async function eliminar(id) {
     const pool = await getPool();
     const conexion = await pool.connect();
     try {
+        await conexion.query('DELETE FROM evento_personal WHERE personal_id = ?', [id]);
         await conexion.query('DELETE FROM personal WHERE id = ?', [id]);
     } finally {
         await conexion.close();

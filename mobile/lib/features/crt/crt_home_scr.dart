@@ -56,7 +56,6 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   TipoFormacion? _tipoFormacion;
   String _previewText = '';
   final ValueNotifier<String> _previewNotifier = ValueNotifier<String>('');
-  Timer? _previewDebounce;
   bool _generando = false;
   final _colaboracionCiudadanaKey = GlobalKey<ColaboracionCiudadanaFormState>();
 
@@ -95,23 +94,18 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
 
   @override
   void dispose() {
-    _previewDebounce?.cancel();
     _previewNotifier.dispose();
     super.dispose();
   }
 
   void _onPreviewChanged(String text) {
     _previewText = text;
-    _previewDebounce?.cancel();
-    _previewDebounce = Timer(const Duration(milliseconds: 160), () {
-      if (mounted && _previewNotifier.value != text) {
-        _previewNotifier.value = text;
-      }
-    });
+    if (mounted && _previewNotifier.value != text) {
+      _previewNotifier.value = text;
+    }
   }
 
   void _clearPreview() {
-    _previewDebounce?.cancel();
     _previewText = '';
     _previewNotifier.value = '';
   }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -68,6 +70,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
   final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   @override
   void initState() {
@@ -82,6 +85,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _nombreCiudadanoCtrl.dispose();
@@ -176,6 +180,13 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
       'RADIOPERADOR': 'REPORTE DE RADIOPERADOR',
     };
     return titles[servicio] ?? 'REPORTE DE $servicio';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -377,7 +388,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             label: 'Número de moto',
             icon: Icons.two_wheeler_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'K9':
         return TextFormField(
@@ -386,7 +397,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             label: 'Nombre del Can',
             icon: Icons.pets_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
         return Column(
@@ -397,7 +408,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 label: 'Número de móvil',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -412,7 +423,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             label: 'Número de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'SUPERVISION':
         return TextFormField(
@@ -421,7 +432,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             label: 'Número de móvil',
             icon: Icons.directions_car_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'RADIOPERADOR':
         return Column(
@@ -436,7 +447,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         );
@@ -721,7 +732,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
               validator: (value) => _required(value, 'Circuito'),
             ),
             const SizedBox(height: 12),
@@ -733,7 +744,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               label: 'Dirección',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
             validator: (value) => _required(value, 'Dirección'),
           ),
           const SizedBox(height: 12),
@@ -771,7 +782,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               label: 'Nombre del ciudadano',
               icon: Icons.person_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
             validator: (value) => _required(value, 'Nombre del ciudadano'),
           ),
           const SizedBox(height: 12),
@@ -790,7 +801,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                     label: 'Número de cédula',
                     icon: Icons.badge_outlined,
                   ),
-                  onChanged: (_) => _actualizarPreview(),
+                  onChanged: (_) => _schedulePreviewUpdate(),
                   validator: (value) =>
                       ColaboracionCiudadanaText.cedulaValida(value ?? '')
                       ? null
@@ -810,7 +821,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                     label: 'Número de contacto',
                     icon: Icons.phone_outlined,
                   ),
-                  onChanged: (_) => _actualizarPreview(),
+                  onChanged: (_) => _schedulePreviewUpdate(),
                   validator: (value) =>
                       ColaboracionCiudadanaText.telefonoValido(value ?? '')
                       ? null
@@ -856,7 +867,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 label: 'Especifique el motivo',
                 icon: Icons.edit_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
               validator: (value) => _required(value, 'El motivo específico'),
             ),
           ],
@@ -872,7 +883,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               icon: Icons.gavel_outlined,
               hint: 'Ej: se realizo la verificacion correspondiente...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
             validator: (value) => _required(value, 'Acción realizada'),
           ),
           const SizedBox(height: 12),
@@ -886,7 +897,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
               icon: Icons.check_circle_outline,
               hint: 'Ej: se logro localizar al familiar...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
             validator: (value) =>
                 _required(value, 'Resultado del procedimiento'),
           ),
@@ -929,7 +940,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
                 label: 'Detalle de la novedad',
                 icon: Icons.warning_amber_outlined,
               ).copyWith(alignLabelWithHint: true),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
               validator: (value) => _required(value, 'Detalle de la novedad'),
             ),
           ],

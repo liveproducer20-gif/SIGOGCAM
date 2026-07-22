@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -70,6 +72,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
   final _novedadCtrl = TextEditingController();
 
   String _previewText = '';
+  Timer? _previewDebounce;
 
   static const Map<String, List<String>> _procedimientosPorEntidad = {
     'POLICIA NACIONAL': [
@@ -236,6 +239,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
 
   @override
   void dispose() {
+    _previewDebounce?.cancel();
     _circuitoCtrl.dispose();
     _direccionCtrl.dispose();
     _motoCtrl.dispose();
@@ -484,6 +488,13 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
         .map((p) => 'Asimismo, se identifico $p')
         .join('. ');
     return 'Durante el procedimiento se identifico $primera. $resto.';
+  }
+
+  void _schedulePreviewUpdate() {
+    _previewDebounce?.cancel();
+    _previewDebounce = Timer(const Duration(milliseconds: 250), () {
+      if (mounted) _actualizarPreview();
+    });
   }
 
   void _actualizarPreview() {
@@ -761,7 +772,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             label: 'Numero de moto',
             icon: Icons.two_wheeler_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'K9':
         return TextFormField(
@@ -770,7 +781,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             label: 'Nombre del Can',
             icon: Icons.pets_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
         return Column(
@@ -781,7 +792,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Numero de movil',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
               const SizedBox(height: 10),
@@ -796,7 +807,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             label: 'Numero de bicicleta',
             icon: Icons.pedal_bike_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'SUPERVISION':
         return TextFormField(
@@ -805,7 +816,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             label: 'Numero de movil',
             icon: Icons.directions_car_outlined,
           ),
-          onChanged: (_) => _actualizarPreview(),
+          onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'RADIOPERADOR':
         return Column(
@@ -820,7 +831,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Nombre del videoperador',
                 icon: Icons.videocam_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         );
@@ -936,7 +947,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Nombre de la entidad',
                 icon: Icons.business_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 8),
           ],
@@ -946,7 +957,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               label: 'Nombre del personal',
               icon: Icons.person_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 8),
           if (!esOtraEntidad) ...[
@@ -956,7 +967,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Vehiculo / Unidad',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
           if (esOtraEntidad) ...[
@@ -966,7 +977,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Vehiculo / Unidad',
                 icon: Icons.directions_car_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 8),
             TextFormField(
@@ -977,7 +988,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Motivo / procedimiento',
                 icon: Icons.description_outlined,
               ).copyWith(alignLabelWithHint: true),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
           if (procedimientos.isNotEmpty && !esOtraEntidad) ...[
@@ -1059,7 +1070,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               label: 'Nombre completo',
               icon: Icons.person_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
@@ -1115,7 +1126,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               label: 'Detalle del estado o novedad',
               icon: Icons.notes_outlined,
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 8),
           TextFormField(
@@ -1126,7 +1137,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               label: 'Accion realizada',
               icon: Icons.gavel_outlined,
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 8),
           CheckboxListTile(
@@ -1153,7 +1164,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 icon: Icons.local_hospital_outlined,
                 hint: 'Ej: Hospital de Los Ceibos',
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
         ],
@@ -1356,7 +1367,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Circuito',
                 icon: Icons.route_outlined,
               ),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
             const SizedBox(height: 12),
           ],
@@ -1367,7 +1378,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               label: 'Direccion',
               icon: Icons.location_on_outlined,
             ),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -1475,7 +1486,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
               icon: Icons.check_circle_outline,
               hint: 'Ej: se logro controlar la situacion...',
             ).copyWith(alignLabelWithHint: true),
-            onChanged: (_) => _actualizarPreview(),
+            onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 12),
 
@@ -1511,7 +1522,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
                 label: 'Detalle de la novedad',
                 icon: Icons.warning_amber_outlined,
               ).copyWith(alignLabelWithHint: true),
-              onChanged: (_) => _actualizarPreview(),
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
 
