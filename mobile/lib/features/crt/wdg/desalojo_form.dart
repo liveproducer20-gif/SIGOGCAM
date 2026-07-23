@@ -37,6 +37,8 @@ class _DesalojoFormState extends State<DesalojoForm> {
   static const _blueBorder = Color(0xFFB8CCE4);
   static const _blueFocus = Color(0xFF2956A3);
 
+  String _servicio = 'PEDESTRE';
+
   List<Map<String, dynamic>> _distritos = [];
   String? _distritoSeleccionado;
   bool _cargandoDistritos = true;
@@ -48,8 +50,14 @@ class _DesalojoFormState extends State<DesalojoForm> {
   final _novedadesCtrl = TextEditingController();
 
   CrtEasStation? _easSeleccionado;
+  List<String> _movilesEas = [];
+  final Set<String> _movilesSeleccionados = {};
   bool _esAgresivo = false;
   bool _necesitaColaboracion = false;
+
+  bool get _isEas => _servicio == 'EAS';
+  bool get _isRadioperador => _servicio == 'RADIOPERADOR';
+  bool get _needsEasDropdown => _isEas || _isRadioperador;
 
   String _previewText = '';
   Timer? _previewDebounce;
@@ -107,10 +115,83 @@ class _DesalojoFormState extends State<DesalojoForm> {
     }
   }
 
+  void _onServicioChanged(String? value) {
+    if (value == null) return;
+    final prevNeedsEas = _needsEasDropdown;
+    setState(() {
+      _servicio = value;
+      if (prevNeedsEas && !_needsEasDropdown) {
+        _easSeleccionado = null;
+        _movilesEas = [];
+        _movilesSeleccionados.clear();
+      }
+    });
+    if (_needsEasDropdown && _easSeleccionado != null) {
+      _actualizarMovilesEas(_easSeleccionado!);
+    }
+    _actualizarPreview();
+  }
+
   void _onEasChanged(CrtEasStation? value) {
     if (value == null) return;
-    setState(() => _easSeleccionado = value);
+    setState(() {
+      _easSeleccionado = value;
+      _movilesSeleccionados.clear();
+      _movilesEas = [];
+    });
+    _actualizarMovilesEas(value);
     _actualizarPreview();
+  }
+
+  Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
+    try {
+      final asignaciones = await _crtApi.getAsignacionesMoviles();
+      final codigoLower = eas.codigo.toLowerCase();
+      final nombreLower = eas.nombre.toLowerCase();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            return easCodigo == codigoLower || easNombre == nombreLower;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
+      if (mounted) {
+        setState(() => _movilesEas = asignadas);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _movilesEas = []);
+    }
+  }
+
+  void _toggleMovil(String movil) {
+    setState(() {
+      if (_movilesSeleccionados.contains(movil)) {
+        _movilesSeleccionados.remove(movil);
+      } else {
+        _movilesSeleccionados.add(movil);
+      }
+    });
+    _actualizarPreview();
+  }
+
+  String _servicioTitle(String servicio) {
+    const titles = {
+      'MOTORIZADO': 'REPORTE DE MOTORIZADO',
+      'K9': 'REPORTE DE K9',
+      'EAS': 'REPORTE DE EAS',
+      'PEDESTRE': 'REPORTE DE PEDESTRE',
+      'TURISMO': 'REPORTE DE TURISMO',
+      'CICLISTA': 'REPORTE DE CICLISTA',
+      'ADMINISTRATIVO': 'REPORTE DE ADMINISTRATIVO',
+      'AMBIENTE': 'REPORTE DE AMBIENTE GOCAM',
+      'ENCARGADO': 'REPORTE DE ENCARGADO',
+      'GESTION DE RIESGOS': 'REPORTE DE GESTION DE RIESGOS',
+      'SUPERVISION': 'REPORTE DE SUPERVISION',
+      'RADIOPERADOR': 'REPORTE DE RADIOOPERADOR',
+    };
+    return titles[servicio] ?? 'REPORTE DE $servicio';
   }
 
   void _schedulePreviewUpdate() {
@@ -125,14 +206,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
     final jefe = CrtTextGenerator.jefeDisplay;
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
-    final horario =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
-    );
-    final horaSalida =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
+    final horario = CrtTextGenerator.obtenerHorarioJornada();
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
@@ -143,8 +217,8 @@ class _DesalojoFormState extends State<DesalojoForm> {
     final saludo = CrtSpecialTextGenerator.saludo(now);
     final causa = 'Desalojo de vendedores autónomos no regularizados';
 
-    final circuito = _easSeleccionado != null
-        ? '${_easSeleccionado!.codigo.replaceFirst("ECO", "EAS")} - ${_easSeleccionado!.nombre}'
+    final circuito = _needsEasDropdown && _easSeleccionado != null
+        ? _easSeleccionado!.nombre
         : '[CIRCUITO]';
 
     final calleDesalojo =
@@ -167,10 +241,10 @@ class _DesalojoFormState extends State<DesalojoForm> {
     final buf = StringBuffer()
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
       ..writeln()
-      ..writeln('*DESALOJO DE VENDEDORES AUTÓNOMOS NO REGULARIZADOS*')
+      ..writeln('*${_servicioTitle(_servicio)}*')
       ..writeln('*DISTRITO:* $distrito')
       ..writeln('*CIRCUITO:* $circuito')
-      ..writeln('*HORARIO:* $horario - $horaSalida')
+      ..writeln('*HORARIO:* $horario')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')
@@ -182,6 +256,15 @@ class _DesalojoFormState extends State<DesalojoForm> {
     if (novedades.isNotEmpty) {
       buf.writeln();
       buf.writeln(novedades);
+    }
+
+    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('*MOVILES EN CIRCULACION:*');
+      final sorted = _movilesSeleccionados.toList()..sort();
+      for (final m in sorted) {
+        buf.writeln('MOVIL $m');
+      }
     }
 
     buf.writeln();
@@ -275,6 +358,67 @@ class _DesalojoFormState extends State<DesalojoForm> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMovilesCheckboxes() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _blueLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _blueBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'MÓVILES EN CIRCULACIÓN',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _blue,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_movilesEas.isEmpty)
+            Text(
+              _easSeleccionado != null
+                  ? 'No hay móviles asignados a este EAS'
+                  : 'Seleccione un EAS para ver móviles',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _movilesEas.map((movil) {
+                final selected = _movilesSeleccionados.contains(movil);
+                return FilterChip(
+                  label: Text(
+                    movil,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? _blue : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  selected: selected,
+                  onSelected: (_) => _toggleMovil(movil),
+                  selectedColor: _blueLight,
+                  side: BorderSide(
+                    color: selected ? _blueMid : Colors.grey[300]!,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 
@@ -381,31 +525,63 @@ class _DesalojoFormState extends State<DesalojoForm> {
           _sectionBadge(1, 'INFORMACIÓN DEL SERVICIO'),
           const SizedBox(height: 16),
 
-          _cargandoDistritos
-              ? const LinearProgressIndicator()
-              : DropdownButtonFormField<String>(
-                  initialValue: _distritoSeleccionado,
-                  decoration: _inputDeco(
-                    label: 'Distrito',
-                    icon: Icons.map_outlined,
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _servicio,
                   isExpanded: true,
-                  items: _distritos
-                      .map(
-                        (d) => DropdownMenuItem(
-                          value: d['nombre'] as String?,
-                          child: Text(
-                            d['nombre'] as String? ?? '',
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) {
-                    setState(() => _distritoSeleccionado = v);
-                    _actualizarPreview();
-                  },
+                  decoration: _inputDeco(
+                    label: 'Tipo de Servicio',
+                    icon: Icons.category_outlined,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'PEDESTRE', child: Text('Pedestre')),
+                    DropdownMenuItem(value: 'MOTORIZADO', child: Text('Motorizado')),
+                    DropdownMenuItem(value: 'K9', child: Text('K9')),
+                    DropdownMenuItem(value: 'EAS', child: Text('EAS')),
+                    DropdownMenuItem(value: 'TURISMO', child: Text('Turismo')),
+                    DropdownMenuItem(value: 'CICLISTA', child: Text('Ciclista')),
+                    DropdownMenuItem(value: 'ADMINISTRATIVO', child: Text('Administrativo')),
+                    DropdownMenuItem(value: 'AMBIENTE', child: Text('Ambiente')),
+                    DropdownMenuItem(value: 'ENCARGADO', child: Text('Encargado')),
+                    DropdownMenuItem(value: 'GESTION DE RIESGOS', child: Text('Gestión de Riesgos')),
+                    DropdownMenuItem(value: 'SUPERVISION', child: Text('Supervisión')),
+                    DropdownMenuItem(value: 'RADIOPERADOR', child: Text('Radioperador')),
+                  ],
+                  onChanged: _onServicioChanged,
                 ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _cargandoDistritos
+                    ? const LinearProgressIndicator()
+                    : DropdownButtonFormField<String>(
+                        initialValue: _distritoSeleccionado,
+                        decoration: _inputDeco(
+                          label: 'Distrito',
+                          icon: Icons.map_outlined,
+                        ),
+                        isExpanded: true,
+                        items: _distritos
+                            .map(
+                              (d) => DropdownMenuItem(
+                                value: d['nombre'] as String?,
+                                child: Text(
+                                  d['nombre'] as String? ?? '',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (v) {
+                          setState(() => _distritoSeleccionado = v);
+                          _actualizarPreview();
+                        },
+                      ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
 
           _buildHoraField(),
@@ -421,26 +597,53 @@ class _DesalojoFormState extends State<DesalojoForm> {
           ),
           const SizedBox(height: 12),
 
-          DropdownButtonFormField<CrtEasStation>(
-            initialValue: _easSeleccionado,
-            isExpanded: true,
-            decoration: _inputDeco(
-              label: 'Circuito / EAS',
-              icon: Icons.location_city_outlined,
-            ),
-            items: CrtCatalog.easStations
-                .map(
-                  (e) => DropdownMenuItem(
-                    value: e,
-                    child: Text(
-                      '${e.codigo} - ${e.nombre}',
-                      overflow: TextOverflow.ellipsis,
+          if (_needsEasDropdown) ...[
+            DropdownButtonFormField<CrtEasStation>(
+              initialValue: _easSeleccionado,
+              isExpanded: true,
+              decoration: _inputDeco(
+                label: 'Circuito / EAS',
+                icon: Icons.location_city_outlined,
+              ),
+              items: CrtCatalog.easStations
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e,
+                      child: Text(
+                        '${e.codigo} - ${e.nombre}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                )
-                .toList(),
-            onChanged: _onEasChanged,
-          ),
+                  )
+                  .toList(),
+              onChanged: _onEasChanged,
+            ),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _buildMovilesCheckboxes(),
+            ],
+          ] else ...[
+            DropdownButtonFormField<CrtEasStation>(
+              initialValue: _easSeleccionado,
+              isExpanded: true,
+              decoration: _inputDeco(
+                label: 'Circuito / EAS',
+                icon: Icons.location_city_outlined,
+              ),
+              items: CrtCatalog.easStations
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e,
+                      child: Text(
+                        '${e.codigo} - ${e.nombre}',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: _onEasChanged,
+            ),
+          ],
           const SizedBox(height: 12),
 
           TextFormField(

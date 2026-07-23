@@ -175,14 +175,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
     final servicio = _servicioTitle(_servicio);
-    final horario =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (now.hour + 8) % 24,
-      minute: (now.minute + 30) % 60,
-    );
-    final horaSalida =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
+    final horario = CrtTextGenerator.obtenerHorarioJornada();
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
@@ -208,7 +201,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       ..writeln('*$servicio*')
       ..writeln('*DISTRITO:* $distrito')
       ..writeln('*CIRCUITO:* $ubicacionValor')
-      ..writeln('*HORARIO:* $horario - $horaSalida')
+      ..writeln('*HORARIO:* $horario')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')

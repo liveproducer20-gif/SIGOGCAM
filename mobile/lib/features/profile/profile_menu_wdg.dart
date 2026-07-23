@@ -51,9 +51,13 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
       offset: const Offset(0, 48),
       onSelected: (action) {
         if (action == _ProfileAction.view) {
-          _openProfile(context, editMode: false);
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _openProfile(context, editMode: false),
+          );
         } else if (action == _ProfileAction.edit) {
-          _openProfile(context, editMode: true);
+          WidgetsBinding.instance.addPostFrameCallback(
+            (_) => _openProfile(context, editMode: true),
+          );
         } else if (action == _ProfileAction.notifications) {
           widget.onNotifications?.call();
         } else {

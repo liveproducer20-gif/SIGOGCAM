@@ -16,6 +16,23 @@ class CrtTextGenerator {
 
   static set jefeNombre(String v) => _jefeNombre = v;
 
+  static String obtenerHorarioJornada() {
+    final now = DateTime.now();
+    final horaInicio =
+        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+
+    String horaFin;
+    if (now.hour >= 6 && now.hour < 14) {
+      horaFin = '14:30';
+    } else if (now.hour >= 14 && now.hour < 22) {
+      horaFin = '22:30';
+    } else {
+      horaFin = '06:30';
+    }
+
+    return '$horaInicio - $horaFin';
+  }
+
   static String build(CrtFormData data) {
     if (data.modulo == TipoModuloCartilla.eas) {
       return _buildEas(data);

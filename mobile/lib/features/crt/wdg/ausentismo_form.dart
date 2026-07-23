@@ -63,6 +63,8 @@ class _AusentismoFormState extends State<AusentismoForm> {
   DateTime _fechaFin = DateTime.now().add(const Duration(days: 1));
 
   CrtEasStation? _easSeleccionado;
+  List<String> _movilesEas = [];
+  final Set<String> _movilesSeleccionados = {};
 
   String _previewText = '';
   Timer? _previewDebounce;
@@ -264,6 +266,15 @@ class _AusentismoFormState extends State<AusentismoForm> {
         );
     }
 
+    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+      buf.writeln();
+      buf.writeln('*MOVILES EN CIRCULACION:*');
+      final sorted = _movilesSeleccionados.toList()..sort();
+      for (final m in sorted) {
+        buf.writeln('MOVIL $m');
+      }
+    }
+
     buf.writeln();
     buf.writeln('*REPORTA:*');
     buf.writeln('ACM. $reporta');
@@ -284,14 +295,57 @@ class _AusentismoFormState extends State<AusentismoForm> {
       if (prevNeedsEas && !_needsEasDropdown) {
         _easSeleccionado = null;
         _circuitoCtrl.clear();
+        _movilesEas = [];
+        _movilesSeleccionados.clear();
       }
     });
+    if (_needsEasDropdown && _easSeleccionado != null) {
+      _actualizarMovilesEas(_easSeleccionado!);
+    }
     _actualizarPreview();
   }
 
   void _onEasChanged(CrtEasStation? value) {
     if (value == null) return;
-    setState(() => _easSeleccionado = value);
+    setState(() {
+      _easSeleccionado = value;
+      _movilesSeleccionados.clear();
+      _movilesEas = [];
+    });
+    _actualizarMovilesEas(value);
+    _actualizarPreview();
+  }
+
+  Future<void> _actualizarMovilesEas(CrtEasStation eas) async {
+    try {
+      final asignaciones = await _crtApi.getAsignacionesMoviles();
+      final codigoLower = eas.codigo.toLowerCase();
+      final nombreLower = eas.nombre.toLowerCase();
+      final asignadas = asignaciones
+          .where((a) {
+            final easCodigo = a['eas_codigo']?.toString().toLowerCase() ?? '';
+            final easNombre = a['eas']?.toString().toLowerCase() ?? '';
+            return easCodigo == codigoLower || easNombre == nombreLower;
+          })
+          .map((a) => a['numero_movil']?.toString() ?? '')
+          .where((m) => m.isNotEmpty)
+          .toList();
+      if (mounted) {
+        setState(() => _movilesEas = asignadas);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _movilesEas = []);
+    }
+  }
+
+  void _toggleMovil(String movil) {
+    setState(() {
+      if (_movilesSeleccionados.contains(movil)) {
+        _movilesSeleccionados.remove(movil);
+      } else {
+        _movilesSeleccionados.add(movil);
+      }
+    });
     _actualizarPreview();
   }
 
@@ -458,6 +512,65 @@ class _AusentismoFormState extends State<AusentismoForm> {
           )
           .toList(),
       onChanged: _onEasChanged,
+    );
+  }
+
+  Widget _buildMovilesCheckboxes() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _blueLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: _blueBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'MÓVILES EN CIRCULACIÓN',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: _blue,
+              letterSpacing: 0.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          if (_movilesEas.isEmpty)
+            Text(
+              'No hay móviles asignados a este EAS',
+              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: _movilesEas.map((movil) {
+                final selected = _movilesSeleccionados.contains(movil);
+                return FilterChip(
+                  label: Text(
+                    movil,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: selected ? _blue : Colors.grey[700],
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.normal,
+                    ),
+                  ),
+                  selected: selected,
+                  onSelected: (_) => _toggleMovil(movil),
+                  selectedColor: _blueLight,
+                  side: BorderSide(
+                    color: selected ? _blueMid : Colors.grey[300]!,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 
@@ -744,6 +857,8 @@ class _AusentismoFormState extends State<AusentismoForm> {
           if (_needsEasDropdown) ...[
             _buildEasDropdown(),
             const SizedBox(height: 12),
+            if (_easSeleccionado != null && _movilesEas.isNotEmpty)
+              _buildMovilesCheckboxes(),
           ],
 
           if (!_needsEasDropdown) ...[

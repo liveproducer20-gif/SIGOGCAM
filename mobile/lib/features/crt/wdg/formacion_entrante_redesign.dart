@@ -200,14 +200,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
     final servicio = _servicioTitle(_servicio);
-    final horario =
-        '${_horaIngreso.hour.toString().padLeft(2, '0')}:${_horaIngreso.minute.toString().padLeft(2, '0')}';
-    final horaSalidaCalc = TimeOfDay(
-      hour: (_horaIngreso.hour + 8) % 24,
-      minute: (_horaIngreso.minute + 30) % 60,
-    );
-    final horaSalida =
-        '${horaSalidaCalc.hour.toString().padLeft(2, '0')}:${horaSalidaCalc.minute.toString().padLeft(2, '0')}';
+    final horario = CrtTextGenerator.obtenerHorarioJornada();
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
@@ -240,7 +233,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       ..writeln('*$servicio*')
       ..writeln('*DISTRITO:* $distrito')
       ..writeln('$ubicacionLabel $ubicacionValor')
-      ..writeln('*HORARIO:* $horario - $horaSalida')
+      ..writeln('*HORARIO:* $horario')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')
