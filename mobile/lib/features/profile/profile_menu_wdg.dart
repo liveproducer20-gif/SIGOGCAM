@@ -403,20 +403,19 @@ class _ProfileDialogState extends State<ProfileDialog> {
     );
   }
 
-  Widget _responsivePair(Widget first, Widget second) => LayoutBuilder(
-    builder: (context, constraints) {
-      if (constraints.maxWidth < 430) {
-        return Column(children: [first, const SizedBox(height: 12), second]);
-      }
-      return Row(
-        children: [
-          Expanded(child: first),
-          const SizedBox(width: 12),
-          Expanded(child: second),
-        ],
-      );
-    },
-  );
+  Widget _responsivePair(Widget first, Widget second) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 430) {
+      return Column(children: [first, const SizedBox(height: 12), second]);
+    }
+    return Row(
+      children: [
+        Expanded(child: first),
+        const SizedBox(width: 12),
+        Expanded(child: second),
+      ],
+    );
+  }
 
   TextField _field({
     required TextEditingController controller,
