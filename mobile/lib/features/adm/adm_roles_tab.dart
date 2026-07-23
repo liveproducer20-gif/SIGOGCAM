@@ -28,6 +28,7 @@ class _RolesTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> 
   int _usersWithRole = 0;
   int _activeRoles = 0;
   late Future<List<Map<String, dynamic>>> _future;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -93,11 +94,14 @@ class _RolesTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> 
   }
 
   void _onSearch(String value) {
-    setState(() {
-      _search = value;
-      _page = 1;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      setState(() {
+        _search = value;
+        _page = 1;
+      });
+      _load();
     });
-    _load();
   }
 
   @override
