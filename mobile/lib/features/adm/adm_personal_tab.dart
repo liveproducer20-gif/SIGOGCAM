@@ -388,6 +388,7 @@ class _PersonalTabState extends State<AdmCrudTab>
             Scrollbar(
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
+                primary: true,
                 child: DataTable(
                   headingRowColor: WidgetStateProperty.all(AdmTokens.primary),
                   headingTextStyle: const TextStyle(

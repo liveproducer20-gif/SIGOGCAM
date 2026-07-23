@@ -497,6 +497,7 @@ class _CatalogosTabState extends State<AdmCrudTab>
             thumbVisibility: true,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              primary: true,
               child: DataTable(
                 headingRowHeight: 52,
                 dataRowMinHeight: 58,
