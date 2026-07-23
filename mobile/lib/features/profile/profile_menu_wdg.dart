@@ -281,7 +281,6 @@ class _ProfileDialogState extends State<ProfileDialog> {
         horizontal: isMobile ? 12 : 16,
         vertical: isMobile ? 16 : 24,
       ),
-      scrollable: true,
       title: Row(
         children: [
           _ProfileAvatar(

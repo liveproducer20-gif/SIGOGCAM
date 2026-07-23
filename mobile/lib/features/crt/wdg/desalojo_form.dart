@@ -46,6 +46,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
   TimeOfDay _horaIngreso = TimeOfDay.now();
   final _direccionCtrl = TextEditingController();
   final _direccionDesalojoCtrl = TextEditingController();
+  final _circuitoCtrl = TextEditingController();
   final _acmCtrl = TextEditingController(text: '1');
   final _novedadesCtrl = TextEditingController();
 
@@ -77,6 +78,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
     _previewDebounce?.cancel();
     _direccionCtrl.dispose();
     _direccionDesalojoCtrl.dispose();
+    _circuitoCtrl.dispose();
     _acmCtrl.dispose();
     _novedadesCtrl.dispose();
     super.dispose();
@@ -122,6 +124,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
       _servicio = value;
       if (prevNeedsEas && !_needsEasDropdown) {
         _easSeleccionado = null;
+        _circuitoCtrl.clear();
         _movilesEas = [];
         _movilesSeleccionados.clear();
       }
@@ -219,7 +222,7 @@ class _DesalojoFormState extends State<DesalojoForm> {
 
     final circuito = _needsEasDropdown && _easSeleccionado != null
         ? _easSeleccionado!.nombre
-        : '[CIRCUITO]';
+        : (_circuitoCtrl.text.isNotEmpty ? _circuitoCtrl.text : '[CIRCUITO]');
 
     final calleDesalojo =
         _direccionDesalojoCtrl.text.isNotEmpty
@@ -623,25 +626,13 @@ class _DesalojoFormState extends State<DesalojoForm> {
               _buildMovilesCheckboxes(),
             ],
           ] else ...[
-            DropdownButtonFormField<CrtEasStation>(
-              initialValue: _easSeleccionado,
-              isExpanded: true,
+            TextFormField(
+              controller: _circuitoCtrl,
               decoration: _inputDeco(
-                label: 'Circuito / EAS',
-                icon: Icons.location_city_outlined,
+                label: 'Circuito',
+                icon: Icons.route_outlined,
               ),
-              items: CrtCatalog.easStations
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(
-                        '${e.codigo} - ${e.nombre}',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: _onEasChanged,
+              onChanged: (_) => _schedulePreviewUpdate(),
             ),
           ],
           const SizedBox(height: 12),
