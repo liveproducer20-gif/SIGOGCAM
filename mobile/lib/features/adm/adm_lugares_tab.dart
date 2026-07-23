@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import 'adm_api.dart';
@@ -25,12 +27,19 @@ class _LugarState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
   String _sort = 'Nombre A-Z';
   bool _gridView = false;
   late Future<List<Map<String, dynamic>>> _future;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _future = Future.value([]);
     initLazy((widget as LugaresTab).tabIndex, _load);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -51,9 +60,12 @@ class _LugarState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
   }
 
   void _onSearch(String value) {
-    setState(() {
-      _search = value;
-      _page = 1;
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      setState(() {
+        _search = value;
+        _page = 1;
+      });
     });
   }
 

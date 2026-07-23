@@ -37,6 +37,12 @@ class _RolesTabState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> 
     initLazy((widget as RolesTab).tabIndex, _load);
   }
 
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final result = await widget.api.getRoles(
       page: _page,
