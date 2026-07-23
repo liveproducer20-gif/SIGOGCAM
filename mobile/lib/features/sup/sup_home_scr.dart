@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../core/auth/app_user.dart';
+import '../../core/wdg/responsive.dart';
 import '../adm/adm_export.dart';
 import '../dash/wdg/top_bar_wdg.dart';
 import 'sup_api.dart';
@@ -724,8 +725,8 @@ class _SupHomeScrState extends State<SupHomeScr> {
           insetPadding: const EdgeInsets.all(12),
           child: ConstrainedBox(
             constraints: BoxConstraints(
-              maxWidth: 720,
-              maxHeight: MediaQuery.sizeOf(context).height - 24,
+              maxWidth: AppResponsive.dialogMaxWidth(context),
+              maxHeight: AppResponsive.dialogMaxHeight(context),
             ),
             child: SupportTicketDetail(
               api: api,
@@ -857,7 +858,7 @@ class _SupHomeScrState extends State<SupHomeScr> {
         builder: (context, setLocal) => AlertDialog(
           title: const Text('Filtros avanzados'),
           content: SizedBox(
-            width: 430,
+            width: AppResponsive.dialogMaxWidth(context),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -948,8 +949,8 @@ class _SupHomeScrState extends State<SupHomeScr> {
     context: context,
     builder: (_) => AlertDialog(
       title: const Text('Configuración de soporte'),
-      content: const SizedBox(
-        width: 440,
+      content: SizedBox(
+        width: AppResponsive.dialogMaxWidth(context),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

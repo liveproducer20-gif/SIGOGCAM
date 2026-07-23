@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
@@ -170,11 +172,18 @@ class _EvtLstState extends State<_EvtLst> {
   String lugar = '';
   String prioridad = 'Todas';
   DateTime? fecha;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     eventosFuture = _loadEventos();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -244,11 +253,20 @@ class _EvtLstState extends State<_EvtLst> {
               ),
               child: EvtFilWdg(
                 admin: widget.user.puedeGestionarEventos,
-                onBuscar: (v) =>
-                    setState(() => buscar = v.trim().toLowerCase()),
+                onBuscar: (v) {
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                    setState(() => buscar = v.trim().toLowerCase());
+                  });
+                },
                 onEstado: (v) => setState(() => estado = v),
                 onTipo: (v) => setState(() => tipo = v),
-                onLugar: (v) => setState(() => lugar = v.trim().toLowerCase()),
+                onLugar: (v) {
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                    setState(() => lugar = v.trim().toLowerCase());
+                  });
+                },
                 onPrioridad: (v) => setState(() => prioridad = v),
                 onFecha: (v) => setState(() => fecha = v),
               ),
@@ -476,7 +494,7 @@ class _EvtEditDlgState extends State<_EvtEditDlg> {
     return AlertDialog(
       title: const Text('Editar evento'),
       content: SizedBox(
-        width: 540,
+        width: AppResponsive.dialogMaxWidth(context),
         child: SingleChildScrollView(
           child: Column(
             children: [
@@ -913,8 +931,8 @@ class _EvtAgentPreviewCard extends StatelessWidget {
       builder: (_) => AlertDialog(
         title: const Text('PDF adjunto'),
         content: SizedBox(
-          width: 760,
-          height: 560,
+          width: AppResponsive.dialogMaxWidth(context) * 1.4,
+          height: AppResponsive.dialogMaxHeight(context),
           child: Column(
             children: [
               const Icon(Icons.picture_as_pdf_outlined, size: 58),

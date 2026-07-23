@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/auth/app_user.dart';
@@ -32,11 +34,18 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
   bool loading = true;
   String? error;
   String filtro = '';
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _load();
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   @override
@@ -118,7 +127,12 @@ class _AnnHomeScrState extends State<AnnHomeScr> {
                 boxShadow: AdmTokens.cardShadow,
               ),
               child: TextField(
-                onChanged: (v) => setState(() => filtro = v.trim()),
+                onChanged: (v) {
+                  _searchDebounce?.cancel();
+                  _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+                    setState(() => filtro = v.trim());
+                  });
+                },
                 decoration: InputDecoration(
                   hintText: 'Buscar por título, contenido o prioridad...',
                   prefixIcon: const Icon(Icons.search_rounded),
@@ -397,7 +411,7 @@ class _AnnEditDlgState extends State<_AnnEditDlg> {
     return AlertDialog(
       title: Text(widget.ann == null ? 'Nuevo anuncio' : 'Editar anuncio'),
       content: SizedBox(
-        width: 520,
+        width: AppResponsive.dialogMaxWidth(context),
         child: SingleChildScrollView(
           child: Column(
             children: [

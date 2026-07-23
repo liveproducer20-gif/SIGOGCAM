@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/auth/app_user.dart';
 import '../../../core/thm/app_thm.dart';
+import '../../../core/wdg/responsive.dart';
 import '../../profile/profile_menu_wdg.dart';
 
 enum SideMenuSection { main, operational, reports, settings, support }
@@ -584,7 +585,7 @@ class _UserCardState extends State<_UserCard> {
         builder: (_) => AlertDialog(
           title: const Text('Información de sesión'),
           content: SizedBox(
-            width: 440,
+            width: AppResponsive.dialogMaxWidth(context),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,

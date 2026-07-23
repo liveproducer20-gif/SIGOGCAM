@@ -988,10 +988,8 @@ class _ToolButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox(
     height: 44,
-    child: OutlinedButton.icon(
+    child: OutlinedButton(
       onPressed: onTap,
-      icon: Icon(icon, size: 18),
-      label: Text(label),
       style: OutlinedButton.styleFrom(
         backgroundColor: primary ? AdmTokens.primary : AdmTokens.surface,
         foregroundColor: primary ? Colors.white : AdmTokens.grey700,
@@ -999,6 +997,15 @@ class _ToolButton extends StatelessWidget {
           color: primary ? AdmTokens.primary : AdmTokens.grey200,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
       ),
     ),
   );
