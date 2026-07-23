@@ -404,47 +404,61 @@ class _UserCardState extends State<_UserCard> {
               .toUpperCase();
     return PopupMenuButton<String>(
       tooltip: 'Opciones de usuario',
-      offset: const Offset(12, -280),
       onSelected: _onSelected,
       itemBuilder: (_) => const [
         PopupMenuItem(
           value: 'profile',
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.person_outline),
-            title: Text('Mi perfil'),
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.person_outline, size: 20),
+              SizedBox(width: 12),
+              Text('Mi perfil'),
+            ],
           ),
         ),
         PopupMenuItem(
           value: 'account',
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.settings_outlined),
-            title: Text('Mi cuenta'),
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.settings_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Mi cuenta'),
+            ],
           ),
         ),
         PopupMenuItem(
           value: 'status',
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.circle_outlined),
-            title: Text('Estado'),
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.circle_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Estado'),
+            ],
           ),
         ),
         PopupMenuItem(
           value: 'session',
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.receipt_long_outlined),
-            title: Text('Información de sesión'),
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.receipt_long_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Información de sesión'),
+            ],
           ),
         ),
         PopupMenuItem(
           value: 'personalization',
-          child: ListTile(
-            dense: true,
-            leading: Icon(Icons.palette_outlined),
-            title: Text('Personalización'),
+          height: 40,
+          child: Row(
+            children: [
+              Icon(Icons.palette_outlined, size: 20),
+              SizedBox(width: 12),
+              Text('Personalización'),
+            ],
           ),
         ),
       ],
