@@ -290,8 +290,21 @@ class _FormacionFormState extends State<FormacionForm> {
     widget.onPreviewChanged?.call(_previewText);
   }
 
+  void _applyAutoShift() {
+    final now = TimeOfDay.now();
+    final totalMinutes = now.hour * 60 + now.minute;
+    if (totalMinutes >= 1320) {
+      _horaIngreso = const TimeOfDay(hour: 22, minute: 0);
+    } else if (totalMinutes >= 840) {
+      _horaIngreso = const TimeOfDay(hour: 14, minute: 0);
+    } else {
+      _horaIngreso = const TimeOfDay(hour: 6, minute: 0);
+    }
+  }
+
   void _onServicioChanged(String? value) {
     if (value == null) return;
+    final prevNeedsEas = _needsEasDropdown;
     setState(() {
       _servicio = value;
       _motoCtrl.clear();
@@ -300,8 +313,12 @@ class _FormacionFormState extends State<FormacionForm> {
       _bicicletaCtrl.clear();
       _videoperadorCtrl.clear();
       _movilesSeleccionados.clear();
+      if (prevNeedsEas && !_needsEasDropdown) {
+        _horaIngreso = TimeOfDay.now();
+      }
       if (_needsEasDropdown) {
         _circuitoCtrl.clear();
+        _applyAutoShift();
       }
     });
     if (_needsEasDropdown && _easSeleccionado != null) {
@@ -595,8 +612,10 @@ class _FormacionFormState extends State<FormacionForm> {
               _buildField('Circuito', _circuitoCtrl, Icons.route_outlined),
             if (!_needsEasDropdown) const SizedBox(height: 12),
 
-            _buildHoraField(),
-            const SizedBox(height: 12),
+            if (!_needsEasDropdown) ...[
+              _buildHoraField(),
+              const SizedBox(height: 12),
+            ],
 
             _buildField(
               'Direccion',
