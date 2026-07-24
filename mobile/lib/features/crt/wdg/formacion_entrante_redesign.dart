@@ -200,7 +200,9 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
     final servicio = _servicioTitle(_servicio);
-    final horario = CrtTextGenerator.obtenerHorarioJornada();
+    final horario = _needsEasDropdown
+        ? CrtTextGenerator.obtenerHorarioJornada(_horaIngreso)
+        : CrtTextGenerator.obtenerHorarioJornada();
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =
@@ -257,7 +259,7 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       buf.writeln(novedades);
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
       final sorted = _movilesSeleccionados.toList()..sort();
@@ -280,10 +282,6 @@ class _FormacionEntranteRedesignState extends State<FormacionEntranteRedesign> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {

@@ -379,28 +379,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     _actualizarPreview();
   }
 
-  String _obtenerProcedimientosNarrativo() {
-    final todos = <String>[];
-    for (final entidad in _entidadesSeleccionadas) {
-      if (entidad == 'OTRA ENTIDAD') continue;
-      final procs = _procedimientosSeleccionados[entidad];
-      if (procs != null && procs.isNotEmpty) {
-        todos.addAll(procs);
-      }
-    }
-    if (todos.isEmpty) return '';
-    if (todos.length == 1) return todos.first.toLowerCase();
-    if (todos.length == 2) {
-      return '${todos.first.toLowerCase()} y ${todos.last.toLowerCase()}';
-    }
-    final resto = todos
-        .sublist(0, todos.length - 1)
-        .map((e) => e.toLowerCase())
-        .join(', ');
-    return '$resto y ${todos.last.toLowerCase()}';
-  }
-
-  String _obtenerEntidadesNarrativo() {
+  String _obtenerNarrativoEntidades() {
     final partes = <String>[];
     for (final entidad in _entidadesSeleccionadas) {
       if (entidad == 'OTRA ENTIDAD') {
@@ -408,9 +387,9 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             .trim();
         final motivo = _otraEntidadMotivoControllers[entidad]?.text.trim();
         if (nombreEntidad != null && nombreEntidad.isNotEmpty) {
-          String parte = nombreEntidad;
+          String parte = 'personal de $nombreEntidad';
           if (motivo != null && motivo.isNotEmpty) {
-            parte += ', $motivo';
+            parte += ', en $motivo';
           }
           partes.add(parte);
         }
@@ -418,24 +397,36 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       }
       final nombre = _nombrePersonalControllers[entidad]?.text.trim() ?? '';
       final vehiculo = _vehiculoControllers[entidad]?.text.trim() ?? '';
-      if (nombre.isNotEmpty) {
-        String parte = 'personal de $entidad, $nombre';
-        if (vehiculo.isNotEmpty) {
-          parte += ', movilizado en $vehiculo';
-        }
-        partes.add(parte);
+      final procs = _procedimientosSeleccionados[entidad];
+      String intervencion = '';
+      if (procs != null && procs.isNotEmpty) {
+        intervencion = procs.first.toLowerCase();
       }
+      if (nombre.isEmpty) continue;
+      String parte = 'personal de $entidad, $nombre';
+      if (vehiculo.isNotEmpty) {
+        parte += ', movilizado en $vehiculo';
+      }
+      if (intervencion.isNotEmpty) {
+        parte += ', en la $intervencion';
+      }
+      partes.add(parte);
     }
     if (partes.isEmpty) return '';
-    if (partes.length == 1) {
-      return 'contando con la presencia de ${partes.first}';
+    final prefijos = [
+      'contando con la presencia de ',
+      'asi mismo ',
+      'y por consecuencia ',
+    ];
+    final buf = StringBuffer();
+    for (int i = 0; i < partes.length; i++) {
+      final prefijo = i < prefijos.length ? prefijos[i] : 'y por consecuencia ';
+      buf.write('$prefijo${partes[i]}');
+      if (i < partes.length - 1) {
+        buf.write('; ');
+      }
     }
-    if (partes.length == 2) {
-      return 'contando con la presencia de ${partes.first} y ${partes.last}';
-    }
-    final ultimo = partes.last;
-    final resto = partes.sublist(0, partes.length - 1).join('; ');
-    return 'contando con la presencia de $resto; y $ultimo';
+    return buf.toString();
   }
 
   String _obtenerPersonasNarrativo() {
@@ -522,11 +513,11 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
           : '[CIRCUITO]';
     }
 
-    final entidadesNarrativo = _obtenerEntidadesNarrativo();
-    final procedimientos = _obtenerProcedimientosNarrativo();
+    final entidadesNarrativo = _obtenerNarrativoEntidades();
     final personasNarrativo = _obtenerPersonasNarrativo();
     final resultado = _resultadoCtrl.text.trim();
     final novedad = _novedadCtrl.text.trim();
+    final horario = CrtTextGenerator.obtenerHorarioJornada();
 
     final buf = StringBuffer()
       ..writeln('*CUERPO DE AGENTES DE CONTROL MUNICIPAL*')
@@ -534,6 +525,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       ..writeln('*$servicio*')
       ..writeln('*DISTRITO:* $distrito')
       ..writeln('*CIRCUITO:* $ubicacionValor')
+      ..writeln('*HORARIO:* $horario')
       ..writeln('*HORA:* $hora')
       ..writeln('*FECHA:* $fecha')
       ..writeln('*DIRECCION:* $direccion')
@@ -548,14 +540,10 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
     if (entidadesNarrativo.isNotEmpty) {
       buf.write(', $entidadesNarrativo');
     }
-    buf.write('.');
-
-    if (procedimientos.isNotEmpty) {
-      buf.write(' La intervencion se realizo debido a $procedimientos.');
-    }
+    buf.write('. ');
 
     if (personasNarrativo.isNotEmpty) {
-      buf.write(' $personasNarrativo');
+      buf.write('$personasNarrativo ');
     }
 
     if (resultado.isNotEmpty) {
@@ -582,7 +570,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       }
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln();
       buf.writeln(
@@ -603,10 +591,6 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -784,22 +768,7 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
           onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
-        return Column(
-          children: [
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Numero de movil',
-                icon: Icons.directions_car_outlined,
-              ),
-              onChanged: (_) => _schedulePreviewUpdate(),
-            ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildMovilesCheckboxes(),
-            ],
-          ],
-        );
+        return _buildMovilesCheckboxes();
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -821,10 +790,8 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              _buildMovilesCheckboxes(),
-              const SizedBox(height: 10),
-            ],
+            _buildMovilesCheckboxes(),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
@@ -1140,20 +1107,23 @@ class _ColaboracionEntidadesFormState extends State<ColaboracionEntidadesForm> {
             onChanged: (_) => _schedulePreviewUpdate(),
           ),
           const SizedBox(height: 8),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            dense: true,
-            value: trasladado,
-            onChanged: (v) {
-              setState(() => persona['trasladado'] = v ?? false);
-              _actualizarPreview();
-            },
-            title: const Text(
-              'Fue trasladado a una casa de salud?',
-              style: TextStyle(fontSize: 13),
+          Material(
+            color: Colors.transparent,
+            child: CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              value: trasladado,
+              onChanged: (v) {
+                setState(() => persona['trasladado'] = v ?? false);
+                _actualizarPreview();
+              },
+              title: const Text(
+                'Fue trasladado a una casa de salud?',
+                style: TextStyle(fontSize: 13),
+              ),
+              controlAffinity: ListTileControlAffinity.leading,
+              activeColor: _blueMid,
             ),
-            controlAffinity: ListTileControlAffinity.leading,
-            activeColor: _blueMid,
           ),
           if (trasladado) ...[
             const SizedBox(height: 8),

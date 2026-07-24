@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../mdl/crt_enums.dart';
 import '../mdl/crt_models.dart';
 
@@ -16,15 +18,15 @@ class CrtTextGenerator {
 
   static set jefeNombre(String v) => _jefeNombre = v;
 
-  static String obtenerHorarioJornada() {
-    final now = DateTime.now();
+  static String obtenerHorarioJornada([TimeOfDay? horaIngreso]) {
+    final h = horaIngreso ?? TimeOfDay.now();
     final horaInicio =
-        '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+        '${h.hour.toString().padLeft(2, '0')}:${h.minute.toString().padLeft(2, '0')}';
 
     String horaFin;
-    if (now.hour >= 6 && now.hour < 14) {
+    if (h.hour >= 6 && h.hour < 14) {
       horaFin = '14:30';
-    } else if (now.hour >= 14 && now.hour < 22) {
+    } else if (h.hour >= 14 && h.hour < 22) {
       horaFin = '22:30';
     } else {
       horaFin = '06:30';

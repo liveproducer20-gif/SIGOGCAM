@@ -221,7 +221,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       buf.writeln(novedades);
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
       final sorted = _movilesSeleccionados.toList()..sort();
@@ -244,10 +244,6 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       case 'K9':
         if (_canCtrl.text.isNotEmpty) {
           buf.writeln('*CAN:* ${_canCtrl.text}');
-        }
-      case 'EAS':
-        if (_movilCtrl.text.isNotEmpty) {
-          buf.writeln('*MOVIL:* ${_movilCtrl.text}');
         }
       case 'CICLISTA':
         if (_bicicletaCtrl.text.isNotEmpty) {
@@ -427,22 +423,7 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
           onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
-        return Column(
-          children: [
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Número de móvil',
-                icon: Icons.directions_car_outlined,
-              ),
-              onChanged: (_) => _schedulePreviewUpdate(),
-            ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildMovilesCheckboxes(),
-            ],
-          ],
-        );
+        return _buildMovilesCheckboxes();
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -464,10 +445,8 @@ class _RondaDisuasivaFormState extends State<RondaDisuasivaForm> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              _buildMovilesCheckboxes(),
-              const SizedBox(height: 10),
-            ],
+            _buildMovilesCheckboxes(),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(

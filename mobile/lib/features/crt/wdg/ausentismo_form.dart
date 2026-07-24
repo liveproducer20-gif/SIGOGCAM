@@ -266,7 +266,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
         );
     }
 
-    if (_isRadioperador && _movilesSeleccionados.isNotEmpty) {
+    if (_needsEasDropdown && _movilesSeleccionados.isNotEmpty) {
       buf.writeln();
       buf.writeln('*MOVILES EN CIRCULACION:*');
       final sorted = _movilesSeleccionados.toList()..sort();
@@ -857,8 +857,7 @@ class _AusentismoFormState extends State<AusentismoForm> {
           if (_needsEasDropdown) ...[
             _buildEasDropdown(),
             const SizedBox(height: 12),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty)
-              _buildMovilesCheckboxes(),
+            if (_easSeleccionado != null) _buildMovilesCheckboxes(),
           ],
 
           if (!_needsEasDropdown) ...[

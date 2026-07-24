@@ -225,7 +225,9 @@ class _DesalojoFormState extends State<DesalojoForm> {
     final jefe = CrtTextGenerator.jefeDisplay;
     final reporta = widget.user?.nombreCompleto ?? 'ACM';
     final distrito = _distritoSeleccionado ?? '';
-    final horario = CrtTextGenerator.obtenerHorarioJornada();
+    final horario = _needsEasDropdown
+        ? CrtTextGenerator.obtenerHorarioJornada(_horaIngreso)
+        : CrtTextGenerator.obtenerHorarioJornada();
     final hora =
         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     final fecha =

@@ -228,7 +228,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
             : null,
         bicicleta: _servicio == 'CICLISTA' ? extras[_servicio] : null,
         videoperador: _isRadioperador ? _videoperadorCtrl.text : null,
-        movilesEnCirculacion: _isRadioperador
+        movilesEnCirculacion: _needsEasDropdown
             ? (_movilesSeleccionados.toList()..sort())
             : const [],
       ),
@@ -400,22 +400,7 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
           onChanged: (_) => _schedulePreviewUpdate(),
         );
       case 'EAS':
-        return Column(
-          children: [
-            TextFormField(
-              controller: _movilCtrl,
-              decoration: _inputDeco(
-                label: 'Número de móvil',
-                icon: Icons.directions_car_outlined,
-              ),
-              onChanged: (_) => _schedulePreviewUpdate(),
-            ),
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              _buildMovilesCheckboxes(),
-            ],
-          ],
-        );
+        return _buildMovilesCheckboxes();
       case 'CICLISTA':
         return TextFormField(
           controller: _bicicletaCtrl,
@@ -437,10 +422,8 @@ class ColaboracionCiudadanaFormState extends State<ColaboracionCiudadanaForm> {
       case 'RADIOPERADOR':
         return Column(
           children: [
-            if (_easSeleccionado != null && _movilesEas.isNotEmpty) ...[
-              _buildMovilesCheckboxes(),
-              const SizedBox(height: 10),
-            ],
+            _buildMovilesCheckboxes(),
+            const SizedBox(height: 10),
             TextFormField(
               controller: _videoperadorCtrl,
               decoration: _inputDeco(
