@@ -818,11 +818,15 @@ class AchievementProgressCard extends StatelessWidget {
                       ),
                       const Spacer(),
                       if (progreso.ultimaInsignia != null)
-                        Text(
-                          'Última: ${progreso.ultimaInsignia}',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AdmTokens.grey400,
+                        Flexible(
+                          child: Text(
+                            'Última: ${progreso.ultimaInsignia}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: AdmTokens.grey400,
+                            ),
                           ),
                         ),
                     ],
@@ -831,12 +835,13 @@ class AchievementProgressCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          ShareButton(
-            onTap: onShare,
-            label: 'Compartir progreso',
-            subtitle: 'Comparte tu avance en redes sociales.',
-            icon: Icons.share_outlined,
+          const SizedBox(width: 12),
+          Flexible(
+            child: ShareButton(
+              onTap: onShare,
+              label: 'Compartir',
+              icon: Icons.share_outlined,
+            ),
           ),
         ],
       ),
@@ -1700,6 +1705,7 @@ class _AchievementTabsState extends State<AchievementTabs>
             children: [
               TabBar(
                 controller: _tabCtrl,
+                isScrollable: true,
                 labelColor: AdmTokens.primary,
                 unselectedLabelColor: AdmTokens.grey500,
                 indicatorColor: AdmTokens.primary,
@@ -1733,7 +1739,7 @@ class _AchievementTabsState extends State<AchievementTabs>
                 ],
               ),
               SizedBox(
-                height: 300,
+                height: 350,
                 child: TabBarView(
                   controller: _tabCtrl,
                   children: [
@@ -2050,15 +2056,18 @@ class _AchievementCard extends StatelessWidget {
               ],
             ),
           const SizedBox(height: 6),
-          ShareButton(
-            onTap: () => _share(context),
-            label: isUnlocked
-                ? 'Compartir logro'
-                : isInProgress
-                ? 'Compartir progreso'
-                : 'Compartir',
-            icon: Icons.share_outlined,
-            enabled: isUnlocked || isInProgress,
+          SizedBox(
+            width: double.infinity,
+            child: ShareButton(
+              onTap: () => _share(context),
+              label: isUnlocked
+                  ? 'Compartir logro'
+                  : isInProgress
+                  ? 'Compartir progreso'
+                  : 'Compartir',
+              icon: Icons.share_outlined,
+              enabled: isUnlocked || isInProgress,
+            ),
           ),
         ],
       ),

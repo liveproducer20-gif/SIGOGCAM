@@ -202,7 +202,7 @@ class _SupHomeScrState extends State<SupHomeScr> {
       _header(admin: false),
       Container(
         color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Row(
           children: [
             for (final item in const [
@@ -259,14 +259,15 @@ class _SupHomeScrState extends State<SupHomeScr> {
   );
   Widget _header({required bool admin}) => LayoutBuilder(
     builder: (context, constraints) {
+      final isMobile = constraints.maxWidth < 700;
       final title = Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             admin ? 'Alertas y Soporte' : 'Centro de soporte',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 23,
+              fontSize: isMobile ? 20 : 23,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -274,7 +275,10 @@ class _SupHomeScrState extends State<SupHomeScr> {
             admin
                 ? 'Centro de monitoreo de errores y problemas reportados por los usuarios.'
                 : 'Reporta problemas y consulta su estado.',
-            style: const TextStyle(color: Color(0xFFCFDDF0), fontSize: 12),
+            style: TextStyle(
+              color: const Color(0xFFCFDDF0),
+              fontSize: isMobile ? 11 : 12,
+            ),
           ),
         ],
       );
@@ -286,42 +290,61 @@ class _SupHomeScrState extends State<SupHomeScr> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white38),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 10 : 14,
+                vertical: isMobile ? 8 : 10,
+              ),
             ),
             onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Actualizar'),
+            icon: Icon(Icons.refresh_rounded, size: isMobile ? 16 : 18),
+            label: Text(
+              'Actualizar',
+              style: TextStyle(fontSize: isMobile ? 12 : 14),
+            ),
           ),
           OutlinedButton.icon(
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
               side: const BorderSide(color: Colors.white38),
+              padding: EdgeInsets.symmetric(
+                horizontal: isMobile ? 10 : 14,
+                vertical: isMobile ? 8 : 10,
+              ),
             ),
             onPressed: _tickets.isEmpty ? null : _showExportMenu,
-            icon: const Icon(Icons.download_outlined),
-            label: const Text('Exportar'),
+            icon: Icon(Icons.download_outlined, size: isMobile ? 16 : 18),
+            label: Text(
+              'Exportar',
+              style: TextStyle(fontSize: isMobile ? 12 : 14),
+            ),
           ),
           IconButton.outlined(
             color: Colors.white,
             onPressed: _settings,
             tooltip: 'Configuración',
-            icon: const Icon(Icons.settings_outlined),
+            icon: Icon(Icons.settings_outlined, size: isMobile ? 18 : 22),
+            padding: EdgeInsets.all(isMobile ? 8 : 10),
+            constraints: BoxConstraints(
+              minWidth: isMobile ? 36 : 40,
+              minHeight: isMobile ? 36 : 40,
+            ),
           ),
         ],
       );
       return Container(
         color: const Color(0xFF082F6B),
         padding: EdgeInsets.fromLTRB(
-          constraints.maxWidth < 700 ? 16 : 22,
-          14,
-          18,
-          15,
+          isMobile ? 16 : 22,
+          isMobile ? 12 : 14,
+          isMobile ? 12 : 18,
+          isMobile ? 12 : 15,
         ),
-        child: constraints.maxWidth < 700
+        child: isMobile
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   title,
-                  if (admin) ...[const SizedBox(height: 12), actions],
+                  if (admin) ...[const SizedBox(height: 10), actions],
                 ],
               )
             : Row(
@@ -413,63 +436,69 @@ class _SupHomeScrState extends State<SupHomeScr> {
     child: Padding(
       padding: const EdgeInsets.all(10),
       child: LayoutBuilder(
-        builder: (context, c) => Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            SizedBox(
-              width: c.maxWidth < 700 ? c.maxWidth : 290,
-              child: TextField(
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
-                  hintText: 'Buscar por título, usuario o código...',
-                  isDense: true,
-                  border: OutlineInputBorder(),
+        builder: (context, c) {
+          final isMobile = c.maxWidth < 700;
+          final selectWidth = isMobile ? (c.maxWidth - 8) / 2 : 160.0;
+          return Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SizedBox(
+                width: isMobile ? c.maxWidth : 290,
+                child: TextField(
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    hintText: 'Buscar por título, usuario o código...',
+                    isDense: true,
+                    border: OutlineInputBorder(),
+                  ),
+                  onChanged: (v) {
+                    _debounce?.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 350), () {
+                      _search = v;
+                      _page = 1;
+                      _load();
+                    });
+                  },
                 ),
-                onChanged: (v) {
-                  _debounce?.cancel();
-                  _debounce = Timer(const Duration(milliseconds: 350), () {
-                    _search = v;
-                    _page = 1;
-                    _load();
-                  });
-                },
               ),
-            ),
-            _select('Estado', _status, const [
-              '',
-              'Nuevo',
-              'En proceso',
-              'Pendiente',
-              'Resuelto',
-              'Cancelado',
-            ], (v) => _setFilter(status: v)),
-            _select('Prioridad', _priority, const [
-              '',
-              'Crítica',
-              'Alta',
-              'Media',
-              'Baja',
-            ], (v) => _setFilter(priority: v)),
-            _select('Módulo', _module, [
-              '',
-              ...supportModules,
-            ], (v) => _setFilter(module: v)),
-            OutlinedButton.icon(
-              onPressed: _advancedFilters,
-              icon: const Icon(Icons.tune_rounded),
-              label: Text(
-                'Filtros${[_userFilter, _area, _since].where((e) => e.isNotEmpty).isEmpty ? '' : ' (${[_userFilter, _area, _since].where((e) => e.isNotEmpty).length})'}',
+              _select(
+                'Estado',
+                _status,
+                const ['', 'Nuevo', 'En proceso', 'Pendiente', 'Resuelto', 'Cancelado'],
+                (v) => _setFilter(status: v),
+                width: selectWidth,
               ),
-            ),
-            if (_hasFilters)
-              TextButton.icon(
-                onPressed: _clearFilters,
-                icon: const Icon(Icons.filter_alt_off_rounded),
-                label: const Text('Limpiar'),
+              _select(
+                'Prioridad',
+                _priority,
+                const ['', 'Crítica', 'Alta', 'Media', 'Baja'],
+                (v) => _setFilter(priority: v),
+                width: selectWidth,
               ),
-          ],
-        ),
+              _select(
+                'Módulo',
+                _module,
+                ['', ...supportModules],
+                (v) => _setFilter(module: v),
+                width: selectWidth,
+              ),
+              OutlinedButton.icon(
+                onPressed: _advancedFilters,
+                icon: const Icon(Icons.tune_rounded),
+                label: Text(
+                  'Filtros${[_userFilter, _area, _since].where((e) => e.isNotEmpty).isEmpty ? '' : ' (${[_userFilter, _area, _since].where((e) => e.isNotEmpty).length})'}',
+                ),
+              ),
+              if (_hasFilters)
+                TextButton.icon(
+                  onPressed: _clearFilters,
+                  icon: const Icon(Icons.filter_alt_off_rounded),
+                  label: const Text('Limpiar'),
+                ),
+            ],
+          );
+        },
       ),
     ),
   );
@@ -477,9 +506,10 @@ class _SupHomeScrState extends State<SupHomeScr> {
     String label,
     String value,
     List<String> values,
-    ValueChanged<String> changed,
-  ) => SizedBox(
-    width: 160,
+    ValueChanged<String> changed, {
+    double? width,
+  }) => SizedBox(
+    width: width ?? 160,
     child: DropdownButtonFormField<String>(
       initialValue: value,
       isExpanded: true,
@@ -487,6 +517,7 @@ class _SupHomeScrState extends State<SupHomeScr> {
       decoration: InputDecoration(
         labelText: label,
         border: const OutlineInputBorder(),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       ),
       items: values
           .map(
@@ -624,17 +655,18 @@ class _SupHomeScrState extends State<SupHomeScr> {
     ),
     child: ListTile(
       onTap: () => _open(t),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       title: Text(
         t.title,
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontWeight: FontWeight.w700),
+        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
       ),
       subtitle: Padding(
-        padding: const EdgeInsets.only(top: 7),
+        padding: const EdgeInsets.only(top: 6),
         child: Wrap(
           spacing: 6,
-          runSpacing: 6,
+          runSpacing: 4,
           children: [
             SupportStatusBadge(t.status),
             SupportPriorityBadge(t.priority),
@@ -649,7 +681,7 @@ class _SupHomeScrState extends State<SupHomeScr> {
     ),
   );
   Widget _pager() => Padding(
-    padding: const EdgeInsets.all(8),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
     child: Row(
       children: [
         Expanded(
@@ -666,8 +698,13 @@ class _SupHomeScrState extends State<SupHomeScr> {
                 }
               : null,
           icon: const Icon(Icons.chevron_left),
+          padding: const EdgeInsets.all(6),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
-        Text('$_page / ${(_total / _pageSize).ceil().clamp(1, 9999)}'),
+        Text(
+          '$_page / ${(_total / _pageSize).ceil().clamp(1, 9999)}',
+          style: const TextStyle(fontSize: 13),
+        ),
         IconButton(
           onPressed: _page * _pageSize < _total
               ? () {
@@ -676,6 +713,8 @@ class _SupHomeScrState extends State<SupHomeScr> {
                 }
               : null,
           icon: const Icon(Icons.chevron_right),
+          padding: const EdgeInsets.all(6),
+          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
       ],
     ),
@@ -688,7 +727,9 @@ class _SupHomeScrState extends State<SupHomeScr> {
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(14),
+            padding: EdgeInsets.all(
+              MediaQuery.sizeOf(context).width < 700 ? 12 : 14,
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -696,16 +737,21 @@ class _SupHomeScrState extends State<SupHomeScr> {
                     history
                         ? 'Historial de mis reportes'
                         : 'Estado de mis reportes',
-                    style: const TextStyle(
-                      fontSize: 18,
+                    style: TextStyle(
+                      fontSize: MediaQuery.sizeOf(context).width < 700 ? 16 : 18,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF082F6B),
+                      color: const Color(0xFF082F6B),
                     ),
                   ),
                 ),
                 IconButton(
                   onPressed: _load,
                   icon: const Icon(Icons.refresh_rounded),
+                  padding: const EdgeInsets.all(6),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
                 ),
               ],
             ),
@@ -1038,56 +1084,60 @@ class _StatCard extends StatelessWidget {
     required this.onTap,
   });
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: width,
-    child: Card(
-      elevation: 0,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(9),
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    return SizedBox(
+      width: width,
+      child: Card(
+        elevation: 0,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: EdgeInsets.all(isMobile ? 10 : 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(isMobile ? 6 : 8),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: .12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(icon, color: color, size: isMobile ? 18 : 22),
                 ),
-                child: Icon(icon, color: color),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      text ?? '$value',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: color,
+                SizedBox(width: isMobile ? 8 : 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text ?? '$value',
+                        style: TextStyle(
+                          fontSize: isMobile ? 17 : 20,
+                          fontWeight: FontWeight.w900,
+                          color: color,
+                        ),
                       ),
-                    ),
-                    Text(
-                      label,
-                      maxLines: 2,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF64748B),
+                      Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: isMobile ? 10 : 11,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _UserTab extends StatelessWidget {
@@ -1102,42 +1152,47 @@ class _UserTab extends StatelessWidget {
     required this.onTap,
   });
   @override
-  Widget build(BuildContext context) => InkWell(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 13),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: selected ? const Color(0xFF0D5BD7) : Colors.transparent,
-            width: 3,
-          ),
-        ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: selected ? const Color(0xFF0D5BD7) : const Color(0xFF64748B),
-          ),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
-                color: selected
-                    ? const Color(0xFF0D5BD7)
-                    : const Color(0xFF64748B),
-              ),
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.sizeOf(context).width < 600;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: isMobile ? 10 : 13),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? const Color(0xFF0D5BD7) : Colors.transparent,
+              width: 3,
             ),
           ),
-        ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: isMobile ? 16 : 18,
+              color: selected
+                  ? const Color(0xFF0D5BD7)
+                  : const Color(0xFF64748B),
+            ),
+            SizedBox(width: isMobile ? 4 : 6),
+            Flexible(
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: isMobile ? 11 : 12,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
+                  color: selected
+                      ? const Color(0xFF0D5BD7)
+                      : const Color(0xFF64748B),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

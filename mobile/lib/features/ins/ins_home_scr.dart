@@ -267,16 +267,18 @@ class _Header extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 14),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Mis insignias', style: AdmTokens.h1),
-                SizedBox(height: 2),
-                Text(
-                  'Progresa generando cartillas y desbloquea nuevas insignias.',
-                  style: TextStyle(fontSize: 14, color: AdmTokens.grey500),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Mis insignias', style: AdmTokens.h1),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Progresa generando cartillas y desbloquea nuevas insignias.',
+                    style: TextStyle(fontSize: 14, color: AdmTokens.grey500),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

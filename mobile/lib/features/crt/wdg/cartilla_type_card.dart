@@ -36,6 +36,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
   Widget build(BuildContext context) {
     final selected = widget.selected;
     final hovered = _isHovered && !selected;
+    final compact = widget.height < 130;
 
     return MouseRegion(
       cursor: widget.enabled
@@ -57,7 +58,7 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
               height: widget.height,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(compact ? 10 : 16),
               decoration: BoxDecoration(
                 color: widget.enabled
                     ? (selected ? _selectedBg : Colors.white)
@@ -89,12 +90,12 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                       children: [
                         Icon(
                           widget.icon,
-                          size: 32,
+                          size: compact ? 26 : 32,
                           color: widget.enabled
                               ? _darkBlue
                               : const Color(0xFF9CA3AF),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 6),
                         Text(
                           widget.title,
                           maxLines: 2,
@@ -107,8 +108,8 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                             fontWeight: selected
                                 ? FontWeight.w600
                                 : FontWeight.w500,
-                            fontSize: 13,
-                            height: 1.3,
+                            fontSize: compact ? 11 : 13,
+                            height: 1.2,
                           ),
                         ),
                         if (widget.description != null) ...[
@@ -135,15 +136,15 @@ class _CartillaTypeCardState extends State<CartillaTypeCard> {
                       top: 0,
                       right: 0,
                       child: Container(
-                        width: 22,
-                        height: 22,
+                        width: compact ? 18 : 22,
+                        height: compact ? 18 : 22,
                         decoration: const BoxDecoration(
                           color: _darkBlue,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.check,
-                          size: 14,
+                          size: compact ? 11 : 14,
                           color: Colors.white,
                         ),
                       ),

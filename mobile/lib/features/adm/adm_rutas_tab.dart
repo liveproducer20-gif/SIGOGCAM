@@ -371,9 +371,11 @@ class _RutasTabState extends State<RutasTab> with AdmLazyTabMixin<RutasTab> {
   );
 
   Future<void> _edit(Map<String, dynamic>? item) async {
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
+    if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _RutaDialog(item: item),
+      builder: (_) => _RutaDialog(item: item, catalogs: catalogs),
     );
     if (data == null) return;
     if (!mounted) return;
@@ -1246,18 +1248,46 @@ class _RouteBottomStats extends StatelessWidget {
 
 class _RutaDialog extends StatefulWidget {
   final Map<String, dynamic>? item;
-  const _RutaDialog({this.item});
+  final Map<String, List<Map<String, dynamic>>> catalogs;
+  const _RutaDialog({this.item, required this.catalogs});
   @override
   State<_RutaDialog> createState() => _RutaDialogState();
 }
 
 class _RutaDialogState extends State<_RutaDialog> {
   late final nombre = TextEditingController(text: _s('nombre'));
+  late final direccion = TextEditingController(text: _s('direccion'));
+  late final horaEntrada = TextEditingController(text: _s('hora_entrada'));
+  late final horaSalida = TextEditingController(text: _s('hora_salida'));
+  late final consignas = TextEditingController(text: _s('consignas'));
+  int? distritoId;
+
+  @override
+  void initState() {
+    super.initState();
+    distritoId = _int('distrito_id');
+  }
+
   @override
   Widget build(BuildContext context) => AdmFormDialog(
     title: widget.item == null ? 'Nueva Ruta' : 'Editar Ruta',
-    children: [admField(nombre, 'Nombre')],
-    onSave: () => Navigator.pop(context, {'nombre': nombre.text.trim()}),
+    children: [
+      admField(nombre, 'Nombre'),
+      admField(direccion, 'Ubicacion'),
+      admDropdown('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
+      admField(horaEntrada, 'Horario de entrada (HH:mm)'),
+      admField(horaSalida, 'Horario de salida (HH:mm)'),
+      admField(consignas, 'Consignas'),
+    ],
+    onSave: () => Navigator.pop(context, {
+      'nombre': nombre.text.trim(),
+      'direccion': direccion.text.trim(),
+      'distritoId': distritoId,
+      'horaEntrada': horaEntrada.text.trim(),
+      'horaSalida': horaSalida.text.trim(),
+      'consignas': consignas.text.trim(),
+    }),
   );
   String _s(String key) => widget.item?[key]?.toString() ?? '';
+  int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
 }

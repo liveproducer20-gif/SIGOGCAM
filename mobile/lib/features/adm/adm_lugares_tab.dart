@@ -182,16 +182,10 @@ class _LugarState extends State<AdmCrudTab> with AdmLazyTabMixin<AdmCrudTab> {
   }
 
   Future<void> _edit(Map<String, dynamic>? item) async {
-    final results = await Future.wait([
-      CatalogCache.instance.getOrLoad(widget.api),
-      widget.api.getRutas(),
-    ]);
-    final catalogs = results[0] as Map<String, List<Map<String, dynamic>>>;
-    final rutas = results[1] as List<Map<String, dynamic>>;
     if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _LugarDialog(item: item, rutas: rutas, catalogs: catalogs),
+      builder: (_) => _LugarDialog(item: item),
     );
     if (data == null) return;
     if (!mounted) return;
@@ -499,9 +493,11 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
   }
 
   Future<void> _create() async {
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
+    if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => const _RutaDialog(),
+      builder: (_) => _RutaDialog(catalogs: catalogs),
     );
     if (data == null) return;
     if (!mounted) return;
@@ -512,9 +508,11 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
   }
 
   Future<void> _edit(Map<String, dynamic> item) async {
+    final catalogs = await CatalogCache.instance.getOrLoad(widget.api);
+    if (!mounted) return;
     final data = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (_) => _RutaDialog(item: item),
+      builder: (_) => _RutaDialog(item: item, catalogs: catalogs),
     );
     if (data == null) return;
     if (!mounted) return;
@@ -544,54 +542,31 @@ class _RutasManagerDialogState extends State<_RutasManagerDialog> {
 
 class _RutaDialog extends StatefulWidget {
   final Map<String, dynamic>? item;
-  const _RutaDialog({this.item});
+  final Map<String, List<Map<String, dynamic>>> catalogs;
+  const _RutaDialog({this.item, required this.catalogs});
   @override
   State<_RutaDialog> createState() => _RutaDialogState();
 }
 
 class _RutaDialogState extends State<_RutaDialog> {
   late final nombre = TextEditingController(text: _s('nombre'));
-  @override
-  Widget build(BuildContext context) => AdmFormDialog(
-        title: widget.item == null ? 'Nueva Ruta' : 'Editar Ruta',
-        children: [
-          admField(nombre, 'Nombre'),
-        ],
-        onSave: () => Navigator.pop(context, {
-          'nombre': nombre.text.trim(),
-        }),
-      );
-  String _s(String key) => widget.item?[key]?.toString() ?? '';
-}
-
-class _LugarDialog extends StatefulWidget {
-  final Map<String, dynamic>? item;
-  final List<Map<String, dynamic>> rutas;
-  final Map<String, List<Map<String, dynamic>>> catalogs;
-  const _LugarDialog({this.item, required this.rutas, required this.catalogs});
-  @override
-  State<_LugarDialog> createState() => _LugarDialogState();
-}
-
-class _LugarDialogState extends State<_LugarDialog> {
   late final direccion = TextEditingController(text: _s('direccion'));
   late final horaEntrada = TextEditingController(text: _s('hora_entrada'));
   late final horaSalida = TextEditingController(text: _s('hora_salida'));
   late final consignas = TextEditingController(text: _s('consignas'));
-  int? rutaId;
   int? distritoId;
+
   @override
   void initState() {
     super.initState();
-    rutaId = _int('ruta_id');
     distritoId = _int('distrito_id');
   }
 
   @override
   Widget build(BuildContext context) => AdmFormDialog(
-        title: widget.item == null ? 'Nuevo lugar' : 'Editar lugar',
+        title: widget.item == null ? 'Nueva Ruta' : 'Editar Ruta',
         children: [
-          admDropdown('Ruta', widget.rutas, rutaId, (v) => setState(() => rutaId = v)),
+          admField(nombre, 'Nombre'),
           admField(direccion, 'Ubicacion'),
           admDropdown('Distrito', widget.catalogs['DISTRITOS'], distritoId, (v) => setState(() => distritoId = v)),
           admField(horaEntrada, 'Horario de entrada (HH:mm)'),
@@ -599,7 +574,7 @@ class _LugarDialogState extends State<_LugarDialog> {
           admField(consignas, 'Consignas'),
         ],
         onSave: () => Navigator.pop(context, {
-          'rutaId': rutaId,
+          'nombre': nombre.text.trim(),
           'direccion': direccion.text.trim(),
           'distritoId': distritoId,
           'horaEntrada': horaEntrada.text.trim(),
@@ -609,4 +584,33 @@ class _LugarDialogState extends State<_LugarDialog> {
       );
   String _s(String key) => widget.item?[key]?.toString() ?? '';
   int? _int(String key) => int.tryParse(widget.item?[key]?.toString() ?? '');
+}
+
+class _LugarDialog extends StatefulWidget {
+  final Map<String, dynamic>? item;
+  const _LugarDialog({this.item});
+  @override
+  State<_LugarDialog> createState() => _LugarDialogState();
+}
+
+class _LugarDialogState extends State<_LugarDialog> {
+  late final nombre = TextEditingController(text: _s('nombre'));
+  late final direccion = TextEditingController(text: _s('direccion'));
+  late final observaciones = TextEditingController(text: _s('consignas'));
+
+  @override
+  Widget build(BuildContext context) => AdmFormDialog(
+        title: widget.item == null ? 'Nuevo lugar' : 'Editar lugar',
+        children: [
+          admField(nombre, 'Nombre'),
+          admField(direccion, 'Ubicacion'),
+          admField(observaciones, 'Observaciones'),
+        ],
+        onSave: () => Navigator.pop(context, {
+          'nombre': nombre.text.trim(),
+          'direccion': direccion.text.trim(),
+          'consignas': observaciones.text.trim(),
+        }),
+      );
+  String _s(String key) => widget.item?[key]?.toString() ?? '';
 }

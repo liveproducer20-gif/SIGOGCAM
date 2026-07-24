@@ -51,9 +51,9 @@ class _DashScrState extends State<DashScr> {
   bool _supportAttached = false;
   List<SideMenuItem>? _remoteItems;
 
-  List<SideMenuItem> get items =>
-      _remoteItems ??
-      SideMenuConfig.forUser(user, supportBadge: _supportPending);
+  bool _menuLoading = true;
+
+  List<SideMenuItem> get items => _remoteItems ?? [];
 
   @override
   void initState() {
@@ -62,6 +62,12 @@ class _DashScrState extends State<DashScr> {
     AuthSession.onSessionExpired = _logout;
     _loadMenu();
     _supportStart = Timer(const Duration(milliseconds: 700), _startSupport);
+  }
+
+  @override
+  void reassemble() {
+    super.reassemble();
+    _loadMenu();
   }
 
   @override
@@ -106,6 +112,12 @@ class _DashScrState extends State<DashScr> {
   Widget build(BuildContext context) {
     final isWeb = MediaQuery.sizeOf(context).width >= AppBreakpoints.tablet;
 
+    if (_menuLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return isWeb
         ? _WebDash(
             items: items,
@@ -140,12 +152,6 @@ class _DashScrState extends State<DashScr> {
     AuthSession.setUser(next);
     setState(() {
       user = next;
-      _remoteItems = null;
-      final nextItems = SideMenuConfig.forUser(
-        next,
-        supportBadge: _supportPending,
-      );
-      if (idxSel >= nextItems.length) idxSel = 0;
     });
     _loadMenu();
   }
@@ -161,10 +167,11 @@ class _DashScrState extends State<DashScr> {
       if (!mounted || resolved.isEmpty) return;
       setState(() {
         _remoteItems = resolved;
+        _menuLoading = false;
         if (idxSel >= resolved.length) idxSel = 0;
       });
     } catch (_) {
-      // Compatibility fallback for installations without dynamic-menu tables.
+      if (mounted) setState(() => _menuLoading = false);
     }
   }
 

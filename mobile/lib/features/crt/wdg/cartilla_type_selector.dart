@@ -40,10 +40,10 @@ class CartillaTypeSelector extends StatelessWidget {
           builder: (context, constraints) {
             final maxWidth = constraints.maxWidth;
             final cols = compact
-                ? (maxWidth >= 400 ? 2 : 1)
+                ? 2
                 : (maxWidth >= 620 ? 3 : (maxWidth >= 400 ? 2 : 1));
             final cardWidth = (maxWidth - gap * (cols - 1)) / cols;
-            final cardHeight = compact ? 128.0 : 152.0;
+            final cardHeight = compact ? 110.0 : 152.0;
 
             return SingleChildScrollView(
               child: Wrap(
