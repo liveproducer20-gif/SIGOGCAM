@@ -43,6 +43,7 @@ enum TipoCartilla {
   colaboracionEventos,
   resguardoPersonal,
   colaboracionAtm,
+  otrasCartillas,
 }
 
 enum Jornada {
@@ -149,6 +150,8 @@ extension TipoCartillaX on TipoCartilla {
         return 'Resguardo de personal';
       case TipoCartilla.colaboracionAtm:
         return 'Colaboración ATM';
+      case TipoCartilla.otrasCartillas:
+        return 'Otras cartillas';
     }
   }
 

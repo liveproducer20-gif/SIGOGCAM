@@ -28,6 +28,7 @@ import 'wdg/punto_martillo_form.dart';
 import 'wdg/requerimiento_form.dart';
 import 'wdg/retiro_temporal_form.dart';
 import 'wdg/ronda_disuasiva_form.dart';
+import 'wdg/otras_cartillas_form.dart';
 
 class CrtHomeScr extends StatefulWidget {
   final AppUser? user;
@@ -58,6 +59,7 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
   final ValueNotifier<String> _previewNotifier = ValueNotifier<String>('');
   bool _generando = false;
   final _colaboracionCiudadanaKey = GlobalKey<ColaboracionCiudadanaFormState>();
+  final _otrasCartillasKey = GlobalKey<OtrasCartillasFormState>();
 
   final crtApi = CrtApi();
 
@@ -79,6 +81,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         return 'colaboracion_entidades';
       case TipoCartilla.colaboracionEventos:
         return 'colaboracion_ciudadana';
+      case TipoCartilla.otrasCartillas:
+        return 'otras_cartillas';
       case TipoCartilla.permisoAusentismo:
         return 'permiso_ausentismo';
       default:
@@ -458,6 +462,19 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         ),
       ];
     }
+    if (tipo == TipoCartilla.otrasCartillas) {
+      return [
+        _buildBackButton(),
+        const SizedBox(height: 12),
+        OtrasCartillasForm(
+          key: _otrasCartillasKey,
+          user: widget.user,
+          onPreviewChanged: _onPreviewChanged,
+          onGenerate: _generarCartilla,
+          generando: _generando,
+        ),
+      ];
+    }
     return [
       _buildBackButton(),
       const SizedBox(height: 12),
@@ -548,6 +565,10 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         !(_colaboracionCiudadanaKey.currentState?.validate() ?? false)) {
       return;
     }
+    if (tipo == TipoCartilla.otrasCartillas &&
+        !(_otrasCartillasKey.currentState?.validate() ?? false)) {
+      return;
+    }
     if (_previewText.isEmpty) return;
     final bool isEasCartilla =
         tipo == TipoCartilla.desalojoVendedores ||
@@ -557,7 +578,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
         tipo == TipoCartilla.permisoAusentismo ||
         tipo == TipoCartilla.retiroTemporal ||
         tipo == TipoCartilla.colaboracionEntidades ||
-        tipo == TipoCartilla.colaboracionEventos;
+        tipo == TipoCartilla.colaboracionEventos ||
+        tipo == TipoCartilla.otrasCartillas;
     final isColaboracionCiudadana = tipo == TipoCartilla.colaboracionEventos;
     final cartillaLabel = isColaboracionCiudadana
         ? 'COLABORACIÓN CIUDADANA'
@@ -849,6 +871,8 @@ class _CrtHomeScrState extends State<CrtHomeScr> {
           tipo = TipoCartilla.colaboracionEntidades;
         case 'colaboracion_ciudadana':
           tipo = TipoCartilla.colaboracionEventos;
+        case 'otras_cartillas':
+          tipo = TipoCartilla.otrasCartillas;
         case 'permiso_ausentismo':
           tipo = TipoCartilla.permisoAusentismo;
         default:
