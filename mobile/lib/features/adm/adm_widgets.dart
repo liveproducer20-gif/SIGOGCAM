@@ -917,8 +917,7 @@ Widget admDropdown(
     decoration: InputDecoration(
       labelText: label,
       labelStyle: TextStyle(color: AdmTokens.grey500, fontSize: 14),
-      filled: true,
-      fillColor: AdmTokens.grey50,
+      filled: false,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: BorderSide(color: AdmTokens.grey200),
