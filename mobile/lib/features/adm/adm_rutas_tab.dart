@@ -35,7 +35,9 @@ class _RutasTabState extends State<RutasTab> with AdmLazyTabMixin<RutasTab> {
   Future<void> _reloadFromLazy() async {
     if (!mounted) return;
     final f = _fetch();
-    setState(() => future = f);
+    setState(() {
+      future = f;
+    });
     await f;
   }
 

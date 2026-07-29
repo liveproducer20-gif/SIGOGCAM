@@ -51,8 +51,11 @@ class _SupportTicketDetailState extends State<SupportTicketDetail> {
     super.dispose();
   }
 
-  void _reload() =>
-      setState(() => _future = widget.api.detail(widget.ticketId));
+  void _reload() {
+    setState(() {
+      _future = widget.api.detail(widget.ticketId);
+    });
+  }
   @override
   Widget build(BuildContext context) => Container(
     color: Colors.white,

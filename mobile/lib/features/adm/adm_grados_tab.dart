@@ -33,7 +33,9 @@ class _GradosTabState extends State<GradosTab> with AdmLazyTabMixin<GradosTab> {
   Future<void> _reloadFromLazy() async {
     if (!mounted) return;
     final f = _fetch();
-    setState(() => future = f);
+    setState(() {
+      future = f;
+    });
     await f;
   }
 
