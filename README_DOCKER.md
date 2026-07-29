@@ -1,4 +1,4 @@
-# SIGO-GCAM con Docker
+# SIGO - Sistema Inteligente de Gestión Operativa con Docker
 
 Esta configuración inicia SQL Server 2025, restaura la base BITSAC, ejecuta la
 API Node.js y publica Flutter Web mediante Nginx.
@@ -169,7 +169,7 @@ un entorno vacío desde el respaldo actual:
 
 1. Genere y conserve un respaldo de cualquier dato que necesite.
 2. Detenga Compose.
-3. Elimine expresamente el volumen `sigo-gcam-sqlserver-data`.
+3. Elimine expresamente el volumen `SIGO - Sistema Inteligente de Gestión Operativa-sqlserver-data`.
 4. Verifique que `Backup/BITSAC2` sea el respaldo correcto.
 5. Ejecute nuevamente `docker compose up -d`.
 

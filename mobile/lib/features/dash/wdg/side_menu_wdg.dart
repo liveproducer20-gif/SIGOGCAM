@@ -216,7 +216,7 @@ class _MenuHeader extends StatelessWidget {
                   height: 88,
                 ),
                 const Text(
-                  'SIGO-GCAM',
+                  'SIGO - Sistema Inteligente de Gestión Operativa',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,

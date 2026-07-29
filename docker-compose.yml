@@ -1,9 +1,9 @@
-name: ${COMPOSE_PROJECT_NAME:-sigo-gcam}
+name: ${COMPOSE_PROJECT_NAME:-SIGO - Sistema Inteligente de Gestión Operativa}
 
 services:
   database:
     image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
-    container_name: sigo-gcam-database
+    container_name: SIGO - Sistema Inteligente de Gestión Operativa-database
     hostname: database
     environment:
       ACCEPT_EULA: "Y"
@@ -38,7 +38,7 @@ services:
 
   database-init:
     image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
-    container_name: sigo-gcam-database-init
+    container_name: SIGO - Sistema Inteligente de Gestión Operativa-database-init
     environment:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
       DB_DATABASE: ${DB_DATABASE:-BITSAC}
@@ -65,7 +65,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: production
-    container_name: sigo-gcam-backend
+    container_name: SIGO - Sistema Inteligente de Gestión Operativa-backend
     environment:
       NODE_ENV: production
       PORT: 3000
@@ -112,7 +112,7 @@ services:
       dockerfile: Dockerfile
       args:
         SIGO_API_BASE_URL: ${SIGO_API_BASE_URL:-/api}
-    container_name: sigo-gcam-frontend
+    container_name: SIGO - Sistema Inteligente de Gestión Operativa-frontend
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     networks:
@@ -130,9 +130,9 @@ services:
 
 networks:
   sigo_network:
-    name: sigo-gcam-network
+    name: SIGO - Sistema Inteligente de Gestión Operativa-network
     driver: bridge
 
 volumes:
   sqlserver_data:
-    name: sigo-gcam-sqlserver-data
+    name: SIGO - Sistema Inteligente de Gestión Operativa-sqlserver-data

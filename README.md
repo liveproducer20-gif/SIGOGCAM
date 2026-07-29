@@ -1,4 +1,4 @@
-# SIGO-GCAM
+# SIGO - Sistema Inteligente de Gestión Operativa
 
 **Sistema Inteligente de Gestion Operativa para el Cuerpo de Agentes de Control Municipal de Guayaquil.**
 
@@ -34,7 +34,7 @@
 
 ## Descripcion del Proyecto
 
-SIGO-GCAM es una plataforma integral disenada para la gestion operativa del Cuerpo de Agentes de Control Municipal (GCAM) del canton de Guayaquil. El sistema abarca desde la gestion de personal y cartillas de novedades hasta un sistema de gamificacion con insignias, todo respaldado por una arquitectura robusta y escalable.
+SIGO - Sistema Inteligente de Gestión Operativa es una plataforma integral disenada para la gestion operativa del Cuerpo de Agentes de Control Municipal (GCAM) del canton de Guayaquil. El sistema abarca desde la gestion de personal y cartillas de novedades hasta un sistema de gamificacion con insignias, todo respaldado por una arquitectura robusta y escalable.
 
 **Objetivos principales:**
 
@@ -461,7 +461,7 @@ docker compose down
 docker compose up --build
 
 # Acceder al container de SQL
-docker exec -it sigo-gcam-database /opt/mssql-tools18/bin/sqlcmd \
+docker exec -it SIGO - Sistema Inteligente de Gestión Operativa-database /opt/mssql-tools18/bin/sqlcmd \
   -S localhost -U SA -P '<password>' -C
 
 # Verificar salud
@@ -495,7 +495,7 @@ Para despliegue en produccion, consultar [README_DOCKER.md](README_DOCKER.md) qu
 | Abreviacion | Significado |
 |-------------|-------------|
 | BITSAC | Base de Informacion Tecnologica de Seguridad y Accion Centralizada |
-| SIGO-GCAM | Sistema Inteligente de Gestion Operativa - GCAM |
+| SIGO - Sistema Inteligente de Gestión Operativa | Sistema Inteligente de Gestion Operativa - GCAM |
 | GCAM | Cuerpo de Agentes de Control Municipal |
 | EAS | Estacion de Accion Segura |
 | RBAC | Role-Based Access Control (Control de Acceso Basado en Roles) |

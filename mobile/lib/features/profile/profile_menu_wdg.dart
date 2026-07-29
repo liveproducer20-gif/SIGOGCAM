@@ -116,7 +116,7 @@ class _ProfileMenuWdgState extends State<ProfileMenuWdg> {
                     height: 38,
                     width: 116,
                     fit: BoxFit.contain,
-                    semanticLabel: 'SIGO-GCAM',
+                    semanticLabel: 'SIGO - Sistema Inteligente de Gestión Operativa',
                   ),
                   const SizedBox(width: 10),
                 ],

@@ -1591,7 +1591,7 @@ class UserRankBuilder {
               .toDouble();
 
     return UserRankData(
-      nombre: nombre.isEmpty ? 'Usuario SIGO-GCAM' : nombre,
+      nombre: nombre.isEmpty ? 'Usuario SIGO - Sistema Inteligente de Gestión Operativa' : nombre,
       badgeName: badgeName?.isNotEmpty == true ? badgeName! : 'Sin insignias',
       badgeMetaCartillas: previousMeta,
       level: category?.isNotEmpty == true ? category! : 'Novato',

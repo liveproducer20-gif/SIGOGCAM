@@ -1,6 +1,6 @@
-# SIGO-GCAM — Documentación Completa de Módulos
+# SIGO - Sistema Inteligente de Gestión Operativa — Documentación Completa de Módulos
 
-**Plataforma:** BITSAC/SIGO-GCAM — Sistema Inteligente de Gestión Operativa
+**Plataforma:** BITSAC/SIGO - Sistema Inteligente de Gestión Operativa — Sistema Inteligente de Gestión Operativa
 **Organizacion:** SIGO WORKING TECHNOLOGIES
 **Fecha de inicio:** 1 de junio de 2026
 ---
@@ -34,7 +34,7 @@
 - Texto superpuesto:
   - Título: "Sistema Inteligente de Gestión Operativa"
   - Subtítulo: "Cuerpo de agentes de control Municipal de Guayaquil"
-  - Marca: "SIGO-GCAM"
+  - Marca: "SIGO - Sistema Inteligente de Gestión Operativa"
   - Lema: "Lealtad, Valor, Orden"
 
 ### 1.3 Formulario de Login
@@ -113,7 +113,7 @@
 - Soporte: sin permisos requeridos (siempre visible)
 
 **Funcionalidades del menú:**
-- Header con logo SIGO-GCAM y botón colapsar/expandir
+- Header con logo SIGO - Sistema Inteligente de Gestión Operativa y botón colapsar/expandir
 - Menú animado (280px abierto, 72px cerrado)
 - Tooltips en modo colapsado
 - Badges con contador (soporte)

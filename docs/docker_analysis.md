@@ -4,7 +4,7 @@ Fecha del análisis: 2026-07-14.
 
 ## Arquitectura identificada
 
-SIGO-GCAM contiene una API REST Node.js/Express, un cliente Flutter
+SIGO - Sistema Inteligente de Gestión Operativa contiene una API REST Node.js/Express, un cliente Flutter
 multiplataforma y una base SQL Server. Flutter tiene destinos Android, iOS,
 Windows, Linux, macOS y Web. Docker ejecuta el destino Web; las aplicaciones
 móviles y de escritorio se siguen compilando con Flutter fuera de Docker.
@@ -24,7 +24,7 @@ Por ese motivo, la imagen de base debe ser SQL Server 2025 (17.x); SQL Server
 
 | Servicio | Responsabilidad | Persistencia |
 | --- | --- | --- |
-| `database` | SQL Server 2025 | Volumen `sigo-gcam-sqlserver-data` |
+| `database` | SQL Server 2025 | Volumen `SIGO - Sistema Inteligente de Gestión Operativa-sqlserver-data` |
 | `database-init` | Restauración idempotente y `DBCC CHECKDB` | Usa el volumen de SQL Server y termina |
 | `backend` | API Express con Node.js 24 LTS y ODBC 18 | Bind mount `backend/uploads` |
 | `frontend` | Flutter Web release servido por Nginx | Imagen inmutable |

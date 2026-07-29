@@ -1452,7 +1452,7 @@ class _MobDash extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: TopBarWdg(
-        ttl: 'SIGO-GCAM',
+        ttl: 'SIGO - Sistema Inteligente de Gestión Operativa',
         user: user,
         onUserChanged: onUserChanged,
         onLogout: onLogout,

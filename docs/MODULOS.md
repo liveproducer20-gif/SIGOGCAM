@@ -1,4 +1,4 @@
-# Documentacion de Modulos - BITSAC / SIGO-GCAM
+# Documentacion de Modulos - BITSAC / SIGO - Sistema Inteligente de Gestión Operativa
 
 **Autor:** Jorge Luis Calderon Aguirre
 **Organizacion:** SIGO WORKING TECHNOLOGIES

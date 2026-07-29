@@ -89,7 +89,7 @@ class _AuthImgPanel extends StatelessWidget {
               ),
               SizedBox(height: 18),
               Text(
-                'SIGO-GCAM',
+                'SIGO - Sistema Inteligente de Gestión Operativa',
                 style: TextStyle(
                   color: AppThm.accClr,
                   fontSize: 30,

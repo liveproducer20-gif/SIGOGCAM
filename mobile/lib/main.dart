@@ -16,7 +16,7 @@ class BitsacApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Plataforma SIGO-GCAM',
+      title: 'Plataforma SIGO - Sistema Inteligente de Gestión Operativa',
       debugShowCheckedModeBanner: false,
       theme: AppThm.lgt,
       home: SplScr(),
