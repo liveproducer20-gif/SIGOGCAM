@@ -5,7 +5,6 @@
 | | |
 |---|---|
 | **Autor / Desarrollador** | Jorge Luis Calderon Aguirre |
-| **Organizacion** | SIGO WORKING TECHNOLOGIES |
 | **Fecha de inicio** | 1 de junio de 2026 |
 | **Plataforma** | Flutter (Android, iOS, Web, Windows, Linux, macOS) |
 | **Backend** | Node.js + Express 5 + SQL Server 2025 |
@@ -495,7 +494,7 @@ Para despliegue en produccion, consultar [README_DOCKER.md](README_DOCKER.md) qu
 | Abreviacion | Significado |
 |-------------|-------------|
 | BITSAC | Base de Informacion Tecnologica de Seguridad y Accion Centralizada |
-| SIGO - Sistema Inteligente de Gestión Operativa | Sistema Inteligente de Gestion Operativa - GCAM |
+| SIGO - Sistema Inteligente de Gestión Operativa | Sistema Inteligente de Gestion Operativa |
 | GCAM | Cuerpo de Agentes de Control Municipal |
 | EAS | Estacion de Accion Segura |
 | RBAC | Role-Based Access Control (Control de Acceso Basado en Roles) |
@@ -524,7 +523,6 @@ Para despliegue en produccion, consultar [README_DOCKER.md](README_DOCKER.md) qu
 
 **Jorge Luis Calderon Aguirre**
 Desarrollador de Software
-SIGO WORKING TECHNOLOGIES
 
 Inicio del proyecto: **1 de junio de 2026**
 
@@ -532,4 +530,4 @@ Inicio del proyecto: **1 de junio de 2026**
 
 ## Licencia
 
-Proyecto privado. Todos los derechos reservados. SIGO WORKING TECHNOLOGIES - Guayaquil, Ecuador.
+Proyecto privado. Todos los derechos reservados. Jorge Luis Calderón Aguirre - Guayaquil, Ecuador.

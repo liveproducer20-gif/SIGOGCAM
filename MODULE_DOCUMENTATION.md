@@ -1,7 +1,6 @@
 # SIGO - Sistema Inteligente de Gestión Operativa — Documentación Completa de Módulos
 
-**Plataforma:** BITSAC/SIGO - Sistema Inteligente de Gestión Operativa — Sistema Inteligente de Gestión Operativa
-**Organizacion:** SIGO WORKING TECHNOLOGIES
+**Plataforma:** SIGO - Sistema Inteligente de Gestión Operativa — Sistema Inteligente de Gestión Operativa
 **Fecha de inicio:** 1 de junio de 2026
 ---
 

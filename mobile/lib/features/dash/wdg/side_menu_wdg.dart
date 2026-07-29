@@ -216,7 +216,7 @@ class _MenuHeader extends StatelessWidget {
                   height: 88,
                 ),
                 const Text(
-                  'SIGO - Sistema Inteligente de Gestión Operativa',
+                  'SIGO',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -317,7 +317,7 @@ class _MenuTileState extends State<_MenuTile> {
               minLeadingWidth: 0,
               horizontalTitleGap: 12,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: widget.open ? 12 : 17,
+                horizontal: widget.open ? 12 : 10,
                 vertical: 2,
               ),
               leading: Icon(
@@ -656,7 +656,45 @@ class _LogoutTile extends StatelessWidget {
   final VoidCallback onTap;
   const _LogoutTile({required this.open, required this.onTap});
   @override
-  Widget build(BuildContext context) => ListTile(
+  Widget build(BuildContext context) {
+    Future<void> confirmLogout() async {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Cerrar sesiÃ³n'),
+          content: const Text('Â¿Deseas cerrar la sesiÃ³n actual?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Cerrar sesiÃ³n'),
+            ),
+          ],
+        ),
+      );
+      if (ok == true) onTap();
+    }
+
+    if (!open) {
+      return Center(
+        child: Tooltip(
+          message: 'Cerrar sesiÃ³n',
+          child: IconButton(
+            onPressed: confirmLogout,
+            icon: const Icon(
+              Icons.logout_rounded,
+              size: 20,
+              color: Color(0xFFFCA5A5),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListTile(
     dense: true,
     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
     hoverColor: const Color(0x22EF4444),
@@ -697,5 +735,6 @@ class _LogoutTile extends StatelessWidget {
       );
       if (ok == true) onTap();
     },
-  );
+    );
+  }
 }

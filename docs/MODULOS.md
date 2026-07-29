@@ -1,7 +1,6 @@
 # Documentacion de Modulos - BITSAC / SIGO - Sistema Inteligente de Gestión Operativa
 
 **Autor:** Jorge Luis Calderon Aguirre
-**Organizacion:** SIGO WORKING TECHNOLOGIES
 **Fecha de inicio:** 1 de junio de 2026
 
 ---
