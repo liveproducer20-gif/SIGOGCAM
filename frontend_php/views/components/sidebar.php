@@ -41,9 +41,12 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
         <?php endif; ?>
 
         <?php if ($sidebarCan(['distribucion.ver'])): ?>
-        <section class="sigo-nav-group<?= $open(['/distribucion-geografica']) ?>" data-nav-group>
-            <button type="button" aria-expanded="<?= $path === '/distribucion-geografica' ? 'true' : 'false' ?>"><span class="sigo-nav-icon">⌖</span><span>Distribución geográfica</span><b>⌄</b></button>
-            <div class="sigo-submenu"><a class="<?= $active(['/distribucion-geografica']) ?>" href="/distribucion-geografica">Vista general del mapa</a><?php if ($sidebarCan(['distribucion.crear'])): ?><a href="/distribucion-geografica?crear=1">Crear punto</a><?php endif; ?></div>
+        <section class="sigo-nav-group<?= $open(['/distribucion-geografica', '/distribucion-tablero']) ?>" data-nav-group>
+            <button type="button" aria-expanded="<?= in_array($path, ['/distribucion-geografica', '/distribucion-tablero'], true) ? 'true' : 'false' ?>"><span class="sigo-nav-icon">⌖</span><span>Distribución</span><b>⌄</b></button>
+            <div class="sigo-submenu">
+                <a class="<?= $active(['/distribucion-geografica']) ?>" href="/distribucion-geografica">Distribución geográfica</a>
+                <a class="<?= $active(['/distribucion-tablero']) ?>" href="/distribucion-tablero">Tablero de distribución</a>
+            </div>
         </section>
         <?php endif; ?>
 

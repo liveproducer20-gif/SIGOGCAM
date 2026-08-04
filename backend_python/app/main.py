@@ -11,6 +11,7 @@ from app.modules.catalogos.routes import router as catalogos_router
 from app.modules.configuracion.routes import router as configuracion_router
 from app.modules.eventos.routes import router as eventos_router
 from app.modules.distribucion_geografica.routes import router as distribucion_geografica_router
+from app.modules.distribucion_tablero.routes import router as distribucion_tablero_router
 from app.modules.dashboard.routes import router as dashboard_router
 from app.modules.health.routes import router as health_router
 from app.modules.insignias.routes import router as insignias_router
@@ -45,6 +46,7 @@ app.include_router(cartillas_router, prefix=f"{settings.api_prefix}/cartillas")
 app.include_router(personal_router, prefix=f"{settings.api_prefix}/personal")
 app.include_router(eventos_router, prefix=f"{settings.api_prefix}/eventos")
 app.include_router(distribucion_geografica_router, prefix=settings.api_prefix)
+app.include_router(distribucion_tablero_router, prefix=settings.api_prefix)
 app.include_router(dashboard_router, prefix=f"{settings.api_prefix}/dashboard")
 app.include_router(anuncios_router, prefix=f"{settings.api_prefix}/anuncios")
 app.include_router(insignias_router, prefix=f"{settings.api_prefix}/insignias")

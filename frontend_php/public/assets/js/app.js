@@ -185,12 +185,78 @@
         let manual = cardOutput.value.trim() !== '';
         cardOutput.addEventListener('input', () => { manual = true; });
         const value = (name) => cardForm.elements.namedItem(name)?.value?.trim() || '';
+        const greet = () => {
+            const h = new Date().getHours();
+            if (h >= 6 && h < 12) return 'buenos días';
+            if (h >= 12 && h < 19) return 'buenas tardes';
+            return 'buenas noches';
+        };
+        const procedureByCause = (cause, address) => {
+            const base = `Muy ${greet()}, Sr. Maldonado Cabrera Freddy, Jefe de Control Municipal, muy respetuosamente me permito informarle que`;
+            const c = (cause || '').toLowerCase();
+            const l = address ? ` en la dirección ${address}` : '';
+            if (c.includes('desalojo')) return `${base} durante el recorrido preventivo se evidenció la presencia de vendedores ocupando el espacio público${l}, por lo que se procedió a dialogar de manera respetuosa, indicando la normativa vigente y solicitando el retiro voluntario del lugar. La intervención se desarrolló sin novedades adicionales, manteniendo presencia preventiva en el sector.`;
+            if (c.includes('retiro')) return `${base} se realizó el retiro temporal correspondiente${l}, verificando previamente las condiciones del sitio y coordinando la actuación de forma ordenada para precautelar la seguridad ciudadana y el uso adecuado del espacio público.`;
+            if (c.includes('requerimiento')) return `${base} se atendió un requerimiento ciudadano/institucional${l}, tomando contacto con las partes involucradas y brindando la colaboración operativa necesaria conforme a las competencias del Cuerpo de Agentes de Control Municipal.`;
+            if (c.includes('ronda')) return `${base} se ejecutaron rondas disuasivas${l}, manteniendo presencia preventiva, verificando puntos sensibles y observando el normal desarrollo de las actividades en el sector asignado.`;
+            if (c.includes('entidades')) return `${base} se brindó colaboración operativa a otras entidades${l}, acompañando el procedimiento solicitado y manteniendo presencia institucional hasta la culminación de la novedad, sin registrarse incidentes adicionales.`;
+            if (c.includes('ciudadana')) return `${base} se brindó colaboración ciudadana${l}, orientando a la persona requirente y realizando las gestiones operativas necesarias dentro del ámbito de competencia institucional.`;
+            if (c.includes('accidente')) return `${base} se tomó conocimiento de un accidente${l}, verificando la situación en territorio y precautelando el área mientras se coordinaba la atención correspondiente con las entidades competentes. Se mantuvo presencia preventiva hasta normalizar la novedad.`;
+            if (c.includes('robo')) return `${base} se tomó conocimiento de una alerta relacionada con presunto robo${l}, por lo que se mantuvo presencia preventiva, se verificó la novedad y se orientó a la persona afectada para la coordinación con las entidades competentes.`;
+            if (c.includes('extorsi')) return `${base} se recibió información relacionada con una presunta extorsión${l}, manteniendo reserva y orientando a la persona involucrada sobre la canalización correspondiente con las autoridades competentes.`;
+            if (c.includes('amenaza')) return `${base} se atendió una novedad por amenazas${l}, brindando acompañamiento preventivo y recomendando a la persona afectada formalizar la denuncia respectiva ante la entidad competente.`;
+            if (c.includes('desapar')) return `${base} se tomó conocimiento sobre la presunta desaparición de una persona${l}, por lo que se orientó a los ciudadanos respecto al procedimiento correspondiente y se dejó constancia de la novedad para fines pertinentes.`;
+            if (c.includes('agresi')) return `${base} se verificó una novedad relacionada con agresión${l}, manteniendo presencia preventiva, procurando separar a las partes involucradas y coordinando la atención correspondiente según la situación observada.`;
+            if (c.includes('cámara') || c.includes('camara')) return `${base} se realizó visualización de cámaras relacionada con la novedad reportada${l}, revisando la información disponible y dejando constancia de los detalles relevantes para conocimiento superior.`;
+            if (c.includes('ausent')) return `${base} se registra permiso de ausentismo del servidor correspondiente, dejando constancia de la novedad para conocimiento superior y fines administrativos.`;
+            if (c.includes('martillo')) return `${base} durante el servicio asignado se mantuvo presencia preventiva${l}, verificando el orden en el sector y realizando acciones disuasivas conforme a las disposiciones operativas.`;
+            return `${base} durante el servicio establecido se verificó la novedad correspondiente a ${cause}${l}.`;
+        };
         const renderCard = () => {
             if (manual) return;
             const now = new Date();
+            const tipo = value('tipo_servicio').toUpperCase();
+            const tipoC = value('tipo_cartilla');
             const cause = value('causa');
             const detail = value('detalle');
-            cardOutput.value = `*CUERPO DE AGENTES DE CONTROL MUNICIPAL*\n\n*REPORTE DE ${value('tipo_cartilla').toUpperCase()}*\n*DISTRITO:* ${value('distrito').toUpperCase()}\n*CIRCUITO:* ${value('eas_nombre') || 'NO APLICA'}\n*HORARIO:* ${value('horario') || 'POR DEFINIR'}\n*HORA:* ${now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})}\n*FECHA:* ${now.toLocaleDateString('es-EC')}\n*DIRECCIÓN:* ${value('direccion')}\n\n*CAUSA:* ${cause}\n\n*PROCEDIMIENTO:*\n${value('procedimiento') || `Se informa la novedad correspondiente a ${cause}.${detail ? ` ${detail}` : ''}`}\n\n*REPORTA:*\n*CP:* ${value('cp')}\n*JP:* ${value('jp')}\n*Aux.:* ${value('policia')}\n\n*LEALTAD, VALOR Y ORDEN*\n\n*ADJUNTO FOTOGRAFÍA*`;
+            const address = value('direccion');
+            const movil = value('movil');
+            const cp = value('cp');
+            const jp = value('jp');
+            const policia = value('policia');
+            const cedula = value('cedula_ultimos_4');
+            const disco = value('numero_disco');
+            const kilometraje = value('kilometraje');
+            const esConductor = tipo === 'CONDUCTOR';
+            let texto = '*CUERPO DE AGENTES DE CONTROL MUNICIPAL*\n\n';
+            texto += `*REPORTE DE ${tipoC ? tipoC.toUpperCase() : tipo}*\n`;
+            texto += `*DISTRITO:* ${value('distrito').toUpperCase()}\n`;
+            texto += `*CIRCUITO:* ${value('circuito') || value('eas_nombre') || 'EAS'}\n`;
+            texto += `*HORARIO:* ${value('horario') || 'POR DEFINIR'}\n`;
+            texto += `*HORA:* ${now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})}\n`;
+            texto += `*FECHA:* ${now.toLocaleDateString('es-EC')}\n`;
+            texto += `*DIRECCIÓN:* ${address}\n\n`;
+            texto += `*CAUSA:* ${cause}\n\n`;
+            texto += '*PROCEDIMIENTO:*\n\n';
+            let procedimiento = procedureByCause(cause, address);
+            if (!cause.toLowerCase().includes('ausent') && address) {
+                procedimiento += ` Se procedió con punto martillo en la calle ${address}.`;
+            }
+            texto += procedimiento + '\n\n';
+            texto += 'Notifico novedades para fines correspondientes.\n';
+            if (esConductor) {
+                if (kilometraje) texto += `\n*Kilometraje:* ${kilometraje}`;
+                if (disco) texto += `\n*Disco:* ${disco}`;
+                if (cedula) texto += `\n*Cédula últimos 4:* ${cedula}`;
+            }
+            if (movil) texto += `\n*Móvil ${movil}*`;
+            texto += '\n\n*REPORTA:*\n\n';
+            texto += `*CP:* ${cp}\n`;
+            texto += `*JP:* ${jp}`;
+            if (policia) texto += `\n*POLICÍA:* ${policia}`;
+            texto += '\n\n*Lealtad, Valor y Orden*\n\n';
+            texto += 'Adjunto fotografía';
+            cardOutput.value = texto;
         };
         cardForm.addEventListener('input', renderCard);
         cardForm.addEventListener('change', renderCard);

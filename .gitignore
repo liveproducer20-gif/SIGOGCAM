@@ -1,17 +1,11 @@
 
 patch/
 
-# Arquitectura previa pendiente de limpieza final
-backend/
-mobile/
-ENTREGABLES_APK/
-
 # Environment
 .env
 backend_python/.env
 frontend_php/.env
 *.local
-/requirements.txt
 
 # Python
 __pycache__/
