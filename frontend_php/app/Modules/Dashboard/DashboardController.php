@@ -23,7 +23,7 @@ final class DashboardController
 
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $response = $api->get('configuracion/mi-estructura');
+            $response = $api->get('auth/mi-menu');
             $menu = $response['datos'] ?? [];
             $stats = $api->get('dashboard/resumen')['datos'] ?? [];
             $version = $api->get('configuracion/version')['datos'] ?? [];

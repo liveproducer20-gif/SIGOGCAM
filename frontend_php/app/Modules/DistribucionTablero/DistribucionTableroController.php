@@ -17,7 +17,8 @@ final class DistribucionTableroController
         }
 
         $user = AuthSession::user() ?? [];
-        if (!in_array('tablero_distribucion.ver', $user['permisos'] ?? [], true)) {
+        $role = strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? ''));
+        if (!str_contains($role, 'ADMINISTRADOR') && !in_array('tablero_distribucion.ver', $user['permisos'] ?? [], true)) {
             http_response_code(403);
             echo 'No tiene permiso para consultar el tablero de distribucion.';
             return;

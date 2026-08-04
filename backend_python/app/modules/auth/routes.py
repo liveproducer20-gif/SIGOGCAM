@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.responses import ok
 from app.core.security import create_access_token, verify_password
+from app.middleware.auth import current_user
 from app.modules.auth.models import LoginRequest
 from app.modules.auth.repository import get_permissions_by_role, get_user_by_email
+from app.modules.configuracion.repository import build_tree, my_structure
 
 
 router = APIRouter(tags=["autenticacion"])
@@ -55,6 +57,12 @@ def login(payload: LoginRequest):
     )
 
     return ok({"usuario": usuario, "token": token}, "Inicio de sesión correcto")
+
+
+@router.get("/mi-menu")
+def mi_menu(user: dict = Depends(current_user)):
+    items = my_structure(int(user["id"]))
+    return ok(build_tree(items))
 
 
 def _rol_aplicacion(value: str) -> str:

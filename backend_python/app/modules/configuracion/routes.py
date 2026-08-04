@@ -38,7 +38,10 @@ def roles(user: dict = Depends(current_user)):
 
 @router.get("/version")
 def version(user: dict = Depends(current_user)):
-    return ok(current_version())
+    try:
+        return ok(current_version())
+    except Exception:
+        return ok({"resumen": "Configuración inicial", "fecha_creacion": None})
 
 
 @router.get("/permisos")

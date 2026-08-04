@@ -16,7 +16,7 @@ def summary() -> dict:
                 (SELECT COUNT(*) FROM dbo.alertas_soporte
                  WHERE ISNULL(activo, 1) = 1 AND ISNULL(estado, 'Nuevo') <> 'Resuelto') AS alertas_activas,
                 (SELECT COUNT(*) FROM dbo.lugares_servicio
-                 WHERE ISNULL(activo, 1) = 1 AND latitud IS NOT NULL AND longitud IS NOT NULL) AS puntos_georreferenciados,
+                 WHERE ISNULL(activo, 1) = 1) AS puntos_georreferenciados,
                 (SELECT COUNT(*) FROM dbo.rutas WHERE ISNULL(activo, 1) = 1) AS rutas_operativas
             """
         )

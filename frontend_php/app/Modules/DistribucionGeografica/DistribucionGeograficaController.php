@@ -17,7 +17,8 @@ final class DistribucionGeograficaController
         }
 
         $user = AuthSession::user() ?? [];
-        if (!in_array('distribucion.ver', $user['permisos'] ?? [], true)) {
+        $role = strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? ''));
+        if (!str_contains($role, 'ADMINISTRADOR') && !in_array('distribucion.ver', $user['permisos'] ?? [], true)) {
             http_response_code(403);
             echo 'No tiene permiso para consultar distribución geográfica.';
             return;
