@@ -91,6 +91,7 @@ if ($path === '/eventos/eliminar' && $method === 'POST') {
     (new EventosController())->destroy();
     return;
 }
+if ($path === '/eventos/estado' && $method === 'POST') { (new EventosController())->status(); return; }
 
 if ($path === '/anuncios' && $method === 'GET') {
     (new AnunciosController())->index();
@@ -106,6 +107,7 @@ if ($path === '/anuncios/eliminar' && $method === 'POST') {
     (new AnunciosController())->destroy();
     return;
 }
+if ($path === '/anuncios/publicar' && $method === 'POST') { (new AnunciosController())->publish(); return; }
 
 if ($path === '/personal' && $method === 'GET') {
     (new PersonalController())->index();
@@ -139,6 +141,16 @@ if ($path === '/soporte' && $method === 'GET') {
 
 if ($path === '/soporte' && $method === 'POST') {
     (new SoporteController())->store();
+    return;
+}
+
+if ($path === '/soporte/actualizar' && $method === 'POST') {
+    (new SoporteController())->update();
+    return;
+}
+
+if ($path === '/soporte/comentar' && $method === 'POST') {
+    (new SoporteController())->comment();
     return;
 }
 
@@ -176,6 +188,8 @@ if ($path === '/configuracion/condiciones/eliminar' && $method === 'POST') {
     (new ConfiguracionController())->deleteCondition();
     return;
 }
+if ($path === '/configuracion/campos' && $method === 'POST') { (new ConfiguracionController())->updateFields(); return; }
+if ($path === '/configuracion/versiones' && $method === 'POST') { (new ConfiguracionController())->createVersion(); return; }
 
 http_response_code(404);
 echo 'Ruta no encontrada';

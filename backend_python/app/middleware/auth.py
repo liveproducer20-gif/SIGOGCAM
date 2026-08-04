@@ -27,7 +27,8 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bear
 def require_permission(permission: str):
     def checker(user: dict = Depends(current_user)) -> dict:
         permissions = user.get("permisos") or []
-        if permission not in permissions:
+        role = str(user.get("rolCodigo") or user.get("rol") or "").upper()
+        if "ADMINISTRADOR" not in role and permission not in permissions:
             raise HTTPException(status_code=403, detail="No tiene permiso para esta accion")
         return user
 

@@ -33,6 +33,9 @@
                 if (!field) return;
                 if (field.type === 'checkbox') {
                     field.checked = Boolean(payload[key]);
+                } else if (field instanceof HTMLSelectElement && field.multiple) {
+                    const selected = (payload[key] || []).map(String);
+                    Array.from(field.options).forEach((option) => { option.selected = selected.includes(option.value); });
                 } else {
                     field.value = payload[key] ?? '';
                 }
@@ -174,5 +177,33 @@
         document.querySelectorAll('.geo-modal:not([hidden]) [data-close-wizard]').forEach((button) => button.click());
         sidebar?.classList.remove('mobile-open');
         overlay?.classList.remove('is-visible');
+    });
+
+    const cardForm = document.getElementById('cartillaForm');
+    const cardOutput = document.querySelector('.cartilla-preview textarea[name="contenido"]');
+    if (cardForm && cardOutput) {
+        let manual = cardOutput.value.trim() !== '';
+        cardOutput.addEventListener('input', () => { manual = true; });
+        const value = (name) => cardForm.elements.namedItem(name)?.value?.trim() || '';
+        const renderCard = () => {
+            if (manual) return;
+            const now = new Date();
+            const cause = value('causa');
+            const detail = value('detalle');
+            cardOutput.value = `*CUERPO DE AGENTES DE CONTROL MUNICIPAL*\n\n*REPORTE DE ${value('tipo_cartilla').toUpperCase()}*\n*DISTRITO:* ${value('distrito').toUpperCase()}\n*CIRCUITO:* ${value('eas_nombre') || 'NO APLICA'}\n*HORARIO:* ${value('horario') || 'POR DEFINIR'}\n*HORA:* ${now.toLocaleTimeString('es-EC',{hour:'2-digit',minute:'2-digit'})}\n*FECHA:* ${now.toLocaleDateString('es-EC')}\n*DIRECCIÓN:* ${value('direccion')}\n\n*CAUSA:* ${cause}\n\n*PROCEDIMIENTO:*\n${value('procedimiento') || `Se informa la novedad correspondiente a ${cause}.${detail ? ` ${detail}` : ''}`}\n\n*REPORTA:*\n*CP:* ${value('cp')}\n*JP:* ${value('jp')}\n*Aux.:* ${value('policia')}\n\n*LEALTAD, VALOR Y ORDEN*\n\n*ADJUNTO FOTOGRAFÍA*`;
+        };
+        cardForm.addEventListener('input', renderCard);
+        cardForm.addEventListener('change', renderCard);
+        renderCard();
+        document.querySelector('[data-copy-cartilla]')?.addEventListener('click', async () => { await navigator.clipboard.writeText(cardOutput.value); });
+        document.querySelector('[data-share-cartilla]')?.addEventListener('click', async () => {
+            if (navigator.share) await navigator.share({title:'Cartilla SIGO',text:cardOutput.value});
+            else await navigator.clipboard.writeText(cardOutput.value);
+        });
+    }
+    document.querySelector('[data-share-achievements]')?.addEventListener('click', async () => {
+        const text = Array.from(document.querySelectorAll('.badge-stats .stat')).map((card) => `${card.querySelector('span')?.textContent}: ${card.querySelector('strong')?.textContent}`).join(' · ');
+        if (navigator.share) await navigator.share({ title: 'Mis insignias SIGO', text });
+        else await navigator.clipboard.writeText(text);
     });
 })();

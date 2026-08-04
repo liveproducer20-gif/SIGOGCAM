@@ -189,3 +189,53 @@ def active_eas() -> list[dict]:
                 """
             )
         return _rows(cursor)
+
+
+def get_temp_cp(user_id: int) -> dict:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("SELECT TOP 1 nombre_cp FROM dbo.cartilla_temp_cp WHERE usuario_id=? ORDER BY id DESC",user_id)
+        row=cursor.fetchone(); return {"nombreCp":row.nombre_cp if row else ""}
+
+
+def save_temp_cp(user_id: int, name: str) -> None:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("DELETE FROM dbo.cartilla_temp_cp WHERE usuario_id=?",user_id)
+        cursor.execute("INSERT INTO dbo.cartilla_temp_cp(usuario_id,nombre_cp,fecha_creacion) VALUES(?,?,SYSDATETIME())",user_id,name)
+
+
+def police_servers(eas_id: int | None = None) -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("SELECT id,eas_id,nombre,activo FROM dbo.servidores_policiales WHERE activo=1 AND (? IS NULL OR eas_id=?) ORDER BY nombre",eas_id,eas_id)
+        return _rows(cursor)
+
+
+def create_police_server(eas_id: int, name: str) -> int:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("INSERT INTO dbo.servidores_policiales(eas_id,nombre,activo,fecha_creacion) OUTPUT INSERTED.id VALUES(?,?,1,SYSDATETIME())",eas_id,name)
+        return int(cursor.fetchone()[0])
+
+
+def eas_addresses(eas_id: int) -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("SELECT id,eas_id,direccion,activo FROM dbo.eas_direcciones WHERE eas_id=? AND ISNULL(activo,1)=1 ORDER BY direccion",eas_id)
+        return _rows(cursor)
+
+
+def create_eas_address(eas_id: int, address: str) -> int:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("INSERT INTO dbo.eas_direcciones(eas_id,direccion,activo,fecha_creacion) OUTPUT INSERTED.id VALUES(?,?,1,SYSDATETIME())",eas_id,address)
+        return int(cursor.fetchone()[0])
+
+
+def eas_mobile_assignments() -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("""SELECT a.id,a.eas_id,e.codigo AS eas_codigo,e.nombre AS eas_nombre,a.movil_id,m.numero_movil,m.placa
+                          FROM dbo.movil_eas_asignaciones a INNER JOIN dbo.eas_estaciones e ON e.id=a.eas_id
+                          INNER JOIN dbo.moviles m ON m.id=a.movil_id WHERE a.activo=1 ORDER BY e.codigo,m.numero_movil""")
+        return _rows(cursor)
+
+
+def control_chief() -> dict:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("SELECT TOP 1 valor FROM dbo.configuracion_institucional WHERE clave IN ('JEFE_CONTROL_MUNICIPAL','jefe_control_municipal') ORDER BY id DESC")
+        row=cursor.fetchone(); return {"nombre":row.valor if row else "Jefe de Control Municipal"}

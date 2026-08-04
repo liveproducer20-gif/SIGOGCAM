@@ -18,11 +18,13 @@ final class EventosController
 
         $items = [];
         $tipos = [];
+        $personal = [];
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $response = $api->get('eventos');
             $items = $response['datos'] ?? [];
             $tipos = $api->get('catalogos/TIPOS_EVENTO')['datos'] ?? [];
+            $personal = $api->get('personal/operativos')['datos'] ?? [];
         } catch (\Throwable $exception) {
             $error = $error ?? $exception->getMessage();
         }
@@ -30,6 +32,7 @@ final class EventosController
         View::render('eventos/index', [
             'items' => $items,
             'tipos' => $tipos,
+            'personal' => $personal,
             'error' => $error,
             'success' => $success,
         ]);
@@ -51,7 +54,7 @@ final class EventosController
             'descripcion' => trim($_POST['descripcion'] ?? ''),
             'prioridad' => trim($_POST['prioridad'] ?? ''),
             'notificar' => isset($_POST['notificar']),
-            'personalIds' => [],
+            'personalIds' => array_map('intval', $_POST['personal_ids'] ?? []),
         ];
 
         $image = $this->fileAsDataUri('imagen');
@@ -71,8 +74,9 @@ final class EventosController
 
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $api->post('eventos', $payload);
-            $this->index(null, 'Evento creado correctamente.');
+            $id=(int)($_POST['id'] ?? 0);
+            if ($id > 0) $api->put("eventos/{$id}", $payload); else $api->post('eventos', $payload);
+            $this->index(null, $id > 0 ? 'Evento actualizado correctamente.' : 'Evento creado correctamente.');
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
@@ -98,6 +102,13 @@ final class EventosController
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
+    }
+
+    public function status(): void
+    {
+        $id=(int)($_POST['id'] ?? 0);
+        try { (new ApiClient(Config::get('API_BASE_URL'),AuthSession::token()))->put("eventos/{$id}/estado",['estado'=>trim($_POST['estado'] ?? 'NUEVO')]); $this->index(null,'Estado actualizado correctamente.'); }
+        catch (\Throwable $exception) { $this->index($exception->getMessage()); }
     }
 
     private function fileAsDataUri(string $field): ?array

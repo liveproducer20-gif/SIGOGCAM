@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.core.responses import ok
-from app.middleware.auth import current_user
+from app.middleware.auth import current_user, require_permission
 from app.modules.configuracion.repository import (
     all_permissions,
     all_modules,
@@ -17,10 +17,11 @@ from app.modules.configuracion.repository import (
     save_menu_configuration,
     save_role_condition,
     update_role_permissions,
+    configuration_audit, create_role_version, role_fields, role_versions, save_role_fields, system_fields,
 )
 
 
-router = APIRouter(tags=["configuracion"])
+router = APIRouter(tags=["configuracion"], dependencies=[Depends(require_permission("configuracion.ver"))])
 
 
 @router.get("/mi-estructura")
@@ -92,3 +93,22 @@ def guardar_condicion_rol(role_id: int, payload: dict, user: dict = Depends(curr
 def eliminar_condicion_rol(role_id: int, condition_id: int, user: dict = Depends(current_user)):
     delete_role_condition(role_id, condition_id)
     return ok(None, "Condición desactivada correctamente")
+
+
+@router.get("/roles/{role_id}/campos")
+def campos_rol(role_id:int,user:dict=Depends(current_user)): return ok(role_fields(role_id))
+
+@router.put("/roles/{role_id}/campos")
+def guardar_campos(role_id:int,payload:dict,user:dict=Depends(current_user)): save_role_fields(role_id,payload.get("items") or []); return ok(None,"Campos actualizados correctamente")
+
+@router.get("/roles/{role_id}/versiones")
+def versiones(role_id:int,user:dict=Depends(current_user)): return ok(role_versions(role_id))
+
+@router.post("/roles/{role_id}/versiones",status_code=201)
+def crear_version(role_id:int,payload:dict,user:dict=Depends(current_user)): return {**ok(None,"Versión creada correctamente"),"id":create_role_version(role_id,int(user["id"]),payload.get("comentario"))}
+
+@router.get("/auditoria")
+def auditoria(rolId:int|None=None,limite:int=100,user:dict=Depends(current_user)): return ok(configuration_audit(rolId,min(limite,500)))
+
+@router.get("/campos-sistema")
+def campos_sistema(user:dict=Depends(current_user)): return ok(system_fields())

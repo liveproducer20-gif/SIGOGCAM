@@ -42,6 +42,7 @@ def list_events(user_id: int | None = None) -> list[dict]:
             p.nombre_completo AS creado_por_nombre,
             te.id AS tipo_evento_id,
             te.nombre AS tipo_evento,
+            STUFF((SELECT ','+CONVERT(NVARCHAR(20),epx.personal_id) FROM dbo.evento_personal epx WHERE epx.evento_id=e.id FOR XML PATH(''),TYPE).value('.','NVARCHAR(4000)'),1,1,'') AS personal_ids,
             (
                 SELECT COUNT(1)
                 FROM dbo.evento_personal ep
@@ -179,6 +180,23 @@ def create_event(data: dict) -> int:
                 call_status_id,
             )
         return event_id
+
+
+def update_event(event_id: int, data: dict) -> None:
+    with get_connection() as connection:
+        cursor=connection.cursor()
+        estado_id=_catalog_detail_id(connection,"ESTADOS_EVENTO",data.get("estado") or "NUEVO")
+        cursor.execute("""UPDATE dbo.eventos SET titulo=?,tipo_evento_id=?,fecha_inicio=?,fecha_fin=?,lugar=?,
+                          descripcion=?,prioridad=?,imagen_url=?,pdf_nombre=?,pdf_url=?,notificar=?,
+                          estado_evento_id=COALESCE(?,estado_evento_id),fecha_actualizacion=SYSDATETIME() WHERE id=?""",
+                       data["titulo"],data["tipoEventoId"],data["fechaInicio"],data["fechaFin"],data["lugar"],
+                       data.get("descripcion"),data.get("prioridad"),data.get("imagenUrl"),data.get("pdfNombre"),data.get("pdfUrl"),
+                       1 if data.get("notificar",True) else 0,estado_id,event_id)
+        cursor.execute("DELETE FROM dbo.evento_personal WHERE evento_id=?",event_id)
+        for person_id in data.get("personalIds") or []:
+            status_id=_catalog_detail_id(connection,"ESTADOS_CONVOCATORIA","PENDIENTE")
+            cursor.execute("""INSERT INTO dbo.evento_personal(evento_id,personal_id,fecha_convocatoria,estado_convocatoria_id)
+                              VALUES(?,?,SYSDATETIME(),?)""",event_id,int(person_id),status_id)
 
 
 def update_status(event_id: int, status: str) -> None:

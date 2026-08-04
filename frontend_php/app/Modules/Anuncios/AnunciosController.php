@@ -17,16 +17,19 @@ final class AnunciosController
         }
 
         $items = [];
+        $personal = [];
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $response = $api->get('anuncios');
             $items = $response['datos'] ?? [];
+            $personal = $api->get('personal/operativos')['datos'] ?? [];
         } catch (\Throwable $exception) {
             $error = $error ?? $exception->getMessage();
         }
 
         View::render('anuncios/index', [
             'items' => $items,
+            'personal' => $personal,
             'error' => $error,
             'success' => $success,
         ]);
@@ -55,15 +58,17 @@ final class AnunciosController
                 'prioridad' => trim($_POST['prioridad'] ?? 'Normal'),
                 'publicado' => isset($_POST['publicado']),
                 'notificar' => isset($_POST['notificar']),
-                'personalIds' => [],
+                'fechaExpiracion' => trim($_POST['fecha_expiracion'] ?? '') ?: null,
+                'personalIds' => array_map('intval', $_POST['personal_ids'] ?? []),
             ];
             $image = $this->fileAsDataUri('imagen');
             if ($image !== null) {
                 $payload['imagenNombre'] = $image['name'];
                 $payload['imagenUrl'] = $image['data'];
             }
-            $api->post('anuncios', $payload);
-            $this->index(null, 'Anuncio creado correctamente.');
+            $id=(int)($_POST['id'] ?? 0);
+            if ($id > 0) $api->put("anuncios/{$id}",$payload); else $api->post('anuncios', $payload);
+            $this->index(null, $id > 0 ? 'Anuncio actualizado correctamente.' : 'Anuncio creado correctamente.');
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
@@ -89,6 +94,13 @@ final class AnunciosController
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
+    }
+
+    public function publish(): void
+    {
+        $id=(int)($_POST['id'] ?? 0);
+        try { (new ApiClient(Config::get('API_BASE_URL'),AuthSession::token()))->put("anuncios/{$id}/publicado",['publicado'=>($_POST['publicado'] ?? '0')==='1']); $this->index(null,'Publicación actualizada.'); }
+        catch (\Throwable $exception) { $this->index($exception->getMessage()); }
     }
 
     private function fileAsDataUri(string $field): ?array

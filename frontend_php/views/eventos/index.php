@@ -1,96 +1,11 @@
-<section class="dashboard">
-    <header class="topbar">
-        <div>
-            <h1>Eventos</h1>
-            <p>Gestión de capacitaciones, reuniones y operativos.</p>
-        </div>
-        <a class="button-link" href="/dashboard">Volver</a>
-    </header>
-
-    <?php if (!empty($error)): ?>
-        <div class="alert"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <?php if (!empty($success)): ?>
-        <div class="success"><?= htmlspecialchars($success) ?></div>
-    <?php endif; ?>
-
-    <form class="work-card" method="post" action="/eventos" enctype="multipart/form-data">
-        <div class="form-grid">
-            <label>Título<input type="text" name="titulo" required></label>
-            <label>Tipo de evento
-                <select name="tipo_evento_id" required>
-                    <option value="">Seleccione</option>
-                    <?php foreach (($tipos ?? []) as $tipo): ?>
-                        <option value="<?= (int)($tipo['id'] ?? 0) ?>"><?= htmlspecialchars($tipo['nombre'] ?? '') ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </label>
-            <label>Fecha inicio<input type="datetime-local" name="fecha_inicio" required></label>
-            <label>Fecha fin<input type="datetime-local" name="fecha_fin" required></label>
-            <label>Prioridad
-                <select name="prioridad">
-                    <option>Normal</option>
-                    <option>Alta</option>
-                    <option>Media</option>
-                    <option>Baja</option>
-                </select>
-            </label>
-        </div>
-        <label>Lugar<input type="text" name="lugar" required></label>
-        <label>Descripción<textarea name="descripcion" rows="4"></textarea></label>
-        <div class="form-grid">
-            <label>Imagen<input type="file" name="imagen" accept="image/*"></label>
-            <label>PDF<input type="file" name="pdf" accept="application/pdf"></label>
-        </div>
-        <label class="check-row"><input type="checkbox" name="notificar" checked> Notificar</label>
-        <button type="submit">Crear evento</button>
-    </form>
-
-    <div class="table-card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Evento</th>
-                    <th>Tipo</th>
-                    <th>Fecha</th>
-                    <th>Lugar</th>
-                    <th>Estado</th>
-                    <th>Adjuntos</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($items as $item): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($item['titulo'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($item['tipo_evento'] ?? '') ?></td>
-                        <td><?= htmlspecialchars((string) ($item['fecha_inicio'] ?? '')) ?></td>
-                        <td><?= htmlspecialchars($item['lugar'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($item['estado'] ?? '') ?></td>
-                        <td>
-                            <?php if (!empty($item['imagen_url'])): ?>
-                                <details>
-                                    <summary>Imagen</summary>
-                                    <img class="image-preview" src="<?= htmlspecialchars($item['imagen_url']) ?>" alt="Imagen del evento">
-                                </details>
-                            <?php endif; ?>
-                            <?php if (!empty($item['pdf_url'])): ?>
-                                <details>
-                                    <summary>PDF</summary>
-                                    <iframe class="pdf-preview" src="<?= htmlspecialchars($item['pdf_url']) ?>" title="PDF del evento"></iframe>
-                                </details>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <form method="post" action="/eventos/eliminar" class="inline-form">
-                                <input type="hidden" name="id" value="<?= (int)($item['id'] ?? 0) ?>">
-                                <button type="submit" class="danger">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
+<?php
+$e=static fn(mixed $v):string=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$json=static fn(array $v):string=>htmlspecialchars((string)json_encode($v,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),ENT_QUOTES,'UTF-8');
+$perms=$usuarioActual['permisos']??[];$admin=str_contains(strtoupper((string)($usuarioActual['rolNombre']??$usuarioActual['rol']??'')),'ADMINISTRADOR');$can=static fn(string $p):bool=>$admin||in_array($p,$perms,true);
+?>
+<section class="module-workspace events-workspace">
+<?php if ($error): ?><div class="alert"><?= $e($error) ?></div><?php endif; ?><?php if ($success): ?><div class="success"><?= $e($success) ?></div><?php endif; ?>
+<header class="module-heading"><div><span class="eyebrow">Programación institucional</span><h2>Eventos</h2><p>Capacitaciones, reuniones y operativos con convocatoria de personal.</p></div><div class="module-metrics"><strong><?= count($items) ?></strong><span>eventos registrados</span></div></header>
+<?php if ($can('eventos.crear')||$can('eventos.editar')): ?><form class="form-panel module-form" method="post" action="/eventos" enctype="multipart/form-data" id="form-evento"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nuevo evento</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>Título<input name="titulo" required></label><label>Tipo<select name="tipo_evento_id" required><option value="">Seleccione</option><?php foreach($tipos as $tipo): ?><option value="<?= (int)$tipo['id'] ?>"><?= $e($tipo['nombre']) ?></option><?php endforeach; ?></select></label><label>Prioridad<select name="prioridad"><option>Normal</option><option>Importante</option><option>Urgente</option></select></label><label>Inicio<input type="datetime-local" name="fecha_inicio" required></label><label>Fin<input type="datetime-local" name="fecha_fin" required></label><label>Lugar<input name="lugar" required></label><label class="span-2">Descripción<textarea name="descripcion" rows="3"></textarea></label><label>Personal convocado<select name="personal_ids[]" multiple size="5"><?php foreach($personal as $person): ?><option value="<?= (int)$person['id'] ?>"><?= $e($person['nombre_completo']) ?></option><?php endforeach; ?></select></label><label>Imagen<input type="file" name="imagen" accept="image/*"></label><label>PDF<input type="file" name="pdf" accept="application/pdf"></label><label class="check-row"><input type="checkbox" name="notificar" checked> Notificar</label></div><button>Guardar evento</button></form><?php endif; ?>
+<section class="table-wrap"><table><thead><tr><th>Evento</th><th>Tipo</th><th>Fecha</th><th>Lugar</th><th>Prioridad</th><th>Convocados</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach($items as $item): $payload=['id'=>$item['id'],'titulo'=>$item['titulo'],'tipo_evento_id'=>$item['tipo_evento_id'],'fecha_inicio'=>str_replace(' ','T',substr((string)$item['fecha_inicio'],0,16)),'fecha_fin'=>str_replace(' ','T',substr((string)$item['fecha_fin'],0,16)),'lugar'=>$item['lugar'],'descripcion'=>$item['descripcion'],'prioridad'=>$item['prioridad'],'personal_ids[]'=>array_filter(explode(',',(string)($item['personal_ids']??''))),'notificar'=>(bool)$item['notificar']]; ?><tr><td><strong><?= $e($item['titulo']) ?></strong><small><?= $e($item['creado_por_nombre']) ?></small></td><td><?= $e($item['tipo_evento']) ?></td><td><?= $e(substr((string)$item['fecha_inicio'],0,16)) ?></td><td><?= $e($item['lugar']) ?></td><td><span class="priority-pill"><?= $e($item['prioridad']) ?></span></td><td><?= (int)$item['confirmados'] ?> / <?= (int)$item['convocados'] ?></td><td><span class="status-pill <?= $item['estado']==='EN_CURSO'?'is-active':'' ?>"><?= $e(str_replace('_',' ',$item['estado'])) ?></span></td><td class="actions"><?php if($can('eventos.editar')): ?><button type="button" class="secondary" data-edit-target="#form-evento" data-payload="<?= $json($payload) ?>">Editar</button><form class="inline-form" method="post" action="/eventos/estado"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><select name="estado" onchange="this.form.submit()"><option>Estado…</option><option value="PLANIFICADO">Planificado</option><option value="EN_CURSO">En curso</option><option value="FINALIZADO">Finalizado</option><option value="CANCELADO">Cancelado</option></select></form><?php endif; ?><?php if($can('eventos.eliminar')): ?><form class="inline-form" method="post" action="/eventos/eliminar"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Eliminar</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
 </section>

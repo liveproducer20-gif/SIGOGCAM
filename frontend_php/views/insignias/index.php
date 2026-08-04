@@ -1,52 +1,11 @@
 <?php
-$badges = $progress['insignias'] ?? [];
+$badges=$progress['insignias']??[];$e=static fn(mixed $v):string=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+$next=$progress['siguiente']??null;$remaining=$next?max(0,(int)$next['meta_cartillas']-(int)($progress['total_cartillas_generadas']??0)):0;
+$levels=[];foreach($badges as $badge){$levels[$badge['categoria']?:'General'][]=$badge;}
 ?>
-<section class="page-header">
-    <div>
-        <p class="eyebrow">Rendimiento</p>
-        <h1>Mis insignias</h1>
-    </div>
-    <a class="button secondary" href="/dashboard">Volver</a>
-</section>
-
-<?php if ($error): ?>
-    <div class="alert error"><?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
-
-<section class="stats-grid">
-    <article class="stat"><span>Total cartillas</span><strong><?= (int)($progress['total_cartillas_generadas'] ?? 0) ?></strong></article>
-    <article class="stat"><span>Desbloqueadas</span><strong><?= (int)($progress['desbloqueadas'] ?? 0) ?></strong></article>
-    <article class="stat"><span>Pendientes</span><strong><?= (int)($progress['pendientes'] ?? 0) ?></strong></article>
-</section>
-
-<section class="content-grid">
-    <div>
-        <h2>Progreso de insignias</h2>
-        <div class="badge-grid">
-            <?php foreach ($badges as $badge): ?>
-                <article class="badge-card <?= !empty($badge['desbloqueada']) ? 'is-open' : '' ?>">
-                    <strong><?= htmlspecialchars($badge['titulo'] ?? '') ?></strong>
-                    <span><?= htmlspecialchars((string)($badge['meta_cartillas'] ?? 0)) ?> cartillas</span>
-                    <progress max="100" value="<?= htmlspecialchars((string)($badge['porcentaje'] ?? 0)) ?>"></progress>
-                </article>
-            <?php endforeach; ?>
-        </div>
-    </div>
-    <aside>
-        <h2>Ranking</h2>
-        <div class="table-wrap compact">
-            <table>
-                <thead><tr><th>#</th><th>Servidor</th><th>Cartillas</th></tr></thead>
-                <tbody>
-                <?php foreach ($ranking as $row): ?>
-                    <tr>
-                        <td><?= (int)($row['posicion'] ?? 0) ?></td>
-                        <td><?= htmlspecialchars($row['nombre_completo'] ?? '') ?></td>
-                        <td><?= (int)($row['total_cartillas_generadas'] ?? 0) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </aside>
+<section class="module-workspace badges-workspace"><?php if($error): ?><div class="alert"><?= $e($error) ?></div><?php endif; ?>
+<header class="badge-hero"><div><span class="eyebrow">Trayectoria operativa</span><h2>Mis insignias</h2><p>Cada cartilla registrada aporta al progreso institucional.</p></div><div class="badge-hero-medal">★</div><button type="button" data-share-achievements>Compartir progreso</button></header>
+<section class="stats-grid badge-stats"><article class="stat"><span>Cartillas</span><strong><?= (int)($progress['total_cartillas_generadas']??0) ?></strong></article><article class="stat"><span>Desbloqueadas</span><strong><?= (int)($progress['desbloqueadas']??0) ?></strong></article><article class="stat"><span>Pendientes</span><strong><?= (int)($progress['pendientes']??0) ?></strong></article><article class="stat"><span>Para la siguiente</span><strong><?= $remaining ?></strong></article></section>
+<?php if($next): ?><section class="next-achievement"><div><span>Próximo logro</span><h3><?= $e($next['titulo']) ?></h3><p><?= $e($next['descripcion']) ?></p></div><div><strong><?= (int)($progress['total_cartillas_generadas']??0) ?> / <?= (int)$next['meta_cartillas'] ?></strong><progress max="<?= max(1,(int)$next['meta_cartillas']) ?>" value="<?= (int)($progress['total_cartillas_generadas']??0) ?>"></progress></div></section><?php endif; ?>
+<section class="badges-layout"><div class="achievement-levels"><?php foreach($levels as $category=>$items): ?><section><header><h3><?= $e($category) ?></h3><span><?= count($items) ?> insignias</span></header><div class="badge-grid"><?php foreach($items as $badge): ?><article class="badge-card <?= $badge['desbloqueada']?'is-open':'' ?>"><i><?= $badge['desbloqueada']?'★':'◇' ?></i><strong><?= $e($badge['titulo']) ?></strong><p><?= $e($badge['descripcion']) ?></p><span><?= (int)$badge['meta_cartillas'] ?> cartillas</span><progress max="100" value="<?= $e($badge['porcentaje']) ?>"></progress><?php if($badge['fecha_desbloqueo']): ?><small>Lograda: <?= $e(substr((string)$badge['fecha_desbloqueo'],0,10)) ?></small><?php endif; ?></article><?php endforeach; ?></div></section><?php endforeach; ?></div><aside class="ranking-panel"><h3>Ranking institucional</h3><div class="ranking-list"><?php foreach($ranking as $row): ?><article><b><?= (int)$row['posicion'] ?></b><span><strong><?= $e($row['nombre_completo']) ?></strong><small><?= $e($row['rol']??'') ?></small></span><em><?= (int)$row['total_cartillas_generadas'] ?></em></article><?php endforeach; ?></div></aside></section>
 </section>

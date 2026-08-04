@@ -1,56 +1,27 @@
-<section class="page-header">
-    <div>
-        <p class="eyebrow">Atención interna</p>
-        <h1>Alertas / Soporte</h1>
+<?php $e=static fn(mixed $v):string=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8'); ?>
+<section class="support-workspace">
+<?php if ($message): ?><div class="success"><?= $e($message) ?></div><?php endif; ?>
+<?php if ($error): ?><div class="alert error"><?= $e($error) ?></div><?php endif; ?>
+<section class="stats-grid support-stats">
+    <?php foreach ([['Total','total'],['Nuevas','nuevos'],['En proceso','en_proceso'],['Resueltas','resueltos'],['Críticas','criticas'],['Respuesta prom.','promedio_minutos']] as [$label,$key]): ?><article class="stat"><span><?= $label ?></span><strong><?= (int)($stats[$key] ?? 0) ?><?= $key==='promedio_minutos' ? ' min' : '' ?></strong></article><?php endforeach; ?>
+</section>
+<section class="support-layout">
+    <div class="support-main">
+        <form method="post" action="/soporte" enctype="multipart/form-data" class="form-panel support-form">
+            <div class="admin-form-title"><h2>Nueva alerta</h2><span class="eyebrow">Reporte institucional</span></div>
+            <div class="form-grid"><label>Título<input name="titulo" required minlength="5" maxlength="200"></label><label>Módulo<select name="modulo" required><?php foreach (['Eventos','Cartillas','Personal','Roles','Lugares','Rutas','Grados','EAS','Móviles','Asignaciones','Insignias','Reportes','Configuración','General'] as $module): ?><option><?= $module ?></option><?php endforeach; ?></select></label><label>Prioridad<select name="prioridad"><option>Media</option><option>Alta</option><option>Baja</option><option>Crítica</option></select></label><label>Evidencia<input type="file" name="imagen" accept="image/png,image/jpeg,image/webp"></label></div>
+            <label>Descripción<textarea name="descripcion" required minlength="20" maxlength="3000" rows="4"></textarea></label><button type="submit">Registrar alerta</button>
+        </form>
+        <div class="table-wrap"><table><thead><tr><th>Código</th><th>Título</th><th>Usuario</th><th>Módulo</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead><tbody><?php foreach ($tickets as $ticket): ?><tr><td><strong><?= $e($ticket['codigo_alerta']) ?></strong></td><td><?= $e($ticket['titulo']) ?></td><td><?= $e($ticket['usuario_nombre']) ?></td><td><?= $e($ticket['modulo']) ?></td><td><span class="priority-pill priority-<?= strtolower(str_replace(['í',' '],['i','-'],(string)$ticket['prioridad'])) ?>"><?= $e($ticket['prioridad']) ?></span></td><td><span class="status-pill <?= $ticket['estado']==='Resuelto'?'is-active':'' ?>"><?= $e($ticket['estado']) ?></span></td><td><?= $e(substr((string)$ticket['fecha_creacion'],0,16)) ?></td><td><a class="table-action" href="/soporte?id=<?= (int)$ticket['id'] ?>">Ver detalle</a></td></tr><?php endforeach; ?></tbody></table></div>
     </div>
-    <a class="button secondary" href="/dashboard">Volver</a>
-</section>
-
-<?php if ($message): ?>
-    <div class="alert"><?= htmlspecialchars($message) ?></div>
-<?php endif; ?>
-<?php if ($error): ?>
-    <div class="alert error"><?= htmlspecialchars($error) ?></div>
-<?php endif; ?>
-
-<section class="stats-grid">
-    <article class="stat"><span>Total</span><strong><?= (int)($stats['total'] ?? 0) ?></strong></article>
-    <article class="stat"><span>Nuevas</span><strong><?= (int)($stats['nuevos'] ?? 0) ?></strong></article>
-    <article class="stat"><span>En proceso</span><strong><?= (int)($stats['en_proceso'] ?? 0) ?></strong></article>
-    <article class="stat"><span>Resueltas</span><strong><?= (int)($stats['resueltos'] ?? 0) ?></strong></article>
-</section>
-
-<section class="split-panel">
-    <form method="post" action="/soporte" class="form-panel">
-        <h2>Nueva alerta</h2>
-        <label>Título <input name="titulo" required minlength="3"></label>
-        <label>Módulo <input name="modulo" value="Plataforma" required></label>
-        <label>Prioridad
-            <select name="prioridad">
-                <option>Media</option>
-                <option>Alta</option>
-                <option>Baja</option>
-                <option>Crítica</option>
-            </select>
-        </label>
-        <label>Descripción <textarea name="descripcion" required rows="5"></textarea></label>
-        <button class="button" type="submit">Registrar alerta</button>
-    </form>
-
-    <div class="table-wrap">
-        <table>
-            <thead><tr><th>Código</th><th>Título</th><th>Módulo</th><th>Prioridad</th><th>Estado</th></tr></thead>
-            <tbody>
-            <?php foreach ($tickets as $ticket): ?>
-                <tr>
-                    <td><?= htmlspecialchars($ticket['codigo_alerta'] ?? '') ?></td>
-                    <td><?= htmlspecialchars($ticket['titulo'] ?? '') ?></td>
-                    <td><?= htmlspecialchars($ticket['modulo'] ?? '') ?></td>
-                    <td><?= htmlspecialchars($ticket['prioridad'] ?? '') ?></td>
-                    <td><span class="pill"><?= htmlspecialchars($ticket['estado'] ?? '') ?></span></td>
-                </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
+    <aside class="support-detail">
+    <?php if ($selected): ?>
+        <header><span class="eyebrow"><?= $e($selected['codigo_alerta']) ?></span><h2><?= $e($selected['titulo']) ?></h2><p><?= $e($selected['usuario_nombre'].' · '.$selected['modulo']) ?></p></header>
+        <div class="support-description"><?= nl2br($e($selected['descripcion'])) ?></div>
+        <?php if (!empty($selected['imagen'])): ?><img class="support-evidence" src="<?= $e($selected['imagen']) ?>" alt="Evidencia adjunta"><?php endif; ?>
+        <?php if ($isManager): ?><form method="post" action="/soporte/actualizar" class="support-update"><input type="hidden" name="id" value="<?= (int)$selected['id'] ?>"><label>Estado<select name="estado"><?php foreach (['Nuevo','En proceso','Pendiente','Resuelto','Cancelado'] as $value): ?><option <?= $selected['estado']===$value?'selected':'' ?>><?= $value ?></option><?php endforeach; ?></select></label><label>Prioridad<select name="prioridad"><?php foreach (['Crítica','Alta','Media','Baja'] as $value): ?><option <?= $selected['prioridad']===$value?'selected':'' ?>><?= $value ?></option><?php endforeach; ?></select></label><label>Asignado a<input name="asignado_nombre" value="<?= $e($selected['asignado_nombre'] ?? '') ?>"></label><button>Actualizar</button></form><?php endif; ?>
+        <section class="support-comments"><h3>Comentarios</h3><?php foreach (($selected['comentarios'] ?? []) as $comment): ?><article><strong><?= $e($comment['usuario_nombre']) ?></strong><small><?= $e($comment['fecha_creacion']) ?><?= $comment['es_interno']?' · Interno':'' ?></small><p><?= nl2br($e($comment['comentario'])) ?></p></article><?php endforeach; ?><form method="post" action="/soporte/comentar"><input type="hidden" name="id" value="<?= (int)$selected['id'] ?>"><textarea name="comentario" required minlength="2" rows="3" placeholder="Escriba un comentario…"></textarea><?php if ($isManager): ?><label class="check-row"><input type="checkbox" name="es_interno"> Comentario interno</label><?php endif; ?><button>Comentar</button></form></section>
+        <details class="support-history"><summary>Historial de cambios (<?= count($selected['historial'] ?? []) ?>)</summary><?php foreach (($selected['historial'] ?? []) as $history): ?><p><strong><?= $e($history['accion']) ?></strong> · <?= $e($history['usuario_nombre']) ?><small><?= $e($history['fecha_creacion']) ?></small></p><?php endforeach; ?></details>
+    <?php else: ?><div class="empty-state"><strong>Seleccione una alerta</strong><p>Consulte su detalle, comentarios e historial.</p></div><?php endif; ?>
+    </aside>
+</section></section>

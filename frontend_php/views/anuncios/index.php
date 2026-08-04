@@ -1,75 +1,8 @@
-<section class="dashboard">
-    <header class="topbar">
-        <div>
-            <h1>Anuncios</h1>
-            <p>Publicaciones internas y novedades institucionales.</p>
-        </div>
-        <a class="button-link" href="/dashboard">Volver</a>
-    </header>
-
-    <?php if (!empty($error)): ?>
-        <div class="alert"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <?php if (!empty($success)): ?>
-        <div class="success"><?= htmlspecialchars($success) ?></div>
-    <?php endif; ?>
-
-    <form class="work-card" method="post" action="/anuncios" enctype="multipart/form-data">
-        <div class="form-grid">
-            <label>Título<input type="text" name="titulo" required></label>
-            <label>Prioridad
-                <select name="prioridad">
-                    <option>Normal</option>
-                    <option>Alta</option>
-                    <option>Media</option>
-                    <option>Baja</option>
-                </select>
-            </label>
-        </div>
-        <label>Descripción<textarea name="descripcion" rows="5" required></textarea></label>
-        <label>Imagen<input type="file" name="imagen" accept="image/*"></label>
-        <label class="check-row"><input type="checkbox" name="publicado" checked> Publicado</label>
-        <label class="check-row"><input type="checkbox" name="notificar" checked> Notificar</label>
-        <button type="submit">Crear anuncio</button>
-    </form>
-
-    <div class="table-card">
-        <table>
-            <thead>
-                <tr>
-                    <th>Título</th>
-                    <th>Prioridad</th>
-                    <th>Publicado</th>
-                    <th>Fecha</th>
-                    <th>Adjunto</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($items as $item): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($item['titulo'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($item['prioridad'] ?? '') ?></td>
-                        <td><?= !empty($item['publicado']) ? 'Sí' : 'No' ?></td>
-                        <td><?= htmlspecialchars((string) ($item['fecha_publicacion'] ?? '')) ?></td>
-                        <td>
-                            <?php if (!empty($item['imagen_url'])): ?>
-                                <details>
-                                    <summary>Imagen</summary>
-                                    <img class="image-preview" src="<?= htmlspecialchars($item['imagen_url']) ?>" alt="Imagen del anuncio">
-                                </details>
-                            <?php endif; ?>
-                        </td>
-                        <td>
-                            <form method="post" action="/anuncios/eliminar" class="inline-form">
-                                <input type="hidden" name="id" value="<?= (int)($item['id'] ?? 0) ?>">
-                                <button type="submit" class="danger">Eliminar</button>
-                            </form>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-</section>
+<?php
+$e=static fn(mixed $v):string=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');$json=static fn(array $v):string=>htmlspecialchars((string)json_encode($v,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),ENT_QUOTES,'UTF-8');
+$perms=$usuarioActual['permisos']??[];$admin=str_contains(strtoupper((string)($usuarioActual['rolNombre']??$usuarioActual['rol']??'')),'ADMINISTRADOR');$can=static fn(string $p):bool=>$admin||in_array($p,$perms,true);
+?>
+<section class="module-workspace announcements-workspace"><?php if($error): ?><div class="alert"><?= $e($error) ?></div><?php endif; ?><?php if($success): ?><div class="success"><?= $e($success) ?></div><?php endif; ?>
+<header class="module-heading"><div><span class="eyebrow">Comunicación interna</span><h2>Anuncios</h2><p>Publicaciones, destinatarios y vigencia de novedades institucionales.</p></div><div class="module-metrics"><strong><?= count($items) ?></strong><span>publicaciones</span></div></header>
+<?php if($can('anuncios.crear')||$can('anuncios.editar')): ?><form class="form-panel module-form" method="post" action="/anuncios" enctype="multipart/form-data" id="form-anuncio"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nuevo anuncio</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>Título<input name="titulo" required></label><label>Prioridad<select name="prioridad"><option>Normal</option><option>Importante</option><option>Urgente</option><option>Alta</option><option>Media</option><option>Baja</option></select></label><label>Expira<input type="datetime-local" name="fecha_expiracion"></label><label class="span-2">Descripción<textarea name="descripcion" rows="4" required></textarea></label><label>Destinatarios<select name="personal_ids[]" multiple size="5"><?php foreach($personal as $person): ?><option value="<?= (int)$person['id'] ?>"><?= $e($person['nombre_completo']) ?></option><?php endforeach; ?></select></label><label>Imagen<input type="file" name="imagen" accept="image/*"></label><label class="check-row"><input type="checkbox" name="publicado" checked> Publicado</label><label class="check-row"><input type="checkbox" name="notificar" checked> Notificar</label></div><button>Guardar anuncio</button></form><?php endif; ?>
+<section class="announcement-grid"><?php foreach($items as $item): $payload=['id'=>$item['id'],'titulo'=>$item['titulo'],'descripcion'=>$item['descripcion'],'prioridad'=>$item['prioridad'],'fecha_expiracion'=>$item['fecha_expiracion']?str_replace(' ','T',substr((string)$item['fecha_expiracion'],0,16)):'','personal_ids[]'=>array_filter(explode(',',(string)($item['personal_ids']??''))),'publicado'=>(bool)$item['publicado'],'notificar'=>(bool)$item['notificar']]; ?><article><header><span class="priority-pill"><?= $e($item['prioridad']) ?></span><span class="status-pill <?= $item['publicado']?'is-active':'' ?>"><?= $item['publicado']?'Publicado':'Borrador' ?></span></header><?php if($item['imagen_url']): ?><img src="<?= $e($item['imagen_url']) ?>" alt="Imagen del anuncio"><?php endif; ?><h3><?= $e($item['titulo']) ?></h3><p><?= nl2br($e($item['descripcion'])) ?></p><small>Publicado: <?= $e(substr((string)$item['fecha_publicacion'],0,16)) ?><?= $item['fecha_expiracion']?' · Expira: '.$e(substr((string)$item['fecha_expiracion'],0,16)):'' ?></small><footer><?php if($can('anuncios.editar')): ?><button type="button" class="secondary" data-edit-target="#form-anuncio" data-payload="<?= $json($payload) ?>">Editar</button><?php endif; ?><?php if($can('anuncios.publicar')): ?><form method="post" action="/anuncios/publicar"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><input type="hidden" name="publicado" value="<?= $item['publicado']?'0':'1' ?>"><button><?= $item['publicado']?'Ocultar':'Publicar' ?></button></form><?php endif; ?><?php if($can('anuncios.eliminar')): ?><form method="post" action="/anuncios/eliminar" class="inline-form"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Eliminar</button></form><?php endif; ?></footer></article><?php endforeach; ?></section></section>

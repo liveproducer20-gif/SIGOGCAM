@@ -40,7 +40,7 @@ def user_progress(user_id: int) -> dict:
 
         cursor.execute(
             """
-            SELECT i.id, i.codigo, i.titulo, i.descripcion, i.meta_cartillas, i.icono,
+            SELECT i.id, i.codigo, i.titulo, i.descripcion, i.meta_cartillas, i.categoria, i.icono,
                    ui.fecha_desbloqueo
             FROM dbo.insignias i
             LEFT JOIN dbo.usuario_insignias ui

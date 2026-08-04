@@ -6,6 +6,16 @@
     <a class="button secondary" href="/dashboard">Volver</a>
 </section>
 
+<section class="work-card full config-fields">
+    <div class="admin-form-title"><div><p class="eyebrow">Seguridad de datos</p><h2>Campos por rol</h2></div><span><?= count($fields ?? []) ?> campos</span></div>
+    <form method="post" action="/configuracion/campos"><input type="hidden" name="rol_id" value="<?= (int)$selectedRoleId ?>"><div class="table-wrap embedded"><table><thead><tr><th>Módulo</th><th>Campo</th><th>Clasificación</th><th>Nivel de acceso</th><th>Enmascarado</th></tr></thead><tbody><?php foreach(($fields ?? []) as $field): ?><tr><td><?= htmlspecialchars($field['modulo'] ?? '') ?></td><td><strong><?= htmlspecialchars($field['nombre'] ?? '') ?></strong><small><?= htmlspecialchars($field['codigo'] ?? '') ?></small></td><td><?= htmlspecialchars($field['clasificacion'] ?? '') ?></td><td><select name="fields[<?= (int)$field['campo_id'] ?>][nivel_acceso]"><?php foreach(['ninguno','lectura','edicion'] as $level): ?><option value="<?= $level ?>" <?= ($field['nivel_acceso']??'')===$level?'selected':'' ?>><?= ucfirst($level) ?></option><?php endforeach; ?></select></td><td><input type="checkbox" name="fields[<?= (int)$field['campo_id'] ?>][enmascarado]" <?= !empty($field['enmascarado'])?'checked':'' ?>></td></tr><?php endforeach; ?></tbody></table></div><button type="submit">Guardar campos</button></form>
+</section>
+
+<section class="content-grid config-history-grid">
+    <div class="work-card"><div class="admin-form-title"><div><p class="eyebrow">Respaldo lógico</p><h2>Versiones</h2></div></div><form method="post" action="/configuracion/versiones"><input type="hidden" name="rol_id" value="<?= (int)$selectedRoleId ?>"><label>Comentario<input name="comentario" placeholder="Motivo o alcance de esta versión"></label><button>Crear versión</button></form><div class="config-timeline"><?php foreach(($versions ?? []) as $item): ?><article><strong>v<?= (int)$item['version'] ?></strong><span><?= htmlspecialchars($item['estado']) ?></span><p><?= htmlspecialchars($item['comentario'] ?: 'Sin comentario') ?></p><small><?= htmlspecialchars($item['creado_por_nombre'] ?? 'Sistema') ?> · <?= htmlspecialchars($item['fecha_creacion']) ?></small></article><?php endforeach; ?></div></div>
+    <div class="work-card"><div class="admin-form-title"><div><p class="eyebrow">Trazabilidad</p><h2>Auditoría del rol</h2></div><span><?= count($audit ?? []) ?> eventos</span></div><div class="config-timeline audit"><?php foreach(($audit ?? []) as $item): ?><article><strong><?= htmlspecialchars($item['accion'] ?? '') ?></strong><span><?= htmlspecialchars($item['rol'] ?? '') ?></span><p><?= htmlspecialchars($item['usuario'] ?? 'Sistema') ?></p><small><?= htmlspecialchars($item['fecha'] ?? '') ?> · <?= htmlspecialchars($item['ip'] ?? '') ?></small></article><?php endforeach; ?></div></div>
+</section>
+
 <?php if ($error): ?>
     <div class="alert error"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>

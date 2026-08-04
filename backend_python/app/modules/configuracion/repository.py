@@ -1,3 +1,4 @@
+import json
 from app.core.db import get_connection
 
 
@@ -309,3 +310,52 @@ def delete_role_condition(role_id: int, condition_id: int) -> None:
             condition_id,
             role_id,
         )
+
+
+def system_fields() -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("""SELECT cs.id,cs.modulo_id,ms.nombre AS modulo,cs.codigo,cs.nombre,cs.tipo_dato,cs.clasificacion,cs.estado
+                          FROM dbo.campos_sistema cs LEFT JOIN dbo.modulos_sistema ms ON ms.id=cs.modulo_id ORDER BY ms.nombre,cs.nombre""")
+        return _rows(cursor)
+
+
+def role_fields(role_id: int) -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("""SELECT cs.id AS campo_id,cs.codigo,cs.nombre,cs.tipo_dato,cs.clasificacion,ms.nombre AS modulo,
+                          ISNULL(rcp.nivel_acceso,'ninguno') AS nivel_acceso,ISNULL(rcp.enmascarado,0) AS enmascarado
+                          FROM dbo.campos_sistema cs LEFT JOIN dbo.modulos_sistema ms ON ms.id=cs.modulo_id
+                          LEFT JOIN dbo.rol_campos_permisos rcp ON rcp.campo_id=cs.id AND rcp.rol_id=? WHERE cs.estado=1 ORDER BY ms.nombre,cs.nombre""",role_id)
+        return _rows(cursor)
+
+
+def save_role_fields(role_id: int, items: list[dict]) -> None:
+    with get_connection() as connection:
+        cursor=connection.cursor()
+        for item in items:
+            cursor.execute("DELETE FROM dbo.rol_campos_permisos WHERE rol_id=? AND campo_id=?",role_id,int(item["campoId"]))
+            cursor.execute("INSERT INTO dbo.rol_campos_permisos(rol_id,campo_id,nivel_acceso,enmascarado) VALUES(?,?,?,?)",role_id,int(item["campoId"]),item.get("nivelAcceso") or "ninguno",1 if item.get("enmascarado") else 0)
+
+
+def role_versions(role_id: int) -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("""SELECT v.id,v.rol_id,v.version,v.estado,v.comentario,v.creado_por,p.nombre_completo AS creado_por_nombre,v.fecha_creacion
+                          FROM dbo.versiones_configuracion_roles v LEFT JOIN dbo.vw_personal_detalle p ON p.id=v.creado_por WHERE v.rol_id=? ORDER BY v.version DESC""",role_id)
+        return _rows(cursor)
+
+
+def create_role_version(role_id: int, user_id: int, comment: str | None) -> int:
+    snapshot={"menu":menu_configuration(role_id),"alcance":data_scopes(role_id),"campos":role_fields(role_id),"condiciones":role_conditions(role_id)}
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute("SELECT ISNULL(MAX(version),0)+1 FROM dbo.versiones_configuracion_roles WHERE rol_id=?",role_id); version=int(cursor.fetchone()[0])
+        cursor.execute("""INSERT INTO dbo.versiones_configuracion_roles(rol_id,version,estado,configuracion_json,comentario,creado_por,fecha_creacion)
+                          OUTPUT INSERTED.id VALUES(?,?,'ACTIVA',?,?,?,SYSDATETIME())""",role_id,version,json.dumps(snapshot,ensure_ascii=False,default=str),comment,user_id)
+        return int(cursor.fetchone()[0])
+
+
+def configuration_audit(role_id: int | None = None, limit: int = 100) -> list[dict]:
+    with get_connection() as connection:
+        cursor=connection.cursor(); cursor.execute(f"""SELECT TOP ({int(limit)}) a.id,a.usuario_id,p.nombre_completo AS usuario,a.accion,a.rol_afectado_id,r.nombre AS rol,
+                          a.valor_anterior,a.valor_nuevo,a.ip,a.dispositivo,a.fecha FROM dbo.auditoria_roles_permisos a
+                          LEFT JOIN dbo.vw_personal_detalle p ON p.id=a.usuario_id LEFT JOIN dbo.roles r ON r.id=a.rol_afectado_id
+                          WHERE (? IS NULL OR a.rol_afectado_id=?) ORDER BY a.fecha DESC""",role_id,role_id)
+        return _rows(cursor)

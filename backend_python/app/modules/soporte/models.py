@@ -14,3 +14,8 @@ class TicketUpdate(BaseModel):
     prioridad: str | None = None
     asignado_a: int | None = None
     asignado_nombre: str | None = None
+
+
+class CommentCreate(BaseModel):
+    comentario: str = Field(min_length=2, max_length=3000)
+    es_interno: bool = False

@@ -91,6 +91,17 @@ def create_announcement(data: dict) -> int:
         return announcement_id
 
 
+def update_announcement(announcement_id: int, data: dict) -> None:
+    with get_connection() as connection:
+        cursor=connection.cursor()
+        cursor.execute("""UPDATE dbo.anuncios SET titulo=?,descripcion=?,prioridad=?,fecha_expiracion=?,publicado=?,notificar=?,
+                          imagen_nombre=COALESCE(?,imagen_nombre),imagen_url=COALESCE(?,imagen_url),fecha_actualizacion=SYSDATETIME() WHERE id=?""",
+                       data["titulo"],data["descripcion"],data.get("prioridad") or "Normal",data.get("fechaExpiracion"),
+                       1 if data.get("publicado",True) else 0,1 if data.get("notificar",True) else 0,
+                       data.get("imagenNombre"),data.get("imagenUrl"),announcement_id)
+        _save_people(connection,announcement_id,data.get("personalIds") or [])
+
+
 def update_published(announcement_id: int, published: bool) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()

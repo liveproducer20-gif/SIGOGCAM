@@ -17,16 +17,28 @@ final class CartillasController
         }
 
         $eas = [];
+        $catalogs = [];
+        $assignments = [];
+        $tempCp = '';
+        $chief = '';
         $preview = $_POST['contenido'] ?? '';
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $eas = $api->get('cartillas/eas')['datos'] ?? [];
+            $catalogs = $api->get('cartillas/catalogos-operativos')['datos'] ?? [];
+            $assignments = $api->get('cartillas/asignaciones-eas-moviles')['datos'] ?? [];
+            $tempCp = $api->get('cartillas/temp/cp')['datos']['nombreCp'] ?? '';
+            $chief = $api->get('cartillas/jefe-control-municipal')['datos']['nombre'] ?? '';
         } catch (\Throwable $exception) {
             $error = $error ?? $exception->getMessage();
         }
 
         View::render('cartillas/index', [
             'eas' => $eas,
+            'catalogs' => $catalogs,
+            'assignments' => $assignments,
+            'tempCp' => $tempCp,
+            'chief' => $chief,
             'preview' => $preview,
             'error' => $error,
             'success' => $success,
@@ -56,7 +68,12 @@ final class CartillasController
             $response = $api->post('cartillas', [
                 'causa' => $causa,
                 'contenido' => $contenido,
+                'tipo' => trim($_POST['tipo_servicio'] ?? ''),
+                'subtipo' => trim($_POST['tipo_cartilla'] ?? ''),
+                'datos' => array_filter($_POST, static fn($key) => !in_array($key, ['contenido'], true), ARRAY_FILTER_USE_KEY),
             ]);
+            $_POST['contenido'] = $contenido;
+            if (!empty($_POST['cp'])) $api->put('cartillas/temp/cp',['nombreCp'=>trim($_POST['cp'])]);
 
             $total = $response['total_cartillas_generadas'] ?? null;
             $message = $total === null

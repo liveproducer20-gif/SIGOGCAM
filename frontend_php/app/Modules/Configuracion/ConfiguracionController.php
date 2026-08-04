@@ -24,6 +24,9 @@ final class ConfiguracionController
         $menu = [];
         $scopes = [];
         $conditions = [];
+        $fields = [];
+        $versions = [];
+        $audit = [];
         $message = $_GET['mensaje'] ?? null;
         $error = null;
 
@@ -40,6 +43,9 @@ final class ConfiguracionController
                 $menu = $api->get("configuracion/roles/{$selectedRoleId}/menu")['datos'] ?? [];
                 $scopes = $api->get("configuracion/roles/{$selectedRoleId}/alcance")['datos'] ?? [];
                 $conditions = $api->get("configuracion/roles/{$selectedRoleId}/condiciones")['datos'] ?? [];
+                $fields = $api->get("configuracion/roles/{$selectedRoleId}/campos")['datos'] ?? [];
+                $versions = $api->get("configuracion/roles/{$selectedRoleId}/versiones")['datos'] ?? [];
+                $audit = $api->get("configuracion/auditoria?rolId={$selectedRoleId}&limite=100")['datos'] ?? [];
             }
         } catch (\Throwable $exception) {
             $error = $exception->getMessage();
@@ -54,6 +60,9 @@ final class ConfiguracionController
             'menu' => $menu,
             'scopes' => $scopes,
             'conditions' => $conditions,
+            'fields' => $fields,
+            'versions' => $versions,
+            'audit' => $audit,
             'message' => $message,
             'error' => $error,
         ]);
@@ -130,6 +139,19 @@ final class ConfiguracionController
         } catch (\Throwable $exception) {
             header('Location: /configuracion?rol_id=' . $roleId . '&mensaje=' . urlencode($exception->getMessage()));
         }
+    }
+
+    public function updateFields(): void
+    {
+        $roleId=(int)($_POST['rol_id'] ?? 0); $items=[];
+        foreach($_POST['fields'] ?? [] as $fieldId=>$item) $items[]=['campoId'=>(int)$fieldId,'nivelAcceso'=>trim($item['nivel_acceso'] ?? 'ninguno'),'enmascarado'=>isset($item['enmascarado'])];
+        $this->sendConfig("configuracion/roles/{$roleId}/campos",['items'=>$items],$roleId,'Permisos de campos actualizados.');
+    }
+
+    public function createVersion(): void
+    {
+        $roleId=(int)($_POST['rol_id'] ?? 0);
+        $this->postConfig("configuracion/roles/{$roleId}/versiones",['comentario'=>trim($_POST['comentario'] ?? '')],$roleId,'Versión de configuración creada.');
     }
 
     private function sendConfig(string $path, array $payload, int $roleId, string $message): void
