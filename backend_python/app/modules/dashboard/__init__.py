@@ -1,0 +1,1 @@
+"""Indicadores del panel principal."""

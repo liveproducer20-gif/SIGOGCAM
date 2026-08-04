@@ -1,0 +1,34 @@
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+
+from app.core.config import settings
+
+
+bearer = HTTPBearer(auto_error=False)
+
+
+def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Sesion no autorizada")
+
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.jwt_secret,
+            algorithms=[settings.jwt_algorithm],
+        )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Sesion expirada o invalida") from None
+
+    return payload
+
+
+def require_permission(permission: str):
+    def checker(user: dict = Depends(current_user)) -> dict:
+        permissions = user.get("permisos") or []
+        if permission not in permissions:
+            raise HTTPException(status_code=403, detail="No tiene permiso para esta accion")
+        return user
+
+    return checker

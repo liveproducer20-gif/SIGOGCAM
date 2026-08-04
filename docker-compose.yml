@@ -1,9 +1,9 @@
-name: ${COMPOSE_PROJECT_NAME:-SIGO - Sistema Inteligente de Gestión Operativa}
+name: sigo-gcam
 
 services:
   database:
     image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
-    container_name: SIGO - Sistema Inteligente de Gestión Operativa-database
+    container_name: sigo-gcam-database
     hostname: database
     environment:
       ACCEPT_EULA: "Y"
@@ -34,11 +34,10 @@ services:
       retries: 30
       start_period: 30s
     restart: unless-stopped
-    stop_grace_period: 60s
 
   database-init:
     image: ${MSSQL_IMAGE:-mcr.microsoft.com/mssql/server:2025-CU5-ubuntu-24.04}
-    container_name: SIGO - Sistema Inteligente de Gestión Operativa-database-init
+    container_name: sigo-gcam-database-init
     environment:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
       DB_DATABASE: ${DB_DATABASE:-BITSAC}
@@ -60,79 +59,61 @@ services:
     entrypoint: ["/bin/bash", "/docker-entrypoint-initdb.d/init-database.sh"]
     restart: "no"
 
-  backend:
+  api:
     build:
-      context: ./backend
+      context: ./backend_python
       dockerfile: Dockerfile
-      target: production
-    container_name: SIGO - Sistema Inteligente de Gestión Operativa-backend
+    container_name: sigo-gcam-api
     environment:
-      NODE_ENV: production
-      PORT: 3000
-      TRUST_PROXY: 1
-      JSON_LIMIT: ${JSON_LIMIT:-25mb}
-      DB_DRIVER: FreeTDS
+      APP_ENV: production
+      API_PREFIX: /api
+      DB_DRIVER: ODBC Driver 18 for SQL Server
       DB_SERVER: database
-      DB_SQL_PORT: 1433
       DB_DATABASE: ${DB_DATABASE:-BITSAC}
       DB_USER: sa
       DB_PASSWORD: ${MSSQL_SA_PASSWORD:?Defina MSSQL_SA_PASSWORD en el archivo .env}
+      DB_TRUSTED_CONNECTION: "no"
       DB_ENCRYPT: "yes"
-      DB_TRUSTED_CONNECTION: "No"
-      DB_TRUST_SERVER_CERTIFICATE: "Yes"
-      DB_CONNECTION_TIMEOUT: ${DB_CONNECTION_TIMEOUT:-30}
+      DB_TRUST_SERVER_CERTIFICATE: "yes"
       JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en el archivo .env}
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
-    volumes:
-      - type: bind
-        source: ./backend/uploads
-        target: /app/uploads
+      - "${API_PORT:-8000}:8000"
     networks:
       - sigo_network
     depends_on:
       database-init:
         condition: service_completed_successfully
     healthcheck:
-      test:
-        - CMD
-        - node
-        - -e
-        - fetch('http://127.0.0.1:3000/api/probar-db').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/probar-db', timeout=5)\""]
       interval: 15s
       timeout: 5s
       retries: 10
       start_period: 20s
     restart: unless-stopped
-    init: true
 
-  frontend:
+  web:
     build:
-      context: ./mobile
+      context: ./frontend_php
       dockerfile: Dockerfile
-      args:
-        SIGO_API_BASE_URL: ${SIGO_API_BASE_URL:-/api}
-    container_name: SIGO - Sistema Inteligente de Gestión Operativa-frontend
+    container_name: sigo-gcam-web
+    environment:
+      APP_ENV: production
+      API_BASE_URL: http://api:8000/api
+      SESSION_NAME: sigo_gcam_session
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${WEB_PORT:-8080}:8080"
     networks:
       - sigo_network
     depends_on:
-      backend:
+      api:
         condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz >/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
     restart: unless-stopped
 
 networks:
   sigo_network:
-    name: SIGO - Sistema Inteligente de Gestión Operativa-network
+    name: sigo-gcam-network
     driver: bridge
 
 volumes:
   sqlserver_data:
-    name: SIGO - Sistema Inteligente de Gestión Operativa-sqlserver-data
+    name: sigo-gcam-sqlserver-data
