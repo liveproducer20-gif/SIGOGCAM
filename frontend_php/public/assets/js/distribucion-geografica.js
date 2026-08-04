@@ -107,7 +107,7 @@
         const personnel = (point.asignaciones || []).map(item => `<span class="geo-agent-chip"><span>${escapeHtml(item.agente)}</span><b>${escapeHtml(item.codigo)}</b></span>`).join('') || '<span class="geo-agent-chip">Sin personal asignado</span>';
         $('#geoDetail').innerHTML = `<header><h2>Información del punto</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
           <div class="geo-point-head"><div class="geo-point-avatar">${point.estado === 'SIN_ASIGNACION' ? '○' : '♟'}</div><div><span class="geo-status">${escapeHtml(stateText(point.estado))}</span><h3>${escapeHtml(point.nombre)}</h3><small>${escapeHtml(point.ubicacion_especifica)}</small></div></div>
-          <div class="geo-detail-list"><dl><dt>Distrito</dt><dd>${escapeHtml(point.distrito)}</dd><dt>Ruta</dt><dd>${escapeHtml(point.ruta)}</dd><dt>Sector</dt><dd>${escapeHtml(point.sector)}</dd><dt>Dirección o referencia</dt><dd>${escapeHtml(point.direccion)}</dd><dt>Tipo de servicio</dt><dd>${escapeHtml(point.tipo_servicio)}</dd><dt>Coordenadas</dt><dd>${escapeHtml(point.latitud)}, ${escapeHtml(point.longitud)}</dd><dt>Turno y horario</dt><dd>${escapeHtml(point.turno)} · ${timeText(point.hora_inicio)} - ${timeText(point.hora_fin)}</dd><dt>Cantidad requerida</dt><dd>${point.cantidad_requerida} agente(s)</dd><dt>Personal asignado (${(point.asignaciones || []).length})</dt><dd><div class="geo-agent-chips">${personnel}</div></dd><dt>Observaciones</dt><dd>${escapeHtml(point.observaciones || 'Sin observaciones')}</dd></dl></div>
+          <div class="geo-detail-list"><dl><dt>Distrito</dt><dd>${escapeHtml(point.distrito)}</dd><dt>Ruta</dt><dd>${escapeHtml(point.ruta)}</dd><dt>Dirección o referencia</dt><dd>${escapeHtml(point.direccion)}</dd><dt>Tipo de servicio</dt><dd>${escapeHtml(point.tipo_servicio)}</dd><dt>Coordenadas</dt><dd>${escapeHtml(point.latitud)}, ${escapeHtml(point.longitud)}</dd><dt>Turno y horario</dt><dd>${escapeHtml(point.turno)} · ${timeText(point.hora_inicio)} - ${timeText(point.hora_fin)}</dd><dt>Cantidad requerida</dt><dd>${point.cantidad_requerida} agente(s)</dd><dt>Personal asignado (${(point.asignaciones || []).length})</dt><dd><div class="geo-agent-chips">${personnel}</div></dd><dt>Observaciones</dt><dd>${escapeHtml(point.observaciones || 'Sin observaciones')}</dd></dl></div>
           <div class="geo-detail-actions"><button class="geo-primary" type="button" data-view-point>Ver detalles</button>${permissions.edit ? '<button class="geo-secondary" type="button" data-edit-point>Editar punto</button>' : ''}${permissions.assign ? '<button class="geo-secondary assign" type="button" data-assign-point>Administrar asignaciones</button>' : ''}</div>`;
         $('#closeDetail').onclick = () => $('#geoDetail').classList.remove('is-open');
         $('[data-view-point]')?.addEventListener('click', () => $('.geo-detail-list').scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -117,26 +117,15 @@
 
     async function loadRoutes(districtId, target, selected = '') {
         target.innerHTML = '<option value="">Seleccione</option>'; target.disabled = !districtId;
-        const sectorTarget = target === $('#filterRoute') ? $('#filterSector') : $('#formSector');
-        sectorTarget.innerHTML = '<option value="">Seleccione una ruta</option>'; sectorTarget.disabled = true;
         if (!districtId) return;
         const items = (await api(`distritos/${districtId}/rutas`)).datos || [];
         items.forEach(item => target.add(new Option(item.nombre, item.id)));
         if (selected) target.value = String(selected);
     }
 
-    async function loadSectors(routeId, target, selected = '') {
-        target.innerHTML = '<option value="">Seleccione</option>'; target.disabled = !routeId;
-        if (!routeId) return;
-        const items = (await api(`rutas/${routeId}/sectores`)).datos || [];
-        items.forEach(item => target.add(new Option(item.nombre, item.id)));
-        if (selected) target.value = String(selected);
-    }
-
     $('#filterDistrict').addEventListener('change', async e => { try { await loadRoutes(e.target.value, $('#filterRoute')); } catch (error) { notify(error.message, true); } });
-    $('#filterRoute').addEventListener('change', async e => { try { await loadSectors(e.target.value, $('#filterSector')); } catch (error) { notify(error.message, true); } });
     $('#geoFilters').addEventListener('submit', e => { e.preventDefault(); loadPoints(); });
-    $('#geoFilters').addEventListener('reset', () => setTimeout(() => { $('#filterRoute').disabled = true; $('#filterSector').disabled = true; loadPoints(); }, 0));
+    $('#geoFilters').addEventListener('reset', () => setTimeout(() => { $('#filterRoute').disabled = true; loadPoints(); }, 0));
     $('#geoFilterToggle')?.addEventListener('click', () => $('#geoFilters').classList.toggle('is-open'));
     $('#geoMenuToggle').addEventListener('click', () => app.classList.toggle('menu-open'));
     $('#closeDetail')?.addEventListener('click', () => $('#geoDetail').classList.remove('is-open'));
@@ -188,7 +177,6 @@
             setDraftLocation(point.latitud, point.longitud);
             form.elements.distrito_id.value = point.distrito_id;
             await loadRoutes(point.distrito_id, $('#formRoute'), point.ruta_id);
-            await loadSectors(point.ruta_id, $('#formSector'), point.sector_id);
             ['nombre','ubicacion_especifica','tipo_servicio_id','turno_id','cantidad_requerida','estado','observaciones'].forEach(name => { if (form.elements[name]) form.elements[name].value = point[name] ?? ''; });
             form.elements.hora_inicio.value = timeText(point.hora_inicio).replace('—',''); form.elements.hora_fin.value = timeText(point.hora_fin).replace('—','');
             assignments = (point.asignaciones || []).map(item => ({
@@ -235,7 +223,6 @@
     $('#prevStep').addEventListener('click', () => showStep(currentStep - 1));
     $('#locateCoordinates').addEventListener('click', () => setDraftLocation(form.elements.latitud.value, form.elements.longitud.value));
     $('#formDistrict').addEventListener('change', async e => { try { await loadRoutes(e.target.value, $('#formRoute')); } catch (error) { notify(error.message, true); } });
-    $('#formRoute').addEventListener('change', async e => { try { await loadSectors(e.target.value, $('#formSector')); } catch (error) { notify(error.message, true); } });
     $('#formShift').addEventListener('change', e => { const option = e.target.selectedOptions[0]; form.elements.hora_inicio.value = option?.dataset.start || ''; form.elements.hora_fin.value = option?.dataset.end || ''; $('#assignShift').value = e.target.value; $('#assignStartTime').value = form.elements.hora_inicio.value; $('#assignEndTime').value = form.elements.hora_fin.value; });
 
     $('#createRoute')?.addEventListener('click', async () => {
@@ -245,15 +232,6 @@
             const body = { distrito_id: Number(districtId), nombre: name.trim(), turno_id: form.elements.turno_id.value ? Number(form.elements.turno_id.value) : null, hora_inicio: form.elements.hora_inicio.value || null, hora_fin: form.elements.hora_fin.value || null };
             const result = await api(`distritos/${districtId}/rutas`, { method: 'POST', body });
             await loadRoutes(districtId, $('#formRoute'), result.datos.id); notify(result.mensaje);
-        } catch (error) { notify(error.message, true); }
-    });
-    $('#createSector')?.addEventListener('click', async () => {
-        const districtId = form.elements.distrito_id.value, routeId = form.elements.ruta_id.value;
-        if (!routeId) return notify('Seleccione primero una ruta.', true);
-        const name = prompt('Nombre del nuevo sector:'); if (!name?.trim()) return;
-        try {
-            const result = await api(`rutas/${routeId}/sectores`, { method: 'POST', body: { distrito_id: Number(districtId), ruta_id: Number(routeId), nombre: name.trim() } });
-            await loadSectors(routeId, $('#formSector'), result.datos.id); notify(result.mensaje);
         } catch (error) { notify(error.message, true); }
     });
 
@@ -309,13 +287,13 @@
     }
 
     function collectPayload() {
-        return { distrito_id: Number(form.elements.distrito_id.value), ruta_id: Number(form.elements.ruta_id.value), sector_id: Number(form.elements.sector_id.value), nombre: form.elements.nombre.value.trim(), ubicacion_especifica: form.elements.ubicacion_especifica.value.trim(), direccion: form.elements.direccion.value.trim(), latitud: Number(form.elements.latitud.value), longitud: Number(form.elements.longitud.value), tipo_servicio_id: Number(form.elements.tipo_servicio_id.value), turno_id: Number(form.elements.turno_id.value), hora_inicio: form.elements.hora_inicio.value, hora_fin: form.elements.hora_fin.value, cantidad_requerida: Number(form.elements.cantidad_requerida.value), observaciones: form.elements.observaciones.value.trim() || null, estado: assignments.length ? 'CUBIERTO' : form.elements.estado.value, asignaciones: assignments.filter(item => !item.id).map(({ agente, codigo, turno, id, ...item }) => item) };
+        return { distrito_id: Number(form.elements.distrito_id.value), ruta_id: Number(form.elements.ruta_id.value), nombre: form.elements.nombre.value.trim(), ubicacion_especifica: form.elements.ubicacion_especifica.value.trim(), direccion: form.elements.direccion.value.trim(), latitud: Number(form.elements.latitud.value), longitud: Number(form.elements.longitud.value), tipo_servicio_id: Number(form.elements.tipo_servicio_id.value), turno_id: Number(form.elements.turno_id.value), hora_inicio: form.elements.hora_inicio.value, hora_fin: form.elements.hora_fin.value, cantidad_requerida: Number(form.elements.cantidad_requerida.value), observaciones: form.elements.observaciones.value.trim() || null, estado: assignments.length ? 'CUBIERTO' : form.elements.estado.value, asignaciones: assignments.filter(item => !item.id).map(({ agente, codigo, turno, id, ...item }) => item) };
     }
 
     function renderSummary() {
         const payload = collectPayload();
         const label = (select) => select.selectedOptions[0]?.textContent || '—';
-        const values = [['Distrito',label(form.elements.distrito_id)],['Ruta',label(form.elements.ruta_id)],['Sector',label(form.elements.sector_id)],['Punto',payload.nombre],['Ubicación específica',payload.ubicacion_especifica],['Dirección',payload.direccion],['Latitud',payload.latitud],['Longitud',payload.longitud],['Tipo de servicio',label(form.elements.tipo_servicio_id)],['Turno',label(form.elements.turno_id)],['Horario',`${payload.hora_inicio} - ${payload.hora_fin}`],['Cantidad requerida',payload.cantidad_requerida],['Agentes asignados',assignments.map(item => item.agente).join(', ') || 'Sin cobertura'],['Observaciones',payload.observaciones || 'Sin observaciones']];
+        const values = [['Distrito',label(form.elements.distrito_id)],['Ruta',label(form.elements.ruta_id)],['Punto',payload.nombre],['Ubicación específica',payload.ubicacion_especifica],['Dirección',payload.direccion],['Latitud',payload.latitud],['Longitud',payload.longitud],['Tipo de servicio',label(form.elements.tipo_servicio_id)],['Turno',label(form.elements.turno_id)],['Horario',`${payload.hora_inicio} - ${payload.hora_fin}`],['Cantidad requerida',payload.cantidad_requerida],['Agentes asignados',assignments.map(item => item.agente).join(', ') || 'Sin cobertura'],['Observaciones',payload.observaciones || 'Sin observaciones']];
         $('#pointSummary').innerHTML = values.map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`).join('');
         if (!window.L) return;
         if (!previewMap) { previewMap = L.map('previewMap', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([payload.latitud, payload.longitud], 16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(previewMap); }

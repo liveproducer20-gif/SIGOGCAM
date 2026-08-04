@@ -27,7 +27,7 @@ class AssignmentInput(BaseModel):
 class PointInput(BaseModel):
     distrito_id: int
     ruta_id: int
-    sector_id: int
+    sector_id: int | None = None
     nombre: str = Field(min_length=3, max_length=180)
     ubicacion_especifica: str = Field(min_length=3, max_length=220)
     direccion: str = Field(min_length=3, max_length=300)

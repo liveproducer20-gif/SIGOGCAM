@@ -89,7 +89,7 @@ def list_points(filters: dict) -> list[dict]:
         FROM dbo.lugares_servicio p
         INNER JOIN dbo.catalogo_detalles d ON d.id=p.distrito_id
         INNER JOIN dbo.rutas r ON r.id=p.ruta_id
-        INNER JOIN dbo.sectores s ON s.id=p.sector_id
+        LEFT JOIN dbo.sectores s ON s.id=p.sector_id
         INNER JOIN dbo.turnos t ON t.id=p.turno_id
         INNER JOIN dbo.catalogo_detalles ts ON ts.id=p.tipo_servicio_id
         WHERE {' AND '.join(where)} ORDER BY p.nombre
@@ -111,7 +111,7 @@ def get_point(point_id: int) -> dict:
                    s.nombre AS sector, t.nombre AS turno, ts.nombre AS tipo_servicio
             FROM dbo.lugares_servicio p
             INNER JOIN dbo.catalogo_detalles d ON d.id=p.distrito_id
-            INNER JOIN dbo.rutas r ON r.id=p.ruta_id INNER JOIN dbo.sectores s ON s.id=p.sector_id
+            INNER JOIN dbo.rutas r ON r.id=p.ruta_id LEFT JOIN dbo.sectores s ON s.id=p.sector_id
             INNER JOIN dbo.turnos t ON t.id=p.turno_id INNER JOIN dbo.catalogo_detalles ts ON ts.id=p.tipo_servicio_id
             WHERE p.id=?
         """, point_id)
@@ -157,9 +157,10 @@ def _validate_relations(cursor, data: dict) -> None:
         raise HTTPException(422, "La ruta no pertenece al distrito seleccionado")
     if route[0] is not None and int(route[0]) != int(data["turno_id"]):
         raise HTTPException(422, "El turno del punto no es compatible con el turno de la ruta")
-    cursor.execute("SELECT COUNT(*) FROM dbo.sectores WHERE id=? AND ruta_id=? AND distrito_id=? AND activo=1", data["sector_id"], data["ruta_id"], data["distrito_id"])
-    if cursor.fetchone()[0] == 0:
-        raise HTTPException(422, "El sector no pertenece a la ruta seleccionada")
+    if data.get("sector_id") is not None:
+        cursor.execute("SELECT COUNT(*) FROM dbo.sectores WHERE id=? AND ruta_id=? AND distrito_id=? AND activo=1", data["sector_id"], data["ruta_id"], data["distrito_id"])
+        if cursor.fetchone()[0] == 0:
+            raise HTTPException(422, "El sector no pertenece a la ruta seleccionada")
 
 
 def _validate_assignment(cursor, assignment: dict, point_id: int | None = None, assignment_id: int | None = None) -> None:

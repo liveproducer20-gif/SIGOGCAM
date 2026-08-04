@@ -22,9 +22,7 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
             <section class="geo-nav-group is-open">
                 <div><span>▧</span> Distribución <b>⌃</b></div>
                 <a class="is-active" href="/distribucion-geografica">Distribución geográfica</a>
-                <a href="#">Rutas</a>
-                <a href="#">Puntos de servicio</a>
-                <a href="#">Asignaciones</a>
+                <a href="/distribucion-tablero">Tablero de distribución</a>
             </section>
             <a href="#"><span>✥</span> Comunicación <b>›</b></a>
             <a href="#"><span>▥</span> Reportes <b>›</b></a>
@@ -52,7 +50,6 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
                 <label>Distrito<select name="distrito_id" id="filterDistrict"><option value="">Todos los distritos</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
                 <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Todas las rutas</option></select></label>
                 <label>Turno<select name="turno_id"><option value="">Todos los turnos</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?> (<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?> - <?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>)</option><?php endforeach; ?></select></label>
-                <label>Sector<select name="sector_id" id="filterSector" disabled><option value="">Todos los sectores</option></select></label>
                 <label>Estado<select name="estado"><option value="">Todos</option><option value="CUBIERTO">Punto cubierto</option><option value="SIN_ASIGNACION">Sin asignación</option><option value="FUERA_TURNO">Fuera de turno</option><option value="INACTIVO">Inactivo</option><option value="NOVEDAD">Con novedad</option></select></label>
                 <label>Buscar agente<input name="agente" type="search" placeholder="Nombre, cédula o código"></label>
                 <div class="geo-filter-actions"><button class="geo-primary" type="submit">Aplicar filtros</button><button class="geo-secondary" type="reset">↻ Limpiar filtros</button></div>
@@ -99,7 +96,6 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
                     <div class="geo-form-grid">
                         <label>Distrito<select name="distrito_id" id="formDistrict" required><option value="">Seleccione</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
                         <label>Ruta<select name="ruta_id" id="formRoute" required disabled><option value="">Seleccione un distrito</option></select><?php if ($canCatalogs): ?><button class="geo-inline-add" id="createRoute" type="button">＋ Crear nueva ruta</button><?php endif; ?></label>
-                        <label>Sector<select name="sector_id" id="formSector" required disabled><option value="">Seleccione una ruta</option></select><?php if ($canCatalogs): ?><button class="geo-inline-add" id="createSector" type="button">＋ Crear nuevo sector</button><?php endif; ?></label>
                         <label>Nombre del punto<input name="nombre" required maxlength="180" placeholder="Punto 9 de Octubre y Boyacá"></label>
                         <label>Ubicación específica<input name="ubicacion_especifica" required maxlength="220" placeholder="Esquina noreste"></label>
                         <label>Tipo de servicio<select name="tipo_servicio_id" required><option value="">Seleccione</option><?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>

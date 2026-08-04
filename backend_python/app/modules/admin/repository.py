@@ -190,7 +190,7 @@ def update_catalog_detail(item_id: int, data: dict) -> None:
 def delete_catalog_detail(item_id: int) -> None:
     with get_connection() as connection:
         connection.cursor().execute(
-            "UPDATE dbo.catalogo_detalles SET estado=0,fecha_actualizacion=SYSDATETIME() WHERE id=?", item_id
+            "DELETE FROM dbo.catalogo_detalles WHERE id=?", item_id
         )
 
 
@@ -510,7 +510,7 @@ def _soft_delete(table_name: str, item_id: int) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute(
-            f"UPDATE dbo.{table_name} SET activo = 0, fecha_actualizacion = SYSDATETIME() WHERE id = ?",
+            f"DELETE FROM dbo.{table_name} WHERE id = ?",
             item_id,
         )
 

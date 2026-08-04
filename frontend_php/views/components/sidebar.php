@@ -15,7 +15,7 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
 ?>
 <aside class="sigo-sidebar" id="sigoSidebar" aria-label="Navegación principal">
     <a class="sigo-logo" href="/dashboard">
-        <span class="sigo-logo-mark"><i>★</i></span>
+        <img class="sigo-logo-img" src="/assets/img/logo_sigo_gcam.png" alt="SIGO" width="42" height="42">
         <span><strong>SIGO</strong><small>Sistema Inteligente de<br>Gestión Operativa</small></span>
     </a>
     <nav class="sigo-navigation">
