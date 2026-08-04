@@ -559,3 +559,121 @@ dd {
         grid-template-columns: 1fr;
     }
 }
+
+/* Changelog / Registro de cambios */
+.changelog-section .changelog-form {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sigo-line);
+}
+
+.changelog-section .changelog-form .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.changelog-section .changelog-form .span-2 {
+    grid-column: 1 / -1;
+}
+
+.changelog-timeline {
+    display: grid;
+    gap: 12px;
+}
+
+.changelog-entry {
+    padding: 16px;
+    border: 1px solid var(--sigo-line);
+    border-radius: 9px;
+    background: #f9fbfd;
+    transition: border-color .2s;
+}
+
+.changelog-entry:hover {
+    border-color: var(--sigo-teal);
+}
+
+.changelog-entry-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.changelog-meta {
+    flex: 1;
+}
+
+.changelog-meta strong {
+    display: block;
+    color: var(--sigo-navy);
+    font-size: 13px;
+}
+
+.changelog-author {
+    display: block;
+    margin-top: 3px;
+    color: var(--sigo-teal);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.changelog-datetime {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.changelog-date {
+    color: var(--sigo-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.changelog-time {
+    color: var(--sigo-muted);
+    font-size: 10px;
+}
+
+.changelog-detail {
+    margin: 10px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid var(--sigo-teal);
+    background: #fff;
+    border-radius: 0 6px 6px 0;
+    color: #3d5a80;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.changelog-entry .inline-form {
+    flex-shrink: 0;
+}
+
+.changelog-entry .inline-form button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 11px;
+    display: grid;
+    place-items: center;
+}
+
+@media (max-width: 650px) {
+    .changelog-section .changelog-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .changelog-entry-header {
+        flex-wrap: wrap;
+    }
+
+    .changelog-datetime {
+        width: 100%;
+        flex-direction: row;
+        gap: 8px;
+        margin-top: 6px;
+    }
+}

@@ -16,6 +16,50 @@
     <div class="work-card"><div class="admin-form-title"><div><p class="eyebrow">Trazabilidad</p><h2>Auditoría del rol</h2></div><span><?= count($audit ?? []) ?> eventos</span></div><div class="config-timeline audit"><?php foreach(($audit ?? []) as $item): ?><article><strong><?= htmlspecialchars($item['accion'] ?? '') ?></strong><span><?= htmlspecialchars($item['rol'] ?? '') ?></span><p><?= htmlspecialchars($item['usuario'] ?? 'Sistema') ?></p><small><?= htmlspecialchars($item['fecha'] ?? '') ?> · <?= htmlspecialchars($item['ip'] ?? '') ?></small></article><?php endforeach; ?></div></div>
 </section>
 
+<section class="work-card full changelog-section">
+    <div class="admin-form-title">
+        <div><p class="eyebrow">Historial de actualizaciones</p><h2>Registro de cambios</h2></div>
+        <span><?= count($cambios ?? []) ?> registros</span>
+    </div>
+
+    <form method="post" action="/configuracion/cambios" class="changelog-form">
+        <div class="form-grid">
+            <label>Desarrollador<input type="text" name="desarrollador" required placeholder="Nombre del desarrollador"></label>
+            <label>Título de actualización<input type="text" name="titulo" required placeholder="Ej: Módulo de cartillas mejorado"></label>
+            <label class="span-2">Detalle de mejoras aplicadas<textarea name="detalle" rows="4" required placeholder="Describa las mejoras, correcciones o funcionalidades implementadas..."></textarea></label>
+        </div>
+        <button type="submit">Registrar cambio</button>
+    </form>
+
+    <div class="changelog-timeline">
+        <?php if (empty($cambios)): ?>
+            <div class="empty-state">No hay cambios registrados</div>
+        <?php else: ?>
+            <?php foreach ($cambios as $cambio): ?>
+                <article class="changelog-entry">
+                    <div class="changelog-entry-header">
+                        <div class="changelog-meta">
+                            <strong><?= htmlspecialchars($cambio['titulo'] ?? '') ?></strong>
+                            <span class="changelog-author"><?= htmlspecialchars($cambio['desarrollador'] ?? '') ?></span>
+                        </div>
+                        <div class="changelog-datetime">
+                            <span class="changelog-date"><?= htmlspecialchars($cambio['fecha'] ?? '') ?></span>
+                            <span class="changelog-time"><?= htmlspecialchars($cambio['hora'] ?? '') ?></span>
+                        </div>
+                        <form method="post" action="/configuracion/cambios/eliminar" class="inline-form">
+                            <input type="hidden" name="id" value="<?= (int)$cambio['id'] ?>">
+                            <button type="submit" class="danger" title="Eliminar registro">✕</button>
+                        </form>
+                    </div>
+                    <?php if (!empty($cambio['detalle'])): ?>
+                        <p class="changelog-detail"><?= nl2br(htmlspecialchars($cambio['detalle'])) ?></p>
+                    <?php endif; ?>
+                </article>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+</section>
+
 <?php if ($error): ?>
     <div class="alert error"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>

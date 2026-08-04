@@ -27,6 +27,7 @@ final class ConfiguracionController
         $fields = [];
         $versions = [];
         $audit = [];
+        $cambios = [];
         $message = $_GET['mensaje'] ?? null;
         $error = null;
 
@@ -47,6 +48,7 @@ final class ConfiguracionController
                 $versions = $api->get("configuracion/roles/{$selectedRoleId}/versiones")['datos'] ?? [];
                 $audit = $api->get("configuracion/auditoria?rolId={$selectedRoleId}&limite=100")['datos'] ?? [];
             }
+            $cambios = $api->get('configuracion/cambios')['datos'] ?? [];
         } catch (\Throwable $exception) {
             $error = $exception->getMessage();
         }
@@ -63,6 +65,7 @@ final class ConfiguracionController
             'fields' => $fields,
             'versions' => $versions,
             'audit' => $audit,
+            'cambios' => $cambios,
             'message' => $message,
             'error' => $error,
         ]);
@@ -152,6 +155,34 @@ final class ConfiguracionController
     {
         $roleId=(int)($_POST['rol_id'] ?? 0);
         $this->postConfig("configuracion/roles/{$roleId}/versiones",['comentario'=>trim($_POST['comentario'] ?? '')],$roleId,'Versión de configuración creada.');
+    }
+
+    public function storeCambio(): void
+    {
+        $payload = [
+            'desarrollador' => trim($_POST['desarrollador'] ?? ''),
+            'titulo' => trim($_POST['titulo'] ?? ''),
+            'detalle' => trim($_POST['detalle'] ?? ''),
+        ];
+        try {
+            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+            $api->post('configuracion/cambios', $payload);
+            header('Location: /configuracion?mensaje=' . urlencode('Cambio registrado correctamente.'));
+        } catch (\Throwable $exception) {
+            header('Location: /configuracion?mensaje=' . urlencode($exception->getMessage()));
+        }
+    }
+
+    public function deleteCambio(): void
+    {
+        $cambioId = (int)($_POST['id'] ?? 0);
+        try {
+            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+            $api->delete("configuracion/cambios/{$cambioId}");
+            header('Location: /configuracion?mensaje=' . urlencode('Cambio eliminado correctamente.'));
+        } catch (\Throwable $exception) {
+            header('Location: /configuracion?mensaje=' . urlencode($exception->getMessage()));
+        }
     }
 
     private function sendConfig(string $path, array $payload, int $roleId, string $message): void

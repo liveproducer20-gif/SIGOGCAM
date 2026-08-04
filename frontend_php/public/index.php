@@ -24,6 +24,7 @@ use App\Modules\Cartillas\CartillasController;
 use App\Modules\Configuracion\ConfiguracionController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\DistribucionGeografica\DistribucionGeograficaController;
+use App\Modules\DistribucionTablero\DistribucionTableroController;
 use App\Modules\Eventos\EventosController;
 use App\Modules\Insignias\InsigniasController;
 use App\Modules\Personal\PersonalController;
@@ -64,6 +65,16 @@ if ($path === '/distribucion-geografica' && $method === 'GET') {
 
 if ($path === '/distribucion-geografica/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
     (new DistribucionGeograficaController())->proxy();
+    return;
+}
+
+if ($path === '/distribucion-tablero' && $method === 'GET') {
+    (new DistribucionTableroController())->index();
+    return;
+}
+
+if ($path === '/distribucion-tablero/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
+    (new DistribucionTableroController())->proxy();
     return;
 }
 
@@ -190,6 +201,8 @@ if ($path === '/configuracion/condiciones/eliminar' && $method === 'POST') {
 }
 if ($path === '/configuracion/campos' && $method === 'POST') { (new ConfiguracionController())->updateFields(); return; }
 if ($path === '/configuracion/versiones' && $method === 'POST') { (new ConfiguracionController())->createVersion(); return; }
+if ($path === '/configuracion/cambios' && $method === 'POST') { (new ConfiguracionController())->storeCambio(); return; }
+if ($path === '/configuracion/cambios/eliminar' && $method === 'POST') { (new ConfiguracionController())->deleteCambio(); return; }
 
 http_response_code(404);
 echo 'Ruta no encontrada';

@@ -359,3 +359,34 @@ def configuration_audit(role_id: int | None = None, limit: int = 100) -> list[di
                           LEFT JOIN dbo.vw_personal_detalle p ON p.id=a.usuario_id LEFT JOIN dbo.roles r ON r.id=a.rol_afectado_id
                           WHERE (? IS NULL OR a.rol_afectado_id=?) ORDER BY a.fecha DESC""",role_id,role_id)
         return _rows(cursor)
+
+
+def list_cambios(limit: int = 50) -> list[dict]:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            f"""SELECT TOP ({int(limit)}) id, desarrollador, fecha, hora, titulo, detalle, fecha_creacion
+                FROM dbo.registro_cambios ORDER BY fecha DESC, hora DESC, id DESC"""
+        )
+        return _rows(cursor)
+
+
+def create_cambio(data: dict) -> int:
+    desarrollador = (data.get("desarrollador") or "").strip()
+    titulo = (data.get("titulo") or "").strip()
+    detalle = (data.get("detalle") or "").strip()
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """INSERT INTO dbo.registro_cambios (desarrollador, fecha, hora, titulo, detalle)
+               OUTPUT INSERTED.id
+               VALUES (?, CAST(GETDATE() AS DATE), CAST(GETDATE() AS TIME(0)), ?, ?)""",
+            desarrollador, titulo, detalle or None,
+        )
+        return int(cursor.fetchone()[0])
+
+
+def delete_cambio(cambio_id: int) -> None:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM dbo.registro_cambios WHERE id = ?", cambio_id)

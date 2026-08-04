@@ -18,6 +18,7 @@ from app.modules.configuracion.repository import (
     save_role_condition,
     update_role_permissions,
     configuration_audit, create_role_version, role_fields, role_versions, save_role_fields, system_fields,
+    list_cambios, create_cambio, delete_cambio,
 )
 
 
@@ -112,3 +113,20 @@ def auditoria(rolId:int|None=None,limite:int=100,user:dict=Depends(current_user)
 
 @router.get("/campos-sistema")
 def campos_sistema(user:dict=Depends(current_user)): return ok(system_fields())
+
+
+@router.get("/cambios")
+def cambios(user: dict = Depends(current_user)):
+    return ok(list_cambios())
+
+
+@router.post("/cambios", status_code=201)
+def crear_cambio(payload: dict, user: dict = Depends(current_user)):
+    item_id = create_cambio(payload)
+    return {**ok(None, "Cambio registrado correctamente"), "id": item_id}
+
+
+@router.delete("/cambios/{cambio_id}")
+def eliminar_cambio(cambio_id: int, user: dict = Depends(current_user)):
+    delete_cambio(cambio_id)
+    return ok(None, "Cambio eliminado correctamente")
