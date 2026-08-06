@@ -35,44 +35,42 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
     <div class="geo-content">
         <header class="geo-header">
             <button class="geo-menu-toggle" type="button" id="geoMenuToggle" aria-label="Abrir menú">☰</button>
-            <div class="geo-title"><h1>DISTRIBUCIÓN GEOGRÁFICA</h1><p>Personal asignado por puntos de servicio</p></div>
-            <?php if ($canCreate): ?>
-                <button class="geo-primary geo-create-header" type="button" data-open-wizard>＋ Crear punto georreferenciado</button>
-            <?php endif; ?>
+            <div class="geo-title"><h1>DISTRIBUCIÓN GEOGRÁFICA</h1><p>Rutas, lugares de servicio y asignación de personal</p></div>
             <div class="geo-user"><span class="geo-bell">♧<b>8</b></span><span><strong><?= $esc($usuario['nombreCompleto'] ?? 'Usuario SIGO') ?></strong><small>Rol: <?= $esc($usuario['rolNombre'] ?? $usuario['rol'] ?? '') ?></small></span><i><?= $esc($initials ?: 'U') ?></i></div>
         </header>
 
         <main class="geo-main">
             <?php if (!empty($error)): ?><div class="geo-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
-            <?php if ($canCreate): ?><div class="geo-page-actions"><button class="geo-primary" type="button" data-open-wizard>＋ Crear punto georreferenciado</button></div><?php endif; ?>
+
             <button class="geo-filter-toggle" type="button" id="geoFilterToggle">☷ Mostrar filtros</button>
             <form class="geo-filters" id="geoFilters">
-                <label>Distrito<select name="distrito_id" id="filterDistrict"><option value="">Todos los distritos</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Todas las rutas</option></select></label>
-                <label>Turno<select name="turno_id"><option value="">Todos los turnos</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?> (<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?> - <?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>)</option><?php endforeach; ?></select></label>
-                <label>Estado<select name="estado"><option value="">Todos</option><option value="CUBIERTO">Punto cubierto</option><option value="SIN_ASIGNACION">Sin asignación</option><option value="FUERA_TURNO">Fuera de turno</option><option value="INACTIVO">Inactivo</option><option value="NOVEDAD">Con novedad</option></select></label>
-                <label>Buscar agente<input name="agente" type="search" placeholder="Nombre, cédula o código"></label>
-                <div class="geo-filter-actions"><button class="geo-primary" type="submit">Aplicar filtros</button><button class="geo-secondary" type="reset">↻ Limpiar filtros</button></div>
+                <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
+                <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
+                <label>Lugar de servicio<select name="lugar_servicio_id" id="filterServicePlace" disabled><option value="">Todos los lugares</option></select></label>
+                <div class="geo-filter-actions">
+                    <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnNewRoute">＋ Dibujar nueva ruta</button><?php endif; ?>
+                    <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnAddPlace" style="display:none">＋ Agregar lugar de servicio</button><?php endif; ?>
+                </div>
             </form>
 
             <section class="geo-workspace">
                 <div class="geo-map-wrap">
-                    <div id="geoMap" aria-label="Mapa de puntos de servicio"></div>
-                    <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> puntos visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
-                    <div class="geo-legend"><strong>Leyenda de estados</strong><span><i class="covered"></i> Punto cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="offshift"></i> Fuera de turno</span><span><i class="incident"></i> Novedad / incidencia</span><span><i class="selected"></i> Punto seleccionado</span></div>
-                    <div class="geo-map-empty" id="geoMapEmpty" hidden>No hay puntos georreferenciados para los filtros seleccionados.</div>
+                    <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
+                    <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> lugares visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
+                    <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="route"></i> Ruta trazada</span></div>
+                    <div class="geo-map-empty" id="geoMapEmpty" hidden>Seleccione un distrito y una ruta para visualizar el trazado y los lugares de servicio.</div>
                 </div>
                 <aside class="geo-detail" id="geoDetail" aria-live="polite">
-                    <header><h2>Información del punto</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
-                    <div class="geo-detail-empty"><span>⌖</span><strong>Seleccione un punto en el mapa</strong><p>Aquí verá su ubicación, horario y personal asignado.</p></div>
+                    <header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
+                    <div class="geo-detail-empty"><span>📍</span><strong>Seleccione un lugar de servicio</strong><p>Aquí verá la información, ubicación y personal asignado.</p></div>
                 </aside>
             </section>
 
             <section class="geo-stats" aria-label="Resumen de distribución">
-                <article><i class="purple">⌖</i><span>Puntos registrados<strong id="statRegistered">0</strong></span></article>
-                <article><i class="green">♙</i><span>Puntos cubiertos<strong id="statCovered">0</strong></span></article>
-                <article><i class="gray">●</i><span>Sin asignación<strong id="statUnassigned">0</strong></span></article>
-                <article><i class="blue">♙</i><span>Personal asignado<strong id="statPersonnel">0</strong></span></article>
+                <article><i class="purple">📍</i><span>Lugares registrados<strong id="statRegistered">0</strong></span></article>
+                <article><i class="green">♟</i><span>Con personal<strong id="statCovered">0</strong></span></article>
+                <article><i class="gray">○</i><span>Sin asignación<strong id="statUnassigned">0</strong></span></article>
+                <article><i class="blue">♙</i><span>Agentes asignados<strong id="statPersonnel">0</strong></span></article>
                 <article><i class="blue">▧</i><span>Rutas activas<strong id="statRoutes">0</strong></span></article>
             </section>
         </main>
@@ -80,48 +78,86 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
 
     <div class="geo-toast" id="geoToast" role="status" aria-live="polite"></div>
 
-    <?php if ($canCreate || $canEdit || $canAssign): ?>
-    <div class="geo-modal" id="pointWizard" hidden>
-        <div class="geo-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
-            <header class="geo-modal-header"><div><p id="wizardEyebrow">Nuevo punto de servicio</p><h2 id="wizardTitle">Crear punto georreferenciado</h2></div><button type="button" data-close-wizard aria-label="Cerrar">×</button></header>
-            <ol class="geo-steps" id="wizardSteps"><li class="is-active"><b>1</b><span>Selección</span></li><li><b>2</b><span>Personal</span></li><li><b>3</b><span>Confirmación</span></li></ol>
-            <form id="pointForm" novalidate>
-                <input type="hidden" name="point_id">
-                <section class="geo-step-panel is-active" data-step="1">
-                    <div class="geo-step-heading"><div><h3>Seleccione el punto de servicio</h3><p>Distrito, ruta y lugar de servicio. Los datos se completarán automáticamente.</p></div></div>
+    <?php if ($canCreate): ?>
+    <!-- WIZARD: DIBUJAR NUEVA RUTA -->
+    <div class="geo-modal" id="drawWizard" hidden>
+        <div class="geo-modal-dialog" role="dialog" aria-modal="true">
+            <header class="geo-modal-header"><div><p>Nueva ruta</p><h2 id="drawRouteTitle">Dibujar ruta geográfica</h2></div><button type="button" id="cancelDraw" aria-label="Cerrar">×</button></header>
+            <div class="geo-step-panel is-active">
+                <div class="geo-step-heading"><div><h3>Información de la ruta</h3><p>Nombre, estilo visual y tipo de geometría del trazado.</p></div></div>
+                <div class="geo-form-grid">
+                    <label>Nombre de la ruta<input id="drawRouteName" maxlength="150" required placeholder="Ej: Boulevard 9 de Octubre"></label>
+                    <label>Descripción<textarea id="drawRouteDesc" rows="2" maxlength="500" placeholder="Opcional"></textarea></label>
+                    <label>Tipo de geometría<select id="drawRouteGeometry"><option value="lineal">Recorrido lineal</option><option value="area">Área geográfica</option></select></label>
+                    <label>Color<input id="drawRouteColor" type="color" value="#2563EB"></label>
+                    <label>Grosor<input id="drawRouteWidth" type="range" min="1" max="20" value="6"></label>
+                    <label>Opacidad<input id="drawRouteOpacity" type="range" min="0.1" max="1" step="0.05" value="0.55"></label>
+                    <label>Estado<select id="drawRouteState"><option value="ACTIVA">Activa</option><option value="BORRADOR">Borrador</option><option value="INACTIVA">Inactiva</option></select></label>
+                </div>
+                <div class="geo-draw-actions">
+                    <button class="geo-primary" type="button" id="startDraw">✏ Dibujar en el mapa</button>
+                </div>
+                <div class="geo-draw-tools" id="drawTools" hidden>
+                    <span>Haga clic en el mapa para dibujar. Use las herramientas para controlar.</span>
+                    <button class="geo-secondary" type="button" id="undoPoint">↩ Deshacer punto</button>
+                    <button class="geo-secondary" type="button" id="clearDrawing">✕ Limpiar</button>
+                </div>
+                <div id="drawMap" style="height:350px;border:1px solid #dce4ef;border-radius:8px;margin-top:12px"></div>
+                <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+                    <button class="geo-ghost" type="button" id="cancelDraw2">Cancelar</button>
+                    <button class="geo-primary" type="button" id="saveRoute">Guardar ruta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD: AGREGAR LUGAR DE SERVICIO -->
+    <div class="geo-modal" id="placeWizard" hidden>
+        <div class="geo-modal-dialog" role="dialog" aria-modal="true">
+            <header class="geo-modal-header"><div><p>Lugar de servicio</p><h2 id="placeWizardTitle">Agregar lugar de servicio</h2></div><button type="button" id="cancelPlace" aria-label="Cerrar">×</button></header>
+            <div class="geo-step-panel is-active">
+                <form id="placeForm" novalidate>
+                    <input type="hidden" name="id" id="place_id">
                     <div class="geo-form-grid">
-                        <label>Distrito<select name="distrito_id" id="formDistrict" required><option value="">Seleccione</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                        <label>Ruta<select name="ruta_id" id="formRoute" required disabled><option value="">Seleccione un distrito</option></select></label>
-                        <label>Lugar de servicio<select name="lugar_servicio_id" id="formServicePlace" required disabled><option value="">Seleccione una ruta</option></select></label>
+                        <label>Nombre<input name="nombre" maxlength="180" required placeholder="Ej: 9 de Octubre y Chimborazo"></label>
+                        <label>Descripción<textarea name="descripcion" rows="2" maxlength="500" placeholder="Opcional"></textarea></label>
+                        <label>Dirección referencial<input name="direccion_referencial" maxlength="300" placeholder="Ej: Frente al parque"></label>
+                        <label>Estado<select name="estado"><option value="ACTIVO">Activo</option><option value="INACTIVO">Inactivo</option></select></label>
                     </div>
-                    <div class="geo-form-grid" id="autoFilledFields" hidden>
-                        <label>Nombre del punto<input name="nombre" id="formNombre" maxlength="180" readonly class="geo-readonly"></label>
-                        <label>Ubicación específica<input name="ubicacion_especifica" id="formUbicacion" maxlength="220" readonly class="geo-readonly"></label>
-                        <label>Dirección<textarea name="direccion" id="formDireccion" rows="2" readonly class="geo-readonly"></textarea></label>
-                        <label>Tipo de servicio<input name="tipo_servicio_id" id="formTipoServicio" readonly class="geo-readonly"></label>
-                        <label>Turno<input name="turno_id" id="formTurno" readonly class="geo-readonly"></label>
-                        <label>Hora de inicio<input name="hora_inicio" id="formHoraInicio" type="time" readonly class="geo-readonly"></label><label>Hora de finalización<input name="hora_fin" id="formHoraFin" type="time" readonly class="geo-readonly"></label>
-                        <label>Cantidad requerida de agentes<input name="cantidad_requerida" id="formCantidad" type="number" min="1" max="100" readonly class="geo-readonly"></label>
+                    <div class="geo-location-grid"><div id="placeMap" style="height:300px;border:1px solid #dce4ef;border-radius:8px"></div><div class="geo-location-fields"><label>Latitud<input name="latitud" inputmode="decimal" placeholder="-2.189875"></label><label>Longitud<input name="longitud" inputmode="decimal" placeholder="-79.884521"></label><p style="color:#637089;font-size:10px">Haga clic en el mapa para ubicar el punto.</p></div></div>
+                    <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+                        <button class="geo-ghost" type="button" id="cancelPlace2">Cancelar</button>
+                        <button class="geo-primary" type="submit">Guardar lugar de servicio</button>
                     </div>
-                    <div class="geo-location-grid" id="mapSection" hidden><div id="wizardMap" aria-label="Mapa para seleccionar coordenadas"></div><div class="geo-location-fields"><label>Latitud<input name="latitud" id="formLatitud" inputmode="decimal" placeholder="-2.189875" required></label><label>Longitud<input name="longitud" id="formLongitud" inputmode="decimal" placeholder="-79.884521" required></label><button class="geo-secondary" id="locateCoordinates" type="button">⌖ Ubicar en el mapa</button></div></div>
-                    <input type="hidden" name="tipo_servicio_id_hidden" id="formTipoServicioId">
-                    <input type="hidden" name="turno_id_hidden" id="formTurnoId">
-                    <input type="hidden" name="estado" value="SIN_ASIGNACION">
-                    <input type="hidden" name="observaciones" value="">
-                </section>
-                <section class="geo-step-panel" data-step="2">
-                    <div class="geo-step-heading"><div><h3>Asignación de personal</h3><p>Busque y agregue uno o varios agentes. También puede registrar el punto sin cobertura.</p></div></div>
-                    <div class="geo-agent-search"><label>Buscar agente<input id="agentSearch" type="search" placeholder="Nombres, apellidos, cédula o código institucional"></label><div id="agentResults" class="geo-agent-results"></div></div>
-                    <div class="geo-assignment-editor" id="assignmentEditor" hidden>
-                        <div class="geo-selected-agent" id="selectedAgent"></div>
-                        <div class="geo-form-grid compact"><label>Tipo de asignación<select id="assignType"><option value="FIJA">Fija</option><option value="TEMPORAL">Temporal</option><option value="RELEVO">Relevo</option></select></label><label>Fecha de inicio<input id="assignStartDate" type="date"></label><label>Fecha de finalización<input id="assignEndDate" type="date"></label><label>Turno<select id="assignShift"><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label><label>Hora de inicio<input id="assignStartTime" type="time"></label><label>Hora de finalización<input id="assignEndTime" type="time"></label><label>Función en el punto<input id="assignRole" placeholder="Ej. Vigilancia pedestre"></label><label>Observaciones<input id="assignNotes"></label></div>
-                        <button class="geo-primary geo-add-agent" id="addAgent" type="button">＋ Agregar agente</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- WIZARD: ASIGNAR AGENTE A LUGAR DE SERVICIO -->
+    <div class="geo-modal" id="assignWizard" hidden>
+        <div class="geo-modal-dialog" role="dialog" aria-modal="true">
+            <header class="geo-modal-header"><div><p>Asignación</p><h2>Asignar agente al lugar de servicio</h2></div><button type="button" id="cancelAssign" aria-label="Cerrar">×</button></header>
+            <div class="geo-step-panel is-active">
+                <div class="geo-agent-search"><label>Buscar agente<input id="agentSearch" type="search" placeholder="Nombres, apellidos o cédula"></label><div id="agentResults" class="geo-agent-results"></div></div>
+                <div class="geo-assignment-editor" id="assignmentEditor" hidden>
+                    <div class="geo-selected-agent" id="selectedAgent"></div>
+                    <div class="geo-form-grid compact">
+                        <label>Tipo<select id="assignType"><option value="FIJA">Fija</option><option value="TEMPORAL">Temporal</option><option value="RELEVO">Relevo</option></select></label>
+                        <label>Fecha inicio<input id="assignStartDate" type="date"></label>
+                        <label>Fecha fin<input id="assignEndDate" type="date"></label>
+                        <label>Turno<select id="assignShift"><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
+                        <label>Hora inicio<input id="assignStartTime" type="time"></label>
+                        <label>Hora fin<input id="assignEndTime" type="time"></label>
+                        <label>Función<input id="assignRole" placeholder="Ej: Vigilancia"></label>
+                        <label>Observaciones<input id="assignNotes"></label>
                     </div>
-                    <div class="geo-assignment-table"><table><thead><tr><th>Agente</th><th>Código</th><th>Turno</th><th>Función</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="assignmentRows"><tr class="empty"><td colspan="6">Aún no se ha agregado personal.</td></tr></tbody></table></div>
-                </section>
-                <section class="geo-step-panel" data-step="3"><div class="geo-step-heading"><div><h3>Resumen del punto georreferenciado</h3><p>Revise la información antes de guardar.</p></div></div><div class="geo-confirm-grid"><dl id="pointSummary"></dl><div id="previewMap" aria-label="Vista previa del punto"></div></div></section>
-                <footer class="geo-modal-footer"><button class="geo-ghost" id="cancelWizard" type="button">Cancelar</button><button class="geo-secondary" id="prevStep" type="button" hidden>← Volver</button><button class="geo-primary" id="nextStep" type="button">Continuar →</button><button class="geo-primary" id="savePoint" type="submit" hidden>Guardar punto georreferenciado</button></footer>
-            </form>
+                    <button class="geo-primary" id="addAgent" type="button">＋ Agregar agente</button>
+                </div>
+                <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+                    <button class="geo-ghost" type="button" id="cancelAssign2">Cerrar</button>
+                </div>
+            </div>
         </div>
     </div>
     <?php endif; ?>

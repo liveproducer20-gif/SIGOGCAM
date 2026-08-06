@@ -159,6 +159,26 @@ def delete_person(person_id: int, user_id: int) -> None:
         cursor.execute("UPDATE dbo.personal SET activo = 0, fecha_actualizacion = SYSDATETIME() WHERE id = ?", person_id)
 
 
+def my_profile(user_id: int) -> dict | None:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT TOP 1
+                p.id, p.cedula, p.nombres, p.apellidos,
+                LTRIM(RTRIM(ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+                p.correo_institucional, p.telefono, p.cargo_id, p.area_id,
+                p.grupo_id, p.jornada_id, p.rol_id, p.grado_id,
+                p.estado_personal_id, p.activo,
+                r.nombre AS rol, ISNULL(ep.nombre, 'SIN ESTADO') AS estado_personal
+            FROM dbo.personal p
+            LEFT JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            WHERE p.id = ?
+        """, user_id)
+        result = _rows(cursor)
+        return result[0] if result else None
+
+
 def catalogs_for_personal() -> dict:
     with get_connection() as connection:
         cursor = connection.cursor()

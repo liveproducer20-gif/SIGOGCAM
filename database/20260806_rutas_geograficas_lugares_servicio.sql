@@ -47,6 +47,10 @@ BEGIN
     INNER JOIN dbo.sectores s ON s.id = ls.sector_id
     WHERE ls.ruta_id IS NULL AND s.ruta_id IS NOT NULL;
 
+    -- Eliminar índices que dependan de sector_id
+    IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_lugares_geo_filtros' AND object_id = OBJECT_ID('dbo.lugares_servicio'))
+        DROP INDEX IX_lugares_geo_filtros ON dbo.lugares_servicio;
+
     -- Eliminar FK de sector_id si existe
     IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_lugares_sector' AND parent_object_id = OBJECT_ID('dbo.lugares_servicio'))
         ALTER TABLE dbo.lugares_servicio DROP CONSTRAINT FK_lugares_sector;
@@ -60,12 +64,33 @@ GO
 -- Asegurar que lugares_servicio tiene ruta_id NOT NULL
 IF COL_LENGTH('dbo.lugares_servicio', 'ruta_id') IS NOT NULL
 BEGIN
-    -- Hacer ruta_id NOT NULL si tiene datos
     DECLARE @count INT;
     SELECT @count = COUNT(*) FROM dbo.lugares_servicio WHERE ruta_id IS NULL;
     IF @count = 0
         ALTER TABLE dbo.lugares_servicio ALTER COLUMN ruta_id INT NOT NULL;
     PRINT 'OK - ruta_id verificado en lugares_servicio.';
+END
+GO
+
+-- Agregar columnas faltantes si no existen
+IF COL_LENGTH('dbo.lugares_servicio', 'descripcion') IS NULL
+BEGIN
+    ALTER TABLE dbo.lugares_servicio ADD descripcion NVARCHAR(500) NULL;
+    PRINT 'OK - Columna descripcion agregada.';
+END
+GO
+
+IF COL_LENGTH('dbo.lugares_servicio', 'direccion_referencial') IS NULL
+BEGIN
+    ALTER TABLE dbo.lugares_servicio ADD direccion_referencial NVARCHAR(300) NULL;
+    PRINT 'OK - Columna direccion_referencial agregada.';
+END
+GO
+
+IF COL_LENGTH('dbo.lugares_servicio', 'estado') IS NULL
+BEGIN
+    ALTER TABLE dbo.lugares_servicio ADD estado NVARCHAR(20) NOT NULL DEFAULT 'ACTIVO';
+    PRINT 'OK - Columna estado agregada.';
 END
 GO
 
