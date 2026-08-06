@@ -9,13 +9,12 @@
   let editingId = null;
   let deleteTargetId = null;
   let resetTargetId = null;
-  let openDropdownId = null;
   let isSaving = false;
+
+  const rowMap = new Map();
 
   const $ = (s, p) => (p || document).querySelector(s);
   const $$ = (s, p) => [...(p || document).querySelectorAll(s)];
-
-  const esc = (v) => { const d = document.createElement('div'); d.textContent = v ?? ''; return d.innerHTML; };
 
   const avatarColors = ['#078c83','#2584e8','#7452c7','#ed9a34','#df444b','#26a269','#d97706','#6366f1'];
   function getAvatar(name, lastName) {
@@ -30,9 +29,11 @@
 
   function statusClass(nombre) {
     const n = (nombre || '').toLowerCase().replace(/\s+/g, '');
-    const map = { 'activo': 'activo', 'inactivo': 'inactivo', 'suspendido': 'suspendido', 'vacaciones': 'vacaciones', 'permiso': 'permiso', 'capacitacion': 'capacitacion', 'reposomedico': 'reposo', 'comisionservicio': 'comision', 'sinestado': 'sinestado', 'sinestado': 'sinestado' };
+    const map = { 'activo': 'activo', 'inactivo': 'inactivo', 'suspendido': 'suspendido', 'vacaciones': 'vacaciones', 'permiso': 'permiso', 'capacitacion': 'capacitacion', 'reposomedico': 'reposo', 'comisionservicio': 'comision', 'sinestado': 'sinestado' };
     return 'p-status-' + (map[n] || 'sinestado');
   }
+
+  function esc(s) { const el = document.createElement('span'); el.textContent = s ?? ''; return el.innerHTML; }
 
   async function apiCall(method, resource, body) {
     const opts = { method, headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } };
@@ -48,8 +49,8 @@
     const existing = document.querySelector('.p-toast');
     if (existing) existing.remove();
     const el = document.createElement('div');
-    el.className = `p-toast ${type}`;
-    el.innerHTML = `<span class="p-toast-icon">${type === 'success' ? '&#10003;' : '&#9888;'}</span><span>${esc(msg)}</span>`;
+    el.className = 'p-toast ' + type;
+    el.innerHTML = '<span class="p-toast-icon">' + (type === 'success' ? '&#10003;' : '&#9888;') + '</span><span>' + esc(msg) + '</span>';
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3500);
   }
@@ -70,22 +71,24 @@
   async function loadTable() {
     const tbody = $('#tableBody');
     if (!tbody) return;
-    tbody.innerHTML = Array.from({ length: state.limit }, () =>
-      `<tr class="p-skeleton-row">${'<td><div class="p-skeleton-cell avatar"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td>'}`
+    tbody.innerHTML = Array.from({ length: Math.min(state.limit, 10) }, () =>
+      '<tr class="p-skeleton-row"><td><div class="p-skeleton-cell avatar"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td><td><div class="p-skeleton-cell"></div></td></tr>'
     ).join('');
     try {
       const qs = buildQueryString();
-      const resp = await apiCall('GET', `?${qs}`);
+      const resp = await apiCall('GET', '?' + qs);
       const payload = resp.datos || {};
       state.data = payload.data || [];
       state.total = payload.pagination?.total || 0;
       state.totalPages = payload.pagination?.totalPages || 1;
       state.page = payload.pagination?.page || 1;
+      rowMap.clear();
+      state.data.forEach(item => rowMap.set(item.id, item));
       renderTable();
       renderPagination();
       $('#totalBadge').textContent = state.total + ' registros';
     } catch (e) {
-      tbody.innerHTML = `<tr><td colspan="8" class="p-empty"><div class="p-empty-icon">!</div><h3>Error al cargar datos</h3><p>${esc(e.message)}</p></td></tr>`;
+      tbody.innerHTML = '<tr><td colspan="8" class="p-empty"><div class="p-empty-icon">!</div><h3>Error al cargar datos</h3><p>' + esc(e.message) + '</p></td></tr>';
     }
   }
 
@@ -94,10 +97,20 @@
     if (!tbody) return;
     if (state.data.length === 0) {
       const hasFilters = state.search || state.estado || state.grado || state.rol || state.grupo || state.jornada;
-      tbody.innerHTML = `<tr><td colspan="8"><div class="p-empty"><div class="p-empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div><h3>${hasFilters ? 'No se encontraron resultados' : 'No hay personal registrado'}</h3><p>${hasFilters ? 'Pruebe con otros términos o limpie los filtros' : 'Cree el primer registro para comenzar'}</p>${hasFilters ? `<button class="p-btn p-btn-secondary" onclick="window.__PERSONAL__.clearFilters()">Limpiar filtros</button>` : (D.canCreate ? `<button class="p-btn p-btn-primary" onclick="window.__PERSONAL__.openCreate()">Crear personal</button>` : '')}</div></td></tr>`;
+      const emptyTitle = hasFilters ? 'No se encontraron resultados' : 'No hay personal registrado';
+      const emptyDesc = hasFilters ? 'Pruebe con otros términos o limpie los filtros' : 'Cree el primer registro para comenzar';
+      const emptyBtn = hasFilters
+        ? '<button class="p-btn p-btn-secondary" id="emptyAction">Limpiar filtros</button>'
+        : (D.canCreate ? '<button class="p-btn p-btn-primary" id="emptyAction">Crear personal</button>' : '');
+      tbody.innerHTML = '<tr><td colspan="8"><div class="p-empty"><div class="p-empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div><h3>' + emptyTitle + '</h3><p>' + emptyDesc + '</p>' + emptyBtn + '</div></td></tr>';
+      const actionBtn = $('#emptyAction');
+      if (actionBtn) {
+        actionBtn.addEventListener('click', hasFilters ? clearFilters : () => openFormModal('create'));
+      }
       return;
     }
-    tbody.innerHTML = state.data.map(item => {
+    let html = '';
+    state.data.forEach(item => {
       const av = getAvatar(item.nombres, item.apellidos);
       const nombre = esc(item.nombre_completo || (item.nombres + ' ' + item.apellidos));
       const cedula = esc(item.cedula || '');
@@ -107,26 +120,33 @@
       const grupo = esc(item.grupo || '');
       const estado = esc(item.estado_personal || 'SIN ESTADO');
       const sc = statusClass(item.estado_personal);
-      return `<tr>
-        <td><div class="p-name-cell"><span class="p-avatar" style="background:${av.color}">${av.initials}</span><span><span class="p-name-text">${nombre}</span></span></div></td>
-        <td>${cedula}</td>
-        <td><span class="p-truncate" title="${correo}">${correo}</span></td>
-        <td>${grado}</td>
-        <td>${rol}</td>
-        <td>${grupo}</td>
-        <td><span class="p-status ${sc}"><span class="p-status-dot"></span>${estado}</span></td>
-        <td><div class="p-actions">
-          ${D.canEdit ? `<button class="p-action-edit" data-edit='${esc(JSON.stringify({id:item.id,cedula:item.cedula,nombres:item.nombres,apellidos:item.apellidos,correo_institucional:item.correo_institucional,telefono:item.telefono||'',grupo_id:item.grupo_id||'',jornada_id:item.jornada_id||'',rol_id:item.rol_id||'',grado_id:item.grado_id||'',estado_personal_id:item.estado_personal_id||'',activo:item.activo}))}' aria-label="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>` : ''}
-          <div style="position:relative">
-            <button class="p-menu-trigger" data-menu="${item.id}" aria-label="Más opciones"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>
-            <div class="p-dropdown" id="menu-${item.id}">
-              ${D.canEdit ? `<button class="p-dropdown-item" data-edit='${esc(JSON.stringify({id:item.id,cedula:item.cedula,nombres:item.nombres,apellidos:item.apellidos,correo_institucional:item.correo_institucional,telefono:item.telefono||'',grupo_id:item.grupo_id||'',jornada_id:item.jornada_id||'',rol_id:item.rol_id||'',grado_id:item.grado_id||'',estado_personal_id:item.estado_personal_id||'',activo:item.activo}))}'><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>` : ''}
-              ${D.canEdit ? `<button class="p-dropdown-item" data-reset='${esc(JSON.stringify({id:item.id,nombre:item.nombre_completo}))}'><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Restablecer contraseña</button>` : ''}
-              ${D.canDelete ? `<div class="p-dropdown-divider"></div><button class="p-dropdown-item danger" data-delete='${esc(JSON.stringify({id:item.id,nombre:item.nombre_completo}))}'><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>` : ''}
-            </div>
-          </div>
-        </div></tr>`;
-    }).join('');
+      html += '<tr>';
+      html += '<td><div class="p-name-cell"><span class="p-avatar" style="background:' + av.color + '">' + av.initials + '</span><span class="p-name-text">' + nombre + '</span></div></td>';
+      html += '<td>' + cedula + '</td>';
+      html += '<td><span class="p-truncate" title="' + correo + '">' + correo + '</span></td>';
+      html += '<td>' + grado + '</td>';
+      html += '<td>' + rol + '</td>';
+      html += '<td>' + grupo + '</td>';
+      html += '<td><span class="p-status ' + sc + '"><span class="p-status-dot"></span>' + estado + '</span></td>';
+      html += '<td><div class="p-actions">';
+      if (D.canEdit) {
+        html += '<button class="p-action-edit" data-id="' + item.id + '" aria-label="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+      }
+      html += '<div style="position:relative">';
+      html += '<button class="p-menu-trigger" data-menu="' + item.id + '" aria-label="Mas opciones"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>';
+      html += '<div class="p-dropdown" id="menu-' + item.id + '">';
+      if (D.canEdit) {
+        html += '<button class="p-dropdown-item" data-action="edit" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>';
+        html += '<button class="p-dropdown-item" data-action="reset" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Restablecer contraseña</button>';
+      }
+      if (D.canDelete) {
+        html += '<div class="p-dropdown-divider"></div>';
+        html += '<button class="p-dropdown-item danger" data-action="delete" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>';
+      }
+      html += '</div></div>';
+      html += '</div></tr>';
+    });
+    tbody.innerHTML = html;
   }
 
   function renderPagination() {
@@ -135,27 +155,27 @@
     if (!info || !controls) return;
     const from = state.total === 0 ? 0 : ((state.page - 1) * state.limit + 1);
     const to = Math.min(state.page * state.limit, state.total);
-    info.textContent = `Mostrando ${from} a ${to} de ${state.total} registros`;
+    info.textContent = 'Mostrando ' + from + ' a ' + to + ' de ' + state.total + ' registros';
     let html = '';
-    html += `<button class="p-pagination-btn" ${state.page <= 1 ? 'disabled' : ''} data-page="${state.page - 1}">&lsaquo;</button>`;
+    html += '<button class="p-pagination-btn" ' + (state.page <= 1 ? 'disabled' : '') + ' data-page="' + (state.page - 1) + '">&lsaquo;</button>';
     const maxBtns = 5;
     let start = Math.max(1, state.page - Math.floor(maxBtns / 2));
     let end = Math.min(state.totalPages, start + maxBtns - 1);
     if (end - start < maxBtns - 1) start = Math.max(1, end - maxBtns + 1);
-    if (start > 1) html += `<button class="p-pagination-btn" data-page="1">1</button>`;
-    if (start > 2) html += `<span class="p-pagination-btn" style="border:none;background:none;cursor:default">...</span>`;
+    if (start > 1) html += '<button class="p-pagination-btn" data-page="1">1</button>';
+    if (start > 2) html += '<span class="p-pagination-btn" style="border:none;background:none;cursor:default">...</span>';
     for (let i = start; i <= end; i++) {
-      html += `<button class="p-pagination-btn ${i === state.page ? 'is-active' : ''}" data-page="${i}">${i}</button>`;
+      html += '<button class="p-pagination-btn ' + (i === state.page ? 'is-active' : '') + '" data-page="' + i + '">' + i + '</button>';
     }
-    if (end < state.totalPages - 1) html += `<span class="p-pagination-btn" style="border:none;background:none;cursor:default">...</span>`;
-    if (end < state.totalPages) html += `<button class="p-pagination-btn" data-page="${state.totalPages}">${state.totalPages}</button>`;
-    html += `<button class="p-pagination-btn" ${state.page >= state.totalPages ? 'disabled' : ''} data-page="${state.page + 1}">&rsaquo;</button>`;
+    if (end < state.totalPages - 1) html += '<span class="p-pagination-btn" style="border:none;background:none;cursor:default">...</span>';
+    if (end < state.totalPages) html += '<button class="p-pagination-btn" data-page="' + state.totalPages + '">' + state.totalPages + '</button>';
+    html += '<button class="p-pagination-btn" ' + (state.page >= state.totalPages ? 'disabled' : '') + ' data-page="' + (state.page + 1) + '">&rsaquo;</button>';
     controls.innerHTML = html;
   }
 
-  function openModal(id) { $(`#${id}`).classList.add('is-open'); }
+  function openModal(id) { $('#' + id).classList.add('is-open'); }
   function closeModal(id) {
-    $(`#${id}`).classList.remove('is-open');
+    $('#' + id).classList.remove('is-open');
     if (id === 'modalOverlay') {
       const btn = $('#createBtn');
       if (btn) btn.focus();
@@ -207,8 +227,8 @@
       { id: 'formJornada', err: 'errJornada', msg: 'Debe seleccionar una jornada' },
     ];
     fields.forEach(f => {
-      const el = $(`#${f.id}`);
-      const errEl = $(`#${f.err}`);
+      const el = $('#' + f.id);
+      const errEl = $('#' + f.err);
       el.classList.remove('error');
       errEl.textContent = '';
       if (!el.value.trim()) {
@@ -259,7 +279,7 @@
     if (pw) payload.password = pw;
     try {
       if (editingId) {
-        await apiCall('PUT', `${editingId}`, payload);
+        await apiCall('PUT', '' + editingId, payload);
         toast('Datos del personal actualizados correctamente.');
       } else {
         await apiCall('POST', '', payload);
@@ -282,7 +302,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Eliminando...';
     try {
-      await apiCall('DELETE', `${deleteTargetId}`);
+      await apiCall('DELETE', '' + deleteTargetId);
       toast('Personal eliminado correctamente.');
       closeModal('deleteOverlay');
       loadTable();
@@ -300,7 +320,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner"></span> Generando...';
     try {
-      const resp = await apiCall('POST', `${resetTargetId}/reset-password`);
+      const resp = await apiCall('POST', resetTargetId + '/reset-password');
       const pw = resp.datos?.password || '';
       $('#resetResult').style.display = 'block';
       $('#resetPassword').textContent = pw;
@@ -316,7 +336,6 @@
 
   function closeAllDropdowns() {
     $$('.p-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
-    openDropdownId = null;
   }
 
   document.addEventListener('click', (e) => {
@@ -324,57 +343,46 @@
     if (menuBtn) {
       e.stopPropagation();
       const id = menuBtn.dataset.menu;
+      const wasOpen = menuBtn.closest('div').querySelector('.p-dropdown.is-open');
       closeAllDropdowns();
-      const dd = $(`#menu-${id}`);
-      if (dd) {
-        dd.classList.add('is-open');
-        openDropdownId = id;
+      if (!wasOpen) {
+        const dd = $('#menu-' + id);
+        if (dd) dd.classList.add('is-open');
       }
       return;
     }
+
     closeAllDropdowns();
 
-    const editBtn = e.target.closest('[data-edit]');
-    if (editBtn) {
+    const actionBtn = e.target.closest('[data-action]');
+    if (actionBtn) {
       e.stopPropagation();
-      try {
-        const data = JSON.parse(editBtn.dataset.edit);
-        openFormModal('edit', data);
-      } catch {}
-      return;
-    }
-    const editAction = e.target.closest('.p-action-edit');
-    if (editAction) {
-      try {
-        const data = JSON.parse(editAction.dataset.edit);
-        openFormModal('edit', data);
-      } catch {}
-      return;
-    }
-
-    const delBtn = e.target.closest('[data-delete]');
-    if (delBtn) {
-      e.stopPropagation();
-      try {
-        const data = JSON.parse(delBtn.dataset.delete);
-        deleteTargetId = data.id;
-        $('#deleteName').textContent = data.nombre || '';
+      const action = actionBtn.dataset.action;
+      const id = parseInt(actionBtn.dataset.id, 10);
+      const row = rowMap.get(id);
+      if (!row) return;
+      if (action === 'edit') {
+        openFormModal('edit', row);
+      } else if (action === 'delete') {
+        deleteTargetId = id;
+        $('#deleteName').textContent = row.nombre_completo || (row.nombres + ' ' + row.apellidos);
         openModal('deleteOverlay');
-      } catch {}
-      return;
-    }
-
-    const resetBtn = e.target.closest('[data-reset]');
-    if (resetBtn) {
-      e.stopPropagation();
-      try {
-        const data = JSON.parse(resetBtn.dataset.reset);
-        resetTargetId = data.id;
-        $('#resetName').textContent = data.nombre || '';
+      } else if (action === 'reset') {
+        resetTargetId = id;
+        $('#resetName').textContent = row.nombre_completo || (row.nombres + ' ' + row.apellidos);
         $('#resetResult').style.display = 'none';
         $('#resetConfirmBtn').style.display = '';
         openModal('resetOverlay');
-      } catch {}
+      }
+      return;
+    }
+
+    const editIcon = e.target.closest('.p-action-edit');
+    if (editIcon) {
+      e.stopPropagation();
+      const id = parseInt(editIcon.dataset.id, 10);
+      const row = rowMap.get(id);
+      if (row) openFormModal('edit', row);
       return;
     }
   });

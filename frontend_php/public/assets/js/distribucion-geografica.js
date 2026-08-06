@@ -43,6 +43,7 @@
         map = L.map('geoMap', { zoomControl: true }).setView([-2.1894, -79.8891], 14);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OpenStreetMap' }).addTo(map);
         markerLayer = L.featureGroup().addTo(map);
+        setTimeout(() => map.invalidateSize(), 100);
     }
 
     // ===================================================================

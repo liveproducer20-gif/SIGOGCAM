@@ -5,10 +5,9 @@
 /* --- Page Header --- */
 .p-page-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
-    flex-wrap: wrap;
     gap: 14px;
 }
 .p-page-title h1 { margin: 0; font-size: 22px; color: var(--sigo-text); }
@@ -22,14 +21,11 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-wrap: wrap;
-    width: 100%;
+    flex-shrink: 0;
 }
 .p-search-wrap {
     position: relative;
-    flex: 1;
-    min-width: 200px;
-    max-width: 400px;
+    width: 300px;
 }
 .p-search-wrap svg {
     position: absolute;
@@ -560,10 +556,12 @@
     .p-form-grid { grid-template-columns: repeat(2, 1fr); }
     .p-filters-grid { grid-template-columns: repeat(3, 1fr); }
 }
+@media (max-width: 900px) {
+    .p-page-header { flex-direction: column; align-items: stretch; }
+    .p-toolbar { flex-wrap: wrap; }
+    .p-search-wrap { width: 100%; }
+}
 @media (max-width: 768px) {
-    .p-page-header { flex-direction: column; }
-    .p-toolbar { flex-direction: column; }
-    .p-search-wrap { max-width: none; }
     .p-form-grid { grid-template-columns: 1fr; }
     .p-filters-grid { grid-template-columns: 1fr 1fr; }
     .p-modal { max-width: 100%; margin: 0 8px; }
