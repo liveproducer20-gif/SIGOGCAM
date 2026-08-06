@@ -84,29 +84,32 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
     <div class="geo-modal" id="pointWizard" hidden>
         <div class="geo-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
             <header class="geo-modal-header"><div><p id="wizardEyebrow">Nuevo punto de servicio</p><h2 id="wizardTitle">Crear punto georreferenciado</h2></div><button type="button" data-close-wizard aria-label="Cerrar">×</button></header>
-            <ol class="geo-steps" id="wizardSteps"><li class="is-active"><b>1</b><span>Ubicación</span></li><li><b>2</b><span>Información</span></li><li><b>3</b><span>Personal</span></li><li><b>4</b><span>Confirmación</span></li></ol>
+            <ol class="geo-steps" id="wizardSteps"><li class="is-active"><b>1</b><span>Selección</span></li><li><b>2</b><span>Personal</span></li><li><b>3</b><span>Confirmación</span></li></ol>
             <form id="pointForm" novalidate>
                 <input type="hidden" name="point_id">
                 <section class="geo-step-panel is-active" data-step="1">
-                    <div class="geo-step-heading"><div><h3>Ubicación del punto</h3><p>Seleccione en el mapa el lugar exacto donde deberá ubicarse el agente.</p></div><span class="geo-hint">El marcador representa una asignación administrativa, no GPS en tiempo real.</span></div>
-                    <div class="geo-location-grid"><div id="wizardMap" aria-label="Mapa para seleccionar coordenadas"></div><div class="geo-location-fields"><label>Latitud<input name="latitud" inputmode="decimal" placeholder="-2.189875" required></label><label>Longitud<input name="longitud" inputmode="decimal" placeholder="-79.884521" required></label><label>Dirección o referencia<textarea name="direccion" rows="4" required placeholder="Ej. Av. 9 de Octubre y Boyacá"></textarea></label><button class="geo-secondary" id="locateCoordinates" type="button">⌖ Ubicar en el mapa</button></div></div>
-                </section>
-                <section class="geo-step-panel" data-step="2">
-                    <div class="geo-step-heading"><div><h3>Información del punto</h3><p>Complete la estructura territorial y las condiciones del servicio.</p></div></div>
+                    <div class="geo-step-heading"><div><h3>Seleccione el punto de servicio</h3><p>Distrito, ruta y lugar de servicio. Los datos se completarán automáticamente.</p></div></div>
                     <div class="geo-form-grid">
                         <label>Distrito<select name="distrito_id" id="formDistrict" required><option value="">Seleccione</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                        <label>Ruta<select name="ruta_id" id="formRoute" required disabled><option value="">Seleccione un distrito</option></select><?php if ($canCatalogs): ?><button class="geo-inline-add" id="createRoute" type="button">＋ Crear nueva ruta</button><?php endif; ?></label>
-                        <label>Nombre del punto<input name="nombre" required maxlength="180" placeholder="Punto 9 de Octubre y Boyacá"></label>
-                        <label>Ubicación específica<input name="ubicacion_especifica" required maxlength="220" placeholder="Esquina noreste"></label>
-                        <label>Tipo de servicio<select name="tipo_servicio_id" required><option value="">Seleccione</option><?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                        <label>Turno<select name="turno_id" id="formShift" required><option value="">Seleccione</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>" data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>" data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                        <label>Hora de inicio<input name="hora_inicio" type="time" required></label><label>Hora de finalización<input name="hora_fin" type="time" required></label>
-                        <label>Cantidad requerida de agentes<input name="cantidad_requerida" type="number" min="1" max="100" value="1" required></label>
-                        <label>Estado<select name="estado"><option value="SIN_ASIGNACION">Sin asignación</option><option value="CUBIERTO">Punto cubierto</option><option value="FUERA_TURNO">Fuera de turno</option><option value="NOVEDAD">Con novedad</option></select></label>
-                        <label class="geo-span-2">Observaciones<textarea name="observaciones" rows="3" maxlength="500"></textarea></label>
+                        <label>Ruta<select name="ruta_id" id="formRoute" required disabled><option value="">Seleccione un distrito</option></select></label>
+                        <label>Lugar de servicio<select name="lugar_servicio_id" id="formServicePlace" required disabled><option value="">Seleccione una ruta</option></select></label>
                     </div>
+                    <div class="geo-form-grid" id="autoFilledFields" hidden>
+                        <label>Nombre del punto<input name="nombre" id="formNombre" maxlength="180" readonly class="geo-readonly"></label>
+                        <label>Ubicación específica<input name="ubicacion_especifica" id="formUbicacion" maxlength="220" readonly class="geo-readonly"></label>
+                        <label>Dirección<textarea name="direccion" id="formDireccion" rows="2" readonly class="geo-readonly"></textarea></label>
+                        <label>Tipo de servicio<input name="tipo_servicio_id" id="formTipoServicio" readonly class="geo-readonly"></label>
+                        <label>Turno<input name="turno_id" id="formTurno" readonly class="geo-readonly"></label>
+                        <label>Hora de inicio<input name="hora_inicio" id="formHoraInicio" type="time" readonly class="geo-readonly"></label><label>Hora de finalización<input name="hora_fin" id="formHoraFin" type="time" readonly class="geo-readonly"></label>
+                        <label>Cantidad requerida de agentes<input name="cantidad_requerida" id="formCantidad" type="number" min="1" max="100" readonly class="geo-readonly"></label>
+                    </div>
+                    <div class="geo-location-grid" id="mapSection" hidden><div id="wizardMap" aria-label="Mapa para seleccionar coordenadas"></div><div class="geo-location-fields"><label>Latitud<input name="latitud" id="formLatitud" inputmode="decimal" placeholder="-2.189875" required></label><label>Longitud<input name="longitud" id="formLongitud" inputmode="decimal" placeholder="-79.884521" required></label><button class="geo-secondary" id="locateCoordinates" type="button">⌖ Ubicar en el mapa</button></div></div>
+                    <input type="hidden" name="tipo_servicio_id_hidden" id="formTipoServicioId">
+                    <input type="hidden" name="turno_id_hidden" id="formTurnoId">
+                    <input type="hidden" name="estado" value="SIN_ASIGNACION">
+                    <input type="hidden" name="observaciones" value="">
                 </section>
-                <section class="geo-step-panel" data-step="3">
+                <section class="geo-step-panel" data-step="2">
                     <div class="geo-step-heading"><div><h3>Asignación de personal</h3><p>Busque y agregue uno o varios agentes. También puede registrar el punto sin cobertura.</p></div></div>
                     <div class="geo-agent-search"><label>Buscar agente<input id="agentSearch" type="search" placeholder="Nombres, apellidos, cédula o código institucional"></label><div id="agentResults" class="geo-agent-results"></div></div>
                     <div class="geo-assignment-editor" id="assignmentEditor" hidden>
@@ -116,7 +119,7 @@ $initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . subs
                     </div>
                     <div class="geo-assignment-table"><table><thead><tr><th>Agente</th><th>Código</th><th>Turno</th><th>Función</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="assignmentRows"><tr class="empty"><td colspan="6">Aún no se ha agregado personal.</td></tr></tbody></table></div>
                 </section>
-                <section class="geo-step-panel" data-step="4"><div class="geo-step-heading"><div><h3>Resumen del punto georreferenciado</h3><p>Revise la información antes de guardar.</p></div></div><div class="geo-confirm-grid"><dl id="pointSummary"></dl><div id="previewMap" aria-label="Vista previa del punto"></div></div></section>
+                <section class="geo-step-panel" data-step="3"><div class="geo-step-heading"><div><h3>Resumen del punto georreferenciado</h3><p>Revise la información antes de guardar.</p></div></div><div class="geo-confirm-grid"><dl id="pointSummary"></dl><div id="previewMap" aria-label="Vista previa del punto"></div></div></section>
                 <footer class="geo-modal-footer"><button class="geo-ghost" id="cancelWizard" type="button">Cancelar</button><button class="geo-secondary" id="prevStep" type="button" hidden>← Volver</button><button class="geo-primary" id="nextStep" type="button">Continuar →</button><button class="geo-primary" id="savePoint" type="submit" hidden>Guardar punto georreferenciado</button></footer>
             </form>
         </div>

@@ -1,3 +1,8 @@
+import json
+from datetime import date
+
+from fastapi import HTTPException
+
 from app.core.db import get_connection
 
 
@@ -6,38 +11,61 @@ def _rows(cursor) -> list[dict]:
     return [dict(zip(columns, row)) for row in cursor.fetchall()]
 
 
+def _row(cursor) -> dict | None:
+    rows = _rows(cursor)
+    return rows[0] if rows else None
+
+
+def _hash_password(password: str) -> str:
+    import hashlib
+    return hashlib.sha256(password.encode("utf-8")).hexdigest()
+
+
 def list_people(search: str | None = None, limit: int = 200) -> list[dict]:
     params = []
     where = "WHERE 1 = 1"
     if search:
         where += """
           AND (
-            LOWER(vd.nombre_completo) LIKE ?
-            OR LOWER(vd.cedula) LIKE ?
-            OR LOWER(vd.correo_institucional) LIKE ?
+            LOWER(p.nombres) LIKE ?
+            OR LOWER(p.apellidos) LIKE ?
+            OR LOWER(p.cedula) LIKE ?
+            OR LOWER(p.correo_institucional) LIKE ?
           )
         """
         term = f"%{search.lower()}%"
-        params.extend([term, term, term])
+        params.extend([term, term, term, term])
 
     sql = f"""
         SELECT TOP ({int(limit)})
-            vd.id,
-            vd.cedula,
-            vd.nombres,
-            vd.apellidos,
-            vd.nombre_completo,
-            vd.correo_institucional,
-            CAST(NULL AS NVARCHAR(120)) AS cargo,
-            CAST(NULL AS NVARCHAR(120)) AS area,
-            CAST(NULL AS NVARCHAR(120)) AS grupo,
-            CAST(NULL AS NVARCHAR(120)) AS jornada,
-            vd.rol,
-            vd.estado_personal,
-            vd.activo
-        FROM dbo.vw_personal_detalle vd
+            p.id,
+            p.cedula,
+            p.nombres,
+            p.apellidos,
+            LTRIM(RTRIM(ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+            p.correo_institucional,
+            p.telefono,
+            p.cargo_id,
+            p.area_id,
+            p.grupo_id,
+            p.jornada_id,
+            p.rol_id,
+            p.grado_id,
+            p.estado_personal_id,
+            p.activo,
+            r.nombre AS rol,
+            ISNULL(ep.nombre, 'SIN ESTADO') AS estado_personal,
+            ISNULL(g.nombre, '') AS grado,
+            ISNULL(cg.nombre, '') AS grupo,
+            ISNULL(jj.nombre, '') AS jornada
+        FROM dbo.personal p
+        LEFT JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+        LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+        LEFT JOIN dbo.grados g ON g.id = p.grado_id
+        LEFT JOIN dbo.catalogo_detalles cg ON cg.id = p.grupo_id
+        LEFT JOIN dbo.catalogo_detalles jj ON jj.id = p.jornada_id
         {where}
-        ORDER BY vd.apellidos, vd.nombres
+        ORDER BY p.apellidos, p.nombres
     """
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -45,29 +73,115 @@ def list_people(search: str | None = None, limit: int = 200) -> list[dict]:
         return _rows(cursor)
 
 
-def my_profile(user_id: int) -> dict | None:
+def get_person(person_id: int) -> dict:
     with get_connection() as connection:
         cursor = connection.cursor()
-        cursor.execute(
-            """
-            SELECT TOP 1
-                vd.id,
-                vd.cedula,
-                vd.nombres,
-                vd.apellidos,
-                vd.nombre_completo,
-                vd.correo_institucional,
-                CAST(NULL AS NVARCHAR(120)) AS cargo,
-                CAST(NULL AS NVARCHAR(120)) AS area,
-                CAST(NULL AS NVARCHAR(120)) AS grupo,
-                CAST(NULL AS NVARCHAR(120)) AS jornada,
-                vd.rol,
-                vd.estado_personal,
-                vd.activo
-            FROM dbo.vw_personal_detalle vd
-            WHERE vd.id = ?
-            """,
-            user_id,
+        cursor.execute("""
+            SELECT p.id, p.cedula, p.nombres, p.apellidos,
+                   LTRIM(RTRIM(ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+                   p.correo_institucional, p.telefono, p.cargo_id, p.area_id,
+                   p.grupo_id, p.jornada_id, p.rol_id, p.grado_id,
+                   p.estado_personal_id, p.activo,
+                   r.nombre AS rol, ISNULL(ep.nombre, 'SIN ESTADO') AS estado_personal
+            FROM dbo.personal p
+            LEFT JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            WHERE p.id = ?
+        """, person_id)
+        person = _row(cursor)
+        if not person:
+            raise HTTPException(404, "La persona no existe")
+        return person
+
+
+def create_person(data: dict, user_id: int) -> int:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM dbo.personal WHERE cedula = ?", data["cedula"])
+        if cursor.fetchone():
+            raise HTTPException(409, "Ya existe una persona con esa cédula")
+        password_hash = _hash_password(data["password"]) if data.get("password") else None
+        cursor.execute("""
+            INSERT INTO dbo.personal
+              (cedula, nombres, apellidos, correo_institucional, telefono,
+               cargo_id, area_id, grupo_id, jornada_id, rol_id, grado_id,
+               estado_personal_id, password_hash, activo, fecha_creacion)
+            OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
+        """,
+            data["cedula"], data["nombres"], data["apellidos"],
+            data["correo_institucional"], data.get("telefono"),
+            data.get("cargo_id"), data.get("area_id"), data.get("grupo_id"),
+            data.get("jornada_id"), data.get("rol_id"), data.get("grado_id"),
+            data.get("estado_personal_id"), password_hash,
+            1 if data.get("activo", True) else 0,
         )
-        result = _rows(cursor)
-        return result[0] if result else None
+        return int(cursor.fetchone()[0])
+
+
+def update_person(person_id: int, data: dict, user_id: int) -> None:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM dbo.personal WHERE id = ?", person_id)
+        if not cursor.fetchone():
+            raise HTTPException(404, "La persona no existe")
+        cursor.execute("SELECT id FROM dbo.personal WHERE cedula = ? AND id <> ?", data["cedula"], person_id)
+        if cursor.fetchone():
+            raise HTTPException(409, "Ya existe otra persona con esa cédula")
+        sets = [
+            "cedula = ?", "nombres = ?", "apellidos = ?",
+            "correo_institucional = ?", "telefono = ?",
+            "cargo_id = ?", "area_id = ?", "grupo_id = ?",
+            "jornada_id = ?", "rol_id = ?", "grado_id = ?",
+            "estado_personal_id = ?", "activo = ?",
+            "fecha_actualizacion = SYSDATETIME()",
+        ]
+        params = [
+            data["cedula"], data["nombres"], data["apellidos"],
+            data["correo_institucional"], data.get("telefono"),
+            data.get("cargo_id"), data.get("area_id"), data.get("grupo_id"),
+            data.get("jornada_id"), data.get("rol_id"), data.get("grado_id"),
+            data.get("estado_personal_id"),
+            1 if data.get("activo", True) else 0,
+        ]
+        if data.get("password"):
+            sets.append("password_hash = ?")
+            params.append(_hash_password(data["password"]))
+        params.append(person_id)
+        cursor.execute(f"UPDATE dbo.personal SET {', '.join(sets)} WHERE id = ?", *params)
+
+
+def delete_person(person_id: int, user_id: int) -> None:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM dbo.personal WHERE id = ?", person_id)
+        if not cursor.fetchone():
+            raise HTTPException(404, "La persona no existe")
+        cursor.execute("UPDATE dbo.personal SET activo = 0, fecha_actualizacion = SYSDATETIME() WHERE id = ?", person_id)
+
+
+def catalogs_for_personal() -> dict:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, nombre FROM dbo.roles WHERE activo = 1 ORDER BY nombre")
+        roles = _rows(cursor)
+        cursor.execute("SELECT id, nombre FROM dbo.grados WHERE activo = 1 ORDER BY nombre")
+        grados = _rows(cursor)
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM dbo.catalogo_detalles cd
+            INNER JOIN dbo.catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'ESTADOS_PERSONAL' AND c.estado = 1 AND cd.estado = 1 ORDER BY cd.nombre
+        """)
+        estados = _rows(cursor)
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM dbo.catalogo_detalles cd
+            INNER JOIN dbo.catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'GRUPOS' AND c.estado = 1 AND cd.estado = 1 ORDER BY cd.orden, cd.nombre
+        """)
+        grupos = _rows(cursor)
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM dbo.catalogo_detalles cd
+            INNER JOIN dbo.catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'JORNADAS' AND c.estado = 1 AND cd.estado = 1 ORDER BY cd.orden, cd.nombre
+        """)
+        jornadas = _rows(cursor)
+        return {"roles": roles, "grados": grados, "estados": estados, "grupos": grupos, "jornadas": jornadas}

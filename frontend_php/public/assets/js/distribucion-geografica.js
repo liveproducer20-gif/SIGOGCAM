@@ -40,8 +40,16 @@
 
     function markerIcon(point, isSelected = false) {
         const color = isSelected ? '#8844c7' : (stateColors[point.estado] || '#aeb7c2');
-        const empty = point.estado === 'SIN_ASIGNACION';
-        return L.divIcon({ className: '', iconSize: [36, 45], iconAnchor: [18, 43], html: `<div class="geo-marker ${empty ? 'unassigned' : ''} ${isSelected ? 'selected' : ''}" style="--marker:${color}">${empty ? '○' : '♟'}</div>` });
+        const size = isSelected ? 44 : 36;
+        return L.divIcon({
+            className: '',
+            iconSize: [size, size + 14],
+            iconAnchor: [size / 2, size + 10],
+            html: `<div class="geo-pin-marker ${isSelected ? 'selected' : ''}" style="--pin-color:${color};width:${size}px;height:${size}px">
+                <img src="/assets/img/pin-avatar.png" alt="Punto" width="${size}" height="${size}">
+                <svg class="geo-pin-arrow" width="20" height="14" viewBox="0 0 20 14"><path d="M10 14L0 0h20z" fill="${color}"/></svg>
+            </div>`
+        });
     }
 
     function initMaps() {
@@ -143,6 +151,8 @@
     const wizard = $('#pointWizard');
     if (!wizard) { initMaps(); return; }
     const form = $('#pointForm');
+    let selectedServicePlace = null;
+
     function setupWizardMaps() {
         if (!window.L) return;
         if (!wizardMap) {
@@ -159,26 +169,94 @@
         form.elements.latitud.value = lat.toFixed(7); form.elements.longitud.value = lng.toFixed(7);
         if (draftMarker) draftMarker.setLatLng([lat, lng]);
         else {
-            draftMarker = L.marker([lat, lng], { draggable: true, icon: L.divIcon({ className: '', iconSize: [36, 45], iconAnchor: [18, 43], html: '<div class="geo-marker" style="--marker:#e3ad23">⌖</div>' }) }).addTo(wizardMap);
+            draftMarker = L.marker([lat, lng], { draggable: true, icon: L.divIcon({ className: '', iconSize: [40, 54], iconAnchor: [20, 50], html: '<div class="geo-pin-marker selected" style="--pin-color:#e3ad23;width:40px;height:40px"><img src="/assets/img/pin-avatar.png" alt="Ubicación" width="40" height="40"><svg class="geo-pin-arrow" width="20" height="14" viewBox="0 0 20 14"><path d="M10 14L0 0h20z" fill="#e3ad23"/></svg></div>' }) }).addTo(wizardMap);
             draftMarker.on('dragend', () => { const point = draftMarker.getLatLng(); setDraftLocation(point.lat, point.lng, false); });
         }
         if (pan) wizardMap.setView([lat, lng], 17);
     }
 
+    async function loadServicePlaces(routeId, districtId, target, selected = '') {
+        target.innerHTML = '<option value="">Seleccione</option>'; target.disabled = !routeId;
+        if (!routeId) return;
+        const params = districtId ? `?distrito_id=${districtId}` : '';
+        const items = (await api(`rutas/${routeId}/lugares-servicio${params}`)).datos || [];
+        items.forEach(item => target.add(new Option(`${item.nombre} — ${item.tipo_servicio || ''}`, item.id)));
+        if (selected) target.value = String(selected);
+    }
+
+    function autoFillFromServicePlace(place) {
+        selectedServicePlace = place;
+        form.elements.nombre.value = place.nombre || '';
+        form.elements.ubicacion_especifica.value = place.ubicacion_especifica || '';
+        form.elements.direccion.value = place.direccion || '';
+        $('#formTipoServicio').value = place.tipo_servicio || '';
+        $('#formTurno').value = place.turno || '';
+        form.elements.hora_inicio.value = timeText(place.hora_inicio).replace('—', '');
+        form.elements.hora_fin.value = timeText(place.hora_fin).replace('—', '');
+        form.elements.cantidad_requerida.value = place.cantidad_requerida || 1;
+        $('#formTipoServicioId').value = place.tipo_servicio_id || '';
+        $('#formTurnoId').value = place.turno_id || '';
+        form.elements.latitud.value = place.latitud || '';
+        form.elements.longitud.value = place.longitud || '';
+        $('#autoFilledFields').hidden = false;
+        $('#mapSection').hidden = false;
+        setupWizardMaps();
+        if (place.latitud && place.longitud) setDraftLocation(Number(place.latitud), Number(place.longitud));
+        $('#assignShift').value = place.turno_id || '';
+        $('#assignStartTime').value = timeText(place.hora_inicio).replace('—', '');
+        $('#assignEndTime').value = timeText(place.hora_fin).replace('—', '');
+    }
+
+    $('#formDistrict').addEventListener('change', async e => {
+        try {
+            const routeTarget = $('#formRoute');
+            const spTarget = $('#formServicePlace');
+            routeTarget.innerHTML = '<option value="">Seleccione un distrito</option>'; routeTarget.disabled = true;
+            spTarget.innerHTML = '<option value="">Seleccione una ruta</option>'; spTarget.disabled = true;
+            $('#autoFilledFields').hidden = true; $('#mapSection').hidden = true; selectedServicePlace = null;
+            if (!e.target.value) return;
+            await loadRoutes(e.target.value, routeTarget);
+        } catch (error) { notify(error.message, true); }
+    });
+
+    $('#formRoute').addEventListener('change', async e => {
+        try {
+            const spTarget = $('#formServicePlace');
+            spTarget.innerHTML = '<option value="">Seleccione</option>'; spTarget.disabled = true;
+            $('#autoFilledFields').hidden = true; $('#mapSection').hidden = true; selectedServicePlace = null;
+            if (!e.target.value) return;
+            await loadServicePlaces(e.target.value, $('#formDistrict').value, spTarget);
+        } catch (error) { notify(error.message, true); }
+    });
+
+    $('#formServicePlace').addEventListener('change', async e => {
+        try {
+            $('#autoFilledFields').hidden = true; $('#mapSection').hidden = true; selectedServicePlace = null;
+            if (!e.target.value) return;
+            const items = (await api(`rutas/${$('#formRoute').value}/lugares-servicio?distrito_id=${$('#formDistrict').value}`)).datos || [];
+            const place = items.find(item => Number(item.id) === Number(e.target.value));
+            if (place) autoFillFromServicePlace(place);
+        } catch (error) { notify(error.message, true); }
+    });
+
     async function openWizard(point = null, targetStep = 1) {
         form.reset(); assignments = []; originalAssignmentIds = []; selectedAgent = null; selectedPointId = point?.id || null;
+        selectedServicePlace = null;
         form.elements.point_id.value = point?.id || '';
         $('#wizardTitle').textContent = point ? 'Editar punto georreferenciado' : 'Crear punto georreferenciado';
         $('#wizardEyebrow').textContent = point ? 'Punto de servicio existente' : 'Nuevo punto de servicio';
-        wizard.hidden = false; document.body.style.overflow = 'hidden'; setupWizardMaps();
+        $('#autoFilledFields').hidden = true; $('#mapSection').hidden = true;
+        wizard.hidden = false; document.body.style.overflow = 'hidden';
         if (draftMarker) { draftMarker.remove(); draftMarker = null; }
         if (point) {
-            form.elements.latitud.value = point.latitud; form.elements.longitud.value = point.longitud; form.elements.direccion.value = point.direccion;
-            setDraftLocation(point.latitud, point.longitud);
             form.elements.distrito_id.value = point.distrito_id;
             await loadRoutes(point.distrito_id, $('#formRoute'), point.ruta_id);
-            ['nombre','ubicacion_especifica','tipo_servicio_id','turno_id','cantidad_requerida','estado','observaciones'].forEach(name => { if (form.elements[name]) form.elements[name].value = point[name] ?? ''; });
-            form.elements.hora_inicio.value = timeText(point.hora_inicio).replace('—',''); form.elements.hora_fin.value = timeText(point.hora_fin).replace('—','');
+            await loadServicePlaces(point.ruta_id, point.distrito_id, $('#formServicePlace'));
+            const sp = { id: point.id, nombre: point.nombre, ubicacion_especifica: point.ubicacion_especifica, direccion: point.direccion,
+                tipo_servicio: point.tipo_servicio, tipo_servicio_id: point.tipo_servicio_id, turno: point.turno, turno_id: point.turno_id,
+                hora_inicio: point.hora_inicio, hora_fin: point.hora_fin, cantidad_requerida: point.cantidad_requerida,
+                latitud: point.latitud, longitud: point.longitud };
+            autoFillFromServicePlace(sp);
             assignments = (point.asignaciones || []).map(item => ({
                 id: item.id, personal_id: item.personal_id, agente: item.agente, codigo: item.codigo,
                 tipo_asignacion: item.tipo_asignacion, fecha_inicio: String(item.fecha_inicio).slice(0,10), fecha_fin: item.fecha_fin ? String(item.fecha_fin).slice(0,10) : null,
@@ -191,49 +269,32 @@
         renderAssignments(); showStep(targetStep);
     }
 
-    function closeWizard() { wizard.hidden = true; document.body.style.overflow = ''; selectedAgent = null; }
+    function closeWizard() { wizard.hidden = true; document.body.style.overflow = ''; selectedAgent = null; selectedServicePlace = null; }
     $$('[data-open-wizard]').forEach(button => button.addEventListener('click', () => openWizard()));
     $$('[data-close-wizard]').forEach(button => button.addEventListener('click', closeWizard));
     $('#cancelWizard').addEventListener('click', closeWizard);
     wizard.addEventListener('click', event => { if (event.target === wizard) closeWizard(); });
 
     function showStep(step) {
-        currentStep = Math.max(1, Math.min(4, step));
+        currentStep = Math.max(1, Math.min(3, step));
         $$('.geo-step-panel', wizard).forEach(panel => panel.classList.toggle('is-active', Number(panel.dataset.step) === currentStep));
         $$('#wizardSteps li').forEach((item, index) => { item.classList.toggle('is-active', index + 1 === currentStep); item.classList.toggle('is-complete', index + 1 < currentStep); });
-        $('#prevStep').hidden = currentStep === 1; $('#nextStep').hidden = currentStep === 4; $('#savePoint').hidden = currentStep !== 4;
-        if (currentStep === 1) setTimeout(() => wizardMap?.invalidateSize(), 50);
-        if (currentStep === 4) renderSummary();
+        $('#prevStep').hidden = currentStep === 1; $('#nextStep').hidden = currentStep === 3; $('#savePoint').hidden = currentStep !== 3;
+        if (currentStep === 1 && !$('#mapSection').hidden) setTimeout(() => wizardMap?.invalidateSize(), 50);
+        if (currentStep === 3) renderSummary();
     }
 
     function validateStep(step) {
         if (step === 1) {
-            if (!draftMarker || !form.elements.latitud.value || !form.elements.longitud.value) { notify('Seleccione una ubicación en el mapa antes de continuar.', true); return false; }
-            const lat = Number(form.elements.latitud.value), lon = Number(form.elements.longitud.value);
-            if (lat < -2.45 || lat > -1.85 || lon < -80.15 || lon > -79.70) { notify('Las coordenadas están fuera del área operativa permitida de Guayaquil.', true); return false; }
-            if (!form.elements.direccion.value.trim()) { notify('Ingrese una dirección o referencia.', true); return false; }
-        }
-        if (step === 2) {
-            const invalid = $$('[data-step="2"] [required]').find(field => !field.value);
-            if (invalid) { invalid.focus(); notify(`Complete el campo ${invalid.closest('label')?.childNodes[0]?.textContent?.trim() || 'requerido'}.`, true); return false; }
+            if (!selectedServicePlace) { notify('Seleccione un lugar de servicio.', true); return false; }
+            if (!form.elements.latitud.value || !form.elements.longitud.value) { notify('El lugar de servicio no tiene coordenadas definidas.', true); return false; }
+            if (!draftMarker) { if (!form.elements.latitud.value || !form.elements.longitud.value) { notify('Seleccione una ubicación en el mapa.', true); return false; } }
         }
         return true;
     }
     $('#nextStep').addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
     $('#prevStep').addEventListener('click', () => showStep(currentStep - 1));
     $('#locateCoordinates').addEventListener('click', () => setDraftLocation(form.elements.latitud.value, form.elements.longitud.value));
-    $('#formDistrict').addEventListener('change', async e => { try { await loadRoutes(e.target.value, $('#formRoute')); } catch (error) { notify(error.message, true); } });
-    $('#formShift').addEventListener('change', e => { const option = e.target.selectedOptions[0]; form.elements.hora_inicio.value = option?.dataset.start || ''; form.elements.hora_fin.value = option?.dataset.end || ''; $('#assignShift').value = e.target.value; $('#assignStartTime').value = form.elements.hora_inicio.value; $('#assignEndTime').value = form.elements.hora_fin.value; });
-
-    $('#createRoute')?.addEventListener('click', async () => {
-        const districtId = form.elements.distrito_id.value; if (!districtId) return notify('Seleccione primero un distrito.', true);
-        const name = prompt('Nombre de la nueva ruta:'); if (!name?.trim()) return;
-        try {
-            const body = { distrito_id: Number(districtId), nombre: name.trim(), turno_id: form.elements.turno_id.value ? Number(form.elements.turno_id.value) : null, hora_inicio: form.elements.hora_inicio.value || null, hora_fin: form.elements.hora_fin.value || null };
-            const result = await api(`distritos/${districtId}/rutas`, { method: 'POST', body });
-            await loadRoutes(districtId, $('#formRoute'), result.datos.id); notify(result.mensaje);
-        } catch (error) { notify(error.message, true); }
-    });
 
     let searchTimer;
     $('#agentSearch').addEventListener('input', event => {
@@ -251,7 +312,7 @@
         selectedAgent = person; $('#agentResults').innerHTML = ''; $('#agentSearch').value = '';
         $('#selectedAgent').innerHTML = `<i>${escapeHtml((person.nombres?.[0] || '') + (person.apellidos?.[0] || ''))}</i><span><strong>${escapeHtml(person.nombre_completo)}</strong><small>Código: ${escapeHtml(person.cedula)} · ${escapeHtml(person.cargo || 'Agente de control')} · ${escapeHtml(person.estado_personal || '')}</small></span>`;
         $('#assignmentEditor').hidden = false;
-        $('#assignShift').value = form.elements.turno_id.value || $('#assignShift').value;
+        $('#assignShift').value = $('#formTurnoId').value || $('#assignShift').value;
         $('#assignStartTime').value = form.elements.hora_inicio.value; $('#assignEndTime').value = form.elements.hora_fin.value;
         if (!$('#assignStartDate').value) $('#assignStartDate').value = new Date().toISOString().slice(0, 10);
     }
@@ -287,13 +348,12 @@
     }
 
     function collectPayload() {
-        return { distrito_id: Number(form.elements.distrito_id.value), ruta_id: Number(form.elements.ruta_id.value), nombre: form.elements.nombre.value.trim(), ubicacion_especifica: form.elements.ubicacion_especifica.value.trim(), direccion: form.elements.direccion.value.trim(), latitud: Number(form.elements.latitud.value), longitud: Number(form.elements.longitud.value), tipo_servicio_id: Number(form.elements.tipo_servicio_id.value), turno_id: Number(form.elements.turno_id.value), hora_inicio: form.elements.hora_inicio.value, hora_fin: form.elements.hora_fin.value, cantidad_requerida: Number(form.elements.cantidad_requerida.value), observaciones: form.elements.observaciones.value.trim() || null, estado: assignments.length ? 'CUBIERTO' : form.elements.estado.value, asignaciones: assignments.filter(item => !item.id).map(({ agente, codigo, turno, id, ...item }) => item) };
+        return { distrito_id: Number(form.elements.distrito_id.value), ruta_id: Number(form.elements.ruta_id.value), nombre: form.elements.nombre.value.trim(), ubicacion_especifica: form.elements.ubicacion_especifica.value.trim(), direccion: form.elements.direccion.value.trim(), latitud: Number(form.elements.latitud.value), longitud: Number(form.elements.longitud.value), tipo_servicio_id: Number($('#formTipoServicioId').value), turno_id: Number($('#formTurnoId').value), hora_inicio: form.elements.hora_inicio.value, hora_fin: form.elements.hora_fin.value, cantidad_requerida: Number(form.elements.cantidad_requerida.value), observaciones: null, estado: assignments.length ? 'CUBIERTO' : 'SIN_ASIGNACION', asignaciones: assignments.filter(item => !item.id).map(({ agente, codigo, turno, id, ...item }) => item) };
     }
 
     function renderSummary() {
         const payload = collectPayload();
-        const label = (select) => select.selectedOptions[0]?.textContent || '—';
-        const values = [['Distrito',label(form.elements.distrito_id)],['Ruta',label(form.elements.ruta_id)],['Punto',payload.nombre],['Ubicación específica',payload.ubicacion_especifica],['Dirección',payload.direccion],['Latitud',payload.latitud],['Longitud',payload.longitud],['Tipo de servicio',label(form.elements.tipo_servicio_id)],['Turno',label(form.elements.turno_id)],['Horario',`${payload.hora_inicio} - ${payload.hora_fin}`],['Cantidad requerida',payload.cantidad_requerida],['Agentes asignados',assignments.map(item => item.agente).join(', ') || 'Sin cobertura'],['Observaciones',payload.observaciones || 'Sin observaciones']];
+        const values = [['Distrito', $('#formDistrict').selectedOptions[0]?.textContent || '—'],['Ruta', $('#formRoute').selectedOptions[0]?.textContent || '—'],['Punto', payload.nombre],['Ubicación específica', payload.ubicacion_especifica],['Dirección', payload.direccion],['Latitud', payload.latitud],['Longitud', payload.longitud],['Tipo de servicio', $('#formTipoServicio').value || '—'],['Turno', $('#formTurno').value || '—'],['Horario', `${payload.hora_inicio} - ${payload.hora_fin}`],['Cantidad requerida', payload.cantidad_requerida],['Agentes asignados', assignments.map(item => item.agente).join(', ') || 'Sin cobertura']];
         $('#pointSummary').innerHTML = values.map(([key, value]) => `<dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value)}</dd>`).join('');
         if (!window.L) return;
         if (!previewMap) { previewMap = L.map('previewMap', { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([payload.latitud, payload.longitud], 16); L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(previewMap); }
@@ -302,7 +362,7 @@
     }
 
     form.addEventListener('submit', async event => {
-        event.preventDefault(); if (!validateStep(2)) return showStep(2);
+        event.preventDefault(); if (!validateStep(1)) return showStep(1);
         if (!assignments.length && !confirm('El punto quedará registrado sin cobertura. ¿Desea continuar?')) return;
         const payload = collectPayload(); const pointId = form.elements.point_id.value;
         $('#savePoint').disabled = true; $('#savePoint').textContent = 'Guardando…';

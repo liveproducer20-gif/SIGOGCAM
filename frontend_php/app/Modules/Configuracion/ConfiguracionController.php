@@ -138,7 +138,7 @@ final class ConfiguracionController
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $api->delete("configuracion/roles/{$roleId}/condiciones/{$conditionId}");
-            header('Location: /configuracion?rol_id=' . $roleId . '&mensaje=' . urlencode('Condición desactivada correctamente.'));
+            header('Location: /configuracion?rol_id=' . $roleId . '&mensaje=' . urlencode('Registro eliminado correctamente.'));
         } catch (\Throwable $exception) {
             header('Location: /configuracion?rol_id=' . $roleId . '&mensaje=' . urlencode($exception->getMessage()));
         }
@@ -179,7 +179,7 @@ final class ConfiguracionController
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $api->delete("configuracion/cambios/{$cambioId}");
-            header('Location: /configuracion?mensaje=' . urlencode('Cambio eliminado correctamente.'));
+            header('Location: /configuracion?mensaje=' . urlencode('Registro eliminado correctamente.'));
         } catch (\Throwable $exception) {
             header('Location: /configuracion?mensaje=' . urlencode($exception->getMessage()));
         }

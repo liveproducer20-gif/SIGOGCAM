@@ -206,7 +206,7 @@
                         <form method="post" action="/configuracion/condiciones/eliminar" class="inline-form">
                             <input type="hidden" name="rol_id" value="<?= (int)$selectedRoleId ?>">
                             <input type="hidden" name="id" value="<?= (int)$condition['id'] ?>">
-                            <button type="submit" class="danger">Desactivar</button>
+                            <button type="submit" class="danger">Eliminar</button>
                         </form>
                     </td>
                 </tr>

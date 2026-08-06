@@ -41,6 +41,11 @@ def post_sector(route_id: int, payload: SectorInput, user: dict = Depends(requir
     return ok({"id": repository.create_sector(data, int(user["id"]))}, "Sector creado correctamente")
 
 
+@router.get("/rutas/{route_id}/lugares-servicio")
+def get_service_places(route_id: int, distrito_id: int | None = None, user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.service_places_by_route(route_id, distrito_id))
+
+
 @router.get("/distribucion-geografica/puntos")
 def points(distrito_id: int | None = None, ruta_id: int | None = None, turno_id: int | None = None,
            sector_id: int | None = None, estado: str | None = None, agente: str | None = None,

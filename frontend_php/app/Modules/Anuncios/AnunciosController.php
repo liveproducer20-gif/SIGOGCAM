@@ -90,7 +90,7 @@ final class AnunciosController
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $api->delete("anuncios/{$id}");
-            $this->index(null, 'Anuncio eliminado correctamente.');
+            $this->index(null, 'Registro eliminado correctamente.');
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }

@@ -340,3 +340,29 @@ def person_assignments(person_id: int) -> list[dict]:
             INNER JOIN dbo.lugares_servicio p ON p.id=ap.punto_id INNER JOIN dbo.turnos t ON t.id=ap.turno_id
             WHERE ap.personal_id=? AND ap.activo=1 ORDER BY ap.fecha_inicio DESC""", person_id)
         return _rows(cursor)
+
+
+def service_places_by_route(route_id: int, distrito_id: int | None = None) -> list[dict]:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        where = ["p.ruta_id = ?", "p.activo = 1"]
+        params: list = [route_id]
+        if distrito_id:
+            where.append("p.distrito_id = ?")
+            params.append(distrito_id)
+        cursor.execute(f"""
+            SELECT p.id, p.nombre, p.ubicacion_especifica, p.direccion,
+                   p.latitud, p.longitud, p.distrito_id, p.ruta_id, p.sector_id,
+                   p.tipo_servicio_id, p.turno_id, p.hora_inicio, p.hora_fin,
+                   p.cantidad_requerida, p.estado_operativo AS estado, p.observacion AS observaciones,
+                   d.nombre AS distrito, r.nombre AS ruta, t.nombre AS turno,
+                   ts.nombre AS tipo_servicio,
+                   (SELECT COUNT(*) FROM dbo.asignaciones_punto ap WHERE ap.punto_id=p.id AND ap.activo=1) AS personal_asignado
+            FROM dbo.lugares_servicio p
+            INNER JOIN dbo.catalogo_detalles d ON d.id=p.distrito_id
+            INNER JOIN dbo.rutas r ON r.id=p.ruta_id
+            INNER JOIN dbo.turnos t ON t.id=p.turno_id
+            INNER JOIN dbo.catalogo_detalles ts ON ts.id=p.tipo_servicio_id
+            WHERE {' AND '.join(where)} ORDER BY p.nombre
+        """, *params)
+        return _rows(cursor)

@@ -192,13 +192,7 @@ def update_catalog_detail(item_id: int, data: dict) -> None:
 def delete_catalog_detail(item_id: int) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
-        try:
-            cursor.execute("DELETE FROM dbo.catalogo_detalles WHERE id=?", item_id)
-        except pyodbc.IntegrityError:
-            cursor.execute(
-                "UPDATE dbo.catalogo_detalles SET estado=0,fecha_actualizacion=SYSDATETIME() WHERE id=?",
-                item_id,
-            )
+        _cascade_delete(cursor, "catalogo_detalles", item_id)
 
 
 def list_mobile_assignments() -> list[dict]:
@@ -511,18 +505,51 @@ def delete_service_place(item_id: int) -> None:
     _soft_delete("lugares_servicio", item_id)
 
 
+_fk_cache: dict[str, list[tuple[str, str]]] | None = None
+
+
+def _child_map(cursor) -> dict[str, list[tuple[str, str]]]:
+    """child_table -> [(parent_col, child_col)] construido desde las FK reales del esquema."""
+    global _fk_cache
+    if _fk_cache is not None:
+        return _fk_cache
+    cursor.execute(
+        """
+        SELECT t2.name AS parent, c1.name AS child_col, t1.name AS child_table
+        FROM sys.foreign_keys fk
+        JOIN sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
+        JOIN sys.tables t1 ON t1.object_id = fk.parent_object_id
+        JOIN sys.columns c1 ON c1.object_id = t1.object_id AND c1.column_id = fkc.parent_column_id
+        JOIN sys.columns c2 ON c2.object_id = fk.referenced_object_id AND c2.column_id = fkc.referenced_column_id
+        JOIN sys.tables t2 ON t2.object_id = fk.referenced_object_id
+        """
+    )
+    result: dict[str, list[tuple[str, str]]] = {}
+    for table, col, child in cursor.fetchall():
+        key = (child, col)
+        result.setdefault(table, []).append(key)
+    _fk_cache = result
+    return result
+
+
 def _soft_delete(table_name: str, item_id: int) -> None:
     if table_name not in {"eas", "eas_estaciones", "moviles", "rutas", "lugares_servicio", "grados", "movil_eas_asignaciones"}:
         raise ValueError("Tabla no permitida")
     with get_connection() as connection:
         cursor = connection.cursor()
-        try:
-            cursor.execute(f"DELETE FROM dbo.{table_name} WHERE id = ?", item_id)
-        except pyodbc.IntegrityError:
-            cursor.execute(
-                f"UPDATE dbo.{table_name} SET activo = 0, fecha_actualizacion = SYSDATETIME() WHERE id = ?",
-                item_id,
-            )
+        _cascade_delete(cursor, table_name, item_id, set())
+
+
+def _cascade_delete(cursor, table_name: str, item_id: int, stack: set) -> None:
+    if (table_name, item_id) in stack:
+        return
+    stack.add((table_name, item_id))
+    for child, column in _child_map(cursor).get(table_name, []):
+        cursor.execute(f"SELECT id FROM dbo.{child} WHERE {column} = ?", item_id)
+        child_ids = [row[0] for row in cursor.fetchall()]
+        for child_id in child_ids:
+            _cascade_delete(cursor, child, child_id, stack)
+    cursor.execute(f"DELETE FROM dbo.{table_name} WHERE id = ?", item_id)
 
 
 def _eas_table() -> str:

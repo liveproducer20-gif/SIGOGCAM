@@ -98,7 +98,7 @@ final class EventosController
         try {
             $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
             $api->delete("eventos/{$id}");
-            $this->index(null, 'Evento eliminado exitosamente.');
+            $this->index(null, 'Registro eliminado correctamente.');
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }

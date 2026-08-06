@@ -125,6 +125,16 @@ if ($path === '/personal' && $method === 'GET') {
     return;
 }
 
+if ($path === '/personal' && $method === 'POST') {
+    (new PersonalController())->store();
+    return;
+}
+
+if ($path === '/personal/eliminar' && $method === 'POST') {
+    (new PersonalController())->destroy();
+    return;
+}
+
 if ($path === '/admin' && $method === 'GET') {
     (new AdminController())->index();
     return;

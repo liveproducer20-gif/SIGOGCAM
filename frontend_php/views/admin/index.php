@@ -89,7 +89,90 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
 
     <?php if ($tab === 'lugares' && $can('lugares_servicio.ver')): ?>
     <header class="admin-section-heading"><div><h2>Lugares de servicio</h2><p>Información operativa y geográfica de los puntos institucionales.</p></div><span><?= count($adminData['lugares']) ?> lugares</span></header>
-    <?php if ($can('lugares_servicio.crear') || $can('lugares_servicio.editar')): ?><form class="form-panel admin-form" method="post" action="/admin" id="form-lugar"><input type="hidden" name="entity" value="lugar"><input type="hidden" name="tab" value="lugares"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nuevo lugar</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>Nombre<input name="nombre" required></label><label>Distrito<select name="distrito_id" required><?php $optionList($refs['distritos'] ?? []); ?></select></label><label>Ruta<select name="ruta_id" required><?php $optionList($adminData['rutas']); ?></select></label><label>Sector<select name="sector_id"><?php $optionList($refs['sectores'] ?? []); ?></select></label><label>Tipo de servicio<select name="tipo_servicio_id"><?php $optionList($refs['tiposServicio'] ?? []); ?></select></label><label>Turno<select name="turno_id"><?php $optionList($refs['turnos'] ?? []); ?></select></label><label class="span-2">Dirección<input name="direccion" required></label><label>Ubicación específica<input name="ubicacion_especifica"></label><label>Hora entrada<input name="hora_entrada"></label><label>Hora salida<input name="hora_salida"></label><label>Inicio<input type="time" name="hora_inicio"></label><label>Fin<input type="time" name="hora_fin"></label><label>Personal requerido<input type="number" min="1" name="cantidad_requerida" value="1"></label><label>Estado operativo<select name="estado_operativo"><option>ACTIVO</option><option>SUSPENDIDO</option><option>CERRADO</option></select></label><label>Latitud<input type="number" step="any" name="latitud"></label><label>Longitud<input type="number" step="any" name="longitud"></label><label class="span-2">Consignas<textarea name="consignas" rows="2"></textarea></label><label>Observación<textarea name="observacion" rows="2"></textarea></label><label class="check-row"><input type="checkbox" name="activo" checked> Activo</label></div><button type="submit">Guardar lugar</button></form><?php endif; ?>
+    <?php if ($can('lugares_servicio.crear') || $can('lugares_servicio.editar')): ?>
+    <form class="form-panel admin-form" method="post" action="/admin" id="form-lugar">
+        <input type="hidden" name="entity" value="lugar">
+        <input type="hidden" name="tab" value="lugares">
+        <input type="hidden" name="id">
+        <div class="admin-form-title"><h3>Nuevo lugar</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div>
+        <div class="form-grid">
+            <label>Distrito<select name="distrito_id" id="lugar-distrito" required><?php $optionList($refs['distritos'] ?? []); ?></select></label>
+            <label>Ruta<select name="ruta_id" id="lugar-ruta" required>
+                <option value="">Seleccione</option>
+                <?php foreach ($adminData['rutas'] as $r): ?><option value="<?= (int)$r['id'] ?>" data-distrito="<?= (int)($r['distrito_id'] ?? 0) ?>" data-hora-inicio="<?= $e($r['hora_inicio'] ?? '') ?>" data-hora-fin="<?= $e($r['hora_fin'] ?? '') ?>"><?= $e($r['nombre']) ?></option><?php endforeach; ?>
+            </select></label>
+            <label>Tipo de servicio<select name="tipo_servicio_id"><?php $optionList($refs['tiposServicio'] ?? []); ?></select></label>
+            <label>Cantidad requerida<input type="number" name="cantidad_requerida" id="lugar-cantidad" min="1" value="1"></label>
+            <label>Hora inicio<input type="time" name="hora_inicio" id="lugar-hora-inicio"></label>
+            <label>Hora fin<input type="time" name="hora_fin" id="lugar-hora-fin"></label>
+        </div>
+        <div id="lugares-list" class="form-grid" style="margin-top:1rem">
+            <label class="span-2">Nombre del lugar de servicio
+                <div style="display:flex;gap:0.5rem;align-items:center">
+                    <input type="text" name="nombre[]" placeholder="Ingrese el nombre" required style="flex:1">
+                    <button type="button" class="remove-lugar danger" style="padding:0.4rem 0.6rem;line-height:1" title="Quitar">&times;</button>
+                </div>
+            </label>
+        </div>
+        <button type="button" id="add-lugar" class="secondary" style="margin-bottom:1rem">+ Agregar otro lugar de servicio</button>
+        <div class="form-grid">
+            <label class="span-2">Consignas<textarea name="consignas" rows="2"></textarea></label>
+            <label class="span-2">Observación<textarea name="observacion" rows="2"></textarea></label>
+        </div>
+        <button type="submit">Guardar lugares</button>
+    </form>
+    <script>
+    (function(){
+        var distritoSel = document.getElementById('lugar-distrito');
+        var rutaSel = document.getElementById('lugar-ruta');
+        var horaInicio = document.getElementById('lugar-hora-inicio');
+        var horaFin = document.getElementById('lugar-hora-fin');
+        var todasRutas = Array.from(rutaSel.options).filter(function(o){ return o.value !== ''; });
+
+        distritoSel.addEventListener('change', function(){
+            var dId = this.value;
+            rutaSel.innerHTML = '';
+            var defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Seleccione';
+            rutaSel.appendChild(defaultOpt);
+            todasRutas.forEach(function(o){
+                if(!dId || o.getAttribute('data-distrito') === dId){
+                    rutaSel.appendChild(o.cloneNode(true));
+                }
+            });
+            horaInicio.value = '';
+            horaFin.value = '';
+        });
+
+        rutaSel.addEventListener('change', function(){
+            var opt = this.options[this.selectedIndex];
+            if(opt && opt.value){
+                horaInicio.value = opt.getAttribute('data-hora-inicio') || '';
+                horaFin.value = opt.getAttribute('data-hora-fin') || '';
+            } else {
+                horaInicio.value = '';
+                horaFin.value = '';
+            }
+        });
+
+        document.getElementById('add-lugar').addEventListener('click', function(){
+            var list = document.getElementById('lugares-list');
+            var label = document.createElement('label');
+            label.className = 'span-2 lugar-row';
+            label.innerHTML = 'Nombre del lugar de servicio <div style="display:flex;gap:0.5rem;align-items:center"><input type="text" name="nombre[]" placeholder="Ingrese el nombre" required style="flex:1"><button type="button" class="remove-lugar danger" style="padding:0.4rem 0.6rem;line-height:1" title="Quitar">&times;</button></div>';
+            list.appendChild(label);
+        });
+
+        document.getElementById('lugares-list').addEventListener('click', function(e){
+            if(e.target.classList.contains('remove-lugar')){
+                var rows = document.querySelectorAll('.lugar-row');
+                if(rows.length > 1) e.target.closest('.lugar-row').remove();
+            }
+        });
+    })();
+    </script>
+    <?php endif; ?>
     <section class="table-wrap"><table><thead><tr><th>Lugar</th><th>Distrito / Ruta</th><th>Servicio</th><th>Horario</th><th>Requeridos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['lugares'] as $item): $payload=['id'=>$item['id'],'nombre'=>$item['nombre'],'direccion'=>$item['direccion'],'ubicacion_especifica'=>$item['ubicacion_especifica'],'distrito_id'=>$item['distrito_id'],'ruta_id'=>$item['ruta_id'],'sector_id'=>$item['sector_id'],'tipo_servicio_id'=>$item['tipo_servicio_id'],'turno_id'=>$item['turno_id'],'hora_entrada'=>$item['hora_entrada'],'hora_salida'=>$item['hora_salida'],'hora_inicio'=>$item['hora_inicio'],'hora_fin'=>$item['hora_fin'],'cantidad_requerida'=>$item['cantidad_requerida'],'estado_operativo'=>$item['estado_operativo'],'consignas'=>$item['consignas'],'observacion'=>$item['observacion'],'latitud'=>$item['latitud'],'longitud'=>$item['longitud'],'activo'=>(bool)$item['activo']]; ?><tr><td><strong><?= $e($item['nombre'] ?: $item['direccion']) ?></strong><small><?= $e($item['direccion']) ?></small></td><td><?= $e(($item['distrito'] ?? '—').' / '.($item['ruta'] ?? '—')) ?></td><td><?= $e($item['tipo_servicio'] ?? '—') ?></td><td><?= $e(($item['hora_inicio'] ?? $item['hora_entrada'] ?? '—').' – '.($item['hora_fin'] ?? $item['hora_salida'] ?? '—')) ?></td><td><?= (int)$item['cantidad_requerida'] ?></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $e($item['estado_operativo']) ?></span></td><td class="actions"><?php if ($can('lugares_servicio.editar')): ?><button type="button" class="secondary" data-edit-target="#form-lugar" data-payload="<?= $json($payload) ?>">Editar</button><?php endif; ?><?php if ($can('lugares_servicio.estado')): ?><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="lugar"><input type="hidden" name="tab" value="lugares"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Eliminar</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
     <?php endif; ?>
 

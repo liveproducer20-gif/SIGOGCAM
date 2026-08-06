@@ -72,17 +72,45 @@ final class AdminController
         $_GET['tab'] = $tab;
         if (!empty($_POST['catalogo_codigo'])) $_GET['catalogo'] = $_POST['catalogo_codigo'];
         try {
-            [$path, $payload] = $this->payloadFor($entity);
             $api = $this->api();
             if ($entity === 'mantenimiento') {
+                [$path, $payload] = $this->payloadFor($entity);
                 $api->post('admin/moviles/' . (int)$_POST['movil_id'] . '/mantenimientos', $payload);
+            } elseif ($entity === 'lugar' && $id <= 0 && !empty($_POST['nombre'])) {
+                $nombres = $_POST['nombre'];
+                if (!is_array($nombres)) $nombres = [$nombres];
+                $distritoId = (int)($_POST['distrito_id'] ?? 0);
+                $rutaId = (int)($_POST['ruta_id'] ?? 0);
+                $tipoServicioId = $this->nullableInt($_POST['tipo_servicio_id'] ?? null);
+                $consignas = $this->text('consignas');
+                $observacion = $this->text('observacion');
+                $creados = 0;
+                foreach ($nombres as $nombre) {
+                    $nombre = trim((string)$nombre);
+                    if ($nombre === '') continue;
+                    $api->post('admin/lugares-servicio', [
+                        'nombre' => $nombre,
+                        'direccion' => $nombre,
+                        'distritoId' => $distritoId,
+                        'rutaId' => $rutaId,
+                        'tipoServicioId' => $tipoServicioId,
+                        'consignas' => $consignas,
+                        'observacion' => $observacion,
+                        'cantidadRequerida' => 1,
+                        'estadoOperativo' => 'ACTIVO',
+                        'activo' => true,
+                    ]);
+                    $creados++;
+                }
+                $this->index("{$creados} registro(s) creado(s) correctamente.");
             } elseif ($entity === 'catalogo_detalle') {
+                [$path, $payload] = $this->payloadFor($entity);
                 if ($id > 0) $api->put("admin/catalogos/detalles/{$id}", $payload);
                 else $api->post('admin/catalogos/' . rawurlencode((string)$_POST['catalogo_codigo']), $payload);
-            } elseif ($id > 0) {
-                $api->put("admin/{$path}/{$id}", $payload);
             } else {
-                $api->post("admin/{$path}", $payload);
+                [$path, $payload] = $this->payloadFor($entity);
+                if ($id > 0) $api->put("admin/{$path}/{$id}", $payload);
+                else $api->post("admin/{$path}", $payload);
             }
             $this->index($id > 0 ? 'Registro actualizado correctamente.' : 'Registro creado correctamente.');
         } catch (\Throwable $exception) {
@@ -104,7 +132,7 @@ final class AdminController
         if ($id <= 0 || !isset($paths[$entity])) { $this->index('Seleccione un registro válido.'); return; }
         try {
             $this->api()->delete('admin/' . $paths[$entity] . '/' . $id);
-            $this->index('Registro desactivado correctamente.');
+            $this->index('Registro eliminado correctamente.');
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
