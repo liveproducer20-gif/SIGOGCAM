@@ -54,7 +54,8 @@
     $('#tdShift').addEventListener('change', e => {
         const opt = e.target.selectedOptions[0];
         currentShift = {
-            nombre: e.target.value,
+            id: e.target.value,
+            nombre: opt?.dataset.nombre || '',
             hora_inicio: opt?.dataset.start || '',
             hora_fin: opt?.dataset.end || '',
         };
@@ -65,16 +66,42 @@
     $('#tdLoadRoute').addEventListener('click', async () => {
         const routeId = $('#tdRoute').value;
         const fecha = $('#tdDate').value;
-        const turno = $('#tdShift').value;
-        if (!routeId || !fecha || !turno) return notify('Seleccione distrito, ruta, fecha y turno.', true);
+        if (!routeId || !fecha) return notify('Seleccione distrito, ruta y fecha.', true);
         setLoading($('#tdLoadRoute'), true);
         try {
-            const shiftOpt = $('#tdShift').selectedOptions[0];
             currentRoute = (await api(`distribucion-tablero/rutas/${routeId}/info`)).datos;
             currentFecha = fecha;
-            currentShift = { nombre: turno, hora_inicio: shiftOpt?.dataset.start || '', hora_fin: shiftOpt?.dataset.end || '' };
+
+            // Auto-select shift based on route's assigned turno_id
+            const routeTurnoId = currentRoute.turno_id;
+            if (routeTurnoId) {
+                $('#tdShift').value = String(routeTurnoId);
+                const shiftOpt = $('#tdShift').selectedOptions[0];
+                currentShift = {
+                    id: shiftOpt?.value || '',
+                    nombre: shiftOpt?.dataset.nombre || '',
+                    hora_inicio: shiftOpt?.dataset.start || '',
+                    hora_fin: shiftOpt?.dataset.end || '',
+                };
+            } else {
+                // Fallback to manually selected shift
+                const shiftOpt = $('#tdShift').selectedOptions[0];
+                currentShift = {
+                    id: shiftOpt?.value || '',
+                    nombre: shiftOpt?.dataset.nombre || '',
+                    hora_inicio: shiftOpt?.dataset.start || '',
+                    hora_fin: shiftOpt?.dataset.end || '',
+                };
+            }
+
+            if (!currentShift.nombre) {
+                notify('No se pudo determinar el turno de la ruta. Seleccione uno manualmente.', true);
+                setLoading($('#tdLoadRoute'), false);
+                return;
+            }
+
             currentSectors = (await api(`distribucion-tablero/rutas/${routeId}/sectores`)).datos || [];
-            const stats = (await api(`distribucion-tablero/rutas/${routeId}/estadisticas?fecha=${fecha}&turno=${encodeURIComponent(turno)}`)).datos || {};
+            const stats = (await api(`distribucion-tablero/rutas/${routeId}/estadisticas?fecha=${fecha}&turno=${encodeURIComponent(currentShift.nombre)}`)).datos || {};
             renderRouteInfo(stats);
             $('#tdRouteInfo').hidden = false;
         } catch (e) { notify(e.message, true); }

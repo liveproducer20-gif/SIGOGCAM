@@ -31,10 +31,11 @@ $canClean = in_array('tablero_distribucion.limpiar', $permissions, true);
                     <select id="tdShift" required>
                         <option value="">Seleccione turno</option>
                         <?php foreach (($catalogos['turnos'] ?? []) as $item): ?>
-                            <option value="<?= $esc($item['nombre']) ?>"
+                            <option value="<?= (int)$item['id'] ?>"
+                                data-nombre="<?= $esc($item['nombre']) ?>"
                                 data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>"
                                 data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>">
-                                <?= $esc($item['nombre']) ?> (<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?> - <?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>)
+                                <?= $esc($item['nombre']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

@@ -44,23 +44,28 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OpenStreetMap' }).addTo(map);
         markerLayer = L.featureGroup().addTo(map);
         setTimeout(() => map.invalidateSize(), 100);
+        loadMapData();
+    }
+
+    function fitMapToBounds(points) {
+        if (!points || points.length === 0 || !map) return;
+        const bounds = L.latLngBounds();
+        points.forEach(p => {
+            if (p.latitud && p.longitud) {
+                bounds.extend([p.latitud, p.longitud]);
+            }
+        });
+        if (!bounds.isValid()) return;
+        map.fitBounds(bounds, { padding: [40, 40] });
+    }
+
+    function updateVisiblePointCount(count) {
+        $('#visiblePointCount').textContent = count;
     }
 
     // ===================================================================
     // PIN MARKER
     // ===================================================================
-    function pinIcon(color, selected = false) {
-        const sz = selected ? 44 : 36;
-        return L.divIcon({
-            className: '',
-            iconSize: [sz, sz + 14],
-            iconAnchor: [sz / 2, sz + 10],
-            html: `<div class="geo-pin-marker ${selected ? 'selected' : ''}" style="--pin-color:${color};width:${sz}px;height:${sz}px">
-                <img src="/assets/img/pin-avatar.png" alt="Punto" width="${sz}" height="${sz}">
-                <svg class="geo-pin-arrow" width="20" height="14" viewBox="0 0 20 14"><path d="M10 14L0 0h20z" fill="${color}"/></svg>
-            </div>`
-        });
-    }
 
     // ===================================================================
     // DISTRICT → ROUTE FLOW
@@ -73,12 +78,19 @@
         lieuSelect.innerHTML = '<option value="">Todos los lugares</option>';
         lieuSelect.disabled = true;
         clearMap();
-        if (!e.target.value) return;
+        if (!e.target.value) {
+            await loadMapData();
+            return;
+        }
         try {
             const routes = (await api(`distritos/${e.target.value}/rutas`)).datos || [];
             routes.forEach(r => routeSelect.add(new Option(r.nombre, r.id)));
             routeSelect.add(new Option('— Dibujar nueva ruta —', 'nueva'));
             routeSelect.disabled = false;
+            if (routes.length > 0 && !routeSelect.value) {
+                routeSelect.value = String(routes[0].id);
+                routeSelect.dispatchEvent(new Event('change'));
+            }
         } catch (err) { notify(err.message, true); }
     });
 
@@ -88,19 +100,35 @@
         lieuSelect.disabled = true;
         clearMap();
         const addBtn = $('#btnAddPlace');
+        const mapEmpty = $('#geoMapEmpty');
         if (addBtn) addBtn.style.display = 'none';
+        if (mapEmpty) mapEmpty.hidden = true;
         if (!e.target.value) return;
         if (e.target.value === 'nueva') { openDrawWizard(); return; }
         try {
             const rutaId = e.target.value;
             const geoData = (await api(`rutas/${rutaId}/geografia`)).datos;
             const places = (await api(`rutas/${rutaId}/lugares-servicio`)).datos || [];
-            if (geoData) { currentRouteGeo = geoData; drawRouteOnMap(geoData); }
+            if (geoData) {
+                currentRouteGeo = geoData;
+                drawRouteOnMap(geoData);
+            } else {
+                // No hay trazado geográfico: mostrar mensaje y botón para agregar
+                if (mapEmpty) {
+                    mapEmpty.innerHTML = 'Esta ruta no tiene trazado geográfico.';
+                    mapEmpty.hidden = false;
+                }
+                // Mostrar botón para agregar trazado si tiene permisos
+                if (addBtn && permissions.create) {
+                    addBtn.style.display = '';
+                    addBtn.textContent = '＋ Agregar trazado geográfico';
+                    addBtn.onclick = () => openDrawWizardForRoute(rutaId);
+                }
+            }
             currentRoute = { id: rutaId };
             places.forEach(p => lieuSelect.add(new Option(p.nombre, p.id)));
             lieuSelect.disabled = false;
             loadServicePlaceMarkers(places);
-            if (addBtn) addBtn.style.display = '';
         } catch (err) { notify(err.message, true); }
     });
 
@@ -185,6 +213,25 @@
         $('#drawRouteOpacity').value = '0.55';
         $('#drawRouteState').value = 'ACTIVA';
         $('#drawRouteGeometry').value = 'lineal';
+        drawWizard.dataset.mode = 'new';
+        drawWizard.dataset.routeId = '';
+        setupDrawMap();
+    }
+
+    function openDrawWizardForRoute(rutaId) {
+        if (!drawWizard) return;
+        drawWizard.hidden = false;
+        document.body.style.overflow = 'hidden';
+        // Cargar info de la ruta para mostrar nombre
+        $('#drawRouteName').value = '';
+        $('#drawRouteDesc').value = '';
+        $('#drawRouteColor').value = '#2563EB';
+        $('#drawRouteWidth').value = '6';
+        $('#drawRouteOpacity').value = '0.55';
+        $('#drawRouteState').value = 'ACTIVA';
+        $('#drawRouteGeometry').value = 'lineal';
+        drawWizard.dataset.mode = 'existing';
+        drawWizard.dataset.routeId = rutaId;
         setupDrawMap();
     }
 
@@ -209,7 +256,7 @@
 
     function stopDrawing() {
         drawMode = false; tempPoints = [];
-        wizardMap?.getContainer().style.cursor = '';
+        if (wizardMap && wizardMap.getContainer()) wizardMap.getContainer().style.cursor = '';
         wizardMap?.off('click', onMapClick);
     }
 
@@ -245,9 +292,36 @@
         if (tempPoints.length < 2) return notify('Dibuje al menos 2 puntos.', true);
         const districtId = $('#filterDistrict').value;
         if (!districtId) return notify('Seleccione un distrito.', true);
-        const payload = {
+
+        const mode = drawWizard.dataset.mode || 'new';
+        let routeId;
+
+        if (mode === 'new') {
+            // 1. Crear la ruta básica en tabla rutas
+            const routePayload = {
+                nombre: name,
+                distritoId: Number(districtId),
+                turnoId: 1,
+                horaInicio: '06:00',
+                horaFin: '14:30',
+                activo: true
+            };
+            try {
+                const routeResult = await api('rutas', { method: 'POST', body: routePayload });
+                routeId = routeResult.id;
+            } catch (err) {
+                return notify('Error al crear la ruta: ' + err.message, true);
+            }
+        } else {
+            // Modo existing: usar la ruta existente
+            routeId = drawWizard.dataset.routeId;
+            if (!routeId) return notify('Error: no se especificó la ruta.', true);
+        }
+
+        // 2. Crear el trazado geográfico vinculado a la ruta
+        const geoPayload = {
             distrito_id: Number(districtId),
-            ruta_id: 0,
+            ruta_id: routeId,
             nombre: name,
             descripcion: $('#drawRouteDesc').value.trim() || null,
             tipo_geometria: $('#drawRouteGeometry').value,
@@ -258,15 +332,17 @@
             estado: $('#drawRouteState').value
         };
         try {
-            const result = await api('rutas-geograficas', { method: 'POST', body: payload });
-            notify('Ruta guardada correctamente.');
+            const result = await api('rutas-geograficas', { method: 'POST', body: geoPayload });
+            notify(mode === 'new' ? 'Ruta y trazado guardados correctamente.' : 'Trazado geográfico agregado correctamente.');
             closeDrawWizard();
             const routeSelect = $('#filterRoute');
             if (routeSelect) {
-                const opt = document.createElement('option');
-                opt.value = result.id; opt.textContent = name;
-                routeSelect.insertBefore(opt, routeSelect.querySelector('[value="nueva"]'));
-                routeSelect.value = String(result.id);
+                if (mode === 'new') {
+                    const opt = document.createElement('option');
+                    opt.value = routeId; opt.textContent = name;
+                    routeSelect.insertBefore(opt, routeSelect.querySelector('[value="nueva"]'));
+                }
+                routeSelect.value = String(routeId);
                 routeSelect.dispatchEvent(new Event('change'));
             }
         } catch (err) { notify(err.message, true); }
