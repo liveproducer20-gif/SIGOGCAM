@@ -80,7 +80,7 @@ def actualizar_ruta(item_id: int, payload: dict = Body(...), user: dict = Depend
 @router.delete("/rutas/{item_id}")
 def eliminar_ruta(item_id: int, user: dict = Depends(require_permission("catalogos.estado"))):
     repo.delete_route(item_id)
-    return ok(None, "Ruta desactivada correctamente")
+    return ok(None, "Ruta eliminada correctamente")
 
 
 @router.get("/lugares-servicio")
@@ -102,7 +102,7 @@ def actualizar_lugar(item_id: int, payload: dict = Body(...), user: dict = Depen
 @router.delete("/lugares-servicio/{item_id}")
 def eliminar_lugar(item_id: int, user: dict = Depends(require_permission("lugares_servicio.estado"))):
     repo.delete_service_place(item_id)
-    return ok(None, "Lugar desactivado correctamente")
+    return ok(None, "Lugar eliminado correctamente")
 
 
 @router.get("/grados")
@@ -124,7 +124,7 @@ def actualizar_grado(item_id: int, payload: dict = Body(...), user: dict = Depen
 @router.delete("/grados/{item_id}")
 def eliminar_grado(item_id: int, user: dict = Depends(require_permission("catalogos.estado"))):
     repo.delete_grade(item_id)
-    return ok(None, "Grado desactivado correctamente")
+    return ok(None, "Grado eliminado correctamente")
 
 
 @router.get("/catalogos")
@@ -173,7 +173,7 @@ def actualizar_asignacion(item_id: int, payload: dict = Body(...), user: dict = 
 @router.delete("/movil-eas-asignaciones/{item_id}")
 def eliminar_asignacion(item_id: int, user: dict = Depends(require_permission("moviles.asignar"))):
     repo.delete_mobile_assignment(item_id)
-    return ok(None, "Asignación desactivada correctamente")
+    return ok(None, "Asignación eliminada correctamente")
 
 
 @router.get("/dashboard/mantenimiento")

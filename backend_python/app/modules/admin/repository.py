@@ -1,3 +1,5 @@
+import pyodbc
+
 from app.core.db import get_connection
 
 
@@ -189,9 +191,14 @@ def update_catalog_detail(item_id: int, data: dict) -> None:
 
 def delete_catalog_detail(item_id: int) -> None:
     with get_connection() as connection:
-        connection.cursor().execute(
-            "DELETE FROM dbo.catalogo_detalles WHERE id=?", item_id
-        )
+        cursor = connection.cursor()
+        try:
+            cursor.execute("DELETE FROM dbo.catalogo_detalles WHERE id=?", item_id)
+        except pyodbc.IntegrityError:
+            cursor.execute(
+                "UPDATE dbo.catalogo_detalles SET estado=0,fecha_actualizacion=SYSDATETIME() WHERE id=?",
+                item_id,
+            )
 
 
 def list_mobile_assignments() -> list[dict]:
@@ -509,10 +516,13 @@ def _soft_delete(table_name: str, item_id: int) -> None:
         raise ValueError("Tabla no permitida")
     with get_connection() as connection:
         cursor = connection.cursor()
-        cursor.execute(
-            f"DELETE FROM dbo.{table_name} WHERE id = ?",
-            item_id,
-        )
+        try:
+            cursor.execute(f"DELETE FROM dbo.{table_name} WHERE id = ?", item_id)
+        except pyodbc.IntegrityError:
+            cursor.execute(
+                f"UPDATE dbo.{table_name} SET activo = 0, fecha_actualizacion = SYSDATETIME() WHERE id = ?",
+                item_id,
+            )
 
 
 def _eas_table() -> str:
