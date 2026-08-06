@@ -30,14 +30,14 @@ def get_route_sectors(route_id: int) -> list[dict]:
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT s.id, s.nombre, s.cantidad_agentes_requeridos, s.orden_distribucion,
-                   s.distrito_id, s.ruta_id,
+            SELECT ls.id, ls.nombre, ls.cantidad_requerida AS cantidad_agentes_requeridos,
+                   ls.distrito_id, ls.ruta_id,
                    (SELECT COUNT(*) FROM dbo.asignaciones_ruta ar
-                    WHERE ar.sector_id = s.id AND ar.estado IN ('PENDIENTE', 'ACTIVA')
+                    WHERE ar.sector_id = ls.id AND ar.estado IN ('PENDIENTE', 'ACTIVA')
                     AND ar.deleted_at IS NULL) AS agentes_asignados
-            FROM dbo.sectores s
-            WHERE s.activo = 1 AND s.ruta_id = ?
-            ORDER BY s.orden_distribucion, s.nombre
+            FROM dbo.lugares_servicio ls
+            WHERE ls.activo = 1 AND ls.ruta_id = ?
+            ORDER BY ls.orden_distribucion, ls.nombre
         """, route_id)
         return _rows(cursor)
 
@@ -64,8 +64,8 @@ def get_route_stats(route_id: int, fecha: date, turno: str) -> dict:
         cursor = connection.cursor()
         cursor.execute("""
             SELECT
-                (SELECT COUNT(*) FROM dbo.sectores WHERE ruta_id = ? AND activo = 1) AS total_sectores,
-                (SELECT ISNULL(SUM(cantidad_agentes_requeridos), 0) FROM dbo.sectores WHERE ruta_id = ? AND activo = 1) AS agentes_requeridos,
+                (SELECT COUNT(*) FROM dbo.lugares_servicio WHERE ruta_id = ? AND activo = 1) AS total_sectores,
+                (SELECT ISNULL(SUM(cantidad_requerida), 0) FROM dbo.lugares_servicio WHERE ruta_id = ? AND activo = 1) AS agentes_requeridos,
                 (SELECT COUNT(*) FROM dbo.asignaciones_ruta
                  WHERE ruta_id = ? AND fecha_asignacion = ? AND turno = ?
                  AND estado IN ('PENDIENTE', 'ACTIVA') AND deleted_at IS NULL) AS agentes_asignados
@@ -342,16 +342,16 @@ def get_assignments_by_route(route_id: int, fecha: date, turno: str) -> list[dic
         cursor = connection.cursor()
         cursor.execute("""
             SELECT ar.id, ar.agente_id, vp.nombre_completo AS agente_nombre, vp.cedula,
-                   ar.sector_id, s.nombre AS sector_nombre,
+                   ar.sector_id, ls.nombre AS sector_nombre,
                    ar.fecha_asignacion, ar.turno, ar.hora_inicio, ar.hora_fin,
                    ar.estado, ar.tipo_asignacion, ar.sorteo_id, ar.observacion,
                    ar.fecha_creacion
             FROM dbo.asignaciones_ruta ar
             INNER JOIN dbo.vw_personal_detalle vp ON vp.id = ar.agente_id
-            INNER JOIN dbo.sectores s ON s.id = ar.sector_id
+            INNER JOIN dbo.lugares_servicio ls ON ls.id = ar.sector_id
             WHERE ar.ruta_id = ? AND ar.fecha_asignacion = ? AND ar.turno = ?
               AND ar.deleted_at IS NULL
-            ORDER BY s.orden_distribucion, s.nombre, vp.nombre_completo
+            ORDER BY ls.orden_distribucion, ls.nombre, vp.nombre_completo
         """, route_id, fecha, turno)
         return _rows(cursor)
 
@@ -393,8 +393,8 @@ def update_sector_requirements(route_id: int, sectores: list[dict], user_id: int
         updated = 0
         for item in sectores:
             cursor.execute("""
-                UPDATE dbo.sectores
-                SET cantidad_agentes_requeridos = ?, actualizado_por = ?, fecha_actualizacion = SYSDATETIME()
+                UPDATE dbo.lugares_servicio
+                SET cantidad_requerida = ?, actualizado_por = ?, fecha_actualizacion = SYSDATETIME()
                 WHERE id = ? AND ruta_id = ? AND activo = 1
             """, item["cantidad_agentes_requeridos"], user_id, item["sector_id"], route_id)
             updated += cursor.rowcount

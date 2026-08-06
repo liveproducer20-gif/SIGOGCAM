@@ -4,77 +4,43 @@ $permissions = $usuario['permisos'] ?? [];
 $canCreate = in_array('distribucion.crear', $permissions, true);
 $canEdit = in_array('distribucion.editar', $permissions, true);
 $canAssign = in_array('distribucion.asignar', $permissions, true);
-$canCatalogs = in_array('distribucion.catalogos', $permissions, true);
-$initials = strtoupper(substr((string)($usuario['nombres'] ?? 'U'), 0, 1) . substr((string)($usuario['apellidos'] ?? ''), 0, 1));
 ?>
-<div class="geo-app" data-can-create="<?= $canCreate ? '1' : '0' ?>" data-can-edit="<?= $canEdit ? '1' : '0' ?>" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-catalogs="<?= $canCatalogs ? '1' : '0' ?>">
-    <aside class="geo-sidebar" aria-label="Navegación principal">
-        <a class="geo-brand" href="/dashboard" aria-label="SIGO inicio">
-            <span class="geo-brand-shield">S</span>
-            <span><strong>SIGO</strong><small>Sistema Integral de<br>Gestión Operativa</small></span>
-        </a>
-        <nav class="geo-nav">
-            <a href="/dashboard"><span>⌂</span> Dashboard</a>
-            <a href="/eventos"><span>▣</span> Eventos</a>
-            <a href="#"><span>◇</span> Novedades <b>⌄</b></a>
-            <a href="/personal"><span>♙</span> Personal <b>⌄</b></a>
-            <a href="#"><span>▤</span> Servicios <b>⌄</b></a>
-            <section class="geo-nav-group is-open">
-                <div><span>▧</span> Distribución <b>⌃</b></div>
-                <a class="is-active" href="/distribucion-geografica">Distribución geográfica</a>
-                <a href="/distribucion-tablero">Tablero de distribución</a>
-            </section>
-            <a href="#"><span>✥</span> Comunicación <b>›</b></a>
-            <a href="#"><span>▥</span> Reportes <b>›</b></a>
-            <a href="/admin"><span>▦</span> Catálogos <b>›</b></a>
-            <a href="/configuracion"><span>⚙</span> Configuración <b>›</b></a>
-        </nav>
-        <div class="geo-sidebar-footer"><span class="geo-footer-shield">S</span><span><strong>SEGURA EP</strong><small>Lealtad, Valor y Orden</small></span></div>
-    </aside>
+<div class="geo-app" data-can-create="<?= $canCreate ? '1' : '0' ?>" data-can-edit="<?= $canEdit ? '1' : '0' ?>" data-can-assign="<?= $canAssign ? '1' : '0' ?>">
+    <main class="geo-main">
+        <?php if (!empty($error)): ?><div class="geo-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
-    <div class="geo-content">
-        <header class="geo-header">
-            <button class="geo-menu-toggle" type="button" id="geoMenuToggle" aria-label="Abrir menú">☰</button>
-            <div class="geo-title"><h1>DISTRIBUCIÓN GEOGRÁFICA</h1><p>Rutas, lugares de servicio y asignación de personal</p></div>
-            <div class="geo-user"><span class="geo-bell">♧<b>8</b></span><span><strong><?= $esc($usuario['nombreCompleto'] ?? 'Usuario SIGO') ?></strong><small>Rol: <?= $esc($usuario['rolNombre'] ?? $usuario['rol'] ?? '') ?></small></span><i><?= $esc($initials ?: 'U') ?></i></div>
-        </header>
+        <button class="geo-filter-toggle" type="button" id="geoFilterToggle">☷ Mostrar filtros</button>
+        <form class="geo-filters" id="geoFilters">
+            <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
+            <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
+            <label>Lugar de servicio<select name="lugar_servicio_id" id="filterServicePlace" disabled><option value="">Todos los lugares</option></select></label>
+            <div class="geo-filter-actions">
+                <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnNewRoute">＋ Dibujar nueva ruta</button><?php endif; ?>
+                <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnAddPlace" style="display:none">＋ Agregar lugar de servicio</button><?php endif; ?>
+            </div>
+        </form>
 
-        <main class="geo-main">
-            <?php if (!empty($error)): ?><div class="geo-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
+        <section class="geo-workspace">
+            <div class="geo-map-wrap">
+                <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
+                <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> lugares visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
+                <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="route"></i> Ruta trazada</span></div>
+                <div class="geo-map-empty" id="geoMapEmpty" hidden>Seleccione un distrito y una ruta para visualizar el trazado y los lugares de servicio.</div>
+            </div>
+            <aside class="geo-detail" id="geoDetail" aria-live="polite">
+                <header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
+                <div class="geo-detail-empty"><span>📍</span><strong>Seleccione un lugar de servicio</strong><p>Aquí verá la información, ubicación y personal asignado.</p></div>
+            </aside>
+        </section>
 
-            <button class="geo-filter-toggle" type="button" id="geoFilterToggle">☷ Mostrar filtros</button>
-            <form class="geo-filters" id="geoFilters">
-                <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-                <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
-                <label>Lugar de servicio<select name="lugar_servicio_id" id="filterServicePlace" disabled><option value="">Todos los lugares</option></select></label>
-                <div class="geo-filter-actions">
-                    <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnNewRoute">＋ Dibujar nueva ruta</button><?php endif; ?>
-                    <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnAddPlace" style="display:none">＋ Agregar lugar de servicio</button><?php endif; ?>
-                </div>
-            </form>
-
-            <section class="geo-workspace">
-                <div class="geo-map-wrap">
-                    <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
-                    <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> lugares visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
-                    <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="route"></i> Ruta trazada</span></div>
-                    <div class="geo-map-empty" id="geoMapEmpty" hidden>Seleccione un distrito y una ruta para visualizar el trazado y los lugares de servicio.</div>
-                </div>
-                <aside class="geo-detail" id="geoDetail" aria-live="polite">
-                    <header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
-                    <div class="geo-detail-empty"><span>📍</span><strong>Seleccione un lugar de servicio</strong><p>Aquí verá la información, ubicación y personal asignado.</p></div>
-                </aside>
-            </section>
-
-            <section class="geo-stats" aria-label="Resumen de distribución">
-                <article><i class="purple">📍</i><span>Lugares registrados<strong id="statRegistered">0</strong></span></article>
-                <article><i class="green">♟</i><span>Con personal<strong id="statCovered">0</strong></span></article>
-                <article><i class="gray">○</i><span>Sin asignación<strong id="statUnassigned">0</strong></span></article>
-                <article><i class="blue">♙</i><span>Agentes asignados<strong id="statPersonnel">0</strong></span></article>
-                <article><i class="blue">▧</i><span>Rutas activas<strong id="statRoutes">0</strong></span></article>
-            </section>
-        </main>
-    </div>
+        <section class="geo-stats" aria-label="Resumen de distribución">
+            <article><i class="purple">📍</i><span>Lugares registrados<strong id="statRegistered">0</strong></span></article>
+            <article><i class="green">♟</i><span>Con personal<strong id="statCovered">0</strong></span></article>
+            <article><i class="gray">○</i><span>Sin asignación<strong id="statUnassigned">0</strong></span></article>
+            <article><i class="blue">♙</i><span>Agentes asignados<strong id="statPersonnel">0</strong></span></article>
+            <article><i class="blue">▧</i><span>Rutas activas<strong id="statRoutes">0</strong></span></article>
+        </section>
+    </main>
 
     <div class="geo-toast" id="geoToast" role="status" aria-live="polite"></div>
 

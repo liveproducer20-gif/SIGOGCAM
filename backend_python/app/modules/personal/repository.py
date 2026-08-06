@@ -21,6 +21,138 @@ def _hash_password(password: str) -> str:
     return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
+def list_people_paginated(
+    search: str | None = None,
+    estado: int | None = None,
+    grado: int | None = None,
+    rol: int | None = None,
+    grupo: int | None = None,
+    jornada: int | None = None,
+    activo: int | None = None,
+    page: int = 1,
+    limit: int = 10,
+) -> dict:
+    params_count = []
+    params_data = []
+    where_count = []
+    where_data = []
+
+    where_base = "WHERE 1 = 1"
+
+    if search:
+        like = f"%{search.lower()}%"
+        cond = (
+            "AND (LOWER(p.nombres) LIKE ? OR LOWER(p.apellidos) LIKE ? "
+            "OR LOWER(p.cedula) LIKE ? OR LOWER(p.correo_institucional) LIKE ? "
+            "OR LOWER(r.nombre) LIKE ? OR LOWER(g.nombre) LIKE ?)"
+        )
+        params_count.extend([like] * 6)
+        params_data.extend([like] * 6)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if estado is not None:
+        cond = "AND p.estado_personal_id = ?"
+        params_count.append(estado)
+        params_data.append(estado)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if grado is not None:
+        cond = "AND p.grado_id = ?"
+        params_count.append(grado)
+        params_data.append(grado)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if rol is not None:
+        cond = "AND p.rol_id = ?"
+        params_count.append(rol)
+        params_data.append(rol)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if grupo is not None:
+        cond = "AND p.grupo_id = ?"
+        params_count.append(grupo)
+        params_data.append(grupo)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if jornada is not None:
+        cond = "AND p.jornada_id = ?"
+        params_count.append(jornada)
+        params_data.append(jornada)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    if activo is not None:
+        cond = "AND p.activo = ?"
+        params_count.append(activo)
+        params_data.append(activo)
+        where_count.append(cond)
+        where_data.append(cond)
+
+    where_sql_count = where_base + " ".join(where_count)
+    where_sql_data = where_base + " ".join(where_data)
+
+    sql_count = f"SELECT COUNT(*) FROM dbo.personal p LEFT JOIN dbo.roles r ON r.id = p.rol_id LEFT JOIN dbo.grados g ON g.id = p.grado_id {where_sql_count}"
+
+    offset = max(0, (page - 1) * limit)
+
+    sql_data = f"""
+        SELECT
+            p.id,
+            p.cedula,
+            p.nombres,
+            p.apellidos,
+            LTRIM(RTRIM(ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+            p.correo_institucional,
+            p.telefono,
+            p.cargo_id,
+            p.area_id,
+            p.grupo_id,
+            p.jornada_id,
+            p.rol_id,
+            p.grado_id,
+            p.estado_personal_id,
+            p.activo,
+            r.nombre AS rol,
+            ISNULL(ep.nombre, 'SIN ESTADO') AS estado_personal,
+            ISNULL(g.nombre, '') AS grado,
+            ISNULL(cg.nombre, '') AS grupo,
+            ISNULL(jj.nombre, '') AS jornada
+        FROM dbo.personal p
+        LEFT JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+        LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+        LEFT JOIN dbo.grados g ON g.id = p.grado_id
+        LEFT JOIN dbo.catalogo_detalles cg ON cg.id = p.grupo_id
+        LEFT JOIN dbo.catalogo_detalles jj ON jj.id = p.jornada_id
+        {where_sql_data}
+        ORDER BY p.apellidos, p.nombres
+        OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+    """
+    params_data.extend([offset, limit])
+
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(sql_count, *params_count)
+        total = cursor.fetchone()[0]
+        cursor.execute(sql_data, *params_data)
+        data = _rows(cursor)
+
+    total_pages = max(1, (total + limit - 1) // limit)
+    return {
+        "data": data,
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "total": total,
+            "totalPages": total_pages,
+        },
+    }
+
+
 def list_people(search: str | None = None, limit: int = 200) -> list[dict]:
     params = []
     where = "WHERE 1 = 1"
@@ -177,6 +309,18 @@ def my_profile(user_id: int) -> dict | None:
         """, user_id)
         result = _rows(cursor)
         return result[0] if result else None
+
+
+def reset_password(person_id: int, new_password: str) -> None:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM dbo.personal WHERE id = ?", person_id)
+        if not cursor.fetchone():
+            raise HTTPException(404, "La persona no existe")
+        cursor.execute(
+            "UPDATE dbo.personal SET password_hash = ?, fecha_actualizacion = SYSDATETIME() WHERE id = ?",
+            _hash_password(new_password), person_id,
+        )
 
 
 def catalogs_for_personal() -> dict:

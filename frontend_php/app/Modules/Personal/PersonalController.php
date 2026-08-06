@@ -17,82 +17,73 @@ final class PersonalController
         }
 
         $user = AuthSession::user() ?? [];
-        $items = [];
         $catalogs = [];
         $error = null;
         try {
             $api = $this->api();
-            $items = $api->get('personal')['datos'] ?? [];
             $catalogs = $api->get('personal/catalogos')['datos'] ?? [];
         } catch (\Throwable $exception) {
             $error = $exception->getMessage();
         }
 
         View::render('personal/index', [
-            'items' => $items,
             'catalogs' => $catalogs,
             'error' => $error,
             'message' => $message,
             'permissions' => $user['permisos'] ?? [],
             'isAdministrator' => str_contains(strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? '')), 'ADMINISTRADOR'),
+            'pageStyles' => ['/assets/css/personal.css'],
         ]);
     }
 
-    public function store(): void
+    public function proxy(): void
     {
-        if (!AuthSession::check()) { header('Location: /'); return; }
-        $id = (int)($_POST['id'] ?? 0);
-        try {
-            $api = $this->api();
-            $payload = [
-                'cedula' => $this->text('cedula'),
-                'nombres' => $this->text('nombres'),
-                'apellidos' => $this->text('apellidos'),
-                'correo_institucional' => $this->text('correo_institucional'),
-                'telefono' => $this->nullableText('telefono'),
-                'cargo_id' => $this->nullableInt($_POST['cargo_id'] ?? null),
-                'area_id' => $this->nullableInt($_POST['area_id'] ?? null),
-                'grupo_id' => $this->nullableInt($_POST['grupo_id'] ?? null),
-                'jornada_id' => $this->nullableInt($_POST['jornada_id'] ?? null),
-                'rol_id' => $this->nullableInt($_POST['rol_id'] ?? null),
-                'grado_id' => $this->nullableInt($_POST['grado_id'] ?? null),
-                'estado_personal_id' => $this->nullableInt($_POST['estado_personal_id'] ?? null),
-                'activo' => isset($_POST['activo']),
-            ];
-            $password = $this->nullableText('password');
-            if ($password !== null) $payload['password'] = $password;
-
-            if ($id > 0) {
-                $api->put("personal/{$id}", $payload);
-                $this->index('Personal actualizado correctamente.');
-            } else {
-                if (empty($payload['password'])) {
-                    $this->index('La contraseña es requerida para nuevo personal.');
-                    return;
-                }
-                $api->post('personal', $payload);
-                $this->index('Personal creado correctamente.');
-            }
-        } catch (\Throwable $exception) {
-            $this->index($exception->getMessage());
+        header('Content-Type: application/json; charset=utf-8');
+        if (!AuthSession::check()) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'mensaje' => 'Sesión no autorizada']);
+            return;
         }
-    }
 
-    public function destroy(): void
-    {
-        if (!AuthSession::check()) { header('Location: /'); return; }
-        $id = (int)($_POST['id'] ?? 0);
-        if ($id <= 0) { $this->index('Seleccione un registro válido.'); return; }
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+        $query = $_SERVER['QUERY_STRING'] ?? '';
+        $resource = ltrim(str_replace('/personal/api', '', $path), '/');
+        if ($resource === '' || $resource === false) {
+            $resource = 'personal';
+        } elseif (!str_starts_with($resource, 'personal')) {
+            $resource = 'personal/' . $resource;
+        }
+        if ($query !== '') {
+            $resource .= '?' . $query;
+        }
+        $allowed = preg_match('#^(personal(/|\?|$))#', $resource) === 1;
+        if (!$allowed || str_contains($resource, '..')) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'mensaje' => 'Recurso no permitido']);
+            return;
+        }
+
+        $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+        $body = json_decode(file_get_contents('php://input') ?: '{}', true);
+        if (!is_array($body)) {
+            $body = [];
+        }
+
         try {
-            $this->api()->delete("personal/{$id}");
-            $this->index('Personal eliminado correctamente.');
+            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+            $response = match ($method) {
+                'GET' => $api->get($resource),
+                'POST' => $api->post($resource, $body),
+                'PUT' => $api->put($resource, $body),
+                'DELETE' => $api->delete($resource),
+                default => throw new \RuntimeException('Método no permitido'),
+            };
+            echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         } catch (\Throwable $exception) {
-            $this->index($exception->getMessage());
+            http_response_code(422);
+            echo json_encode(['ok' => false, 'mensaje' => $exception->getMessage()], JSON_UNESCAPED_UNICODE);
         }
     }
 
     private function api(): ApiClient { return new ApiClient(Config::get('API_BASE_URL'), AuthSession::token()); }
-    private function text(string $key): string { return trim((string)($_POST[$key] ?? '')); }
-    private function nullableText(string $key): ?string { $v = $this->text($key); return $v === '' ? null : $v; }
-    private function nullableInt(mixed $v): ?int { $v = trim((string)$v); return $v === '' ? null : (int)$v; }
 }

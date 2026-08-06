@@ -94,6 +94,13 @@ BEGIN
 END
 GO
 
+IF COL_LENGTH('dbo.lugares_servicio', 'orden_distribucion') IS NULL
+BEGIN
+    ALTER TABLE dbo.lugares_servicio ADD orden_distribucion INT NOT NULL DEFAULT 0;
+    PRINT 'OK - Columna orden_distribucion agregada.';
+END
+GO
+
 -- ===================================================================
 -- 3. TABLA lugares_servicio (si no existe, crear con estructura correcta)
 -- ===================================================================
@@ -132,6 +139,23 @@ BEGIN
       AND NOT EXISTS (SELECT 1 FROM dbo.lugares_servicio ls WHERE ls.ruta_id = s.ruta_id AND ls.nombre = s.nombre);
 
     PRINT 'OK - Datos de sectores migrados a lugares_servicio.';
+END
+GO
+
+-- ===================================================================
+-- 5. ACTUALIZAR FK de asignaciones_ruta: sectores → lugares_servicio
+-- ===================================================================
+IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_asig_ruta_sector' AND parent_object_id = OBJECT_ID('dbo.asignaciones_ruta'))
+BEGIN
+    ALTER TABLE dbo.asignaciones_ruta DROP CONSTRAINT FK_asig_ruta_sector;
+    PRINT 'OK - FK antigua FK_asig_ruta_sector eliminada.';
+END
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_asig_ruta_lugar_servicio' AND parent_object_id = OBJECT_ID('dbo.asignaciones_ruta'))
+BEGIN
+    ALTER TABLE dbo.asignaciones_ruta ADD CONSTRAINT FK_asig_ruta_lugar_servicio FOREIGN KEY (sector_id) REFERENCES dbo.lugares_servicio(id);
+    PRINT 'OK - Nueva FK_asig_ruta_lugar_servicio creada.';
 END
 GO
 

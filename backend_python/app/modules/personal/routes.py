@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from app.core.responses import ok
 from app.middleware.auth import current_user, require_permission
 from app.modules.personal.models import PersonalInput
-from app.modules.personal.repository import list_people, my_profile, get_person, create_person, update_person, delete_person, catalogs_for_personal
+from app.modules.personal.repository import list_people, list_people_paginated, my_profile, get_person, create_person, update_person, delete_person, reset_password, catalogs_for_personal
 
 
 router = APIRouter(tags=["personal"])
@@ -17,9 +17,22 @@ def perfil(user: dict = Depends(current_user)):
 @router.get("")
 def listar_personal(
     buscar: str | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    limit: int = Query(default=10, ge=1, le=100),
+    estado: int | None = Query(default=None),
+    grado: int | None = Query(default=None),
+    rol: int | None = Query(default=None),
+    grupo: int | None = Query(default=None),
+    jornada: int | None = Query(default=None),
+    activo: int | None = Query(default=None),
     user: dict = Depends(current_user),
 ):
-    return ok(list_people(buscar))
+    result = list_people_paginated(
+        search=buscar, estado=estado, grado=grado, rol=rol,
+        grupo=grupo, jornada=jornada, activo=activo,
+        page=page, limit=limit,
+    )
+    return ok(result)
 
 
 @router.get("/buscar")
@@ -63,3 +76,11 @@ def update_person_endpoint(person_id: int, payload: PersonalInput, user: dict = 
 def delete_person_endpoint(person_id: int, user: dict = Depends(require_permission("personal.editar"))):
     delete_person(person_id, int(user["id"]))
     return ok(None, "Personal eliminado correctamente")
+
+
+@router.post("/{person_id}/reset-password")
+def reset_password_endpoint(person_id: int, user: dict = Depends(require_permission("personal.editar"))):
+    import secrets
+    new_password = secrets.token_urlsafe(8)
+    reset_password(person_id, new_password)
+    return ok({"password": new_password}, "Contraseña restablecida correctamente")

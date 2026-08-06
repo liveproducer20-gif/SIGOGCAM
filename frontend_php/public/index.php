@@ -125,13 +125,8 @@ if ($path === '/personal' && $method === 'GET') {
     return;
 }
 
-if ($path === '/personal' && $method === 'POST') {
-    (new PersonalController())->store();
-    return;
-}
-
-if ($path === '/personal/eliminar' && $method === 'POST') {
-    (new PersonalController())->destroy();
+if (str_starts_with($path, '/personal/api') && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
+    (new PersonalController())->proxy();
     return;
 }
 
