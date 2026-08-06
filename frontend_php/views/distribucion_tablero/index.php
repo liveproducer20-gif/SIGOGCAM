@@ -52,7 +52,7 @@ $canClean = in_array('tablero_distribucion.limpiar', $permissions, true);
                     <span class="td-route-district" id="tdRouteDistrict">—</span>
                 </div>
                 <div class="td-route-stats" id="tdRouteStats">
-                    <div class="td-stat"><span class="td-stat-value" id="tdStatSectores">0</span><span class="td-stat-label">Sectores</span></div>
+                    <div class="td-stat"><span class="td-stat-value" id="tdStatSectores">0</span><span class="td-stat-label">Lugares</span></div>
                     <div class="td-stat"><span class="td-stat-value" id="tdStatRequeridos">0</span><span class="td-stat-label">Requeridos</span></div>
                     <div class="td-stat"><span class="td-stat-value" id="tdStatAsignados">0</span><span class="td-stat-label">Asignados</span></div>
                     <div class="td-stat"><span class="td-stat-value" id="tdStatPendientes">0</span><span class="td-stat-label">Pendientes</span></div>
@@ -67,7 +67,7 @@ $canClean = in_array('tablero_distribucion.limpiar', $permissions, true);
                 <?php if ($canConfig): ?>
                     <button class="td-btn td-btn-secondary" id="tdConfigSectors" type="button">Configurar requerimiento</button>
                 <?php endif; ?>
-                <button class="td-btn td-btn-secondary" id="tdViewSectors" type="button">Ver sectores</button>
+                <button class="td-btn td-btn-secondary" id="tdViewSectors" type="button">Ver lugares de servicio</button>
                 <?php if ($canAssign): ?>
                     <button class="td-btn td-btn-primary td-btn-icon" id="tdRandomAssign" type="button">
                         <span class="td-icon">🎲</span> Asignacion aleatoria
@@ -81,10 +81,22 @@ $canClean = in_array('tablero_distribucion.limpiar', $permissions, true);
 
         <section class="td-sectors-panel" id="tdSectorsPanel" hidden>
             <div class="td-panel-header">
-                <h3>Sectores de la ruta</h3>
+                <h3>Lugares de servicio</h3>
                 <button class="td-btn td-btn-ghost" id="tdCloseSectors" type="button">×</button>
             </div>
-            <div class="td-sectors-list" id="tdSectorsList"></div>
+            <div class="td-panel-content">
+                <div class="td-places-list" id="tdSectorsList"></div>
+                <div class="td-personnel-search">
+                    <h4>Buscar personal</h4>
+                    <input type="text" id="tdPersonnelSearch" placeholder="Nombre o cedula..." class="td-search-input">
+                    <div class="td-personnel-results" id="tdPersonnelResults"></div>
+                </div>
+            </div>
+            <div class="td-panel-actions">
+                <button class="td-btn td-btn-primary td-btn-icon" id="tdRandomAssignBottom" type="button">
+                    <span class="td-icon">🎲</span> Asignacion aleatoria
+                </button>
+            </div>
         </section>
 
         <section class="td-assignments-panel" id="tdAssignmentsPanel" hidden>

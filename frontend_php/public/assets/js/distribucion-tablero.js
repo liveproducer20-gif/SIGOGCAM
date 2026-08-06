@@ -102,13 +102,13 @@
         try {
             currentSectors = (await api(`distribucion-tablero/rutas/${currentRoute.id}/sectores`)).datos || [];
             const list = $('#tdSectorsList');
-            if (!currentSectors.length) { list.innerHTML = '<div class="td-empty-state"><span>▧</span><strong>No hay sectores configurados</strong><p>Agregue sectores desde la distribucion geografica.</p></div>'; panel.hidden = false; return; }
+            if (!currentSectors.length) { list.innerHTML = '<div class="td-empty-state"><span>▧</span><strong>No hay lugares configurados</strong><p>Agregue lugares desde la administracion.</p></div>'; panel.hidden = false; return; }
             list.innerHTML = currentSectors.map(s => {
                 const assigned = s.agentes_asignados || 0;
                 const required = s.cantidad_agentes_requeridos || 0;
                 const badgeClass = assigned >= required ? 'td-badge-ok' : assigned > 0 ? 'td-badge-partial' : 'td-badge-empty';
                 const badgeText = assigned >= required ? 'Cubierto' : assigned > 0 ? 'Parcial' : 'Sin personal';
-                return `<div class="td-sector-card"><div><div class="td-sector-name">${esc(s.nombre)}</div><div class="td-sector-meta">${assigned} / ${required} agentes asignados</div></div><span class="td-sector-badge ${badgeClass}">${badgeText}</span></div>`;
+                return `<div class="td-place-card"><div><div class="td-place-name">${esc(s.nombre)}</div><div class="td-place-meta">${assigned} / ${required} agentes asignados</div></div><span class="td-sector-badge ${badgeClass}">${badgeText}</span></div>`;
             }).join('');
             panel.hidden = false;
         } catch (e) { notify(e.message, true); }
@@ -348,4 +348,31 @@
         } catch (e) { notify(e.message, true); }
         finally { setLoading($('#tdCleanAssign'), false); }
     });
+
+    let searchTimeout = null;
+    $('#tdPersonnelSearch')?.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+        if (query.length < 2) { $('#tdPersonnelResults').innerHTML = ''; return; }
+        searchTimeout = setTimeout(() => searchPersonnel(query), 300);
+    });
+
+    async function searchPersonnel(query) {
+        try {
+            const result = (await api(`distribucion-tablero/personal-disponible?q=${encodeURIComponent(query)}`)).datos || [];
+            const container = $('#tdPersonnelResults');
+            if (!result.length) { container.innerHTML = '<div class="td-empty-state"><p>No se encontraron resultados</p></div>'; return; }
+            container.innerHTML = result.map(p => `
+                <div class="td-personnel-card" data-personnel-id="${p.id}">
+                    <div class="td-personnel-avatar">${(p.nombre?.[0] || 'P')}</div>
+                    <div class="td-personnel-info">
+                        <div class="td-personnel-name">${esc(p.nombre)}</div>
+                        <div class="td-personnel-meta">${esc(p.cedula)} · ${esc(p.cargo || '')}</div>
+                    </div>
+                </div>
+            `).join('');
+        } catch (e) { notify(e.message, true); }
+    }
+
+    $('#tdRandomAssignBottom')?.addEventListener('click', () => $('#tdRandomAssign').click());
 })();

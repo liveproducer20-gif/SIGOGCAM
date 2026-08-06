@@ -172,9 +172,9 @@
     // DRAW WIZARD (Crear nueva ruta)
     // ===================================================================
     const drawWizard = $('#drawWizard');
-    if (!drawWizard) { initMap(); return; }
 
     function openDrawWizard() {
+        if (!drawWizard) return;
         drawWizard.hidden = false;
         document.body.style.overflow = 'hidden';
         $('#drawRouteName').value = '';
@@ -187,7 +187,7 @@
         setupDrawMap();
     }
 
-    function closeDrawWizard() { drawWizard.hidden = true; document.body.style.overflow = ''; stopDrawing(); }
+    function closeDrawWizard() { if (!drawWizard) return; drawWizard.hidden = true; document.body.style.overflow = ''; stopDrawing(); }
 
     function setupDrawMap() {
         if (!wizardMap) {
@@ -318,7 +318,7 @@
         } catch (err) { notify(err.message, true); }
     };
 
-    function closePlaceWizard() { placeWizard.hidden = true; document.body.style.overflow = ''; }
+    function closePlaceWizard() { if (!placeWizard) return; placeWizard.hidden = true; document.body.style.overflow = ''; }
 
     let placeMap, placeMarker;
     function setupPlaceMap() {
@@ -373,6 +373,7 @@
     let assignPlaceId = null, selectedAgent = null;
 
     window.openAssignWizard = function (placeId) {
+        if (!assignWizard) return;
         assignPlaceId = placeId; selectedAgent = null;
         $('#assignEditor').hidden = true;
         $('#agentResults').innerHTML = '';
@@ -381,7 +382,7 @@
         document.body.style.overflow = 'hidden';
     };
 
-    function closeAssignWizard() { assignWizard.hidden = true; document.body.style.overflow = ''; }
+    function closeAssignWizard() { if (!assignWizard) return; assignWizard.hidden = true; document.body.style.overflow = ''; }
 
     let searchTimer;
     $('#agentSearch')?.addEventListener('input', e => {
