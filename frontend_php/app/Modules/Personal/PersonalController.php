@@ -35,7 +35,6 @@ final class PersonalController
             'message' => $message,
             'permissions' => $user['permisos'] ?? [],
             'isAdministrator' => str_contains(strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? '')), 'ADMINISTRADOR'),
-            'pageStyles' => ['/assets/css/personal.css'],
         ]);
     }
 

@@ -38,7 +38,7 @@ $kpis = [
         <article class="dashboard-module" data-art="♙"><i class="dashboard-module-icon">♙</i><h3>Administración</h3><p>Catálogos, personal, EAS, móviles, rutas y recursos institucionales.</p><div class="dashboard-module-actions"><a href="/personal">Personal</a><a class="secondary" href="/admin">Catálogos</a></div></article>
         <?php endif; ?>
         <?php if ($can(['distribucion.ver'])): ?>
-        <article class="dashboard-module" data-art="⌖"><i class="dashboard-module-icon">⌖</i><h3>Distribución geográfica</h3><p>Gestión de distritos, rutas, sectores, puntos georreferenciados y asignación territorial.</p><div class="dashboard-module-actions"><a href="/distribucion-geografica">Abrir mapa</a><?php if ($can(['distribucion.crear'])): ?><a class="secondary" href="/distribucion-geografica?crear=1">Crear punto</a><?php endif; ?></div></article>
+        <article class="dashboard-module" data-art="⌖"><i class="dashboard-module-icon">⌖</i><h3>Distribución geográfica</h3><p>Gestión de distritos, rutas, lugares de servicio y asignación territorial.</p><div class="dashboard-module-actions"><a href="/distribucion-geografica">Abrir mapa</a><?php if ($can(['distribucion.crear'])): ?><a class="secondary" href="/distribucion-geografica?crear=1">Crear punto</a><?php endif; ?></div></article>
         <?php endif; ?>
         <?php if ($can(['insignias.ver', 'cartillas.ver'])): ?>
         <article class="dashboard-module" data-art="♜"><i class="dashboard-module-icon">♜</i><h3>Insignias</h3><p>Seguimiento de logros, reconocimientos y progreso institucional.</p><div class="dashboard-module-actions"><a href="/insignias">Abrir</a></div></article>

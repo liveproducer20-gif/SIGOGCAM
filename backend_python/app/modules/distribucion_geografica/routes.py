@@ -48,7 +48,7 @@ def get_service_places(route_id: int, distrito_id: int | None = None, user: dict
 
 @router.get("/distribucion-geografica/puntos")
 def points(distrito_id: int | None = None, ruta_id: int | None = None, turno_id: int | None = None,
-           sector_id: int | None = None, estado: str | None = None, agente: str | None = None,
+           estado: str | None = None, agente: str | None = None,
            user: dict = Depends(require_permission("distribucion.ver"))):
     return ok(repository.list_points(locals()))
 

@@ -86,6 +86,8 @@
         lieuSelect.innerHTML = '<option value="">Todos los lugares</option>';
         lieuSelect.disabled = true;
         clearMap();
+        const addBtn = $('#btnAddPlace');
+        if (addBtn) addBtn.style.display = 'none';
         if (!e.target.value) return;
         if (e.target.value === 'nueva') { openDrawWizard(); return; }
         try {
@@ -97,6 +99,7 @@
             places.forEach(p => lieuSelect.add(new Option(p.nombre, p.id)));
             lieuSelect.disabled = false;
             loadServicePlaceMarkers(places);
+            if (addBtn) addBtn.style.display = '';
         } catch (err) { notify(err.message, true); }
     });
 
@@ -273,8 +276,12 @@
     $('#clearDrawing')?.addEventListener('click', clearDrawing);
     $('#saveRoute')?.addEventListener('click', saveRoute);
     $('#cancelDraw')?.addEventListener('click', closeDrawWizard);
+    $('#cancelDraw2')?.addEventListener('click', closeDrawWizard);
     $('#drawRouteColor')?.addEventListener('input', redrawTemp);
     drawWizard?.addEventListener('click', e => { if (e.target === drawWizard) closeDrawWizard(); });
+
+    $('#btnNewRoute')?.addEventListener('click', () => openDrawWizard());
+    $('#btnAddPlace')?.addEventListener('click', () => window.openAddPlaceWizard());
 
     // ===================================================================
     // ADD / EDIT SERVICE PLACE WIZARD
@@ -356,20 +363,20 @@
     });
 
     $('#cancelPlace')?.addEventListener('click', closePlaceWizard);
+    $('#cancelPlace2')?.addEventListener('click', closePlaceWizard);
     placeWizard?.addEventListener('click', e => { if (e.target === placeWizard) closePlaceWizard(); });
 
     // ===================================================================
     // ASSIGN AGENT WIZARD
     // ===================================================================
     const assignWizard = $('#assignWizard');
-    const assignForm = $('#assignForm');
     let assignPlaceId = null, selectedAgent = null;
 
     window.openAssignWizard = function (placeId) {
         assignPlaceId = placeId; selectedAgent = null;
-        assignForm.reset();
         $('#assignEditor').hidden = true;
         $('#agentResults').innerHTML = '';
+        $('#agentSearch').value = '';
         assignWizard.hidden = false;
         document.body.style.overflow = 'hidden';
     };
@@ -418,6 +425,7 @@
     });
 
     $('#cancelAssign')?.addEventListener('click', closeAssignWizard);
+    $('#cancelAssign2')?.addEventListener('click', closeAssignWizard);
     assignWizard?.addEventListener('click', e => { if (e.target === assignWizard) closeAssignWizard(); });
 
     // ===================================================================

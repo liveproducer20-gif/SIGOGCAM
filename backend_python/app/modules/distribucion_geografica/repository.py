@@ -65,7 +65,7 @@ def list_points(filters: dict) -> list[dict]:
     params: list = []
     mapping = {
         "distrito_id": "p.distrito_id", "ruta_id": "p.ruta_id", "turno_id": "p.turno_id",
-        "sector_id": "p.sector_id", "estado": "p.estado_operativo",
+        "estado": "p.estado_operativo",
     }
     for key, column in mapping.items():
         if filters.get(key) not in (None, ""):
@@ -83,15 +83,12 @@ def list_points(filters: dict) -> list[dict]:
         SELECT p.id, p.nombre, p.ubicacion_especifica, p.direccion,
                p.latitud, p.longitud, p.estado_operativo AS estado,
                p.cantidad_requerida, d.nombre AS distrito, r.nombre AS ruta,
-               s.nombre AS sector, t.nombre AS turno, p.hora_inicio, p.hora_fin,
-               ts.nombre AS tipo_servicio,
+               t.nombre AS turno, p.hora_inicio, p.hora_fin,
                (SELECT COUNT(*) FROM dbo.asignaciones_punto ap WHERE ap.punto_id=p.id AND ap.activo=1) AS personal_asignado
         FROM dbo.lugares_servicio p
         INNER JOIN dbo.catalogo_detalles d ON d.id=p.distrito_id
         INNER JOIN dbo.rutas r ON r.id=p.ruta_id
-        LEFT JOIN dbo.sectores s ON s.id=p.sector_id
         INNER JOIN dbo.turnos t ON t.id=p.turno_id
-        INNER JOIN dbo.catalogo_detalles ts ON ts.id=p.tipo_servicio_id
         WHERE {' AND '.join(where)} ORDER BY p.nombre
     """
     with get_connection() as connection:
@@ -104,14 +101,14 @@ def get_point(point_id: int) -> dict:
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT p.id, p.distrito_id, p.ruta_id, p.sector_id, p.tipo_servicio_id, p.turno_id,
+            SELECT p.id, p.distrito_id, p.ruta_id, p.tipo_servicio_id, p.turno_id,
                    p.nombre, p.ubicacion_especifica, p.direccion, p.latitud, p.longitud,
                    p.hora_inicio, p.hora_fin, p.cantidad_requerida, p.observacion AS observaciones,
                    p.estado_operativo AS estado, p.activo, d.nombre AS distrito, r.nombre AS ruta,
-                   s.nombre AS sector, t.nombre AS turno, ts.nombre AS tipo_servicio
+                   t.nombre AS turno, ts.nombre AS tipo_servicio
             FROM dbo.lugares_servicio p
             INNER JOIN dbo.catalogo_detalles d ON d.id=p.distrito_id
-            INNER JOIN dbo.rutas r ON r.id=p.ruta_id LEFT JOIN dbo.sectores s ON s.id=p.sector_id
+            INNER JOIN dbo.rutas r ON r.id=p.ruta_id
             INNER JOIN dbo.turnos t ON t.id=p.turno_id INNER JOIN dbo.catalogo_detalles ts ON ts.id=p.tipo_servicio_id
             WHERE p.id=?
         """, point_id)
@@ -157,10 +154,6 @@ def _validate_relations(cursor, data: dict) -> None:
         raise HTTPException(422, "La ruta no pertenece al distrito seleccionado")
     if route[0] is not None and int(route[0]) != int(data["turno_id"]):
         raise HTTPException(422, "El turno del punto no es compatible con el turno de la ruta")
-    if data.get("sector_id") is not None:
-        cursor.execute("SELECT COUNT(*) FROM dbo.sectores WHERE id=? AND ruta_id=? AND distrito_id=? AND activo=1", data["sector_id"], data["ruta_id"], data["distrito_id"])
-        if cursor.fetchone()[0] == 0:
-            raise HTTPException(422, "El sector no pertenece a la ruta seleccionada")
 
 
 def _validate_assignment(cursor, assignment: dict, point_id: int | None = None, assignment_id: int | None = None) -> None:
@@ -217,11 +210,11 @@ def create_point(data: dict, user_id: int) -> int:
         state = "CUBIERTO" if assignments else "SIN_ASIGNACION"
         cursor.execute("""
             INSERT INTO dbo.lugares_servicio
-              (nombre, ubicacion_especifica, direccion, distrito_id, ruta_id, sector_id, tipo_servicio_id,
+              (nombre, ubicacion_especifica, direccion, distrito_id, ruta_id, tipo_servicio_id,
                latitud, longitud, turno_id, hora_inicio, hora_fin, cantidad_requerida, observacion,
                estado_operativo, activo, creado_por, fecha_creacion)
-            OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, SYSDATETIME())
-        """, data["nombre"], data["ubicacion_especifica"], data["direccion"], data["distrito_id"], data["ruta_id"], data["sector_id"], data["tipo_servicio_id"], data["latitud"], data["longitud"], data["turno_id"], data["hora_inicio"], data["hora_fin"], data["cantidad_requerida"], data.get("observaciones"), state, user_id)
+            OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, SYSDATETIME())
+        """, data["nombre"], data["ubicacion_especifica"], data["direccion"], data["distrito_id"], data["ruta_id"], data["tipo_servicio_id"], data["latitud"], data["longitud"], data["turno_id"], data["hora_inicio"], data["hora_fin"], data["cantidad_requerida"], data.get("observaciones"), state, user_id)
         point_id = int(cursor.fetchone()[0])
         for assignment in assignments:
             _insert_assignment(cursor, point_id, assignment, user_id)
@@ -239,10 +232,10 @@ def update_point(point_id: int, data: dict, user_id: int) -> None:
             raise HTTPException(409, "Ya existe un punto registrado en las mismas coordenadas")
         cursor.execute("""
             UPDATE dbo.lugares_servicio SET nombre=?, ubicacion_especifica=?, direccion=?, distrito_id=?, ruta_id=?,
-              sector_id=?, tipo_servicio_id=?, latitud=?, longitud=?, turno_id=?, hora_inicio=?, hora_fin=?,
+              tipo_servicio_id=?, latitud=?, longitud=?, turno_id=?, hora_inicio=?, hora_fin=?,
               cantidad_requerida=?, observacion=?, estado_operativo=?, actualizado_por=?, fecha_actualizacion=SYSDATETIME()
             WHERE id=? AND activo=1
-        """, data["nombre"], data["ubicacion_especifica"], data["direccion"], data["distrito_id"], data["ruta_id"], data["sector_id"], data["tipo_servicio_id"], data["latitud"], data["longitud"], data["turno_id"], data["hora_inicio"], data["hora_fin"], data["cantidad_requerida"], data.get("observaciones"), data["estado"], user_id, point_id)
+        """, data["nombre"], data["ubicacion_especifica"], data["direccion"], data["distrito_id"], data["ruta_id"], data["tipo_servicio_id"], data["latitud"], data["longitud"], data["turno_id"], data["hora_inicio"], data["hora_fin"], data["cantidad_requerida"], data.get("observaciones"), data["estado"], user_id, point_id)
         if cursor.rowcount == 0:
             raise HTTPException(404, "El punto de servicio no existe")
         _audit(cursor, user_id, "EDITAR", "lugares_servicio", point_id, before, data)
@@ -352,7 +345,7 @@ def service_places_by_route(route_id: int, distrito_id: int | None = None) -> li
             params.append(distrito_id)
         cursor.execute(f"""
             SELECT p.id, p.nombre, p.ubicacion_especifica, p.direccion,
-                   p.latitud, p.longitud, p.distrito_id, p.ruta_id, p.sector_id,
+                   p.latitud, p.longitud, p.distrito_id, p.ruta_id,
                    p.tipo_servicio_id, p.turno_id, p.hora_inicio, p.hora_fin,
                    p.cantidad_requerida, p.estado_operativo AS estado, p.observacion AS observaciones,
                    d.nombre AS distrito, r.nombre AS ruta, t.nombre AS turno,

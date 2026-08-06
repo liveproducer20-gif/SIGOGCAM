@@ -88,8 +88,8 @@ def list_service_places() -> list[dict]:
     return _query(
         """
         SELECT l.id, l.nombre, l.direccion, l.ubicacion_especifica, l.distrito_id,
-               d.nombre AS distrito, l.ruta_id, r.nombre AS ruta, l.sector_id,
-               s.nombre AS sector, l.tipo_servicio_id, ts.nombre AS tipo_servicio,
+               d.nombre AS distrito, l.ruta_id, r.nombre AS ruta,
+               l.tipo_servicio_id, ts.nombre AS tipo_servicio,
                l.turno_id, t.nombre AS turno, l.hora_entrada, l.hora_salida,
                CONVERT(VARCHAR(5),l.hora_inicio,108) AS hora_inicio,
                CONVERT(VARCHAR(5),l.hora_fin,108) AS hora_fin,
@@ -98,7 +98,6 @@ def list_service_places() -> list[dict]:
         FROM dbo.lugares_servicio l
         LEFT JOIN dbo.catalogo_detalles d ON d.id=l.distrito_id
         LEFT JOIN dbo.rutas r ON r.id=l.ruta_id
-        LEFT JOIN dbo.sectores s ON s.id=l.sector_id
         LEFT JOIN dbo.catalogo_detalles ts ON ts.id=l.tipo_servicio_id
         LEFT JOIN dbo.turnos t ON t.id=l.turno_id
         ORDER BY COALESCE(l.nombre,l.direccion)
@@ -465,15 +464,15 @@ def create_service_place(data: dict) -> int:
         cursor.execute(
             """
             INSERT INTO dbo.lugares_servicio (
-                nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,sector_id,tipo_servicio_id,turno_id,
+                nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,tipo_servicio_id,turno_id,
                 hora_entrada,hora_salida,hora_inicio,hora_fin,cantidad_requerida,estado_operativo,
                 consignas,observacion,latitud,longitud,activo,fecha_creacion
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("sectorId"),data.get("tipoServicioId"),data.get("turnoId"),data.get("horaEntrada"),data.get("horaSalida"),
+            data.get("tipoServicioId"),data.get("turnoId"),data.get("horaEntrada"),data.get("horaSalida"),
             data.get("horaInicio"),data.get("horaFin"),int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
@@ -487,13 +486,13 @@ def update_service_place(item_id: int, data: dict) -> None:
         cursor.execute(
             """
             UPDATE dbo.lugares_servicio
-            SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,sector_id=?,tipo_servicio_id=?,turno_id=?,
+            SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,tipo_servicio_id=?,turno_id=?,
                 hora_entrada=?,hora_salida=?,hora_inicio=?,hora_fin=?,cantidad_requerida=?,estado_operativo=?,
                 consignas=?,observacion=?,latitud=?,longitud=?,activo=?,fecha_actualizacion=SYSDATETIME()
             WHERE id = ?
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("sectorId"),data.get("tipoServicioId"),data.get("turnoId"),data.get("horaEntrada"),data.get("horaSalida"),
+            data.get("tipoServicioId"),data.get("turnoId"),data.get("horaEntrada"),data.get("horaSalida"),
             data.get("horaInicio"),data.get("horaFin"),int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,

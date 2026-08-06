@@ -18,11 +18,11 @@ $jornadas = $catalogs['jornadas'] ?? [];
 <section class="admin-form-section">
     <div class="admin-form-title">
         <h3 id="formTitle">Nuevo Personal</h3>
-        <button type="reset" class="admin-secondary" id="resetForm">Limpiar</button>
+        <button type="reset" class="secondary" id="resetForm">Limpiar</button>
     </div>
     <form method="post" action="/personal" id="personForm" class="admin-form">
         <input type="hidden" name="id" id="formId" value="">
-        <div class="admin-form-grid">
+        <div class="form-grid">
             <label>Cédula <input name="cedula" required maxlength="20" placeholder="0912345678"></label>
             <label>Nombres <input name="nombres" required maxlength="120" placeholder="Juan Carlos"></label>
             <label>Apellidos <input name="apellidos" required maxlength="120" placeholder="Pérez López"></label>
@@ -33,20 +33,20 @@ $jornadas = $catalogs['jornadas'] ?? [];
             <label>Grupo<select name="grupo_id"><option value="">Seleccione</option><?php foreach ($grupos as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Jornada<select name="jornada_id"><option value="">Seleccione</option><?php foreach ($jornadas as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Estado<select name="estado_personal_id"><option value="">Seleccione</option><?php foreach ($estados as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
-            <label>Contraseña <input name="password" type="password" minlength="4" maxlength="128" placeholder="Dejar vacío para mantener"><small class="admin-hint" id="passwordHint">Requerido al crear</small></label>
-            <label class="admin-check-row"><input type="checkbox" name="activo" checked> Activo</label>
+            <label>Contraseña <input name="password" type="password" minlength="4" maxlength="128" placeholder="Dejar vacío para mantener"><small style="color:#8592a5;font-size:10px" id="passwordHint">Requerido al crear</small></label>
+            <label class="check-row"><input type="checkbox" name="activo" checked> Activo</label>
         </div>
-        <button type="submit" class="admin-primary" id="submitBtn">Guardar Personal</button>
+        <button type="submit" class="button" id="submitBtn">Guardar Personal</button>
     </form>
 </section>
 <?php endif; ?>
 
-<section class="admin-table-section">
-    <div class="admin-table-header">
-        <h2>Personal registrado</h2>
-        <span><?= count($items) ?> registro(s)</span>
+<section class="table-wrap">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--sigo-line)">
+        <h2 style="margin:0;font-size:15px">Personal registrado</h2>
+        <span style="color:var(--sigo-muted);font-size:12px"><?= count($items) ?> registro(s)</span>
     </div>
-    <div class="admin-table-wrap">
+    <div style="overflow-x:auto">
         <table>
             <thead>
                 <tr>
@@ -69,10 +69,10 @@ $jornadas = $catalogs['jornadas'] ?? [];
                     <td><?= $esc($item['grado'] ?? '') ?></td>
                     <td><?= $esc($item['rol'] ?? '') ?></td>
                     <td><?= $esc($item['grupo'] ?? '') ?></td>
-                    <td><span class="admin-status <?= ($item['activo'] ?? 0) ? 'active' : 'inactive' ?>"><?= $esc($item['estado_personal'] ?? '') ?></span></td>
-                    <td class="admin-actions">
+                    <td><span class="status-pill <?= ($item['activo'] ?? 0) ? 'is-active' : '' ?>"><?= $esc($item['estado_personal'] ?? '') ?></span></td>
+                    <td class="actions">
                         <?php if ($canEdit): ?>
-                        <button type="button" class="admin-secondary edit-btn"
+                        <button type="button" class="secondary edit-btn"
                             data-payload="<?= $json([
                                 'id' => $item['id'],
                                 'cedula' => $item['cedula'] ?? '',
@@ -89,16 +89,16 @@ $jornadas = $catalogs['jornadas'] ?? [];
                             ]) ?>">Editar</button>
                         <?php endif; ?>
                         <?php if ($canEdit): ?>
-                        <form method="post" action="/personal/eliminar" class="admin-inline-form" onsubmit="return confirm('¿Está seguro de eliminar este registro?')">
+                        <form method="post" action="/personal/eliminar" class="inline-form" onsubmit="return confirm('¿Está seguro de eliminar este registro?')">
                             <input type="hidden" name="id" value="<?= (int)($item['id'] ?? 0) ?>">
-                            <button class="admin-danger">Eliminar</button>
+                            <button class="danger">Eliminar</button>
                         </form>
                         <?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
                 <?php if (empty($items)): ?>
-                <tr><td colspan="8" class="admin-empty">No hay personal registrado.</td></tr>
+                <tr><td colspan="8" style="padding:30px;text-align:center;color:#8592a5;font-size:13px">No hay personal registrado.</td></tr>
                 <?php endif; ?>
             </tbody>
         </table>
