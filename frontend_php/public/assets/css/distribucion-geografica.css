@@ -113,6 +113,7 @@
 .geo-map-tools span{padding:8px 10px;border:1px solid #d5dfea;border-radius:6px;background:rgba(255,255,255,.95);color:#42536d;font-size:10px;font-weight:700;box-shadow:0 2px 8px rgba(20,44,70,.1)}
 .geo-map-tools button{width:35px!important;height:35px!important;padding:0!important;border:1px solid #d5dfea!important;color:#264b72!important;background:#fff!important;font-size:17px!important;box-shadow:0 2px 8px rgba(20,44,70,.1);cursor:pointer;border-radius:6px}
 .geo-map-empty{position:absolute;z-index:510;inset:0;display:flex;align-items:center;justify-content:center;color:#8190a6;font-size:13px;background:rgba(238,242,246,.8);pointer-events:none}
+.geo-map-empty[hidden]{display:none!important}
 
 .geo-map-wrap.is-fullscreen{position:fixed!important;z-index:1450!important;inset:12px!important;height:auto!important;border-radius:10px!important;box-shadow:0 25px 80px rgba(0,0,0,.35)}
 

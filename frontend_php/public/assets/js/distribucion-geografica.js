@@ -149,6 +149,8 @@
         markerLayer.clearLayers();
         if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
         currentRouteGeo = null; currentRoute = null;
+        const mapEmpty = $('#geoMapEmpty');
+        if (mapEmpty) mapEmpty.hidden = true;
     }
 
     function drawRouteOnMap(geo) {
@@ -297,18 +299,18 @@
         let routeId;
 
         if (mode === 'new') {
-            // 1. Crear la ruta básica en tabla rutas
+            // 1. Crear la ruta básica en tabla rutas usando el endpoint correcto
             const routePayload = {
                 nombre: name,
-                distritoId: Number(districtId),
-                turnoId: 1,
-                horaInicio: '06:00',
-                horaFin: '14:30',
+                distrito_id: Number(districtId),
+                turno_id: 1,
+                hora_inicio: '06:00',
+                hora_fin: '14:30',
                 activo: true
             };
             try {
-                const routeResult = await api('rutas', { method: 'POST', body: routePayload });
-                routeId = routeResult.id;
+                const routeResult = await api(`distritos/${districtId}/rutas`, { method: 'POST', body: routePayload });
+                routeId = routeResult.datos?.id || routeResult.id;
             } catch (err) {
                 return notify('Error al crear la ruta: ' + err.message, true);
             }
