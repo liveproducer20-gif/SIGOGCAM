@@ -28,6 +28,7 @@ final class AnunciosController
         }
 
         View::render('anuncios/index', [
+            'title' => 'Anuncios',
             'items' => $items,
             'personal' => $personal,
             'error' => $error,

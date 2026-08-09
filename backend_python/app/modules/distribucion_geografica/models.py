@@ -34,8 +34,8 @@ class PointInput(BaseModel):
     longitud: Decimal
     tipo_servicio_id: int
     turno_id: int
-    hora_inicio: time
-    hora_fin: time
+    hora_inicio: time | None = None
+    hora_fin: time | None = None
     cantidad_requerida: int = Field(ge=1, le=100)
     observaciones: str | None = Field(default=None, max_length=500)
     estado: Literal["CUBIERTO", "SIN_ASIGNACION", "FUERA_TURNO", "INACTIVO", "NOVEDAD", "PENDIENTE"] = "SIN_ASIGNACION"

@@ -29,6 +29,7 @@ final class InsigniasController
         }
 
         View::render('insignias/index', [
+            'title' => 'Insignias',
             'progress' => $progress,
             'ranking' => $ranking,
             'error' => $error,

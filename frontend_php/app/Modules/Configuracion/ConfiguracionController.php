@@ -54,6 +54,7 @@ final class ConfiguracionController
         }
 
         View::render('configuracion/index', [
+            'title' => 'Configuracion',
             'roles' => $roles,
             'version' => $version,
             'permissions' => $permissions,

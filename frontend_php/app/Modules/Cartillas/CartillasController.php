@@ -34,6 +34,7 @@ final class CartillasController
         }
 
         View::render('cartillas/index', [
+            'title' => 'Cartillas',
             'eas' => $eas,
             'catalogs' => $catalogs,
             'assignments' => $assignments,

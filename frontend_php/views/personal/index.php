@@ -17,11 +17,6 @@ $jornadas = $catalogs['jornadas'] ?? [];
         <div class="p-page-title">
             <h1>Personal</h1>
             <p>Consulta del talento operativo</p>
-            <div class="p-breadcrumb">
-                <a href="/dashboard">Inicio</a>
-                <span>›</span>
-                <span>Personal</span>
-            </div>
         </div>
         <div class="p-toolbar" id="toolbar">
             <div class="p-search-wrap" id="searchWrap">

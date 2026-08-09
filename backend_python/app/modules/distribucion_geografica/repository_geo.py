@@ -161,13 +161,17 @@ def get_lugar_servicio(lugar_id: int) -> dict | None:
 def create_lugar_servicio(data: dict, user_id: int) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
+        cursor.execute("""SELECT distrito_id FROM dbo.rutas WHERE id = ?""", data["ruta_id"])
+        row = cursor.fetchone()
+        distrito_id = (row[0] if row else None) or data.get("distrito_id")
         cursor.execute(
             """INSERT INTO dbo.lugares_servicio
-               (ruta_id, nombre, descripcion, direccion_referencial, latitud, longitud,
-                estado, activo, creado_por, fecha_creacion)
+               (ruta_id, distrito_id, nombre, descripcion, direccion, direccion_referencial,
+                latitud, longitud, estado, activo, creado_por, fecha_creacion)
                OUTPUT INSERTED.id
-               VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, SYSDATETIME())""",
-            data["ruta_id"], data["nombre"], data.get("descripcion"),
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, SYSDATETIME())""",
+            data["ruta_id"], distrito_id, data["nombre"], data.get("descripcion"),
+            data.get("direccion") or data.get("direccion_referencial"),
             data.get("direccion_referencial"), data.get("latitud"),
             data.get("longitud"), data.get("estado", "ACTIVO"), user_id
         )

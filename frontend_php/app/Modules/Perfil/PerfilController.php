@@ -27,6 +27,7 @@ final class PerfilController
         }
 
         View::render('perfil/index', [
+            'title' => 'Mi Perfil',
             'profile' => $profile,
             'error' => $error,
         ]);

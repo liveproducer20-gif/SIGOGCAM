@@ -30,6 +30,7 @@ final class EventosController
         }
 
         View::render('eventos/index', [
+            'title' => 'Eventos',
             'items' => $items,
             'tipos' => $tipos,
             'personal' => $personal,

@@ -34,6 +34,7 @@ final class DistribucionGeograficaController
         }
 
         View::render('distribucion_geografica/index', [
+            'title' => 'Distribucion Geografica',
             'usuario' => $user,
             'catalogos' => $catalogs,
             'error' => $error,

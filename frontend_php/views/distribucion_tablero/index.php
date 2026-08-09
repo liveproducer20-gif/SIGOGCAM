@@ -1,9 +1,10 @@
 <?php
 $esc = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 $permissions = $usuario['permisos'] ?? [];
-$canAssign = in_array('tablero_distribucion.asignar', $permissions, true);
-$canConfig = in_array('tablero_distribucion.configurar', $permissions, true);
-$canClean = in_array('tablero_distribucion.limpiar', $permissions, true);
+$isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['rol'] ?? '')), 'ADMINISTRADOR');
+$canAssign = $isAdmin || in_array('tablero_distribucion.asignar', $permissions, true);
+$canConfig = $isAdmin || in_array('tablero_distribucion.configurar', $permissions, true);
+$canClean = $isAdmin || in_array('tablero_distribucion.limpiar', $permissions, true);
 ?>
 <div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-config="<?= $canConfig ? '1' : '0' ?>" data-can-clean="<?= $canClean ? '1' : '0' ?>">
     <main class="td-main">

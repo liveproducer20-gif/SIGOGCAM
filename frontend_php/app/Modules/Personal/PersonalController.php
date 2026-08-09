@@ -27,6 +27,7 @@ final class PersonalController
         }
 
         View::render('personal/index', [
+            'title' => 'Personal',
             'catalogs' => $catalogs,
             'error' => $error,
             'message' => $message,

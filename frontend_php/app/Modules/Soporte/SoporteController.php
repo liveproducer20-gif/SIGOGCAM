@@ -34,6 +34,7 @@ final class SoporteController
         }
 
         View::render('soporte/index', [
+            'title' => 'Soporte',
             'stats' => $stats,
             'tickets' => $tickets,
             'selected' => $selected,

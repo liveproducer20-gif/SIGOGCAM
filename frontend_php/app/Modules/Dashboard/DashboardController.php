@@ -32,6 +32,7 @@ final class DashboardController
         }
 
         View::render('dashboard/index', [
+            'title' => 'Panel principal',
             'usuario' => AuthSession::user(),
             'menu' => $menu,
             'stats' => $stats,

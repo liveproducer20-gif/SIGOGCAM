@@ -74,36 +74,47 @@
 
             // Auto-select shift based on route's assigned turno_id
             const routeTurnoId = currentRoute.turno_id;
+            let userSelectedShift = $('#tdShift').value;
             if (routeTurnoId) {
                 $('#tdShift').value = String(routeTurnoId);
-                const shiftOpt = $('#tdShift').selectedOptions[0];
-                currentShift = {
-                    id: shiftOpt?.value || '',
-                    nombre: shiftOpt?.dataset.nombre || '',
-                    hora_inicio: shiftOpt?.dataset.start || '',
-                    hora_fin: shiftOpt?.dataset.end || '',
-                };
-            } else {
-                // Fallback to manually selected shift
-                const shiftOpt = $('#tdShift').selectedOptions[0];
-                currentShift = {
-                    id: shiftOpt?.value || '',
-                    nombre: shiftOpt?.dataset.nombre || '',
-                    hora_inicio: shiftOpt?.dataset.start || '',
-                    hora_fin: shiftOpt?.dataset.end || '',
-                };
+                // Verify the selection actually changed (turno exists in dropdown)
+                if ($('#tdShift').value !== String(routeTurnoId)) {
+                    // Turno not in dropdown, keep user's manual selection
+                    $('#tdShift').value = userSelectedShift;
+                }
             }
+            const shiftOpt = $('#tdShift').selectedOptions[0];
+            currentShift = {
+                id: shiftOpt?.value || '',
+                nombre: shiftOpt?.dataset.nombre || '',
+                hora_inicio: shiftOpt?.dataset.start || '',
+                hora_fin: shiftOpt?.dataset.end || '',
+            };
 
             if (!currentShift.nombre) {
-                notify('No se pudo determinar el turno de la ruta. Seleccione uno manualmente.', true);
-                setLoading($('#tdLoadRoute'), false);
-                return;
+                notify('La ruta no tiene turno asignado. Seleccione un turno para poder asignar personal.', true);
             }
 
-            currentSectors = (await api(`distribucion-tablero/rutas/${routeId}/sectores`)).datos || [];
-            const stats = (await api(`distribucion-tablero/rutas/${routeId}/estadisticas?fecha=${fecha}&turno=${encodeURIComponent(currentShift.nombre)}`)).datos || {};
+            // Load sectors (non-blocking if fails)
+            try {
+                currentSectors = (await api(`distribucion-tablero/rutas/${routeId}/sectores`)).datos || [];
+            } catch (e) {
+                currentSectors = [];
+                notify('Error al cargar sectores: ' + e.message, true);
+            }
+
+            // Load stats (non-blocking if fails)
+            let stats = {};
+            try {
+                stats = (await api(`distribucion-tablero/rutas/${routeId}/estadisticas?fecha=${fecha}&turno=${encodeURIComponent(currentShift.nombre)}`)).datos || {};
+            } catch (e) {
+                notify('Error al cargar estadisticas: ' + e.message, true);
+            }
+
             renderRouteInfo(stats);
             $('#tdRouteInfo').hidden = false;
+            $('#tdSectorsPanel').hidden = false;
+            renderSectorsPanel();
         } catch (e) { notify(e.message, true); }
         finally { setLoading($('#tdLoadRoute'), false); }
     });
@@ -122,21 +133,29 @@
         $('#tdCoverageFill').style.background = cob >= 100 ? '#55ad38' : cob >= 50 ? '#e3ad23' : '#e63c3c';
     }
 
+    function renderSectorsPanel() {
+        const list = $('#tdSectorsList');
+        if (!list) return;
+        if (!currentSectors.length) {
+            list.innerHTML = '<div class="td-empty-state"><span>▧</span><strong>No hay lugares configurados</strong><p>Agregue lugares desde la administracion.</p></div>';
+            return;
+        }
+        list.innerHTML = currentSectors.map(s => {
+            const assigned = s.agentes_asignados || 0;
+            const required = s.cantidad_agentes_requeridos || 0;
+            const badgeClass = assigned >= required ? 'td-badge-ok' : assigned > 0 ? 'td-badge-partial' : 'td-badge-empty';
+            const badgeText = assigned >= required ? 'Cubierto' : assigned > 0 ? 'Parcial' : 'Sin personal';
+            return `<div class="td-place-card"><div><div class="td-place-name">${esc(s.nombre)}</div><div class="td-place-meta">${assigned} / ${required} agentes asignados</div></div><span class="td-sector-badge ${badgeClass}">${badgeText}</span></div>`;
+        }).join('');
+    }
+
     $('#tdViewSectors').addEventListener('click', async () => {
         if (!currentRoute) return;
         const panel = $('#tdSectorsPanel');
         if (!panel.hidden) { panel.hidden = true; return; }
         try {
             currentSectors = (await api(`distribucion-tablero/rutas/${currentRoute.id}/sectores`)).datos || [];
-            const list = $('#tdSectorsList');
-            if (!currentSectors.length) { list.innerHTML = '<div class="td-empty-state"><span>▧</span><strong>No hay lugares configurados</strong><p>Agregue lugares desde la administracion.</p></div>'; panel.hidden = false; return; }
-            list.innerHTML = currentSectors.map(s => {
-                const assigned = s.agentes_asignados || 0;
-                const required = s.cantidad_agentes_requeridos || 0;
-                const badgeClass = assigned >= required ? 'td-badge-ok' : assigned > 0 ? 'td-badge-partial' : 'td-badge-empty';
-                const badgeText = assigned >= required ? 'Cubierto' : assigned > 0 ? 'Parcial' : 'Sin personal';
-                return `<div class="td-place-card"><div><div class="td-place-name">${esc(s.nombre)}</div><div class="td-place-meta">${assigned} / ${required} agentes asignados</div></div><span class="td-sector-badge ${badgeClass}">${badgeText}</span></div>`;
-            }).join('');
+            renderSectorsPanel();
             panel.hidden = false;
         } catch (e) { notify(e.message, true); }
     });
@@ -385,15 +404,24 @@
     });
 
     async function searchPersonnel(query) {
+        if (!currentRoute || !currentShift) return;
         try {
-            const result = (await api(`distribucion-tablero/personal-disponible?q=${encodeURIComponent(query)}`)).datos || [];
+            const params = new URLSearchParams({
+                q: query,
+                ruta_id: currentRoute.id,
+                fecha: currentFecha,
+                turno: currentShift.nombre,
+                hora_inicio: currentShift.hora_inicio,
+                hora_fin: currentShift.hora_fin,
+            });
+            const result = (await api(`distribucion-tablero/personal-disponible?${params}`)).datos || [];
             const container = $('#tdPersonnelResults');
             if (!result.length) { container.innerHTML = '<div class="td-empty-state"><p>No se encontraron resultados</p></div>'; return; }
             container.innerHTML = result.map(p => `
                 <div class="td-personnel-card" data-personnel-id="${p.id}">
-                    <div class="td-personnel-avatar">${(p.nombre?.[0] || 'P')}</div>
+                    <div class="td-personnel-avatar">${(p.nombre_completo?.[0] || 'P')}</div>
                     <div class="td-personnel-info">
-                        <div class="td-personnel-name">${esc(p.nombre)}</div>
+                        <div class="td-personnel-name">${esc(p.nombre_completo)}</div>
                         <div class="td-personnel-meta">${esc(p.cedula)} · ${esc(p.cargo || '')}</div>
                     </div>
                 </div>

@@ -80,30 +80,38 @@ def get_available_agents(route_id: int, fecha: date, turno: str, hora_inicio: ti
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT vp.id, vp.nombre_completo, vp.cedula, vp.cargo, vp.area,
-                   vp.estado_personal, vp.grado_id, vp.funcion_operativa_id
-            FROM dbo.vw_personal_detalle vp
-            WHERE vp.estado_personal = 'ACTIVO'
-              AND vp.id NOT IN (
+            SELECT p.id,
+                   LTRIM(RTRIM(ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+                   p.cedula,
+                   ISNULL(ep.nombre, 'SIN ESTADO') AS estado_personal,
+                   p.grado_id,
+                   p.cargo_id AS cargo,
+                   p.area_id AS area,
+                   p.funcion_operativa_id
+            FROM dbo.personal p
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            WHERE p.activo = 1
+              AND ISNULL(ep.nombre, 'SIN ESTADO') = 'ACTIVO'
+              AND p.id NOT IN (
                   SELECT ar.agente_id FROM dbo.asignaciones_ruta ar
                   WHERE ar.fecha_asignacion = ? AND ar.estado IN ('PENDIENTE', 'ACTIVA')
                     AND ar.deleted_at IS NULL
                     AND ar.hora_inicio < ? AND ar.hora_fin > ?
               )
-              AND vp.id NOT IN (
+              AND p.id NOT IN (
                   SELECT ap.personal_id FROM dbo.asignaciones_punto ap
                   WHERE ap.fecha_inicio <= ? AND (ap.fecha_fin IS NULL OR ap.fecha_fin >= ?)
                     AND ap.activo = 1 AND ap.estado IN ('ACTIVA', 'PENDIENTE')
                     AND ap.hora_inicio < ? AND ap.hora_fin > ?
               )
-              AND vp.id NOT IN (
+              AND p.id NOT IN (
                   SELECT ae.personal_id FROM dbo.evento_personal ae
                   INNER JOIN dbo.eventos e ON e.id = ae.evento_id
                   WHERE ae.fecha_asignacion = ?
                     AND e.fecha >= ?
                     AND e.fecha <= ?
               )
-            ORDER BY vp.nombre_completo
+            ORDER BY nombre_completo
         """, fecha, hora_fin, hora_inicio, fecha, fecha, hora_fin, hora_inicio, fecha, fecha, fecha)
         return _rows(cursor)
 

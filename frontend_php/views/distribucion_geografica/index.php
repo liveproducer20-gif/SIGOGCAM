@@ -1,9 +1,10 @@
 <?php
 $esc = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 $permissions = $usuario['permisos'] ?? [];
-$canCreate = in_array('distribucion.crear', $permissions, true);
-$canEdit = in_array('distribucion.editar', $permissions, true);
-$canAssign = in_array('distribucion.asignar', $permissions, true);
+$isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['rol'] ?? '')), 'ADMINISTRADOR');
+$canCreate = $isAdmin || in_array('distribucion.crear', $permissions, true);
+$canEdit = $isAdmin || in_array('distribucion.editar', $permissions, true);
+$canAssign = $isAdmin || in_array('distribucion.asignar', $permissions, true);
 ?>
 <div class="geo-app" data-can-create="<?= $canCreate ? '1' : '0' ?>" data-can-edit="<?= $canEdit ? '1' : '0' ?>" data-can-assign="<?= $canAssign ? '1' : '0' ?>">
     <main class="geo-main">
