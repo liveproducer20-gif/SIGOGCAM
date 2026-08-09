@@ -3,163 +3,70 @@ $esc = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES,
 $permissions = $usuario['permisos'] ?? [];
 $isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['rol'] ?? '')), 'ADMINISTRADOR');
 $canAssign = $isAdmin || in_array('tablero_distribucion.asignar', $permissions, true);
-$canConfig = $isAdmin || in_array('tablero_distribucion.configurar', $permissions, true);
-$canClean = $isAdmin || in_array('tablero_distribucion.limpiar', $permissions, true);
+$canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions, true);
 ?>
-<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-config="<?= $canConfig ? '1' : '0' ?>" data-can-clean="<?= $canClean ? '1' : '0' ?>">
-    <main class="td-main">
-        <?php if (!empty($error)): ?><div class="td-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
+<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>">
+    <?php if (!empty($error)): ?><div class="td-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
-        <section class="td-selectors">
-            <div class="td-selector-group">
-                <label>Distrito
-                    <select id="tdDistrict" required>
-                        <option value="">Seleccione distrito</option>
-                        <?php foreach (($catalogos['distritos'] ?? []) as $item): ?>
-                            <option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label>Ruta
-                    <select id="tdRoute" required disabled>
-                        <option value="">Seleccione una ruta</option>
-                    </select>
-                </label>
-                <label>Fecha de servicio
-                    <input type="date" id="tdDate" required>
-                </label>
-                <label>Turno
-                    <select id="tdShift" required>
-                        <option value="">Seleccione turno</option>
-                        <?php foreach (($catalogos['turnos'] ?? []) as $item): ?>
-                            <option value="<?= (int)$item['id'] ?>"
-                                data-nombre="<?= $esc($item['nombre']) ?>"
-                                data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>"
-                                data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>">
-                                <?= $esc($item['nombre']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <div class="td-selector-actions">
-                    <button class="td-btn td-btn-primary" id="tdLoadRoute" type="button">Cargar ruta</button>
-                </div>
-            </div>
-        </section>
-
-        <section class="td-route-info" id="tdRouteInfo" hidden>
-            <div class="td-route-header">
-                <div class="td-route-title">
-                    <h2 id="tdRouteName">—</h2>
-                    <span class="td-route-district" id="tdRouteDistrict">—</span>
-                </div>
-                <div class="td-route-stats" id="tdRouteStats">
-                    <div class="td-stat"><span class="td-stat-value" id="tdStatSectores">0</span><span class="td-stat-label">Lugares</span></div>
-                    <div class="td-stat"><span class="td-stat-value" id="tdStatRequeridos">0</span><span class="td-stat-label">Requeridos</span></div>
-                    <div class="td-stat"><span class="td-stat-value" id="tdStatAsignados">0</span><span class="td-stat-label">Asignados</span></div>
-                    <div class="td-stat"><span class="td-stat-value" id="tdStatPendientes">0</span><span class="td-stat-label">Pendientes</span></div>
-                    <div class="td-stat td-stat-coverage">
-                        <span class="td-stat-value" id="tdStatCobertura">0%</span>
-                        <span class="td-stat-label">Cobertura</span>
-                        <div class="td-coverage-bar"><div class="td-coverage-fill" id="tdCoverageFill"></div></div>
-                    </div>
-                </div>
-            </div>
-            <div class="td-route-actions">
-                <?php if ($canConfig): ?>
-                    <button class="td-btn td-btn-secondary" id="tdConfigSectors" type="button">Configurar requerimiento</button>
-                <?php endif; ?>
-                <button class="td-btn td-btn-secondary" id="tdViewSectors" type="button">Ver lugares de servicio</button>
-                <?php if ($canAssign): ?>
-                    <button class="td-btn td-btn-primary td-btn-icon" id="tdRandomAssign" type="button">
-                        <span class="td-icon">🎲</span> Asignacion aleatoria
-                    </button>
-                <?php endif; ?>
-                <?php if ($canClean): ?>
-                    <button class="td-btn td-btn-danger" id="tdCleanAssign" type="button">Limpiar asignaciones</button>
-                <?php endif; ?>
-            </div>
-        </section>
-
-        <section class="td-sectors-panel" id="tdSectorsPanel" hidden>
-            <div class="td-panel-header">
-                <h3>Lugares de servicio</h3>
-                <button class="td-btn td-btn-ghost" id="tdCloseSectors" type="button">×</button>
-            </div>
-            <div class="td-panel-content">
-                <div class="td-places-list" id="tdSectorsList"></div>
-                <div class="td-personnel-search">
-                    <h4>Buscar personal</h4>
-                    <input type="text" id="tdPersonnelSearch" placeholder="Nombre o cedula..." class="td-search-input">
-                    <div class="td-personnel-results" id="tdPersonnelResults"></div>
-                </div>
-            </div>
-            <div class="td-panel-actions">
-                <button class="td-btn td-btn-primary td-btn-icon" id="tdRandomAssignBottom" type="button">
-                    <span class="td-icon">🎲</span> Asignacion aleatoria
-                </button>
-            </div>
-        </section>
-
-        <section class="td-assignments-panel" id="tdAssignmentsPanel" hidden>
-            <div class="td-panel-header">
-                <h3>Asignaciones actuales</h3>
-                <button class="td-btn td-btn-ghost" id="tdCloseAssignments" type="button">×</button>
-            </div>
-            <div class="td-assignments-table" id="tdAssignmentsTable"></div>
-        </section>
-
-        <?php if ($canConfig): ?>
-        <div class="td-modal" id="tdConfigModal" hidden>
-            <div class="td-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="tdConfigTitle">
-                <div class="td-modal-header">
-                    <div><p>Configuracion</p><h3 id="tdConfigTitle">Requerimiento de personal por sector</h3></div>
-                    <button class="td-btn td-btn-ghost" id="tdCloseConfig" type="button">×</button>
-                </div>
-                <div class="td-modal-body">
-                    <div class="td-config-table" id="tdConfigTable"></div>
-                </div>
-                <div class="td-modal-footer">
-                    <button class="td-btn td-btn-ghost" id="tdCancelConfig" type="button">Cancelar</button>
-                    <button class="td-btn td-btn-primary" id="tdSaveConfig" type="button">Guardar requerimiento</button>
-                </div>
-            </div>
+    <header class="td-page-head">
+        <div class="td-page-title">
+            <span class="td-title-icon" aria-hidden="true">⌖</span>
+            <div><h1>Tablero de Distribución</h1><p>Asignación de personal por ruta y lugares de servicio</p></div>
         </div>
-        <?php endif; ?>
+        <section class="td-filter-card" aria-label="Filtros del tablero">
+            <label>Distrito
+                <select id="tdDistrict"><option value="">Seleccione distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
+            </label>
+            <label>Turno
+                <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>" data-name="<?= $esc($item['nombre']) ?>" data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>" data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
+            </label>
+            <?php if ($canAssign): ?><button class="td-btn td-btn-primary td-save-button" id="tdSaveDraft" type="button"><span aria-hidden="true">▣</span> Guardar distribución</button><?php endif; ?>
+        </section>
+    </header>
 
-        <div class="td-modal" id="tdSorteoModal" hidden>
-            <div class="td-modal-dialog td-modal-wide" role="dialog" aria-modal="true" aria-labelledby="tdSorteoTitle">
-                <div class="td-modal-header">
-                    <div><p>Vista previa</p><h3 id="tdSorteoTitle">Asignacion aleatoria</h3></div>
-                    <button class="td-btn td-btn-ghost" id="tdCloseSorteo" type="button">×</button>
+    <div class="td-board">
+        <aside class="td-routes-card">
+            <div class="td-card-heading"><h2>Lugares de servicio</h2><a href="/admin?tab=rutas" title="Crear ruta" aria-label="Crear ruta">+</a></div>
+            <label class="td-search"><span aria-hidden="true">⌕</span><input id="tdRouteSearch" type="search" placeholder="Buscar lugar de servicio..."></label>
+            <div class="td-route-list" id="tdRouteList"><div class="td-empty-small">Seleccione distrito y turno.</div></div>
+            <a class="td-new-route" href="/admin?tab=rutas">＋ Crear nueva ruta</a>
+        </aside>
+
+        <section class="td-workspace">
+            <div class="td-empty-board" id="tdEmptyBoard"><span>⌖</span><strong>Seleccione una ruta</strong><p>Elija un distrito, turno y una ruta para comenzar la distribución.</p></div>
+            <div id="tdRouteWorkspace" hidden>
+                <div class="td-route-heading"><h2 id="tdRouteName">Ruta</h2><span id="tdRoutePlacesBadge">0 lugares</span></div>
+                <div class="td-kpis">
+                    <article><i class="td-kpi-teal">⌖</i><div><strong id="tdKpiPlaces">0</strong><b>Lugares</b><small>Total de lugares</small></div></article>
+                    <article><i class="td-kpi-blue">♙</i><div><strong id="tdKpiRequired">0</strong><b>Requeridos</b><small>Personal necesario</small></div></article>
+                    <article><i class="td-kpi-green">♟</i><div><strong id="tdKpiAssigned">0</strong><b>Asignados</b><small>Personal asignado</small></div></article>
+                    <article><i class="td-kpi-orange">◷</i><div><strong id="tdKpiPending">0</strong><b>Pendientes</b><small>Por asignar</small></div></article>
+                    <article class="td-coverage-kpi"><i class="td-kpi-purple">◴</i><div><strong id="tdKpiCoverage">0%</strong><b>Cobertura</b><small id="tdCoverageLabel">Ruta incompleta</small></div><span><em id="tdCoverageBar"></em></span></article>
                 </div>
-                <div class="td-modal-body" id="tdSorteoBody"></div>
-                <div class="td-modal-footer">
-                    <button class="td-btn td-btn-ghost" id="tdCancelSorteo" type="button">Cancelar</button>
-                    <?php if ($canAssign): ?>
-                        <button class="td-btn td-btn-secondary" id="tdRetrySorteo" type="button">Volver a sortear</button>
-                        <button class="td-btn td-btn-primary" id="tdConfirmSorteo" type="button">Confirmar asignacion</button>
-                    <?php endif; ?>
+
+                <section class="td-table-card">
+                    <h3>Lugares y asignación de personal</h3>
+                    <div class="td-table-scroll"><table><thead><tr><th>#</th><th>Lugar de servicio</th><th>Requerido</th><th>Asignación actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tdPlacesBody"></tbody></table></div>
+                </section>
+
+                <div class="td-bottom-bar">
+                    <section class="td-random-card"><div class="td-tool-title"><i>◇</i><h3>Asignación aleatoria</h3></div><p>Asigna personal disponible de forma aleatoria sin repetir agentes.</p><?php if ($canAssign): ?><button class="td-btn td-btn-primary" id="tdRandomAssign" type="button">Asignación aleatoria</button><?php endif; ?><div class="td-no-repeat"><b>◆ <span>Sin repetir agentes</span></b><p>El sistema garantiza que ningún agente asignado se repita en otros lugares.</p></div></section>
+                    <section class="td-availability-card"><h3>Disponibilidad actual</h3><dl><div><dt><i class="is-available"></i>Disponibles</dt><dd id="tdAvailable">0</dd></div><div><dt><i class="is-service"></i>En servicio</dt><dd id="tdInService">0</dd></div><div><dt><i class="is-unavailable"></i>No disponibles</dt><dd id="tdUnavailable">0</dd></div><div class="td-total"><dt>Total agentes</dt><dd id="tdTotalAgents">0</dd></div></dl></section>
                 </div>
+
+                <section class="td-info-bar"><i>i</i><div><b>Guardar distribución</b><p>Al guardar, el sistema solicitará la fecha de la distribución de personal y se registrará automáticamente como:</p><strong>DISTRIBUCIÓN DE PERSONAL FECHA XX/XX/XXXX</strong></div><span aria-hidden="true">▦　→　▤</span></section>
             </div>
-        </div>
+        </section>
+    </div>
 
-        <div class="td-modal" id="tdInsufficientModal" hidden>
-            <div class="td-modal-dialog" role="dialog" aria-modal="true">
-                <div class="td-modal-header">
-                    <div><p>Personal insuficiente</p><h3>No hay suficiente personal disponible</h3></div>
-                    <button class="td-btn td-btn-ghost" id="tdCloseInsufficient" type="button">×</button>
-                </div>
-                <div class="td-modal-body" id="tdInsufficientBody"></div>
-                <div class="td-modal-footer">
-                    <button class="td-btn td-btn-ghost" id="tdCancelInsufficient" type="button">Cancelar</button>
-                    <button class="td-btn td-btn-primary" id="tdConfirmPartial" type="button">Asignar personal disponible</button>
-                </div>
-            </div>
-        </div>
+    <div class="td-modal" id="tdAgentModal" hidden><div class="td-modal-dialog"><header><div><small>Asignación manual</small><h3 id="tdAgentModalTitle">Seleccionar agente</h3></div><button type="button" data-close="tdAgentModal">×</button></header><div class="td-modal-body"><label class="td-search"><span>⌕</span><input id="tdAgentSearch" type="search" placeholder="Buscar por nombre o identificación..."></label><div class="td-agent-list" id="tdAgentList"></div></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdAgentModal">Cancelar</button></footer></div></div>
 
-        <div class="td-toast" id="tdToast" role="status" aria-live="polite"></div>
-    </main>
+    <div class="td-modal" id="tdSaveModal" hidden><div class="td-modal-dialog td-modal-small"><header><div><small>Confirmación</small><h3>Guardar distribución de personal</h3></div><button type="button" data-close="tdSaveModal">×</button></header><div class="td-modal-body"><p>Seleccione la fecha de la distribución de personal.</p><label class="td-date-label">Fecha de distribución<input id="tdDistributionDate" type="date" required></label><p class="td-generated-name" id="tdGeneratedName">DISTRIBUCIÓN DE PERSONAL FECHA DD/MM/AAAA</p></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdSaveModal">Cancelar</button><button class="td-btn td-btn-primary" id="tdConfirmSave" type="button">Guardar distribución</button></footer></div></div>
 
+    <div class="td-modal" id="tdPendingModal" hidden><div class="td-modal-dialog td-modal-small"><header><div><small>Advertencia</small><h3>Distribución incompleta</h3></div><button type="button" data-close="tdPendingModal">×</button></header><div class="td-modal-body"><div class="td-warning-box">La distribución posee lugares de servicio pendientes de asignación.</div></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdPendingModal">Volver</button><button class="td-btn td-btn-warning" id="tdForceSave" type="button">Guardar de todas formas</button></footer></div></div>
+
+    <div class="td-modal" id="tdResultModal" hidden><div class="td-modal-dialog"><header><div><small>Registro guardado</small><h3>✓ Distribución guardada correctamente</h3></div><button type="button" data-close="tdResultModal">×</button></header><div class="td-modal-body"><div class="td-success-result"><i>✓</i><h4 id="tdSavedName"></h4><p id="tdSavedSummary"></p></div><div class="td-saved-detail" id="tdSavedDetail"></div></div><footer class="td-result-actions"><button class="td-btn td-btn-ghost" id="tdViewSaved" type="button">Ver distribución</button><button class="td-btn td-btn-ghost" id="tdEditSaved" type="button">Editar distribución</button><button class="td-btn td-btn-ghost" id="tdPrintSaved" type="button">Imprimir</button><button class="td-btn td-btn-ghost" id="tdPdfSaved" type="button">Exportar PDF</button><?php if ($canDelete): ?><button class="td-btn td-btn-danger" id="tdDeleteSaved" type="button">Eliminar</button><?php endif; ?></footer></div></div>
+
+    <div class="td-toast" id="tdToast" role="status" aria-live="polite"></div>
     <script id="tdCatalogs" type="application/json"><?= json_encode($catalogos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>
 </div>

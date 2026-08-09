@@ -34,7 +34,7 @@ final class DistribucionTableroController
         }
 
         View::render('distribucion_tablero/index', [
-            'title' => 'Tablero de Distribucion',
+            'title' => 'Tablero de Distribución',
             'usuario' => $user,
             'catalogos' => $catalogs,
             'error' => $error,

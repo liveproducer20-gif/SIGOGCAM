@@ -130,20 +130,14 @@
       html += '<td><span class="p-status ' + sc + '"><span class="p-status-dot"></span>' + estado + '</span></td>';
       html += '<td><div class="p-actions">';
       if (D.canEdit) {
-        html += '<button class="p-action-edit" data-id="' + item.id + '" aria-label="Editar"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+        html += '<button type="button" class="p-action-button" data-action="edit" data-id="' + item.id + '" title="Editar personal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Editar</span></button>';
       }
-      html += '<div style="position:relative">';
-      html += '<button class="p-menu-trigger" data-menu="' + item.id + '" aria-label="Mas opciones"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg></button>';
-      html += '<div class="p-dropdown" id="menu-' + item.id + '">';
-      if (D.canEdit) {
-        html += '<button class="p-dropdown-item" data-action="edit" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>';
-        html += '<button class="p-dropdown-item" data-action="reset" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Restablecer contraseña</button>';
+      if (D.canResetPassword) {
+        html += '<button type="button" class="p-action-button p-action-icon" data-action="reset" data-id="' + item.id + '" title="Restablecer contraseña" aria-label="Restablecer contraseña"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>';
       }
       if (D.canDelete) {
-        html += '<div class="p-dropdown-divider"></div>';
-        html += '<button class="p-dropdown-item danger" data-action="delete" data-id="' + item.id + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar</button>';
+        html += '<button type="button" class="p-action-button" data-action="delete" data-id="' + item.id + '" title="Eliminar personal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Eliminar</span></button>';
       }
-      html += '</div></div>';
       html += '</div></tr>';
     });
     tbody.innerHTML = html;
@@ -334,26 +328,7 @@
     }
   }
 
-  function closeAllDropdowns() {
-    $$('.p-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
-  }
-
-  document.addEventListener('click', (e) => {
-    const menuBtn = e.target.closest('[data-menu]');
-    if (menuBtn) {
-      e.stopPropagation();
-      const id = menuBtn.dataset.menu;
-      const wasOpen = menuBtn.closest('div').querySelector('.p-dropdown.is-open');
-      closeAllDropdowns();
-      if (!wasOpen) {
-        const dd = $('#menu-' + id);
-        if (dd) dd.classList.add('is-open');
-      }
-      return;
-    }
-
-    closeAllDropdowns();
-
+  document.addEventListener('click', async (e) => {
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       e.stopPropagation();
@@ -362,7 +337,15 @@
       const row = rowMap.get(id);
       if (!row) return;
       if (action === 'edit') {
-        openFormModal('edit', row);
+        actionBtn.disabled = true;
+        try {
+          const response = await apiCall('GET', String(id));
+          openFormModal('edit', response.datos || row);
+        } catch (error) {
+          toast(error.message, 'error');
+        } finally {
+          actionBtn.disabled = false;
+        }
       } else if (action === 'delete') {
         deleteTargetId = id;
         $('#deleteName').textContent = row.nombre_completo || (row.nombres + ' ' + row.apellidos);
@@ -374,15 +357,6 @@
         $('#resetConfirmBtn').style.display = '';
         openModal('resetOverlay');
       }
-      return;
-    }
-
-    const editIcon = e.target.closest('.p-action-edit');
-    if (editIcon) {
-      e.stopPropagation();
-      const id = parseInt(editIcon.dataset.id, 10);
-      const row = rowMap.get(id);
-      if (row) openFormModal('edit', row);
       return;
     }
   });

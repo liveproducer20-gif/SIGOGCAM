@@ -73,13 +73,13 @@ def update_person_endpoint(person_id: int, payload: PersonalInput, user: dict = 
 
 
 @router.delete("/{person_id}")
-def delete_person_endpoint(person_id: int, user: dict = Depends(require_permission("personal.editar"))):
+def delete_person_endpoint(person_id: int, user: dict = Depends(require_permission("personal.eliminar"))):
     delete_person(person_id, int(user["id"]))
     return ok(None, "Personal eliminado correctamente")
 
 
 @router.post("/{person_id}/reset-password")
-def reset_password_endpoint(person_id: int, user: dict = Depends(require_permission("personal.editar"))):
+def reset_password_endpoint(person_id: int, user: dict = Depends(require_permission("personal.reset_password"))):
     import secrets
     new_password = secrets.token_urlsafe(8)
     reset_password(person_id, new_password)

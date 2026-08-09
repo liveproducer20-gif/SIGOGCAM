@@ -4,7 +4,8 @@ $json = static fn($value): string => htmlspecialchars(json_encode($value, JSON_U
 $perms = $permissions ?? [];
 $canCreate = $isAdministrator || in_array('personal.crear', $perms, true);
 $canEdit = $isAdministrator || in_array('personal.editar', $perms, true);
-$canDelete = $isAdministrator || in_array('personal.editar', $perms, true);
+$canDelete = $isAdministrator || in_array('personal.eliminar', $perms, true);
+$canResetPassword = $isAdministrator || in_array('personal.reset_password', $perms, true);
 $roles = $catalogs['roles'] ?? [];
 $grados = $catalogs['grados'] ?? [];
 $estados = $catalogs['estados'] ?? [];
@@ -302,6 +303,7 @@ window.__PERSONAL_DATA__ = {
     canCreate: <?= $json($canCreate) ?>,
     canEdit: <?= $json($canEdit) ?>,
     canDelete: <?= $json($canDelete) ?>,
+    canResetPassword: <?= $json($canResetPassword) ?>,
     apiBase: '/personal/api',
 };
 </script>

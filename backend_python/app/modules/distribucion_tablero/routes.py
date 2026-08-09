@@ -9,12 +9,92 @@ from app.modules.distribucion_tablero.models import (
     CleanAssignmentsInput,
     ConfirmAssignmentInput,
     RandomAssignmentInput,
+    RandomDraftInput,
     RouteRequirementInput,
+    SaveDistributionInput,
     SubstituteAgentInput,
 )
 
 
 router = APIRouter(tags=["distribucion-tablero"])
+
+
+@router.get("/distribucion-tablero/tablero")
+def board_data(
+    distrito_id: int = Query(..., gt=0),
+    turno_id: int = Query(..., gt=0),
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    return ok(repository.get_board_data(distrito_id, turno_id))
+
+
+@router.get("/distribucion-tablero/rutas/{route_id}/lugares")
+def route_places(
+    route_id: int,
+    turno_id: int = Query(..., gt=0),
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    return ok(repository.get_route_places(route_id, turno_id))
+
+
+@router.get("/distribucion-tablero/disponibilidad")
+def board_availability(
+    distrito_id: int = Query(..., gt=0),
+    turno_id: int = Query(..., gt=0),
+    excluidos: str = "",
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    excluded = {int(item) for item in excluidos.split(",") if item.strip().isdigit()}
+    return ok(repository.get_board_availability(distrito_id, turno_id, excluded))
+
+
+@router.post("/distribucion-tablero/asignacion-aleatoria")
+def random_draft(
+    payload: RandomDraftInput,
+    user: dict = Depends(require_permission("tablero_distribucion.asignar")),
+):
+    return ok(repository.generate_draft_assignments(payload.model_dump()))
+
+
+@router.post("/distribucion-tablero/distribuciones", status_code=201)
+def save_distribution(
+    payload: SaveDistributionInput,
+    request: Request,
+    user: dict = Depends(require_permission("tablero_distribucion.asignar")),
+):
+    result = repository.save_distribution(payload.model_dump(), int(user["id"]), request.client.host if request.client else None)
+    return ok(result, "Distribucion guardada correctamente")
+
+
+@router.get("/distribucion-tablero/distribuciones/{distribution_id}")
+def distribution_detail(
+    distribution_id: int,
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    return ok(repository.get_distribution(distribution_id))
+
+
+@router.put("/distribucion-tablero/distribuciones/{distribution_id}")
+def update_distribution(
+    distribution_id: int,
+    payload: SaveDistributionInput,
+    request: Request,
+    user: dict = Depends(require_permission("tablero_distribucion.asignar")),
+):
+    result = repository.update_distribution(
+        distribution_id, payload.model_dump(), int(user["id"]), request.client.host if request.client else None
+    )
+    return ok(result, "Distribucion actualizada correctamente")
+
+
+@router.delete("/distribucion-tablero/distribuciones/{distribution_id}")
+def delete_distribution(
+    distribution_id: int,
+    request: Request,
+    user: dict = Depends(require_permission("tablero_distribucion.eliminar")),
+):
+    repository.delete_distribution(distribution_id, int(user["id"]), request.client.host if request.client else None)
+    return ok(None, "Distribucion eliminada correctamente")
 
 
 @router.get("/distribucion-tablero/rutas/{route_id}/info")

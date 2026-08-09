@@ -1,5 +1,4 @@
 from datetime import date, time
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -39,3 +38,24 @@ class CleanAssignmentsInput(BaseModel):
     ruta_id: int
     fecha_servicio: date
     turno: str = Field(min_length=1, max_length=80)
+
+
+class DraftAssignmentInput(BaseModel):
+    lugar_id: int = Field(gt=0)
+    agente_id: int = Field(gt=0)
+    tipo_asignacion: str = Field(default="MANUAL", max_length=40)
+
+
+class RandomDraftInput(BaseModel):
+    distrito_id: int = Field(gt=0)
+    turno_id: int = Field(gt=0)
+    ruta_id: int = Field(gt=0)
+    asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
+
+
+class SaveDistributionInput(BaseModel):
+    distrito_id: int = Field(gt=0)
+    turno_id: int = Field(gt=0)
+    fecha_distribucion: date
+    asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
+    guardar_con_pendientes: bool = False
