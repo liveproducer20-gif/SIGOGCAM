@@ -1657,6 +1657,35 @@ BEGIN
 END
 GO
 
+-- ============================================================================
+-- 12.9 USUARIO ADMINISTRADOR ADICIONAL (Bermudez)
+--     Copia las referencias (rol, area, jornada, grado, etc.) del primer
+--     usuario con rol 'admin' para heredar la misma configuracion.
+--     Con password_hash NULL, la cedula funciona como contrasena.
+-- ============================================================================
+IF NOT EXISTS (SELECT 1 FROM dbo.personal WHERE correo_institucional = 'adminbermudez@bitsac.local')
+BEGIN
+    DECLARE @adminRefId INT;
+
+    SELECT TOP 1 @adminRefId = p.id
+    FROM dbo.personal p
+    JOIN dbo.roles r ON r.id = p.rol_id
+    WHERE r.codigo = 'admin'
+    ORDER BY p.id;
+
+    INSERT INTO dbo.personal (cedula, nombres, apellidos, correo_institucional, telefono,
+        fecha_nacimiento, fecha_ingreso, cargo_id, area_id, jornada_id, grupo_id, rol_id,
+        estado_personal_id, grado_id, funcion_operativa_id, tipo_rotacion_id, activo)
+    SELECT '0910000011', N'Bermudez', N'Administrador', 'adminbermudez@bitsac.local', '0990000011',
+        '1980-01-01', '2024-01-01', cargo_id, area_id, jornada_id, grupo_id, rol_id,
+        estado_personal_id, grado_id, funcion_operativa_id, tipo_rotacion_id, 1
+    FROM dbo.personal WHERE id = @adminRefId;
+
+    UPDATE dbo.personal SET password_hash = NULL WHERE correo_institucional = 'adminbermudez@bitsac.local';
+    PRINT 'Admin adicional Bermudez insertado.';
+END
+GO
+
 PRINT '============================================================';
 PRINT '  SCRIPT COMPLETO DE BITSAC FINALIZADO CORRECTAMENTE';
 PRINT '============================================================';
