@@ -1661,3 +1661,4 @@ PRINT '============================================================';
 PRINT '  SCRIPT COMPLETO DE BITSAC FINALIZADO CORRECTAMENTE';
 PRINT '============================================================';
 GO
+// hoala //
