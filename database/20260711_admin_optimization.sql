@@ -1,4 +1,5 @@
 /*
+//PRUEBA//
  * ============================================================
  * Script de optimizacion SQL para modulo de administracion
  * Fecha: 2026-07-11
