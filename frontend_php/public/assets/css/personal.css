@@ -85,11 +85,11 @@
     white-space: nowrap;
 }
 .p-btn-primary,
-.p-btn-secondary,
-.p-btn-danger { color: #fff; background: var(--sigo-action-blue, #1464d2); border-color: var(--sigo-action-blue, #1464d2); }
+.p-btn-secondary { color: #fff; background: var(--sigo-action-blue, #1464d2); border-color: var(--sigo-action-blue, #1464d2); }
 .p-btn-primary:hover,
-.p-btn-secondary:hover,
-.p-btn-danger:hover { color: #fff; background: var(--sigo-action-blue-dark, #0b4fae); border-color: var(--sigo-action-blue-dark, #0b4fae); }
+.p-btn-secondary:hover { color: #fff; background: var(--sigo-action-blue-dark, #0b4fae); border-color: var(--sigo-action-blue-dark, #0b4fae); }
+.p-btn-danger { color: #fff; background: #c93642; border-color: #c93642; }
+.p-btn-danger:hover { color: #fff; background: #a92531; border-color: #a92531; }
 .p-btn-icon { min-height: 38px; min-width: 38px; padding: 0; justify-content: center; }
 .p-btn:disabled { opacity: .5; cursor: not-allowed; }
 .p-btn .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: p-spin .6s linear infinite; }
@@ -244,29 +244,78 @@
 .p-status-sinestado { color: #6b7280; background: #f3f4f6; }
 .p-status-sinestado .p-status-dot { background: #9ca3af; }
 
-/* --- Row Actions --- */
-.p-actions { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
-.p-action-button {
-    min-height: 32px;
-    padding: 0 10px;
-    display: inline-flex;
+/* --- Contextual row actions --- */
+.p-actions-cell { overflow: visible; text-align: center; }
+.p-actions { display: flex; align-items: center; justify-content: center; min-width: 44px; }
+.p-actions-trigger {
+    width: 40px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    border: 1px solid var(--sigo-action-blue, #1464d2);
-    border-radius: 7px;
-    background: var(--sigo-action-blue, #1464d2);
-    color: #fff;
-    font-size: 11px;
-    font-weight: 750;
+    border: 1px solid #cbd9e8 !important;
+    border-radius: 8px !important;
+    background: #f8fbff !important;
+    color: #143f70 !important;
+    box-shadow: 0 2px 6px rgba(15,54,94,.06);
+    font-size: 24px !important;
+    font-weight: 800;
+    line-height: 1;
     cursor: pointer;
-    transition: all .15s;
+    transition: background .15s, border-color .15s, box-shadow .15s;
 }
-.p-action-button:hover { background: var(--sigo-action-blue-dark, #0b4fae); border-color: var(--sigo-action-blue-dark, #0b4fae); transform: translateY(-1px); }
-.p-action-button:disabled { opacity: .55; cursor: wait; transform: none; }
-.p-action-icon {
-    width: 32px;
-    padding: 0;
+.p-actions-trigger:hover,
+.p-actions-trigger[aria-expanded="true"] {
+    border-color: #8eb8ea !important;
+    background: #e8f2ff !important;
+    box-shadow: 0 0 0 3px rgba(20,100,210,.1);
+}
+.p-actions-trigger span { transform: translateY(-1px); }
+.p-no-actions { color: var(--sigo-muted); font-size: 11px; }
+.p-actions-menu {
+    display: none;
+    position: fixed;
+    z-index: 3500;
+    width: 220px;
+    padding: 6px;
+    overflow: visible;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 14px 36px rgba(15,54,94,.18);
+}
+.p-actions-menu.is-open { display: block; }
+.p-actions-menu-item {
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 0 11px !important;
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    border: 0 !important;
+    border-radius: 7px !important;
+    background: transparent !important;
+    color: #17385f !important;
+    font: 650 12px/1.25 Inter, "Segoe UI", Arial, sans-serif !important;
+    text-align: left;
+    cursor: pointer;
+}
+.p-actions-menu-item:hover,
+.p-actions-menu-item:focus-visible { outline: none; background: #eef5ff !important; }
+.p-actions-menu-item svg { flex: 0 0 16px; }
+.p-actions-menu-item > span { display: grid; gap: 2px; }
+.p-actions-menu-item small { color: #8998aa; font-size: 9px; font-weight: 600; }
+.p-actions-menu-divider { height: 1px; margin: 5px 4px; background: #e2e8f0; }
+.p-actions-menu-delete { color: #c93642 !important; }
+.p-actions-menu-delete:hover,
+.p-actions-menu-delete:focus-visible { background: #fff1f2 !important; }
+.p-actions-menu-item:disabled {
+    color: #9aa6b5 !important;
+    background: transparent !important;
+    opacity: .72;
+    cursor: not-allowed;
 }
 
 /* --- Modal --- */

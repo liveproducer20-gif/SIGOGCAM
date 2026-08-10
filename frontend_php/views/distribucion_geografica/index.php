@@ -5,8 +5,9 @@ $isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['r
 $canCreate = $isAdmin || in_array('distribucion.crear', $permissions, true);
 $canEdit = $isAdmin || in_array('distribucion.editar', $permissions, true);
 $canAssign = $isAdmin || in_array('distribucion.asignar', $permissions, true);
+$canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, true);
 ?>
-<div class="geo-app" data-can-create="<?= $canCreate ? '1' : '0' ?>" data-can-edit="<?= $canEdit ? '1' : '0' ?>" data-can-assign="<?= $canAssign ? '1' : '0' ?>">
+<div class="geo-app" data-can-create="<?= $canCreate ? '1' : '0' ?>" data-can-edit="<?= $canEdit ? '1' : '0' ?>" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-trace="<?= $canTrace ? '1' : '0' ?>">
     <main class="geo-main">
         <?php if (!empty($error)): ?><div class="geo-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
@@ -14,10 +15,9 @@ $canAssign = $isAdmin || in_array('distribucion.asignar', $permissions, true);
         <form class="geo-filters" id="geoFilters">
             <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
-            <label>Lugar de servicio<select name="lugar_servicio_id" id="filterServicePlace" disabled><option value="">Todos los lugares</option></select></label>
             <div class="geo-filter-actions">
-                <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnNewRoute">＋ Dibujar nueva ruta</button><?php endif; ?>
-                <?php if ($canCreate): ?><button class="geo-primary" type="button" id="btnAddPlace" style="display:none">＋ Agregar lugar de servicio</button><?php endif; ?>
+                <?php if ($canTrace): ?><button class="geo-primary" type="button" id="btnTrace" disabled>⌁ Asignar trazado</button><?php endif; ?>
+                <?php if ($canEdit): ?><button class="geo-primary" type="button" id="btnLocation" disabled>⌖ Asignar ubicación</button><?php endif; ?>
             </div>
         </form>
 
@@ -25,6 +25,15 @@ $canAssign = $isAdmin || in_array('distribucion.asignar', $permissions, true);
             <div class="geo-map-wrap">
                 <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
                 <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> lugares visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
+                <div class="geo-edit-tools" id="traceTools" hidden><strong>Dibuje el recorrido haciendo clic en el mapa</strong><button class="geo-secondary" type="button" id="undoTrace">↶ Deshacer</button><button class="geo-ghost" type="button" id="cancelTrace">Cancelar</button><button class="geo-primary" type="button" id="saveTrace">Guardar trazado</button></div>
+                <aside class="geo-trace-options" id="traceOptions" hidden aria-label="Opciones del trazado">
+                    <header><span>⌁</span><div><strong>Estilo del trazado</strong><small>Configure la geometría</small></div></header>
+                    <label>Tipo de trazado<select id="traceType"><option value="lineal">Lineal (recorrido)</option><option value="area">Área (polígono)</option></select></label>
+                    <label>Color<div class="geo-color-control"><input type="color" id="traceColor" value="#2563EB"><output id="traceColorValue">#2563EB</output></div></label>
+                    <label>Grosor <output id="traceWidthValue">6 px</output><input type="range" id="traceWidth" min="1" max="20" value="6"></label>
+                    <p id="traceTypeHelp">Marque al menos dos puntos para formar el recorrido.</p>
+                </aside>
+                <div class="geo-edit-hint" id="locationHint" hidden>Seleccione en el mapa la ubicación del lugar de servicio. <button type="button" id="cancelLocation">Cancelar</button></div>
                 <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="route"></i> Ruta trazada</span></div>
                 <div class="geo-map-empty" id="geoMapEmpty" hidden>Seleccione un distrito y una ruta para visualizar el trazado y los lugares de servicio.</div>
             </div>
@@ -44,6 +53,20 @@ $canAssign = $isAdmin || in_array('distribucion.asignar', $permissions, true);
     </main>
 
     <div class="geo-toast" id="geoToast" role="status" aria-live="polite"></div>
+
+    <?php if ($canEdit): ?>
+    <div class="geo-modal" id="locationModal" hidden>
+        <div class="geo-modal-dialog geo-location-dialog" role="dialog" aria-modal="true" aria-labelledby="locationTitle">
+            <header class="geo-modal-header"><div><p>Georreferenciación</p><h2 id="locationTitle">Asignar ubicación</h2></div><button type="button" id="closeLocation" aria-label="Cerrar">×</button></header>
+            <form class="geo-step-panel is-active" id="locationForm">
+                <div class="geo-location-summary"><p><span>Distrito</span><strong id="locationDistrict">—</strong></p><p><span>Ruta</span><strong id="locationRoute">—</strong></p><p><span>Latitud</span><strong id="locationLat">—</strong></p><p><span>Longitud</span><strong id="locationLng">—</strong></p></div>
+                <label class="geo-location-select">Lugar de servicio<select id="locationPlace" required><option value="">Seleccione un lugar de servicio</option></select></label>
+                <div class="geo-replace-warning" id="replaceWarning" hidden>Este lugar de servicio ya posee una ubicación asignada. Al continuar se reemplazará y quedará registrada en auditoría.</div>
+                <div class="geo-modal-actions"><button class="geo-ghost" type="button" id="cancelLocationModal">Cancelar</button><button class="geo-primary" type="submit" id="saveLocation">Guardar ubicación</button></div>
+            </form>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <?php if ($canCreate): ?>
     <!-- WIZARD: DIBUJAR NUEVA RUTA -->

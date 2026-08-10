@@ -26,3 +26,69 @@
 .td-app .td-modal header>button{background:transparent!important}
 .td-table-card{min-width:0}.td-table-scroll{max-width:100%;overflow:auto}
 @media(max-width:1500px){.td-page-head{display:grid}.td-filter-card{max-width:none}}
+
+/* ── Modal grande para selector de agentes ── */
+.td-modal-lg .td-modal-dialog{width:min(1060px,96vw);max-height:92vh}
+.td-modal-md .td-modal-dialog{width:min(560px,96vw)}
+.td-app .td-modal.td-modal-lg header{padding:14px 20px}
+.td-app .td-modal.td-modal-lg header>button{width:28px!important;height:28px!important;display:grid;place-items:center;border-radius:6px;font-size:15px!important;color:#59708c;border:1px solid var(--td-line);background:#fff!important;flex-shrink:0;line-height:1}
+.td-app .td-modal.td-modal-lg header>button:hover{background:#f3f4f6!important;color:var(--td-navy)}
+.td-modal-subtitle{margin:4px 0 0;color:var(--td-muted);font-size:12px}
+.td-agent-info-bar{padding:12px 16px;margin-bottom:14px;border:1px solid var(--td-line);border-radius:8px;background:#f8fafc;font-size:12px}
+.td-info-row{padding:3px 0;color:#315782}.td-info-row b{color:var(--td-navy);font-weight:700}
+
+/* ── Filtros del modal — una sola fila ── */
+.td-agent-filters{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;margin-bottom:14px}
+.td-agent-search-label{display:flex;align-items:center;gap:8px;flex:1 1 200px;min-width:180px;height:36px;padding:0 10px;border:1px solid #d5dfeb;border-radius:7px;background:#fff}
+.td-agent-search-label input{border:0;outline:0;flex:1;font:500 12px inherit;background:transparent;color:var(--td-navy)}
+.td-agent-search-label span{color:#7085a1;font-size:15px}
+.td-agent-filters select{height:36px;padding:0 8px;border:1px solid #ccd9e8;border-radius:7px;background:#fff;color:var(--td-navy);font:600 11px inherit;width:120px;flex:0 0 auto}
+.td-agent-filters select:focus{outline:2px solid rgba(7,152,143,.12);border-color:var(--td-teal)}
+.td-btn-sm{min-height:32px;padding:0 10px;font-size:11px}
+.td-agent-filters .td-btn-sm{height:36px;flex:0 0 auto;white-space:nowrap}
+
+/* ── Tabla de agentes ── */
+.td-agent-table-wrap{max-height:420px;overflow:auto;border:1px solid var(--td-line);border-radius:8px}
+.td-agent-table{width:100%;border-collapse:collapse;min-width:700px}
+.td-agent-table th{position:sticky;top:0;z-index:1;padding:10px 12px;background:#f5f8fc;color:var(--td-navy);font-size:10px;text-transform:uppercase;letter-spacing:.03em;text-align:left;border-bottom:1px solid var(--td-line)}
+.td-agent-table td{padding:10px 12px;border-bottom:1px solid #edf1f5;font-size:11px;color:#263e5f;vertical-align:middle}
+.td-agent-table tr.td-row-unavailable{background:#fafbfc;opacity:.78}
+.td-agent-table tr.td-row-unavailable:hover{opacity:1}
+.td-agent-cell{display:flex;align-items:center;gap:8px}
+.td-avatar-sm{display:grid;place-items:center;flex:0 0 32px;height:32px;border-radius:50%;background:#eaf2ff;color:var(--td-blue);font-weight:800;font-size:10px}
+
+/* ── Chips de estado ── */
+.td-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap}
+.td-chip::before{content:"";width:7px;height:7px;border-radius:50%}
+.td-chip-green{background:#edf9f4;color:#16734e}.td-chip-green::before{background:var(--td-green)}
+.td-chip-blue{background:#edf4ff;color:#1a5cc7}.td-chip-blue::before{background:var(--td-blue)}
+.td-chip-orange{background:#fff6e8;color:#b87a12}.td-chip-orange::before{background:var(--td-orange)}
+.td-chip-yellow{background:#fff9ed;color:#9a7210}.td-chip-yellow::before{background:#eab308}
+.td-chip-red{background:#fef2f2;color:#b91c1c}.td-chip-red::before{background:var(--td-red)}
+.td-chip-gray{background:#f3f4f6;color:#6b7280}.td-chip-gray::before{background:#9ca3af}
+.td-chip-purple{background:#f3edff;color:#6d28d9}.td-chip-purple::before{background:var(--td-purple)}
+
+/* ── Disponibilidad ── */
+.td-avail{font-size:10px;font-weight:700}.td-avail-ok{color:#16734e}.td-avail-no{color:#9ca3af}
+
+/* ── Badge de asignacion forzada ── */
+.td-forced-badge{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:2px 8px;border-radius:10px;background:#fff3e0;color:#c2700a;font-size:9px;font-weight:800;cursor:help}
+.td-forced-original{display:block;margin-top:3px;color:#9a7210;font-size:9px;font-style:italic}
+
+/* ── Modal de forzar asignacion ── */
+.td-force-warning{color:var(--td-orange)!important}
+.td-force-warning-box{padding:14px;border:1px solid #f5d79d;border-radius:8px;background:#fff9ed;color:#835b14;font-size:12px;line-height:1.6}
+.td-force-warning-box strong{color:#b45309}
+.td-force-details{margin:14px 0;padding:12px;border:1px solid var(--td-line);border-radius:8px;background:#fafbfc;font-size:12px}
+.td-force-details div{padding:4px 0;color:#3f5c7c}.td-force-details b{color:var(--td-navy)}
+.td-force-justificacion textarea{width:100%;padding:10px;border:1px solid #ccd9e8;border-radius:7px;font:500 12px inherit;resize:vertical;min-height:70px}
+.td-force-justificacion textarea:focus{outline:3px solid rgba(245,166,35,.15);border-color:var(--td-orange)}
+
+/* ── Paginacion ── */
+.td-agent-pagination{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--td-line)}
+.td-pagination-info{font-size:11px;color:var(--td-muted)}
+.td-pagination-btns{display:flex;gap:4px}
+.td-pagination-ellipsis{padding:0 6px;color:var(--td-muted);font-size:12px;line-height:32px}
+
+/* ── Responsive filtros del modal ── */
+@media(max-width:900px){.td-agent-filters{flex-wrap:wrap}.td-agent-filters select{width:calc(50% - 4px)}.td-agent-search-label{min-width:100%}}

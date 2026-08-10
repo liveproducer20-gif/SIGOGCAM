@@ -72,3 +72,34 @@ class SectorInput(BaseModel):
     distrito_id: int
     ruta_id: int
     nombre: str = Field(min_length=3, max_length=180)
+
+
+class RouteTraceInput(BaseModel):
+    distrito_id: int
+    geojson: dict
+    tipo_geometria: Literal["lineal", "area"] = "lineal"
+    color: str = Field(default="#2563EB", pattern=r"^#[0-9A-Fa-f]{6}$")
+    grosor: float = Field(default=6, ge=1, le=20)
+    opacidad: float = Field(default=0.55, ge=0.1, le=1)
+
+
+class PlaceLocationInput(BaseModel):
+    distrito_id: int
+    ruta_id: int
+    latitud: Decimal
+    longitud: Decimal
+    reemplazar: bool = False
+
+    @field_validator("latitud")
+    @classmethod
+    def valid_location_latitude(cls, value: Decimal):
+        if value < Decimal("-90") or value > Decimal("90"):
+            raise ValueError("La latitud no es válida")
+        return value
+
+    @field_validator("longitud")
+    @classmethod
+    def valid_location_longitude(cls, value: Decimal):
+        if value < Decimal("-180") or value > Decimal("180"):
+            raise ValueError("La longitud no es válida")
+        return value

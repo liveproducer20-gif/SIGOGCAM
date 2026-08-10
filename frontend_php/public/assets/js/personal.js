@@ -10,6 +10,9 @@
   let deleteTargetId = null;
   let resetTargetId = null;
   let isSaving = false;
+  let activeActionsId = null;
+  let activeActionsTrigger = null;
+  let actionsMenu = null;
 
   const rowMap = new Map();
 
@@ -95,6 +98,7 @@
   function renderTable() {
     const tbody = $('#tableBody');
     if (!tbody) return;
+    closeActionsMenu(false);
     if (state.data.length === 0) {
       const hasFilters = state.search || state.estado || state.grado || state.rol || state.grupo || state.jornada;
       const emptyTitle = hasFilters ? 'No se encontraron resultados' : 'No hay personal registrado';
@@ -120,6 +124,7 @@
       const grupo = esc(item.grupo || '');
       const estado = esc(item.estado_personal || 'SIN ESTADO');
       const sc = statusClass(item.estado_personal);
+      const hasActions = Boolean(D.canEdit || D.canResetPassword || D.canDelete);
       html += '<tr>';
       html += '<td><div class="p-name-cell"><span class="p-avatar" style="background:' + av.color + '">' + av.initials + '</span><span class="p-name-text">' + nombre + '</span></div></td>';
       html += '<td>' + cedula + '</td>';
@@ -128,17 +133,11 @@
       html += '<td>' + rol + '</td>';
       html += '<td>' + grupo + '</td>';
       html += '<td><span class="p-status ' + sc + '"><span class="p-status-dot"></span>' + estado + '</span></td>';
-      html += '<td><div class="p-actions">';
-      if (D.canEdit) {
-        html += '<button type="button" class="p-action-button" data-action="edit" data-id="' + item.id + '" title="Editar personal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Editar</span></button>';
-      }
-      if (D.canResetPassword) {
-        html += '<button type="button" class="p-action-button p-action-icon" data-action="reset" data-id="' + item.id + '" title="Restablecer contraseña" aria-label="Restablecer contraseña"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>';
-      }
-      if (D.canDelete) {
-        html += '<button type="button" class="p-action-button" data-action="delete" data-id="' + item.id + '" title="Eliminar personal"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Eliminar</span></button>';
-      }
-      html += '</div></tr>';
+      html += '<td class="p-actions-cell"><div class="p-actions">';
+      html += hasActions
+        ? '<button type="button" class="p-actions-trigger" data-actions-trigger="' + item.id + '" aria-label="Acciones de ' + nombre + '" aria-haspopup="menu" aria-expanded="false" aria-controls="personalActionsMenu"><span aria-hidden="true">&#8942;</span></button>'
+        : '<span class="p-no-actions">Sin acciones</span>';
+      html += '</div></td></tr>';
     });
     tbody.innerHTML = html;
   }
@@ -328,7 +327,92 @@
     }
   }
 
+  function ensureActionsMenu() {
+    if (actionsMenu) return actionsMenu;
+    actionsMenu = document.createElement('div');
+    actionsMenu.id = 'personalActionsMenu';
+    actionsMenu.className = 'p-actions-menu';
+    actionsMenu.setAttribute('role', 'menu');
+    actionsMenu.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(actionsMenu);
+    return actionsMenu;
+  }
+
+  function buildActionsMenu(personId) {
+    const isCurrentUser = Number(D.currentUserId) === Number(personId);
+    let html = '';
+    if (D.canEdit) {
+      html += '<button type="button" class="p-actions-menu-item" role="menuitem" data-action="edit" data-id="' + personId + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg><span>Editar</span></button>';
+    }
+    if (D.canResetPassword) {
+      html += '<button type="button" class="p-actions-menu-item" role="menuitem" data-action="reset" data-id="' + personId + '"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span>Restablecer contraseña</span></button>';
+    }
+    if (D.canDelete) {
+      html += '<div class="p-actions-menu-divider" role="separator"></div>';
+      html += '<button type="button" class="p-actions-menu-item p-actions-menu-delete" role="menuitem" data-action="delete" data-id="' + personId + '"' + (isCurrentUser ? ' disabled aria-disabled="true" title="No puede eliminar su propia cuenta"' : '') + '><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><span>Eliminar' + (isCurrentUser ? '<small>Cuenta actual</small>' : '') + '</span></button>';
+    }
+    return html;
+  }
+
+  function positionActionsMenu() {
+    if (!actionsMenu || !activeActionsTrigger || !actionsMenu.classList.contains('is-open')) return;
+    const triggerRect = activeActionsTrigger.getBoundingClientRect();
+    const menuRect = actionsMenu.getBoundingClientRect();
+    const gap = 6;
+    const margin = 8;
+    const left = Math.min(
+      Math.max(margin, triggerRect.right - menuRect.width),
+      window.innerWidth - menuRect.width - margin
+    );
+    const fitsBelow = triggerRect.bottom + gap + menuRect.height <= window.innerHeight - margin;
+    const top = fitsBelow
+      ? triggerRect.bottom + gap
+      : Math.max(margin, triggerRect.top - menuRect.height - gap);
+    actionsMenu.style.left = left + 'px';
+    actionsMenu.style.top = top + 'px';
+    actionsMenu.style.visibility = 'visible';
+  }
+
+  function closeActionsMenu(restoreFocus = true) {
+    if (!actionsMenu) return;
+    actionsMenu.classList.remove('is-open');
+    actionsMenu.setAttribute('aria-hidden', 'true');
+    actionsMenu.style.visibility = 'hidden';
+    if (activeActionsTrigger) {
+      activeActionsTrigger.setAttribute('aria-expanded', 'false');
+      if (restoreFocus && document.contains(activeActionsTrigger)) activeActionsTrigger.focus();
+    }
+    activeActionsId = null;
+    activeActionsTrigger = null;
+  }
+
+  function toggleActionsMenu(trigger, personId) {
+    if (activeActionsId === personId && actionsMenu?.classList.contains('is-open')) {
+      closeActionsMenu();
+      return;
+    }
+    closeActionsMenu(false);
+    const menu = ensureActionsMenu();
+    activeActionsId = personId;
+    activeActionsTrigger = trigger;
+    menu.innerHTML = buildActionsMenu(personId);
+    menu.classList.add('is-open');
+    menu.setAttribute('aria-hidden', 'false');
+    menu.style.visibility = 'hidden';
+    trigger.setAttribute('aria-expanded', 'true');
+    positionActionsMenu();
+    menu.querySelector('button:not(:disabled)')?.focus();
+  }
+
   document.addEventListener('click', async (e) => {
+    const menuTrigger = e.target.closest('[data-actions-trigger]');
+    if (menuTrigger) {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleActionsMenu(menuTrigger, parseInt(menuTrigger.dataset.actionsTrigger, 10));
+      return;
+    }
+
     const actionBtn = e.target.closest('[data-action]');
     if (actionBtn) {
       e.stopPropagation();
@@ -336,6 +420,7 @@
       const id = parseInt(actionBtn.dataset.id, 10);
       const row = rowMap.get(id);
       if (!row) return;
+      closeActionsMenu(false);
       if (action === 'edit') {
         actionBtn.disabled = true;
         try {
@@ -349,6 +434,7 @@
       } else if (action === 'delete') {
         deleteTargetId = id;
         $('#deleteName').textContent = row.nombre_completo || (row.nombres + ' ' + row.apellidos);
+        $('#deleteCedula').textContent = row.cedula || '';
         openModal('deleteOverlay');
       } else if (action === 'reset') {
         resetTargetId = id;
@@ -359,7 +445,14 @@
       }
       return;
     }
+
+    if (actionsMenu?.classList.contains('is-open') && !actionsMenu.contains(e.target)) {
+      closeActionsMenu(false);
+    }
   });
+
+  window.addEventListener('resize', positionActionsMenu);
+  window.addEventListener('scroll', positionActionsMenu, true);
 
   if ($('#createBtn')) {
     $('#createBtn').addEventListener('click', () => openFormModal('create'));
@@ -391,7 +484,7 @@
     if (e.key === 'Escape') {
       if (isSaving) return;
       $$('.p-modal-overlay.is-open').forEach(ov => ov.classList.remove('is-open'));
-      closeAllDropdowns();
+      closeActionsMenu(false);
     }
   });
 

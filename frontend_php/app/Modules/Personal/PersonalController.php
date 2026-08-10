@@ -17,6 +17,20 @@ final class PersonalController
         }
 
         $user = AuthSession::user() ?? [];
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        $roleIdentity = strtoupper(implode(' ', array_filter([
+            (string)($user['rolCodigo'] ?? ''),
+            (string)($user['rolNombre'] ?? ''),
+            (string)($user['rol'] ?? ''),
+        ])));
+        $isAdministrator = (int)($user['rolId'] ?? 0) === 1
+            || str_contains($roleIdentity, 'ADMINISTRADOR');
+        $publicPath = dirname(__DIR__, 3) . '/public';
+        $assetVersion = max(
+            (int)@filemtime($publicPath . '/assets/css/personal.css'),
+            (int)@filemtime($publicPath . '/assets/js/personal.js')
+        );
         $catalogs = [];
         $error = null;
         try {
@@ -32,8 +46,10 @@ final class PersonalController
             'error' => $error,
             'message' => $message,
             'permissions' => $user['permisos'] ?? [],
-            'isAdministrator' => str_contains(strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? '')), 'ADMINISTRADOR'),
-            'pageStyles' => ['/assets/css/personal.css'],
+            'isAdministrator' => $isAdministrator,
+            'currentUserId' => (int)($user['id'] ?? 0),
+            'personalAssetVersion' => $assetVersion,
+            'pageStyles' => ['/assets/css/personal.css?v=' . $assetVersion],
         ]);
     }
 

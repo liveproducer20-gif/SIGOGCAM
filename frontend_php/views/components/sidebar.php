@@ -41,11 +41,12 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
         <?php endif; ?>
 
         <?php if ($sidebarCan(['distribucion.ver', 'tablero_distribucion.ver'])): ?>
-        <section class="sigo-nav-group<?= $open(['/distribucion-geografica', '/distribucion-tablero']) ?>" data-nav-group>
-            <button type="button" aria-expanded="<?= in_array($path, ['/distribucion-geografica', '/distribucion-tablero'], true) ? 'true' : 'false' ?>"><span class="sigo-nav-icon">⌖</span><span>Distribución</span><b>⌄</b></button>
+        <section class="sigo-nav-group<?= $open(['/distribucion-geografica', '/distribucion-tablero', '/distribucion-dashboard']) ?>" data-nav-group>
+            <button type="button" aria-expanded="<?= in_array($path, ['/distribucion-geografica', '/distribucion-tablero', '/distribucion-dashboard'], true) ? 'true' : 'false' ?>"><span class="sigo-nav-icon">⌖</span><span>Distribución</span><b>⌄</b></button>
             <div class="sigo-submenu">
                 <a class="<?= $active(['/distribucion-geografica']) ?>" href="/distribucion-geografica">Distribución geográfica</a>
                 <a class="<?= $active(['/distribucion-tablero']) ?>" href="/distribucion-tablero">Tablero de distribución</a>
+                <a class="<?= $active(['/distribucion-dashboard']) ?>" href="/distribucion-dashboard">Dashboard</a>
             </div>
         </section>
         <?php endif; ?>

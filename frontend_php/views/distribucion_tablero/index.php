@@ -4,8 +4,9 @@ $permissions = $usuario['permisos'] ?? [];
 $isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['rol'] ?? '')), 'ADMINISTRADOR');
 $canAssign = $isAdmin || in_array('tablero_distribucion.asignar', $permissions, true);
 $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions, true);
+$canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions, true);
 ?>
-<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>">
+<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>" data-can-force="<?= $canForce ? '1' : '0' ?>">
     <?php if (!empty($error)): ?><div class="td-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
     <header class="td-page-head">
@@ -59,7 +60,78 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
         </section>
     </div>
 
-    <div class="td-modal" id="tdAgentModal" hidden><div class="td-modal-dialog"><header><div><small>Asignación manual</small><h3 id="tdAgentModalTitle">Seleccionar agente</h3></div><button type="button" data-close="tdAgentModal">×</button></header><div class="td-modal-body"><label class="td-search"><span>⌕</span><input id="tdAgentSearch" type="search" placeholder="Buscar por nombre o identificación..."></label><div class="td-agent-list" id="tdAgentList"></div></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdAgentModal">Cancelar</button></footer></div></div>
+    <div class="td-modal td-modal-lg" id="tdAgentModal" hidden>
+        <div class="td-modal-dialog">
+            <header>
+                <div>
+                    <small>Cambiar agente asignado</small>
+                    <h3 id="tdAgentModalTitle">Seleccionar agente</h3>
+                    <p id="tdAgentModalSubtitle" class="td-modal-subtitle"></p>
+                </div>
+                <button type="button" data-close="tdAgentModal">&times;</button>
+            </header>
+            <div class="td-modal-body">
+                <div class="td-agent-info-bar" id="tdAgentInfoBar"></div>
+                <div class="td-agent-filters">
+                    <label class="td-agent-search-label">
+                        <span>&#128269;</span>
+                        <input id="tdAgentSearch" type="search" placeholder="Buscar por nombre, apellido o cedula...">
+                    </label>
+                    <select id="tdFilterGrupo"><option value="">Grupo</option></select>
+                    <select id="tdFilterTipoServicio"><option value="">Tipo servicio</option></select>
+                    <select id="tdFilterGrado"><option value="">Grado</option></select>
+                    <select id="tdFilterEstado"><option value="">Estado</option></select>
+                    <button class="td-btn td-btn-ghost td-btn-sm" id="tdClearAgentFilters" type="button">Limpiar filtros</button>
+                </div>
+                <div class="td-agent-table-wrap">
+                    <table class="td-agent-table">
+                        <thead><tr>
+                            <th>Agente</th><th>Identificacion</th><th>Grupo</th><th>Tipo servicio</th><th>Grado</th><th>Estado</th><th>Disponibilidad</th><th>Accion</th>
+                        </tr></thead>
+                        <tbody id="tdAgentTableBody"></tbody>
+                    </table>
+                </div>
+                <div class="td-agent-pagination" id="tdAgentPagination"></div>
+            </div>
+            <footer>
+                <button class="td-btn td-btn-ghost" type="button" data-close="tdAgentModal">Cancelar</button>
+            </footer>
+        </div>
+    </div>
+
+    <div class="td-modal td-modal-md" id="tdForceModal" hidden>
+        <div class="td-modal-dialog">
+            <header>
+                <div>
+                    <small class="td-force-warning">Forzar asignacion</small>
+                    <h3>&#9888; Forzar asignacion</h3>
+                </div>
+                <button type="button" data-close="tdForceModal">&times;</button>
+            </header>
+            <div class="td-modal-body">
+                <div class="td-force-warning-box">
+                    El agente seleccionado actualmente se encuentra en estado: <strong id="tdForceAgentStatus"></strong>.
+                    Por esta condicion el agente no deberia ser asignado a un servicio.
+                    &iquest;Desea forzar la asignacion de este agente?
+                </div>
+                <div class="td-force-details">
+                    <div><b>Agente:</b> <span id="tdForceAgentName"></span></div>
+                    <div><b>Estado:</b> <span id="tdForceAgentEstado"></span></div>
+                    <div><b>Lugar:</b> <span id="tdForceLugar"></span></div>
+                    <div><b>Turno:</b> <span id="tdForceTurno"></span></div>
+                </div>
+                <div class="td-force-justificacion">
+                    <label><b>Motivo de la asignacion forzada</b>
+                        <textarea id="tdForceJustificacion" rows="3" placeholder="Ej: Por disposicion del superior de turno."></textarea>
+                    </label>
+                </div>
+            </div>
+            <footer>
+                <button class="td-btn td-btn-ghost" type="button" data-close="tdForceModal">Cancelar</button>
+                <button class="td-btn td-btn-warning" id="tdConfirmForce" type="button">Forzar asignacion</button>
+            </footer>
+        </div>
+    </div>
 
     <div class="td-modal" id="tdSaveModal" hidden><div class="td-modal-dialog td-modal-small"><header><div><small>Confirmación</small><h3>Guardar distribución de personal</h3></div><button type="button" data-close="tdSaveModal">×</button></header><div class="td-modal-body"><p>Seleccione la fecha de la distribución de personal.</p><label class="td-date-label">Fecha de distribución<input id="tdDistributionDate" type="date" required></label><p class="td-generated-name" id="tdGeneratedName">DISTRIBUCIÓN DE PERSONAL FECHA DD/MM/AAAA</p></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdSaveModal">Cancelar</button><button class="td-btn td-btn-primary" id="tdConfirmSave" type="button">Guardar distribución</button></footer></div></div>
 

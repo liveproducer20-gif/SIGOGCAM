@@ -6,6 +6,8 @@ from app.core.responses import ok
 from app.middleware.auth import current_user, require_permission
 from app.modules.distribucion_tablero import repository
 from app.modules.distribucion_tablero.models import (
+    AgentSearchInput,
+    ChangeAgentInput,
     CleanAssignmentsInput,
     ConfirmAssignmentInput,
     RandomAssignmentInput,
@@ -230,3 +232,33 @@ def update_requirements(
         user_id=int(user["id"]),
     )
     return ok(result, "Requerimiento de personal actualizado")
+
+
+@router.post("/distribucion-tablero/agentes-disponibles")
+def agents_for_modal(
+    payload: AgentSearchInput,
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    data = payload.model_dump()
+    data["excluidos"] = data.get("excluidos", [])
+    return ok(repository.get_agents_for_modal(data))
+
+
+@router.post("/distribucion-tablero/cambiar-agente")
+def change_agent(
+    payload: ChangeAgentInput,
+    request: Request,
+    user: dict = Depends(require_permission("tablero_distribucion.asignar")),
+):
+    ip = request.client.host if request.client else None
+    result = repository.validate_and_change_agent(
+        payload.model_dump(), int(user["id"]), ip
+    )
+    return ok(result, "Agente cambiado correctamente")
+
+
+@router.get("/distribucion-tablero/dashboard")
+def distributions_dashboard(
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    return ok(repository.get_distributions_dashboard())

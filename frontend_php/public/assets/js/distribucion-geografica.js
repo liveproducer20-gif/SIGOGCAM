@@ -3,17 +3,13 @@
     const app = document.querySelector('.geo-app');
     if (!app) return;
 
-    const $ = (s, r = document) => r.querySelector(s);
-    const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-    const permissions = {
-        create: app.dataset.canCreate === '1', edit: app.dataset.canEdit === '1',
-        assign: app.dataset.canAssign === '1', catalogs: app.dataset.canCatalogs === '1'
-    };
-    const stateColors = { ACTIVA: '#2563EB', INACTIVA: '#6b7280', CUBIERTO: '#55ad38', SIN_ASIGNACION: '#aeb7c2', BORRADOR: '#e3ad23' };
-    let map, wizardMap, previewMap, draftMarker, drawingLayer, drawMode = false;
-    let markerLayer, selectedMarker = null;
-    let currentRoute = null, currentRouteGeo = null;
-    let tempPoints = [];
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const esc = value => { const node = document.createElement('div'); node.textContent = value ?? ''; return node.innerHTML; };
+    const permissions = { trace: app.dataset.canTrace === '1', edit: app.dataset.canEdit === '1' };
+    const colors = { ASIGNADO: '#22a447', PENDIENTE: '#f59e0b', NOVEDAD: '#dc3545', INACTIVO: '#8c98a8' };
+    let map, routeLayer, markerLayer, editLayer, temporaryMarker;
+    let selection = { districtId: null, districtName: '', routeId: null, routeName: '' };
+    let mapData = null, mode = null, tracePoints = [], pendingLocation = null;
 
     async function api(resource, options = {}) {
         const response = await fetch(`/distribucion-geografica/api?resource=${encodeURIComponent(resource)}`, {
@@ -21,509 +17,332 @@
             headers: options.body ? { 'Content-Type': 'application/json' } : {},
             body: options.body ? JSON.stringify(options.body) : undefined
         });
-        const payload = await response.json().catch(() => ({ ok: false, mensaje: 'Respuesta inválida' }));
-        if (!response.ok || payload.ok !== true) throw new Error(payload.mensaje || payload.detail || 'Error');
-        return payload;
+        const payload = await response.json().catch(() => ({ ok: false, mensaje: 'Respuesta inválida del servidor' }));
+        if (!response.ok || payload.ok !== true) throw new Error(payload.mensaje || payload.detail || 'No se pudo completar la operación');
+        return payload.datos;
     }
 
-    function notify(msg, err = false) {
-        const t = $('#geoToast');
-        t.textContent = msg; t.classList.toggle('is-error', err); t.classList.add('is-visible');
-        clearTimeout(notify._t); notify._t = setTimeout(() => t.classList.remove('is-visible'), 4000);
+    function notify(message, error = false) {
+        const toast = $('#geoToast');
+        if (!toast) return;
+        toast.textContent = message;
+        toast.classList.toggle('is-error', error);
+        toast.classList.add('is-visible');
+        clearTimeout(notify.timer);
+        notify.timer = setTimeout(() => toast.classList.remove('is-visible'), 4200);
     }
 
-    function esc(v) { const d = document.createElement('div'); d.textContent = v ?? ''; return d.innerHTML; }
-    function timeTxt(v) { return v ? String(v).slice(0, 5) : '—'; }
-
-    // ===================================================================
-    // MAP INIT
-    // ===================================================================
-    function initMap() {
-        if (!window.L) { $('#geoMap').innerHTML = '<div class="geo-map-empty">No se pudo cargar el mapa.</div>'; return; }
-        map = L.map('geoMap', { zoomControl: true }).setView([-2.1894, -79.8891], 14);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OpenStreetMap' }).addTo(map);
-        markerLayer = L.featureGroup().addTo(map);
-        setTimeout(() => map.invalidateSize(), 100);
-        loadMapData();
-    }
-
-    function fitMapToBounds(points) {
-        if (!points || points.length === 0 || !map) return;
-        const bounds = L.latLngBounds();
-        points.forEach(p => {
-            if (p.latitud && p.longitud) {
-                bounds.extend([p.latitud, p.longitud]);
-            }
+    function pinIcon(state, temporary = false, serviceType = '') {
+        const color = temporary ? '#2563EB' : (colors[state] || colors.PENDIENTE);
+        const isPedestrian = String(serviceType).toUpperCase().includes('PEDESTRE');
+        if (isPedestrian && !temporary) {
+            return L.divIcon({
+                className: 'geo-pin-host geo-service-pin-host', iconSize: [46, 54], iconAnchor: [23, 52], popupAnchor: [0, -50],
+                html: `<span class="geo-service-pin" style="--pin-color:${color}"><img src="/assets/img/pinp.png" alt="" draggable="false"></span>`
+            });
+        }
+        return L.divIcon({
+            className: 'geo-pin-host', iconSize: [34, 44], iconAnchor: [17, 42], popupAnchor: [0, -39],
+            html: `<span class="geo-pin${temporary ? ' is-temporary' : ''}" style="--pin-color:${color}"><i></i></span>`
         });
-        if (!bounds.isValid()) return;
-        map.fitBounds(bounds, { padding: [40, 40] });
     }
 
-    function updateVisiblePointCount(count) {
-        $('#visiblePointCount').textContent = count;
+    function initializeMap() {
+        if (!window.L) return notify('No se pudo cargar la librería del mapa.', true);
+        map = L.map('geoMap', { zoomControl: true }).setView([-2.1894, -79.8891], 14);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20, attribution: '&copy; OpenStreetMap'
+        }).addTo(map);
+        routeLayer = L.featureGroup().addTo(map);
+        markerLayer = L.featureGroup().addTo(map);
+        editLayer = L.featureGroup().addTo(map);
+        map.on('click', onMapClick);
+        setTimeout(() => map.invalidateSize(), 100);
     }
 
-    // ===================================================================
-    // PIN MARKER
-    // ===================================================================
+    function resetMap() {
+        cancelEditing(false);
+        routeLayer?.clearLayers();
+        markerLayer?.clearLayers();
+        editLayer?.clearLayers();
+        mapData = null;
+        $('#visiblePointCount').textContent = '0';
+        ['statRegistered', 'statCovered', 'statUnassigned', 'statPersonnel', 'statRoutes'].forEach(id => { const el = $('#' + id); if (el) el.textContent = '0'; });
+        const traceButton = $('#btnTrace');
+        const locationButton = $('#btnLocation');
+        if (traceButton) traceButton.disabled = true;
+        if (locationButton) locationButton.disabled = true;
+        $('#geoDetail')?.classList.remove('is-open');
+    }
 
-    // ===================================================================
-    // DISTRICT → ROUTE FLOW
-    // ===================================================================
-    $('#filterDistrict')?.addEventListener('change', async e => {
+    $('#filterDistrict')?.addEventListener('change', async event => {
         const routeSelect = $('#filterRoute');
-        const lieuSelect = $('#filterServicePlace');
+        resetMap();
+        selection = { districtId: event.target.value ? Number(event.target.value) : null,
+            districtName: event.target.selectedOptions[0]?.textContent || '', routeId: null, routeName: '' };
         routeSelect.innerHTML = '<option value="">Seleccione una ruta</option>';
         routeSelect.disabled = true;
-        lieuSelect.innerHTML = '<option value="">Todos los lugares</option>';
-        lieuSelect.disabled = true;
-        clearMap();
-        if (!e.target.value) {
-            await loadMapData();
-            return;
-        }
+        if (!selection.districtId) return;
         try {
-            const routes = (await api(`distritos/${e.target.value}/rutas`)).datos || [];
-            routes.forEach(r => routeSelect.add(new Option(r.nombre, r.id)));
-            routeSelect.add(new Option('— Dibujar nueva ruta —', 'nueva'));
+            const routes = await api(`distritos/${selection.districtId}/rutas`) || [];
+            routes.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
             routeSelect.disabled = false;
-            if (routes.length > 0 && !routeSelect.value) {
+            if (routes.length) {
                 routeSelect.value = String(routes[0].id);
                 routeSelect.dispatchEvent(new Event('change'));
             }
-        } catch (err) { notify(err.message, true); }
+        } catch (error) { notify(error.message, true); }
     });
 
-    $('#filterRoute')?.addEventListener('change', async e => {
-        const lieuSelect = $('#filterServicePlace');
-        lieuSelect.innerHTML = '<option value="">Todos los lugares</option>';
-        lieuSelect.disabled = true;
-        clearMap();
-        const addBtn = $('#btnAddPlace');
-        const mapEmpty = $('#geoMapEmpty');
-        if (addBtn) addBtn.style.display = 'none';
-        if (mapEmpty) mapEmpty.hidden = true;
-        if (!e.target.value) return;
-        if (e.target.value === 'nueva') { openDrawWizard(); return; }
+    $('#filterRoute')?.addEventListener('change', async event => {
+        resetMap();
+        selection.routeId = event.target.value ? Number(event.target.value) : null;
+        selection.routeName = event.target.selectedOptions[0]?.textContent || '';
+        if (!selection.districtId || !selection.routeId) return;
+        await loadRouteMap();
+    });
+
+    async function loadRouteMap() {
         try {
-            const rutaId = e.target.value;
-            const geoData = (await api(`rutas/${rutaId}/geografia`)).datos;
-            const places = (await api(`rutas/${rutaId}/lugares-servicio`)).datos || [];
-            if (geoData) {
-                currentRouteGeo = geoData;
-                drawRouteOnMap(geoData);
-            } else {
-                // No hay trazado geográfico: mostrar mensaje y botón para agregar
-                if (mapEmpty) {
-                    mapEmpty.innerHTML = 'Esta ruta no tiene trazado geográfico.';
-                    mapEmpty.hidden = false;
-                }
-                // Mostrar botón para agregar trazado si tiene permisos
-                if (addBtn && permissions.create) {
-                    addBtn.style.display = '';
-                    addBtn.textContent = '＋ Agregar trazado geográfico';
-                    addBtn.onclick = () => openDrawWizardForRoute(rutaId);
-                }
-            }
-            currentRoute = { id: rutaId };
-            places.forEach(p => lieuSelect.add(new Option(p.nombre, p.id)));
-            lieuSelect.disabled = false;
-            loadServicePlaceMarkers(places);
-        } catch (err) { notify(err.message, true); }
-    });
+            mapData = await api(`distribucion-geografica/rutas/${selection.routeId}/mapa?distrito_id=${selection.districtId}`);
+            renderRouteMap();
+        } catch (error) {
+            resetMap();
+            notify(error.message, true);
+        }
+    }
 
-    $('#filterServicePlace')?.addEventListener('change', async e => {
-        if (!e.target.value) { loadServicePlaceMarkers(null); return; }
-        try {
-            const place = (await api(`lugares-servicio/${e.target.value}`)).datos;
-            if (place && place.latitud && place.longitud) {
-                markerLayer.clearLayers();
-                const m = L.marker([place.latitud, place.longitud], { icon: pinIcon('#2563EB', true) }).addTo(map);
-                m.bindTooltip(place.nombre, { permanent: true, direction: 'top', offset: [0, -18] });
-                map.setView([place.latitud, place.longitud], 17);
-            }
-        } catch (err) { notify(err.message, true); }
-    });
-
-    function clearMap() {
+    function renderRouteMap() {
+        routeLayer.clearLayers();
         markerLayer.clearLayers();
-        if (drawingLayer) { map.removeLayer(drawingLayer); drawingLayer = null; }
-        currentRouteGeo = null; currentRoute = null;
-        const mapEmpty = $('#geoMapEmpty');
-        if (mapEmpty) mapEmpty.hidden = true;
-    }
-
-    function drawRouteOnMap(geo) {
-        if (!geo || !geo.geojson || !window.L) return;
-        try {
-            const data = typeof geo.geojson === 'string' ? JSON.parse(geo.geojson) : geo.geojson;
-            const style = { color: geo.color || '#2563EB', weight: geo.grosor || 6, opacity: geo.opacidad || 0.55 };
-            if (data.type === 'FeatureCollection') {
-                drawingLayer = L.geoJSON(data, { style }).addTo(map);
-            } else if (data.type === 'Feature') {
-                drawingLayer = L.geoJSON(data, { style }).addTo(map);
-            } else {
-                drawingLayer = L.geoJSON(data, { style }).addTo(map);
-            }
-            if (drawingLayer.getBounds) map.fitBounds(drawingLayer.getBounds(), { padding: [40, 40] });
-        } catch (e) { console.error('Error dibujando ruta:', e); }
-    }
-
-    function loadServicePlaceMarkers(places) {
-        markerLayer.clearLayers();
-        if (!places || !window.L) return;
-        places.forEach(p => {
-            if (!p.latitud || !p.longitud) return;
-            const m = L.marker([p.latitud, p.longitud], { icon: pinIcon(stateColors.CUBIERTO) }).addTo(map);
-            m.bindTooltip(p.nombre, { direction: 'top', offset: [0, -18] });
-            m.on('click', () => showServicePlaceDetail(p));
-        });
-    }
-
-    // ===================================================================
-    // SERVICE PLACE DETAIL
-    // ===================================================================
-    async function showServicePlaceDetail(place) {
-        try {
-            const full = (await api(`lugares-servicio/${place.id}`)).datos;
-            const assigns = (await api(`lugares-servicio/${place.id}/asignaciones`)).datos || [];
-            const assignsHtml = assigns.map(a => `<div class="geo-agent-chip"><span>${esc(a.agente)}</span><b>${esc(a.codigo)}</b></div>`).join('') || '<span class="geo-agent-chip">Sin personal asignado</span>';
-            $('#geoDetail').innerHTML = `<header><h2>Lugar de servicio</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
-              <div class="geo-point-head"><div class="geo-point-avatar">${assigns.length ? '♟' : '○'}</div><div><span class="geo-status">${esc(full.estado)}</span><h3>${esc(full.nombre)}</h3><small>${esc(full.direccion_referencial || '')}</small></div></div>
-              <div class="geo-detail-list"><dl><dt>Ruta</dt><dd>${esc(full.ruta)}</dd><dt>Dirección referencial</dt><dd>${esc(full.direccion_referencial || '—')}</dd><dt>Coordenadas</dt><dd>${full.latitud || '—'}, ${full.longitud || '—'}</dd><dt>Agentes asignados (${assigns.length})</dt><dd><div class="geo-agent-chips">${assignsHtml}</div></dd></dl></div>
-              <div class="geo-detail-actions">${permissions.assign ? `<button class="geo-primary" type="button" data-assign-place="${full.id}">Asignar agente</button>` : ''}${permissions.edit ? `<button class="geo-secondary" type="button" data-edit-place="${full.id}">Editar</button>` : ''}</div>`;
-            $('#geoDetail').classList.add('is-open');
-            $('#closeDetail')?.addEventListener('click', () => $('#geoDetail').classList.remove('is-open'));
-            $$('[data-assign-place]').forEach(b => b.addEventListener('click', () => openAssignWizard(Number(b.dataset.assignPlace))));
-            $$('[data-edit-place]').forEach(b => b.addEventListener('click', () => openEditPlaceWizard(Number(b.dataset.editPlace))));
-        } catch (err) { notify(err.message, true); }
-    }
-
-    // ===================================================================
-    // DRAW WIZARD (Crear nueva ruta)
-    // ===================================================================
-    const drawWizard = $('#drawWizard');
-
-    function openDrawWizard() {
-        if (!drawWizard) return;
-        drawWizard.hidden = false;
-        document.body.style.overflow = 'hidden';
-        $('#drawRouteName').value = '';
-        $('#drawRouteDesc').value = '';
-        $('#drawRouteColor').value = '#2563EB';
-        $('#drawRouteWidth').value = '6';
-        $('#drawRouteOpacity').value = '0.55';
-        $('#drawRouteState').value = 'ACTIVA';
-        $('#drawRouteGeometry').value = 'lineal';
-        drawWizard.dataset.mode = 'new';
-        drawWizard.dataset.routeId = '';
-        setupDrawMap();
-    }
-
-    function openDrawWizardForRoute(rutaId) {
-        if (!drawWizard) return;
-        drawWizard.hidden = false;
-        document.body.style.overflow = 'hidden';
-        // Cargar info de la ruta para mostrar nombre
-        $('#drawRouteName').value = '';
-        $('#drawRouteDesc').value = '';
-        $('#drawRouteColor').value = '#2563EB';
-        $('#drawRouteWidth').value = '6';
-        $('#drawRouteOpacity').value = '0.55';
-        $('#drawRouteState').value = 'ACTIVA';
-        $('#drawRouteGeometry').value = 'lineal';
-        drawWizard.dataset.mode = 'existing';
-        drawWizard.dataset.routeId = rutaId;
-        setupDrawMap();
-    }
-
-    function closeDrawWizard() { if (!drawWizard) return; drawWizard.hidden = true; document.body.style.overflow = ''; stopDrawing(); }
-
-    function setupDrawMap() {
-        if (!wizardMap) {
-            wizardMap = L.map('drawMap').setView([-2.1894, -79.8891], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OSM' }).addTo(wizardMap);
-        }
-        setTimeout(() => wizardMap.invalidateSize(), 80);
-        drawingLayer = L.featureGroup().addTo(wizardMap);
-    }
-
-    function startDrawing() {
-        drawMode = true; tempPoints = [];
-        wizardMap.getContainer().style.cursor = 'crosshair';
-        wizardMap.on('click', onMapClick);
-        $('#drawTools').hidden = false;
-        $('#startDraw').hidden = true;
-    }
-
-    function stopDrawing() {
-        drawMode = false; tempPoints = [];
-        if (wizardMap && wizardMap.getContainer()) wizardMap.getContainer().style.cursor = '';
-        wizardMap?.off('click', onMapClick);
-    }
-
-    function onMapClick(e) {
-        tempPoints.push([e.latlng.lat, e.latlng.lng]);
-        drawingLayer.clearLayers();
-        const color = $('#drawRouteColor').value;
-        const weight = Number($('#drawRouteWidth').value) || 6;
-        const opacity = Number($('#drawRouteOpacity').value) || 0.55;
-        if (tempPoints.length >= 2) {
-            L.polyline(tempPoints, { color, weight, opacity }).addTo(drawingLayer);
-        }
-        tempPoints.forEach((p, i) => {
-            L.circleMarker(p, { radius: 5, color: '#fff', fillColor: color, fillOpacity: 1, weight: 2 }).addTo(drawingLayer);
-        });
-    }
-
-    function undoPoint() { if (tempPoints.length) { tempPoints.pop(); redrawTemp(); } }
-    function clearDrawing() { tempPoints = []; drawingLayer.clearLayers(); }
-
-    function redrawTemp() {
-        drawingLayer.clearLayers();
-        const color = $('#drawRouteColor').value;
-        const weight = Number($('#drawRouteWidth').value) || 6;
-        const opacity = Number($('#drawRouteOpacity').value) || 0.55;
-        if (tempPoints.length >= 2) L.polyline(tempPoints, { color, weight, opacity }).addTo(drawingLayer);
-        tempPoints.forEach(p => L.circleMarker(p, { radius: 5, color: '#fff', fillColor: color, fillOpacity: 1, weight: 2 }).addTo(drawingLayer));
-    }
-
-    async function saveRoute() {
-        const name = $('#drawRouteName').value.trim();
-        if (!name) return notify('Ingrese el nombre de la ruta.', true);
-        if (tempPoints.length < 2) return notify('Dibuje al menos 2 puntos.', true);
-        const districtId = $('#filterDistrict').value;
-        if (!districtId) return notify('Seleccione un distrito.', true);
-
-        const mode = drawWizard.dataset.mode || 'new';
-        let routeId;
-
-        if (mode === 'new') {
-            // 1. Crear la ruta básica en tabla rutas usando el endpoint correcto
-            const routePayload = {
-                nombre: name,
-                distrito_id: Number(districtId),
-                turno_id: 1,
-                hora_inicio: '06:00',
-                hora_fin: '14:30',
-                activo: true
-            };
+        editLayer.clearLayers();
+        const route = mapData?.ruta;
+        const places = mapData?.lugares || [];
+        if (!route) return;
+        selection.routeName = route.nombre;
+        const traceButton = $('#btnTrace');
+        const locationButton = $('#btnLocation');
+        if (traceButton) { traceButton.disabled = !permissions.trace; traceButton.textContent = route.tiene_trazado ? '⌁ Redibujar trazado' : '⌁ Asignar trazado'; }
+        if (locationButton) locationButton.disabled = !permissions.edit;
+        const trace = route.trazado;
+        if (trace?.geojson) {
             try {
-                const routeResult = await api(`distritos/${districtId}/rutas`, { method: 'POST', body: routePayload });
-                routeId = routeResult.datos?.id || routeResult.id;
-            } catch (err) {
-                return notify('Error al crear la ruta: ' + err.message, true);
-            }
-        } else {
-            // Modo existing: usar la ruta existente
-            routeId = drawWizard.dataset.routeId;
-            if (!routeId) return notify('Error: no se especificó la ruta.', true);
+                const geojson = typeof trace.geojson === 'string' ? JSON.parse(trace.geojson) : trace.geojson;
+                L.geoJSON(geojson, { style: { color: trace.color || '#2563EB', weight: Number(trace.grosor || 6), opacity: Number(trace.opacidad || .55) } }).addTo(routeLayer);
+            } catch (_) { notify('El trazado guardado no contiene GeoJSON válido.', true); }
         }
-
-        // 2. Crear el trazado geográfico vinculado a la ruta
-        const geoPayload = {
-            distrito_id: Number(districtId),
-            ruta_id: routeId,
-            nombre: name,
-            descripcion: $('#drawRouteDesc').value.trim() || null,
-            tipo_geometria: $('#drawRouteGeometry').value,
-            geojson: JSON.stringify({ type: 'LineString', coordinates: tempPoints.map(p => [p[1], p[0]]) }),
-            color: $('#drawRouteColor').value,
-            grosor: Number($('#drawRouteWidth').value),
-            opacidad: Number($('#drawRouteOpacity').value),
-            estado: $('#drawRouteState').value
-        };
-        try {
-            const result = await api('rutas-geograficas', { method: 'POST', body: geoPayload });
-            notify(mode === 'new' ? 'Ruta y trazado guardados correctamente.' : 'Trazado geográfico agregado correctamente.');
-            closeDrawWizard();
-            const routeSelect = $('#filterRoute');
-            if (routeSelect) {
-                if (mode === 'new') {
-                    const opt = document.createElement('option');
-                    opt.value = routeId; opt.textContent = name;
-                    routeSelect.insertBefore(opt, routeSelect.querySelector('[value="nueva"]'));
-                }
-                routeSelect.value = String(routeId);
-                routeSelect.dispatchEvent(new Event('change'));
-            }
-        } catch (err) { notify(err.message, true); }
+        places.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
+        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
+        $('#statRegistered').textContent = String(places.length);
+        $('#statCovered').textContent = String(places.filter(p => p.agente_id).length);
+        $('#statUnassigned').textContent = String(places.filter(p => !p.agente_id).length);
+        $('#statPersonnel').textContent = String(new Set(places.filter(p => p.agente_id).map(p => p.agente_id)).size);
+        $('#statRoutes').textContent = '1';
+        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
     }
 
-    $('#startDraw')?.addEventListener('click', startDrawing);
-    $('#undoPoint')?.addEventListener('click', undoPoint);
-    $('#clearDrawing')?.addEventListener('click', clearDrawing);
-    $('#saveRoute')?.addEventListener('click', saveRoute);
-    $('#cancelDraw')?.addEventListener('click', closeDrawWizard);
-    $('#cancelDraw2')?.addEventListener('click', closeDrawWizard);
-    $('#drawRouteColor')?.addEventListener('input', redrawTemp);
-    drawWizard?.addEventListener('click', e => { if (e.target === drawWizard) closeDrawWizard(); });
-
-    $('#btnNewRoute')?.addEventListener('click', () => openDrawWizard());
-    $('#btnAddPlace')?.addEventListener('click', () => window.openAddPlaceWizard());
-
-    // ===================================================================
-    // ADD / EDIT SERVICE PLACE WIZARD
-    // ===================================================================
-    const placeWizard = $('#placeWizard');
-    const placeForm = $('#placeForm');
-
-    window.openAddPlaceWizard = function () {
-        if (!currentRoute) return notify('Seleccione una ruta primero.', true);
-        placeForm.reset();
-        $('#placeWizardTitle').textContent = 'Agregar lugar de servicio';
-        $('#place_id').value = '';
-        placeWizard.hidden = false;
-        document.body.style.overflow = 'hidden';
-        setupPlaceMap();
-    };
-
-    window.openEditPlaceWizard = async function (placeId) {
-        try {
-            const place = (await api(`lugares-servicio/${placeId}`)).datos;
-            placeForm.reset();
-            $('#placeWizardTitle').textContent = 'Editar lugar de servicio';
-            $('#place_id').value = place.id;
-            placeForm.elements.nombre.value = place.nombre || '';
-            placeForm.elements.descripcion.value = place.descripcion || '';
-            placeForm.elements.direccion_referencial.value = place.direccion_referencial || '';
-            placeForm.elements.latitud.value = place.latitud || '';
-            placeForm.elements.longitud.value = place.longitud || '';
-            placeForm.elements.estado.value = place.estado || 'ACTIVO';
-            placeWizard.hidden = false;
-            document.body.style.overflow = 'hidden';
-            setupPlaceMap();
-            if (place.latitud && place.longitud) setPlaceMarker(Number(place.latitud), Number(place.longitud));
-        } catch (err) { notify(err.message, true); }
-    };
-
-    function closePlaceWizard() { if (!placeWizard) return; placeWizard.hidden = true; document.body.style.overflow = ''; }
-
-    let placeMap, placeMarker;
-    function setupPlaceMap() {
-        if (!placeMap) {
-            placeMap = L.map('placeMap').setView([-2.1894, -79.8891], 14);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 20, attribution: '&copy; OSM' }).addTo(placeMap);
-            placeMap.on('click', e => setPlaceMarker(e.latlng.lat, e.latlng.lng));
-        }
-        setTimeout(() => placeMap.invalidateSize(), 80);
+    function addPlaceMarker(place) {
+        const state = String(place.estado_operativo || '').toUpperCase() === 'NOVEDAD' ? 'NOVEDAD' : place.estado_mapa;
+        const marker = L.marker([Number(place.latitud), Number(place.longitud)], { icon: pinIcon(state, false, place.tipo_servicio) }).addTo(markerLayer);
+        marker.bindTooltip(esc(place.nombre), { direction: 'top', offset: [0, -30] });
+        marker.bindPopup(placePopup(place), { maxWidth: 320 });
+        marker.on('click', () => showPlaceDetail(place));
     }
 
-    function setPlaceMarker(lat, lng) {
-        placeForm.elements.latitud.value = lat.toFixed(7);
-        placeForm.elements.longitud.value = lng.toFixed(7);
-        if (placeMarker) placeMarker.setLatLng([lat, lng]);
-        else {
-            placeMarker = L.marker([lat, lng], { draggable: true, icon: pinIcon('#e3ad23', true) }).addTo(placeMap);
-            placeMarker.on('dragend', () => { const p = placeMarker.getLatLng(); setPlaceMarker(p.lat, p.lng); });
-        }
-        placeMap.setView([lat, lng], 17);
+    function placePopup(place) {
+        const assigned = Boolean(place.agente_id);
+        return `<div class="geo-popup"><h3>${esc(place.nombre)}</h3>
+            <dl><dt>Agente asignado</dt><dd>${assigned ? esc(place.agente) : 'Sin asignar'}</dd>
+            <dt>Grado / rango</dt><dd>${assigned ? esc(place.grado || '—') : '—'}</dd>
+            <dt>Horario</dt><dd>${assigned ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : 'Pendiente'}</dd>
+            <dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl>
+            <span class="geo-popup-state ${assigned ? 'is-assigned' : ''}">${assigned ? 'Asignado' : 'Pendiente'}</span></div>`;
     }
 
-    placeForm?.addEventListener('submit', async e => {
-        e.preventDefault();
-        const id = $('#place_id').value;
-        const payload = {
-            ruta_id: Number(currentRoute.id),
-            nombre: placeForm.elements.nombre.value.trim(),
-            descripcion: placeForm.elements.descripcion.value.trim() || null,
-            direccion_referencial: placeForm.elements.direccion_referencial.value.trim() || null,
-            latitud: placeForm.elements.latitud.value ? Number(placeForm.elements.latitud.value) : null,
-            longitud: placeForm.elements.longitud.value ? Number(placeForm.elements.longitud.value) : null,
-            estado: placeForm.elements.estado.value
-        };
-        try {
-            if (id) await api(`lugares-servicio/${id}`, { method: 'PUT', body: payload });
-            else await api('lugares-servicio', { method: 'POST', body: payload });
-            notify(id ? 'Lugar actualizado.' : 'Lugar creado.');
-            closePlaceWizard();
-            $('#filterRoute')?.dispatchEvent(new Event('change'));
-        } catch (err) { notify(err.message, true); }
+    function showPlaceDetail(place) {
+        const detail = $('#geoDetail');
+        if (!detail) return;
+        detail.innerHTML = `<header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
+            <div class="geo-point-head"><div class="geo-point-avatar">⌖</div><div><span class="geo-status">${place.agente_id ? 'Asignado' : 'Pendiente'}</span><h3>${esc(place.nombre)}</h3><small>${esc(place.direccion_referencial || '')}</small></div></div>
+            <div class="geo-detail-list"><dl><dt>Ruta</dt><dd>${esc(selection.routeName)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
+            <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignar')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
+            <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : 'Pendiente'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>`;
+        detail.classList.add('is-open');
+        $('#closeDetail')?.addEventListener('click', () => detail.classList.remove('is-open'));
+    }
+
+    function time(value) { return value ? String(value).slice(0, 5) : '—'; }
+
+    $('#btnTrace')?.addEventListener('click', () => {
+        if (!selection.routeId) return notify('Seleccione un distrito y una ruta.', true);
+        cancelEditing(false);
+        mode = 'trace';
+        tracePoints = [];
+        editLayer.clearLayers();
+        routeLayer.clearLayers();
+        const savedTrace = mapData?.ruta?.trazado;
+        $('#traceType').value = savedTrace?.tipo_geometria === 'area' ? 'area' : 'lineal';
+        $('#traceColor').value = /^#[0-9a-f]{6}$/i.test(savedTrace?.color || '') ? savedTrace.color : '#2563EB';
+        $('#traceWidth').value = String(Number(savedTrace?.grosor || 6));
+        updateTraceOptions();
+        map.getContainer().classList.add('is-drawing');
+        $('#traceTools').hidden = false;
+        $('#traceOptions').hidden = false;
+        notify('Haga clic en el mapa para definir el recorrido de la ruta.');
     });
 
-    $('#cancelPlace')?.addEventListener('click', closePlaceWizard);
-    $('#cancelPlace2')?.addEventListener('click', closePlaceWizard);
-    placeWizard?.addEventListener('click', e => { if (e.target === placeWizard) closePlaceWizard(); });
+    function onMapClick(event) {
+        if (mode === 'trace') {
+            tracePoints.push([event.latlng.lat, event.latlng.lng]);
+            renderTemporaryTrace();
+        } else if (mode === 'location') {
+            pendingLocation = { latitud: event.latlng.lat, longitud: event.latlng.lng };
+            if (temporaryMarker) temporaryMarker.setLatLng(event.latlng);
+            else temporaryMarker = L.marker(event.latlng, { icon: pinIcon('PENDIENTE', true) }).addTo(editLayer);
+            map.getContainer().classList.remove('is-locating');
+            mode = null;
+            $('#locationHint').hidden = true;
+            openLocationModal();
+        }
+    }
 
-    // ===================================================================
-    // ASSIGN AGENT WIZARD
-    // ===================================================================
-    const assignWizard = $('#assignWizard');
-    let assignPlaceId = null, selectedAgent = null;
+    function renderTemporaryTrace() {
+        editLayer.clearLayers();
+        const type = $('#traceType').value;
+        const color = $('#traceColor').value;
+        const weight = Number($('#traceWidth').value);
+        if (type === 'area' && tracePoints.length > 2) {
+            L.polygon(tracePoints, { color, weight, opacity: .85, fillColor: color, fillOpacity: .18, dashArray: '8 5' }).addTo(editLayer);
+        } else if (tracePoints.length > 1) {
+            L.polyline(tracePoints, { color, weight, opacity: .8, dashArray: '8 5' }).addTo(editLayer);
+        }
+        tracePoints.forEach(point => L.circleMarker(point, { radius: 5, color: '#fff', weight: 2, fillColor: color, fillOpacity: 1 }).addTo(editLayer));
+    }
 
-    window.openAssignWizard = function (placeId) {
-        if (!assignWizard) return;
-        assignPlaceId = placeId; selectedAgent = null;
-        $('#assignEditor').hidden = true;
-        $('#agentResults').innerHTML = '';
-        $('#agentSearch').value = '';
-        assignWizard.hidden = false;
-        document.body.style.overflow = 'hidden';
-    };
+    function updateTraceOptions() {
+        const type = $('#traceType').value;
+        $('#traceColorValue').textContent = $('#traceColor').value.toUpperCase();
+        $('#traceWidthValue').textContent = `${$('#traceWidth').value} px`;
+        $('#traceTypeHelp').textContent = type === 'area'
+            ? 'Marque al menos tres puntos; el sistema cerrará el área automáticamente.'
+            : 'Marque al menos dos puntos para formar el recorrido.';
+        renderTemporaryTrace();
+    }
+    $('#traceType')?.addEventListener('change', updateTraceOptions);
+    $('#traceColor')?.addEventListener('input', updateTraceOptions);
+    $('#traceWidth')?.addEventListener('input', updateTraceOptions);
 
-    function closeAssignWizard() { if (!assignWizard) return; assignWizard.hidden = true; document.body.style.overflow = ''; }
-
-    let searchTimer;
-    $('#agentSearch')?.addEventListener('input', e => {
-        clearTimeout(searchTimer);
-        const q = e.target.value.trim();
-        if (q.length < 2) { $('#agentResults').innerHTML = ''; return; }
-        searchTimer = setTimeout(async () => {
-            try {
-                const people = (await api(`personal/buscar?q=${encodeURIComponent(q)}`)).datos || [];
-                $('#agentResults').innerHTML = people.slice(0, 10).map(p => `<div class="geo-agent-result" data-person='${esc(JSON.stringify(p))}'><i>${esc((p.nombres?.[0] || '') + (p.apellidos?.[0] || ''))}</i><span><strong>${esc(p.nombre_completo)}</strong><small>${esc(p.cargo || 'Agente')} · ${esc(p.estado_personal || '')}</small></span></div>`).join('') || '<div class="geo-agent-result">Sin resultados.</div>';
-                $$('.geo-agent-result[data-person]', $('#agentResults')).forEach(row => row.addEventListener('click', () => {
-                    selectedAgent = JSON.parse(row.dataset.person);
-                    $('#agentResults').innerHTML = '';
-                    $('#agentSearch').value = '';
-                    $('#selectedAgent').innerHTML = `<i>${esc((selectedAgent.nombres?.[0] || '') + (selectedAgent.apellidos?.[0] || ''))}</i><span><strong>${esc(selectedAgent.nombre_completo)}</strong><small>${esc(selectedAgent.cedula)} · ${esc(selectedAgent.cargo || 'Agente')}</small></span>`;
-                    $('#assignmentEditor').hidden = false;
-                }));
-            } catch (err) { notify(err.message, true); }
-        }, 280);
-    });
-
-    $('#addAgent')?.addEventListener('click', async () => {
-        if (!selectedAgent || !assignPlaceId) return;
-        if (!$('#assignStartDate').value || !$('#assignStartTime').value || !$('#assignEndTime').value) return notify('Complete fecha y horario.', true);
+    $('#undoTrace')?.addEventListener('click', () => { tracePoints.pop(); renderTemporaryTrace(); });
+    $('#cancelTrace')?.addEventListener('click', () => cancelEditing(true));
+    $('#saveTrace')?.addEventListener('click', async () => {
+        const traceType = $('#traceType').value;
+        const minimum = traceType === 'area' ? 3 : 2;
+        if (tracePoints.length < minimum) return notify(`Dibuje al menos ${minimum} puntos para guardar ${traceType === 'area' ? 'el área' : 'el trazado'}.`, true);
+        if (!window.confirm(`¿Desea asignar este trazado a ${selection.routeName}?`)) return;
         try {
-            await api(`lugares-servicio/${assignPlaceId}/asignaciones`, { method: 'POST', body: {
-                personal_id: selectedAgent.id,
-                tipo_asignacion: $('#assignType').value,
-                fecha_inicio: $('#assignStartDate').value,
-                fecha_fin: $('#assignEndDate').value || null,
-                turno_id: Number($('#assignShift').value) || 1,
-                hora_inicio: $('#assignStartTime').value,
-                hora_fin: $('#assignEndTime').value,
-                funcion: $('#assignRole').value || null,
-                observaciones: $('#assignNotes').value || null
+            const coordinates = tracePoints.map(point => [point[1], point[0]]);
+            const geojson = traceType === 'area'
+                ? { type: 'Polygon', coordinates: [[...coordinates, coordinates[0]]] }
+                : { type: 'LineString', coordinates };
+            await api(`distribucion-geografica/rutas/${selection.routeId}/trazado`, { method: 'PUT', body: {
+                distrito_id: selection.districtId,
+                tipo_geometria: traceType, geojson,
+                color: $('#traceColor').value, grosor: Number($('#traceWidth').value), opacidad: .55
             }});
-            notify('Agente asignado.');
-            closeAssignWizard();
-            $('#filterServicePlace')?.dispatchEvent(new Event('change'));
-        } catch (err) { notify(err.message, true); }
+            cancelEditing(false);
+            notify('Trazado guardado correctamente.');
+            await loadRouteMap();
+        } catch (error) { notify(error.message, true); }
     });
 
-    $('#cancelAssign')?.addEventListener('click', closeAssignWizard);
-    $('#cancelAssign2')?.addEventListener('click', closeAssignWizard);
-    assignWizard?.addEventListener('click', e => { if (e.target === assignWizard) closeAssignWizard(); });
+    $('#btnLocation')?.addEventListener('click', () => {
+        if (!selection.routeId) return notify('Seleccione un distrito y una ruta.', true);
+        cancelEditing(false);
+        mode = 'location';
+        map.getContainer().classList.add('is-locating');
+        $('#locationHint').hidden = false;
+    });
+    $('#cancelLocation')?.addEventListener('click', () => cancelEditing(true));
 
-    // ===================================================================
-    // TOOLBAR
-    // ===================================================================
+    function openLocationModal() {
+        const modal = $('#locationModal');
+        const select = $('#locationPlace');
+        if (!modal || !pendingLocation) return;
+        $('#locationDistrict').textContent = selection.districtName;
+        $('#locationRoute').textContent = selection.routeName;
+        $('#locationLat').textContent = pendingLocation.latitud.toFixed(7);
+        $('#locationLng').textContent = pendingLocation.longitud.toFixed(7);
+        select.innerHTML = '<option value="">Seleccione un lugar de servicio</option>';
+        (mapData?.lugares || []).forEach(place => {
+            const option = new Option(place.nombre, place.id);
+            option.dataset.hasLocation = place.latitud != null && place.longitud != null ? '1' : '0';
+            select.add(option);
+        });
+        $('#replaceWarning').hidden = true;
+        $('#saveLocation').textContent = 'Guardar ubicación';
+        modal.hidden = false;
+        document.body.style.overflow = 'hidden';
+    }
+
+    $('#locationPlace')?.addEventListener('change', event => {
+        const replace = event.target.selectedOptions[0]?.dataset.hasLocation === '1';
+        $('#replaceWarning').hidden = !replace;
+        $('#saveLocation').textContent = replace ? 'Reemplazar ubicación' : 'Guardar ubicación';
+    });
+
+    $('#locationForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const select = $('#locationPlace');
+        const placeId = Number(select.value);
+        if (!placeId || !pendingLocation) return notify('Seleccione un lugar de servicio.', true);
+        const replace = select.selectedOptions[0]?.dataset.hasLocation === '1';
+        if (replace && !window.confirm('Este lugar ya posee una ubicación. ¿Desea reemplazarla?')) return;
+        try {
+            await api(`distribucion-geografica/lugares/${placeId}/ubicacion`, { method: 'PUT', body: {
+                distrito_id: selection.districtId, ruta_id: selection.routeId,
+                latitud: pendingLocation.latitud, longitud: pendingLocation.longitud, reemplazar: replace
+            }});
+            closeLocationModal(false);
+            notify(replace ? 'Ubicación reemplazada correctamente.' : 'Ubicación asignada correctamente.');
+            await loadRouteMap();
+        } catch (error) { notify(error.message, true); }
+    });
+
+    function closeLocationModal(restore = true) {
+        const modal = $('#locationModal');
+        if (modal) modal.hidden = true;
+        document.body.style.overflow = '';
+        pendingLocation = null;
+        if (temporaryMarker) { editLayer.removeLayer(temporaryMarker); temporaryMarker = null; }
+        if (restore && mapData) renderRouteMap();
+    }
+    $('#closeLocation')?.addEventListener('click', () => closeLocationModal(true));
+    $('#cancelLocationModal')?.addEventListener('click', () => closeLocationModal(true));
+
+    function cancelEditing(restore = true) {
+        mode = null;
+        tracePoints = [];
+        pendingLocation = null;
+        temporaryMarker = null;
+        editLayer?.clearLayers();
+        map?.getContainer().classList.remove('is-drawing', 'is-locating');
+        if ($('#traceTools')) $('#traceTools').hidden = true;
+        if ($('#traceOptions')) $('#traceOptions').hidden = true;
+        if ($('#locationHint')) $('#locationHint').hidden = true;
+        if (restore && mapData) renderRouteMap();
+    }
+
     $('#centerGeoMap')?.addEventListener('click', () => {
-        const layers = markerLayer?.getLayers() || [];
-        if (layers.length === 1) map.setView(layers[0].getLatLng(), 17);
-        else if (layers.length > 1) map.fitBounds(markerLayer.getBounds(), { padding: [35, 35], maxZoom: 17 });
+        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [35, 35], maxZoom: 17 });
         else map.setView([-2.1894, -79.8891], 14);
     });
-
     $('#fullscreenGeoMap')?.addEventListener('click', () => {
         $('.geo-map-wrap')?.classList.toggle('is-fullscreen');
-        setTimeout(() => map?.invalidateSize(), 220);
+        setTimeout(() => map.invalidateSize(), 220);
     });
+    $('#geoFilterToggle')?.addEventListener('click', () => $('#geoFilters')?.classList.toggle('is-open'));
 
-    $('#geoMenuToggle')?.addEventListener('click', () => app.classList.toggle('menu-open'));
-
-    initMap();
+    initializeMap();
 })();

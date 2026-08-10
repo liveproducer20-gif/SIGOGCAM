@@ -359,3 +359,161 @@ def service_places_by_route(route_id: int, distrito_id: int | None = None) -> li
             WHERE {' AND '.join(where)} ORDER BY p.nombre
         """, *params)
         return _rows(cursor)
+
+
+def _validate_route(cursor, route_id: int, district_id: int) -> dict:
+    cursor.execute("""
+        SELECT r.id, r.nombre, r.distrito_id, r.turno_id, t.nombre AS turno,
+               COALESCE(t.hora_inicio, r.hora_inicio) AS hora_inicio,
+               COALESCE(t.hora_fin, r.hora_fin) AS hora_fin
+        FROM dbo.rutas r LEFT JOIN dbo.turnos t ON t.id=r.turno_id AND t.activo=1
+        WHERE r.id=? AND r.distrito_id=? AND r.activo=1
+    """, route_id, district_id)
+    route = _row(cursor)
+    if not route:
+        raise HTTPException(422, "La ruta no pertenece al distrito seleccionado")
+    return route
+
+
+def route_map(route_id: int, district_id: int) -> dict:
+    """Return geography and live personnel data for one district/route selection."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        route = _validate_route(cursor, route_id, district_id)
+        cursor.execute("""
+            SELECT TOP 1 id, distrito_id, ruta_id, nombre, descripcion, tipo_geometria,
+                   geojson, color, grosor, opacidad, estado, fecha_creacion, fecha_actualizacion
+            FROM dbo.rutas_geograficas
+            WHERE ruta_id=? AND distrito_id=? AND activo=1
+            ORDER BY fecha_actualizacion DESC, fecha_creacion DESC, id DESC
+        """, route_id, district_id)
+        trace = _row(cursor)
+        cursor.execute("""
+            SELECT ls.id, ls.nombre, ls.descripcion, ls.direccion_referencial, ls.latitud, ls.longitud,
+                   ls.estado, ls.estado_operativo, ls.tipo_servicio_id, ts.nombre AS tipo_servicio,
+                   live.distribucion_id, live.agente_id, live.agente, live.grado,
+                   live.hora_inicio, live.hora_fin, live.estado_asignacion
+            FROM dbo.lugares_servicio ls
+            LEFT JOIN dbo.catalogo_detalles ts ON ts.id=ls.tipo_servicio_id
+            OUTER APPLY (
+                SELECT TOP 1 dp.id AS distribucion_id, dd.agente_id,
+                       LTRIM(RTRIM(CONCAT(CASE WHEN g.nombre IS NULL THEN '' ELSE g.nombre + ' ' END,
+                                           p.nombres, ' ', p.apellidos))) AS agente,
+                       g.nombre AS grado, COALESCE(ar.hora_inicio, t.hora_inicio) AS hora_inicio,
+                       COALESCE(ar.hora_fin, t.hora_fin) AS hora_fin, dd.estado AS estado_asignacion
+                FROM dbo.distribucion_personal_detalle dd
+                INNER JOIN dbo.distribuciones_personal dp ON dp.id=dd.distribucion_id
+                    AND dp.deleted_at IS NULL AND dp.estado <> 'ELIMINADA'
+                LEFT JOIN dbo.personal p ON p.id=dd.agente_id
+                LEFT JOIN dbo.grados g ON g.id=p.grado_id
+                LEFT JOIN dbo.asignaciones_ruta ar ON ar.id=dd.asignacion_ruta_id AND ar.deleted_at IS NULL
+                LEFT JOIN dbo.turnos t ON t.id=dp.turno_id
+                WHERE dd.lugar_id=ls.id AND dd.ruta_id=ls.ruta_id AND dd.deleted_at IS NULL
+                  AND dp.distrito_id=ls.distrito_id AND dp.fecha_distribucion<=CAST(GETDATE() AS date)
+                ORDER BY dp.fecha_distribucion DESC, dp.fecha_actualizacion DESC, dp.id DESC,
+                         CASE WHEN dd.agente_id IS NULL THEN 1 ELSE 0 END, dd.id DESC
+            ) live
+            WHERE ls.ruta_id=? AND ls.distrito_id=? AND ls.activo=1
+            ORDER BY ls.nombre
+        """, route_id, district_id)
+        places = _rows(cursor)
+        for place in places:
+            assigned = place.get("agente_id") is not None
+            place["estado_mapa"] = "INACTIVO" if str(place.get("estado") or "").upper() == "INACTIVO" else ("ASIGNADO" if assigned else "PENDIENTE")
+        route["tiene_trazado"] = bool(trace)
+        route["trazado"] = trace
+        return {"ruta": route, "lugares": places}
+
+
+def _trace_coordinates(geojson: dict, trace_type: str) -> list:
+    geometry = geojson.get("geometry") if geojson.get("type") == "Feature" else geojson
+    expected = "Polygon" if trace_type == "area" else "LineString"
+    if not isinstance(geometry, dict) or geometry.get("type") != expected:
+        raise HTTPException(422, f"El trazado debe ser un GeoJSON {expected}")
+    coordinates = geometry.get("coordinates")
+    if trace_type == "area":
+        if not isinstance(coordinates, list) or not coordinates or not isinstance(coordinates[0], list):
+            raise HTTPException(422, "El área contiene coordenadas inválidas")
+        coordinates = coordinates[0]
+        if len(coordinates) < 4 or coordinates[0][:2] != coordinates[-1][:2]:
+            raise HTTPException(422, "El área debe tener al menos tres puntos y estar cerrada")
+    elif not isinstance(coordinates, list) or len(coordinates) < 2:
+        raise HTTPException(422, "El trazado debe contener al menos dos puntos")
+    for coordinate in coordinates:
+        if not isinstance(coordinate, list) or len(coordinate) < 2:
+            raise HTTPException(422, "El trazado contiene coordenadas inválidas")
+        longitude, latitude = Decimal(str(coordinate[0])), Decimal(str(coordinate[1]))
+        if not (GYE_BOUNDS[0] <= latitude <= GYE_BOUNDS[1] and GYE_BOUNDS[2] <= longitude <= GYE_BOUNDS[3]):
+            raise HTTPException(422, "El trazado contiene puntos fuera del área operativa permitida")
+    return coordinates
+
+
+def upsert_route_trace(route_id: int, data: dict, user_id: int) -> dict:
+    _trace_coordinates(data["geojson"], data["tipo_geometria"])
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        route = _validate_route(cursor, route_id, int(data["distrito_id"]))
+        cursor.execute("""
+            SELECT TOP 1 id, distrito_id, ruta_id, nombre, geojson, color, grosor, opacidad
+            FROM dbo.rutas_geograficas WITH (UPDLOCK, HOLDLOCK)
+            WHERE ruta_id=? AND activo=1 ORDER BY id DESC
+        """, route_id)
+        before = _row(cursor)
+        serialized = json.dumps(data["geojson"], ensure_ascii=False, separators=(",", ":"))
+        if before:
+            cursor.execute("""
+                UPDATE dbo.rutas_geograficas SET distrito_id=?, nombre=?, tipo_geometria=?,
+                    geojson=?, color=?, grosor=?, opacidad=?, estado=N'ACTIVA', actualizado_por=?,
+                    fecha_actualizacion=SYSDATETIME()
+                WHERE id=?
+            """, data["distrito_id"], route["nombre"], data["tipo_geometria"], serialized, data["color"], data["grosor"],
+                 data["opacidad"], user_id, before["id"])
+            trace_id, action, created = int(before["id"]), "MODIFICAR_TRAZADO", False
+        else:
+            cursor.execute("""
+                INSERT INTO dbo.rutas_geograficas
+                    (distrito_id,ruta_id,nombre,tipo_geometria,geojson,color,grosor,opacidad,estado,creado_por,activo,fecha_creacion)
+                OUTPUT INSERTED.id VALUES (?,?,?,?,?,?,?,?,N'ACTIVA',?,1,SYSDATETIME())
+            """, data["distrito_id"], route_id, route["nombre"], data["tipo_geometria"], serialized, data["color"],
+                 data["grosor"], data["opacidad"], user_id)
+            trace_id, action, created = int(cursor.fetchone()[0]), "ASIGNAR_TRAZADO", True
+        after = {"ruta_id": route_id, "distrito_id": data["distrito_id"], "tipo_geometria": data["tipo_geometria"], "geojson": data["geojson"]}
+        _audit(cursor, user_id, action, "rutas_geograficas", trace_id, before, after)
+        return {"id": trace_id, "creado": created}
+
+
+def update_place_location(place_id: int, data: dict, user_id: int) -> dict:
+    latitude, longitude = Decimal(str(data["latitud"])), Decimal(str(data["longitud"]))
+    if not (GYE_BOUNDS[0] <= latitude <= GYE_BOUNDS[1] and GYE_BOUNDS[2] <= longitude <= GYE_BOUNDS[3]):
+        raise HTTPException(422, "Las coordenadas están fuera del área operativa permitida")
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        _validate_route(cursor, int(data["ruta_id"]), int(data["distrito_id"]))
+        cursor.execute("""
+            SELECT id, nombre, ruta_id, distrito_id, latitud, longitud
+            FROM dbo.lugares_servicio WITH (UPDLOCK, HOLDLOCK)
+            WHERE id=? AND ruta_id=? AND distrito_id=? AND activo=1
+        """, place_id, data["ruta_id"], data["distrito_id"])
+        before = _row(cursor)
+        if not before:
+            raise HTTPException(422, "El lugar no pertenece a la ruta y distrito seleccionados")
+        had_location = before["latitud"] is not None and before["longitud"] is not None
+        if had_location and not data.get("reemplazar"):
+            raise HTTPException(409, "Este lugar de servicio ya posee una ubicación asignada")
+        cursor.execute("""
+            SELECT TOP 1 nombre FROM dbo.lugares_servicio
+            WHERE id<>? AND activo=1 AND latitud=? AND longitud=?
+        """, place_id, latitude, longitude)
+        duplicate = cursor.fetchone()
+        if duplicate:
+            raise HTTPException(409, f"Las coordenadas ya pertenecen al lugar {duplicate[0]}")
+        cursor.execute("""
+            UPDATE dbo.lugares_servicio SET latitud=?, longitud=?, actualizado_por=?,
+                fecha_actualizacion=SYSDATETIME() WHERE id=?
+        """, latitude, longitude, user_id, place_id)
+        action = "MODIFICAR_UBICACION" if had_location else "ASIGNAR_UBICACION"
+        after = {"ruta_id": data["ruta_id"], "distrito_id": data["distrito_id"], "latitud": str(latitude), "longitud": str(longitude)}
+        _audit(cursor, user_id, action, "lugares_servicio", place_id, before, after)
+        return {"id": place_id, "reemplazada": had_location, "latitud": latitude, "longitud": longitude}

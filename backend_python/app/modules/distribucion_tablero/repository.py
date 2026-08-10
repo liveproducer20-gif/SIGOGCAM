@@ -895,6 +895,314 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
                 "total_asignado": assigned, "pendientes": pending, "asignaciones_creadas": created}
 
 
+def get_agents_for_modal(data: dict) -> dict:
+    """Paginated, filtered agent list for the Cambiar modal."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        distrito_id = int(data["distrito_id"])
+        turno_id = int(data["turno_id"])
+        ruta_id = int(data["ruta_id"])
+        lugar_id = int(data["lugar_id"])
+        excluded_ids = [int(x) for x in data.get("excluidos", []) if x]
+        page = int(data.get("page", 1))
+        limit = int(data.get("limit", 20))
+        offset = (page - 1) * limit
+
+        cursor.execute("SELECT nombre FROM dbo.turnos WHERE id = ? AND activo = 1", turno_id)
+        turno_row = cursor.fetchone()
+        turno_nombre = turno_row[0] if turno_row else ""
+
+        cursor.execute("""
+            SELECT ls.nombre AS lugar_nombre, r.nombre AS ruta_nombre
+            FROM dbo.lugares_servicio ls
+            INNER JOIN dbo.rutas r ON r.id = ls.ruta_id
+            WHERE ls.id = ? AND ls.ruta_id = ?
+        """, lugar_id, ruta_id)
+        place_row = cursor.fetchone()
+        lugar_nombre = place_row[0] if place_row else ""
+        ruta_nombre = place_row[1] if place_row else ""
+
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM catalogo_detalles cd
+            INNER JOIN catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'GRUPOS' AND cd.estado = 1 ORDER BY cd.nombre
+        """)
+        grupos = [{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()]
+
+        cursor.execute("SELECT id, nombre FROM grados WHERE activo = 1 ORDER BY nombre")
+        grados = [{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()]
+
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM catalogo_detalles cd
+            INNER JOIN catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'TIPOS_SERVICIO_LUGAR' AND cd.estado = 1 ORDER BY cd.nombre
+        """)
+        tipos_servicio = [{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()]
+
+        cursor.execute("""
+            SELECT cd.id, cd.nombre FROM catalogo_detalles cd
+            INNER JOIN catalogos c ON c.id = cd.catalogo_id
+            WHERE c.codigo = 'ESTADOS_PERSONAL' AND cd.estado = 1 ORDER BY cd.nombre
+        """)
+        estados = [{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()]
+
+        where = ["p.activo = 1", "UPPER(ISNULL(r.codigo, '')) IN ('AGENTE','ENCARGADO','INSPECTOR','OPERACIONES','SUPERVISOR')"]
+        params: list = []
+
+        if excluded_ids:
+            placeholders = ",".join("?" * len(excluded_ids))
+            where.append(f"p.id NOT IN ({placeholders})")
+            params.extend(excluded_ids)
+
+        if data.get("grupo_id"):
+            where.append("p.grupo_id = ?")
+            params.append(int(data["grupo_id"]))
+        if data.get("grado_id"):
+            where.append("p.grado_id = ?")
+            params.append(int(data["grado_id"]))
+        if data.get("tipo_servicio_id"):
+            where.append("fo.id = ?")
+            params.append(int(data["tipo_servicio_id"]))
+        if data.get("estado"):
+            where.append("UPPER(ISNULL(ep.nombre, '')) = UPPER(?)")
+            params.append(str(data["estado"]))
+        if data.get("search"):
+            where.append("(p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)")
+            search = f"%{data['search']}%"
+            params.extend([search, search, search])
+
+        where_sql = " AND ".join(where)
+
+        cursor.execute(f"""
+            SELECT COUNT(*)
+            FROM dbo.personal p
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            LEFT JOIN dbo.grados g ON g.id = p.grado_id
+            LEFT JOIN dbo.catalogo_detalles gf ON gf.id = p.grupo_id
+            LEFT JOIN dbo.catalogo_detalles fo ON fo.id = p.funcion_operativa_id
+            INNER JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+            WHERE {where_sql}
+        """, *params)
+        total = int(cursor.fetchone()[0])
+
+        cursor.execute(f"""
+            SELECT p.id,
+                   LTRIM(RTRIM(ISNULL(g.nombre + ' ', '') + ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+                   p.nombres, p.apellidos, p.cedula,
+                   ISNULL(ep.nombre, 'SIN ESTADO') AS estado_laboral,
+                   ISNULL(g.nombre, '') AS grado,
+                   ISNULL(gf.nombre, 'Sin grupo') AS grupo,
+                   ISNULL(fo.nombre, '') AS tipo_servicio
+            FROM dbo.personal p
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            LEFT JOIN dbo.grados g ON g.id = p.grado_id
+            LEFT JOIN dbo.catalogo_detalles gf ON gf.id = p.grupo_id
+            LEFT JOIN dbo.catalogo_detalles fo ON fo.id = p.funcion_operativa_id
+            INNER JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+            WHERE {where_sql}
+            ORDER BY p.apellidos, p.nombres
+            OFFSET ? ROWS FETCH NEXT ? ROWS ONLY
+        """, *params, offset, limit)
+        agents_rows = _rows(cursor)
+
+        today = datetime.now().date()
+        turno_name = turno_nombre
+
+        agents = []
+        for agent in agents_rows:
+            agent_id = int(agent["id"])
+            estado_laboral = str(agent["estado_laboral"]).upper()
+
+            disponible = True
+            motivo_no_disponible = ""
+
+            if estado_laboral in ("VACACIONES", "FRANCO", "PERMISO", "INCAPACIDAD", "AUSENTE", "SUSPENDIDO", "REPOSO MEDICO", "COMISION_SERVICIO"):
+                disponible = False
+                motivo_no_disponible = f"Estado: {agent['estado_laboral']}"
+
+            cursor.execute("""
+                SELECT TOP 1 ar.id, ar.ruta_id, r.nombre AS ruta_nombre, ls.nombre AS lugar_nombre
+                FROM dbo.asignaciones_ruta ar
+                LEFT JOIN dbo.rutas r ON r.id = ar.ruta_id
+                LEFT JOIN dbo.lugares_servicio ls ON ls.id = ar.lugar_id
+                WHERE ar.agente_id = ? AND ar.deleted_at IS NULL
+                  AND ar.estado IN ('PENDIENTE', 'ACTIVA')
+            """, agent_id)
+            existing = cursor.fetchone()
+            asignacion_actual = None
+            if existing:
+                disponible = False
+                motivo_no_disponible = "Ya asignado"
+                asignacion_actual = {
+                    "ruta_id": int(existing[1]),
+                    "ruta_nombre": existing[2] or "",
+                    "lugar_nombre": existing[3] or "",
+                }
+
+            if disponible and estado_laboral == "ACTIVO":
+                cursor.execute("""
+                    SELECT TOP 1 ap.id FROM dbo.asignaciones_punto ap
+                    WHERE ap.personal_id = ? AND ap.fecha_inicio <= ? AND (ap.fecha_fin IS NULL OR ap.fecha_fin >= ?)
+                      AND ap.activo = 1 AND ap.estado IN ('ACTIVA', 'PENDIENTE')
+                """, agent_id, today, today)
+                if cursor.fetchone():
+                    disponible = False
+                    motivo_no_disponible = "Asignado en punto"
+
+            puede_asignar_normal = disponible
+            requiere_forzado = not disponible
+
+            agents.append({
+                "id": agent_id,
+                "nombre_completo": agent["nombre_completo"],
+                "nombres": agent["nombres"],
+                "apellidos": agent["apellidos"],
+                "cedula": agent["cedula"],
+                "estado_laboral": agent["estado_laboral"],
+                "grado": agent["grado"],
+                "grupo": agent["grupo"],
+                "tipo_servicio": agent["tipo_servicio"],
+                "disponible": disponible,
+                "motivo_no_disponible": motivo_no_disponible,
+                "asignacion_actual": asignacion_actual,
+                "puede_asignar_normal": puede_asignar_normal,
+                "requiere_forzado": requiere_forzado,
+            })
+
+        total_pages = max(1, (total + limit - 1) // limit)
+        return {
+            "agentes": agents,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages,
+            "lugar_nombre": lugar_nombre,
+            "ruta_nombre": ruta_nombre,
+            "turno_nombre": turno_nombre,
+            "catalogos": {
+                "grupos": grupos,
+                "grados": grados,
+                "tipos_servicio": tipos_servicio,
+                "estados": estados,
+            },
+        }
+
+
+def validate_and_change_agent(data: dict, user_id: int, ip: str | None = None) -> dict:
+    """Validate and apply an agent change. Returns validation result."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+
+        distrito_id = int(data["distrito_id"])
+        turno_id = int(data["turno_id"])
+        ruta_id = int(data["ruta_id"])
+        lugar_id = int(data["lugar_id"])
+        nuevo_id = int(data["agente_nuevo_id"])
+        anterior_id = int(data.get("agente_anterior_id"))
+        forzado = bool(data.get("forzado", False))
+        motivo = data.get("motivo_forzado")
+
+        cursor.execute("SELECT nombre, hora_inicio, hora_fin FROM dbo.turnos WHERE id = ? AND activo = 1", turno_id)
+        turno = _row(cursor)
+        if not turno:
+            raise HTTPException(422, "El turno seleccionado no es valido")
+        turno_nombre = turno["nombre"]
+
+        cursor.execute("SELECT id FROM dbo.catalogo_detalles WHERE id = ? AND estado = 1", distrito_id)
+        if not cursor.fetchone():
+            raise HTTPException(422, "El distrito seleccionado no es valido")
+
+        cursor.execute("""
+            SELECT ls.id, ls.nombre, r.id AS ruta_id, r.nombre AS ruta_nombre
+            FROM dbo.lugares_servicio ls
+            INNER JOIN dbo.rutas r ON r.id = ls.ruta_id AND r.activo = 1
+            WHERE ls.id = ? AND ls.ruta_id = ? AND ls.activo = 1
+        """, lugar_id, ruta_id)
+        lugar = _row(cursor)
+        if not lugar:
+            raise HTTPException(422, "El lugar de servicio no es valido")
+
+        cursor.execute("""
+            SELECT p.id, LTRIM(RTRIM(ISNULL(g.nombre + ' ', '') + ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
+                   p.cedula, ISNULL(ep.nombre, 'SIN ESTADO') AS estado_laboral
+            FROM dbo.personal p
+            LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
+            LEFT JOIN dbo.grados g ON g.id = p.grado_id
+            INNER JOIN dbo.roles r ON r.id = p.rol_id AND r.activo = 1
+            WHERE p.id = ? AND p.activo = 1
+              AND UPPER(ISNULL(r.codigo, '')) IN ('AGENTE','ENCARGADO','INSPECTOR','OPERACIONES','SUPERVISOR')
+        """, nuevo_id)
+        nuevo = _row(cursor)
+        if not nuevo:
+            raise HTTPException(422, "El agente seleccionado no existe o no esta habilitado")
+
+        estado_nuevo = str(nuevo["estado_laboral"]).upper()
+        es_estado_no_disponible = estado_nuevo in ("VACACIONES", "FRANCO", "PERMISO", "INCAPACIDAD", "AUSENTE", "SUSPENDIDO", "REPOSO MEDICO", "COMISION_SERVICIO")
+
+        if es_estado_no_disponible and not forzado:
+            raise HTTPException(409, f"El agente se encuentra en estado '{nuevo['estado_laboral']}'. Debe forzar la asignacion.")
+
+        if forzado and not motivo:
+            raise HTTPException(422, "Debe especificar el motivo de la asignacion forzada")
+
+        cursor.execute("""
+            SELECT TOP 1 ar.id, r.nombre AS ruta_nombre, ls.nombre AS lugar_nombre
+            FROM dbo.asignaciones_ruta ar
+            LEFT JOIN dbo.rutas r ON r.id = ar.ruta_id
+            LEFT JOIN dbo.lugares_servicio ls ON ls.id = ar.lugar_id
+            WHERE ar.agente_id = ? AND ar.deleted_at IS NULL
+              AND ar.estado IN ('PENDIENTE', 'ACTIVA')
+        """, nuevo_id)
+        duplicado = cursor.fetchone()
+        if duplicado:
+            if not forzado:
+                raise HTTPException(409, f"El agente ya esta asignado en: {duplicado[1]} - {duplicado[2]}")
+            else:
+                raise HTTPException(409, f"El agente ya esta asignado en: {duplicado[1]} - {duplicado[2]}. No se puede duplicar un agente en dos lugares simultaneamente.")
+
+        if forzado:
+            cursor.execute("SELECT id FROM dbo.permisos WHERE codigo = 'distribucion.forzar_asignacion' AND activo = 1")
+            perm_row = cursor.fetchone()
+            if perm_row:
+                perm_id = int(perm_row[0])
+                cursor.execute("SELECT id FROM dbo.roles WHERE id = (SELECT rol_id FROM dbo.personal WHERE id = ?)", user_id)
+                user_role = cursor.fetchone()
+                if user_role:
+                    cursor.execute("SELECT permitido FROM dbo.rol_permiso WHERE rol_id = ? AND permiso_id = ?", int(user_role[0]), perm_id)
+                    rp = cursor.fetchone()
+                    if not rp or not rp[0]:
+                        raise HTTPException(403, "No tiene permiso para realizar asignaciones forzadas")
+
+            _audit(cursor, user_id, "ASIGNACION_FORZADA", str(nuevo_id), {
+                "agente_id": nuevo_id,
+                "agente_nombre": nuevo["nombre_completo"],
+                "estado_original": nuevo["estado_laboral"],
+                "lugar_id": lugar_id,
+                "lugar_nombre": lugar["nombre"],
+                "ruta_id": ruta_id,
+                "ruta_nombre": lugar["ruta_nombre"],
+                "turno": turno_nombre,
+                "motivo": motivo,
+                "distrito_id": distrito_id,
+            })
+
+        return {
+            "ok": True,
+            "agente_nuevo": {
+                "id": int(nuevo["id"]),
+                "nombre_completo": nuevo["nombre_completo"],
+                "cedula": nuevo["cedula"],
+                "estado_laboral": nuevo["estado_laboral"],
+            },
+            "lugar": {"id": int(lugar["id"]), "nombre": lugar["nombre"], "ruta_nombre": lugar["ruta_nombre"]},
+            "turno": turno_nombre,
+            "forzado": forzado,
+            "estado_original": nuevo["estado_laboral"] if forzado else None,
+            "motivo_forzado": motivo if forzado else None,
+        }
+
+
 def delete_distribution(distribution_id: int, user_id: int, ip: str | None = None) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
@@ -918,3 +1226,97 @@ def delete_distribution(distribution_id: int, user_id: int, ip: str | None = Non
             WHERE id=?
         """, user_id, distribution_id)
         _audit(cursor, user_id, "ELIMINAR_DISTRIBUCION", str(distribution_id), {"ip": ip})
+
+
+def get_distributions_dashboard() -> dict:
+    """List all active distributions with completeness analysis per district."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT dp.id, dp.nombre, dp.fecha_distribucion, dp.estado,
+                   dp.porcentaje_cobertura, dp.total_requerido, dp.total_asignado,
+                   dp.fecha_creacion,
+                   d.id AS distrito_id, d.nombre AS distrito,
+                   t.id AS turno_id, t.nombre AS turno,
+                   vp.nombre_completo AS creado_por
+            FROM dbo.distribuciones_personal dp
+            INNER JOIN dbo.catalogo_detalles d ON d.id = dp.distrito_id
+            INNER JOIN dbo.turnos t ON t.id = dp.turno_id
+            LEFT JOIN dbo.vw_personal_detalle vp ON vp.id = dp.creado_por
+            WHERE dp.deleted_at IS NULL
+            ORDER BY dp.fecha_creacion DESC
+        """)
+        distributions = _rows(cursor)
+
+        result = []
+        for dist in distributions:
+            dist_id = int(dist["id"])
+
+            cursor.execute("""
+                SELECT dd.ruta_id, r.nombre AS ruta, dd.lugar_id, ls.nombre AS lugar,
+                       dd.cantidad_requerida, dd.agente_id, vp.nombre_completo AS agente,
+                       dd.tipo_asignacion, dd.estado AS detalle_estado
+                FROM dbo.distribucion_personal_detalle dd
+                INNER JOIN dbo.rutas r ON r.id = dd.ruta_id
+                INNER JOIN dbo.lugares_servicio ls ON ls.id = dd.lugar_id
+                LEFT JOIN dbo.vw_personal_detalle vp ON vp.id = dd.agente_id
+                WHERE dd.distribucion_id = ? AND dd.deleted_at IS NULL
+                ORDER BY r.nombre, ls.nombre
+            """, dist_id)
+            detalles = _rows(cursor)
+
+            by_ruta: dict[int, dict] = {}
+            for det in detalles:
+                rid = int(det["ruta_id"])
+                if rid not in by_ruta:
+                    by_ruta[rid] = {"ruta_id": rid, "ruta": det["ruta"], "lugares": [], "requerido": 0, "asignado": 0, "pendiente": 0}
+                lugar_info = {
+                    "lugar_id": int(det["lugar_id"]), "lugar": det["lugar"],
+                    "requerido": int(det["cantidad_requerida"] or 0),
+                    "agente_id": int(det["agente_id"]) if det["agente_id"] else None,
+                    "agente": det["agente"], "tipo_asignacion": det["tipo_asignacion"],
+                    "estado": det["detalle_estado"],
+                }
+                by_ruta[rid]["lugares"].append(lugar_info)
+                by_ruta[rid]["requerido"] += lugar_info["requerido"]
+                if lugar_info["agente_id"]:
+                    by_ruta[rid]["asignado"] += 1
+                else:
+                    by_ruta[rid]["pendiente"] += 1
+
+            rutas = list(by_ruta.values())
+            total_requerido = int(dist["total_requerido"] or 0)
+            total_asignado = int(dist["total_asignado"] or 0)
+            pendientes = max(0, total_requerido - total_asignado)
+            incompletas = []
+            for ruta in rutas:
+                for lugar in ruta["lugares"]:
+                    if not lugar["agente_id"]:
+                        incompletas.append({
+                            "ruta": ruta["ruta"], "lugar": lugar["lugar"],
+                            "requerido": lugar["requerido"],
+                        })
+
+            es_completa = pendientes == 0 and total_requerido > 0
+            result.append({
+                "id": dist_id,
+                "nombre": dist["nombre"],
+                "fecha_distribucion": str(dist["fecha_distribucion"]) if dist["fecha_distribucion"] else None,
+                "estado": dist["estado"],
+                "porcentaje_cobertura": float(dist["porcentaje_cobertura"] or 0),
+                "total_requerido": total_requerido,
+                "total_asignado": total_asignado,
+                "pendientes": pendientes,
+                "fecha_creacion": str(dist["fecha_creacion"]) if dist["fecha_creacion"] else None,
+                "distrito": dist["distrito"],
+                "turno": dist["turno"],
+                "creado_por": dist["creado_por"],
+                "es_completa": es_completa,
+                "rutas": rutas,
+                "lugares_pendientes": incompletas,
+                "total_rutas": len(rutas),
+                "rutas_completas": sum(1 for r in rutas if r["pendiente"] == 0),
+            })
+
+        return {"distribuciones": result}

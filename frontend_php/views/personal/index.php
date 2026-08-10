@@ -1,6 +1,14 @@
 <?php
 $esc = static fn($value): string => htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
-$json = static fn($value): string => htmlspecialchars(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), ENT_QUOTES, 'UTF-8');
+$json = static fn($value): string => json_encode(
+    $value,
+    JSON_UNESCAPED_UNICODE
+    | JSON_UNESCAPED_SLASHES
+    | JSON_HEX_TAG
+    | JSON_HEX_AMP
+    | JSON_HEX_APOS
+    | JSON_HEX_QUOT
+) ?: 'null';
 $perms = $permissions ?? [];
 $canCreate = $isAdministrator || in_array('personal.crear', $perms, true);
 $canEdit = $isAdministrator || in_array('personal.editar', $perms, true);
@@ -259,6 +267,7 @@ $jornadas = $catalogs['jornadas'] ?? [];
         <div class="p-modal-body">
             <p style="margin:0;color:var(--sigo-text);font-size:14px">¿Está seguro de eliminar este registro de personal?</p>
             <p style="margin:10px 0 0;font-weight:700;color:var(--sigo-text)" id="deleteName"></p>
+            <p style="margin:4px 0 0;color:var(--sigo-muted);font-size:12px" id="deleteCedula"></p>
         </div>
         <div class="p-modal-footer">
             <button class="p-btn p-btn-secondary" id="deleteCancelBtn">Cancelar</button>
@@ -283,7 +292,7 @@ $jornadas = $catalogs['jornadas'] ?? [];
             <button class="p-modal-close" id="resetClose" aria-label="Cerrar">&times;</button>
         </div>
         <div class="p-modal-body">
-            <p style="margin:0;color:var(--sigo-text);font-size:14px">Se generará una nueva contraseña para:</p>
+            <p style="margin:0;color:var(--sigo-text);font-size:14px">¿Desea restablecer la contraseña de:</p>
             <p style="margin:10px 0 0;font-weight:700;color:var(--sigo-text)" id="resetName"></p>
             <div id="resetResult" style="display:none;margin-top:14px;padding:12px;border-radius:8px;background:#ecfdf5;border:1px solid #a7f3d0">
                 <p style="margin:0;color:#065f46;font-size:13px">Nueva contraseña:</p>
@@ -304,7 +313,8 @@ window.__PERSONAL_DATA__ = {
     canEdit: <?= $json($canEdit) ?>,
     canDelete: <?= $json($canDelete) ?>,
     canResetPassword: <?= $json($canResetPassword) ?>,
+    currentUserId: <?= (int)($currentUserId ?? 0) ?>,
     apiBase: '/personal/api',
 };
 </script>
-<script src="/assets/js/personal.js"></script>
+<script src="/assets/js/personal.js?v=<?= (int)($personalAssetVersion ?? time()) ?>"></script>

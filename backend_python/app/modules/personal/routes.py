@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.responses import ok
 from app.middleware.auth import current_user, require_permission
@@ -74,6 +74,8 @@ def update_person_endpoint(person_id: int, payload: PersonalInput, user: dict = 
 
 @router.delete("/{person_id}")
 def delete_person_endpoint(person_id: int, user: dict = Depends(require_permission("personal.eliminar"))):
+    if person_id == int(user["id"]):
+        raise HTTPException(status_code=400, detail="No puede eliminar su propia cuenta")
     delete_person(person_id, int(user["id"]))
     return ok(None, "Personal eliminado correctamente")
 

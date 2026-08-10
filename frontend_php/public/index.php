@@ -25,6 +25,7 @@ use App\Modules\Configuracion\ConfiguracionController;
 use App\Modules\Dashboard\DashboardController;
 use App\Modules\DistribucionGeografica\DistribucionGeograficaController;
 use App\Modules\DistribucionTablero\DistribucionTableroController;
+use App\Modules\DistribucionDashboard\DistribucionDashboardController;
 use App\Modules\Eventos\EventosController;
 use App\Modules\Insignias\InsigniasController;
 use App\Modules\Personal\PersonalController;
@@ -75,6 +76,16 @@ if ($path === '/distribucion-tablero' && $method === 'GET') {
 
 if ($path === '/distribucion-tablero/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
     (new DistribucionTableroController())->proxy();
+    return;
+}
+
+if ($path === '/distribucion-dashboard' && $method === 'GET') {
+    (new DistribucionDashboardController())->index();
+    return;
+}
+
+if ($path === '/distribucion-dashboard/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
+    (new DistribucionDashboardController())->proxy();
     return;
 }
 

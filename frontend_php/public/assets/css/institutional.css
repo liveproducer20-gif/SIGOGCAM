@@ -28,7 +28,7 @@ html{background:var(--sigo-navy)}body{background:var(--sigo-bg);color:var(--sigo
 .sigo-content .card-action,
 .sigo-content .table-action,
 .sigo-content .dashboard-module-actions a,
-.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.td-route-item):not(.td-agent-option):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]) {
+.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]) {
     color:#fff!important;
     border-color:var(--sigo-action-blue)!important;
     background:var(--sigo-action-blue)!important;
@@ -39,7 +39,7 @@ html{background:var(--sigo-navy)}body{background:var(--sigo-bg);color:var(--sigo
 .sigo-content .card-action:hover,
 .sigo-content .table-action:hover,
 .sigo-content .dashboard-module-actions a:hover,
-.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.td-route-item):not(.td-agent-option):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]):hover {
+.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]):hover {
     color:#fff!important;
     border-color:var(--sigo-action-blue-dark)!important;
     background:var(--sigo-action-blue-dark)!important;

@@ -59,3 +59,29 @@ class SaveDistributionInput(BaseModel):
     fecha_distribucion: date
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
     guardar_con_pendientes: bool = False
+
+
+class AgentSearchInput(BaseModel):
+    distrito_id: int = Field(gt=0)
+    turno_id: int = Field(gt=0)
+    ruta_id: int = Field(gt=0)
+    lugar_id: int = Field(gt=0)
+    excluidos: list[int] = Field(default_factory=list)
+    grupo_id: int | None = None
+    tipo_servicio_id: int | None = None
+    grado_id: int | None = None
+    estado: str | None = None
+    search: str | None = None
+    page: int = Field(default=1, ge=1)
+    limit: int = Field(default=20, ge=1, le=100)
+
+
+class ChangeAgentInput(BaseModel):
+    distrito_id: int = Field(gt=0)
+    turno_id: int = Field(gt=0)
+    ruta_id: int = Field(gt=0)
+    lugar_id: int = Field(gt=0)
+    agente_nuevo_id: int = Field(gt=0)
+    agente_anterior_id: int | None = None
+    forzado: bool = False
+    motivo_forzado: str | None = None
