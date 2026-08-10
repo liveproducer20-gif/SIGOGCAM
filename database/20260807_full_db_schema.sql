@@ -66,6 +66,7 @@ CREATE TABLE dbo.catalogo_detalles (
     nombre              NVARCHAR(160) NOT NULL,
     descripcion         NVARCHAR(255) NULL,
     orden               INT NOT NULL CONSTRAINT DF_catalogo_detalles_orden DEFAULT (0),
+    asignar_encargado   BIT NOT NULL CONSTRAINT DF_catalogo_detalles_asignar_encargado DEFAULT (0),
     estado              BIT NOT NULL CONSTRAINT DF_catalogo_detalles_estado DEFAULT (1),
     fecha_creacion      DATETIME2 NOT NULL CONSTRAINT DF_catalogo_detalles_fecha DEFAULT (SYSDATETIME()),
     fecha_actualizacion DATETIME2 NULL,
@@ -96,6 +97,7 @@ CREATE TABLE dbo.rutas (
     turno_id            INT NULL,
     hora_inicio         TIME(0) NULL,
     hora_fin            TIME(0) NULL,
+    asignar_encargado   BIT NOT NULL CONSTRAINT DF_rutas_asignar_encargado DEFAULT (0),
     activo              BIT NOT NULL CONSTRAINT DF_rutas_activo DEFAULT (1),
     fecha_creacion      DATETIME2 NOT NULL CONSTRAINT DF_rutas_fecha DEFAULT (SYSDATETIME()),
     fecha_actualizacion DATETIME2 NULL,
@@ -941,6 +943,30 @@ CREATE TABLE dbo.distribucion_personal_detalle (
     CONSTRAINT FK_distribucion_detalle_asignacion FOREIGN KEY (asignacion_ruta_id) REFERENCES dbo.asignaciones_ruta(id),
     CONSTRAINT CK_distribucion_detalle_estado CHECK (estado IN (N'ASIGNADO',N'PENDIENTE',N'CANCELADO'))
 );
+GO
+
+IF OBJECT_ID(N'dbo.distribucion_encargados', N'U') IS NULL
+CREATE TABLE dbo.distribucion_encargados (
+    id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_distribucion_encargados PRIMARY KEY,
+    distribucion_id BIGINT NOT NULL, distrito_id INT NOT NULL, ruta_id INT NULL,
+    tipo_responsabilidad NVARCHAR(30) NOT NULL, requiere_encargado BIT NOT NULL,
+    agente_id INT NULL, tipo_asignacion NVARCHAR(40) NULL,
+    estado NVARCHAR(20) NOT NULL CONSTRAINT DF_distribucion_encargados_estado DEFAULT (N'ASIGNADO'),
+    creado_por INT NOT NULL, fecha_creacion DATETIME2 NOT NULL CONSTRAINT DF_distribucion_encargados_fecha DEFAULT (SYSDATETIME()),
+    fecha_actualizacion DATETIME2 NULL, deleted_at DATETIME2 NULL,
+    CONSTRAINT FK_distribucion_encargados_distribucion FOREIGN KEY (distribucion_id) REFERENCES dbo.distribuciones_personal(id),
+    CONSTRAINT FK_distribucion_encargados_distrito FOREIGN KEY (distrito_id) REFERENCES dbo.catalogo_detalles(id),
+    CONSTRAINT FK_distribucion_encargados_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.rutas(id),
+    CONSTRAINT FK_distribucion_encargados_agente FOREIGN KEY (agente_id) REFERENCES dbo.personal(id),
+    CONSTRAINT FK_distribucion_encargados_creador FOREIGN KEY (creado_por) REFERENCES dbo.personal(id),
+    CONSTRAINT CK_distribucion_encargados_tipo CHECK (tipo_responsabilidad IN (N'ENCARGADO_DISTRITO',N'ENCARGADO_RUTA')),
+    CONSTRAINT CK_distribucion_encargados_consistencia CHECK ((tipo_responsabilidad=N'ENCARGADO_DISTRITO' AND ruta_id IS NULL AND requiere_encargado=1 AND agente_id IS NOT NULL) OR (tipo_responsabilidad=N'ENCARGADO_RUTA' AND ruta_id IS NOT NULL AND ((requiere_encargado=1 AND agente_id IS NOT NULL) OR (requiere_encargado=0 AND agente_id IS NULL))))
+);
+GO
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_distribucion_encargado_distrito' AND object_id=OBJECT_ID(N'dbo.distribucion_encargados'))
+    CREATE UNIQUE INDEX UX_distribucion_encargado_distrito ON dbo.distribucion_encargados(distribucion_id) WHERE tipo_responsabilidad=N'ENCARGADO_DISTRITO' AND deleted_at IS NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_distribucion_encargado_ruta' AND object_id=OBJECT_ID(N'dbo.distribucion_encargados'))
+    CREATE UNIQUE INDEX UX_distribucion_encargado_ruta ON dbo.distribucion_encargados(distribucion_id,ruta_id) WHERE tipo_responsabilidad=N'ENCARGADO_RUTA' AND deleted_at IS NULL;
 GO
 
 -- ============================================================================

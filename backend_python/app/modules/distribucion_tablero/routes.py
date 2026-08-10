@@ -25,9 +25,10 @@ router = APIRouter(tags=["distribucion-tablero"])
 def board_data(
     distrito_id: int = Query(..., gt=0),
     turno_id: int = Query(..., gt=0),
+    fecha: date | None = Query(default=None),
     user: dict = Depends(require_permission("tablero_distribucion.ver")),
 ):
-    return ok(repository.get_board_data(distrito_id, turno_id))
+    return ok(repository.get_board_data(distrito_id, turno_id, fecha))
 
 
 @router.get("/distribucion-tablero/rutas/{route_id}/lugares")

@@ -86,7 +86,7 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
                                         <?php if ($d['es_completa']): ?>
                                             <span class="dd-done-label">&#10003; Asignado</span>
                                         <?php else: ?>
-                                            <a class="dd-btn-distribuir" href="/distribucion-tablero?distrito_id=<?= $d['distrito_id'] ?>&turno_id=<?= $group['turno_id'] ?>">Distribuir</a>
+                                            <a class="dd-btn-distribuir" href="/distribucion-tablero?distrito_id=<?= $d['distrito_id'] ?>&turno_id=<?= $group['turno_id'] ?>&fecha_distribucion=<?= urlencode((string)$group['fecha_distribucion']) ?>">Distribuir</a>
                                         <?php endif; ?>
                                     </td>
                                 </tr>

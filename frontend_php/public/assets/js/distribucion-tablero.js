@@ -11,7 +11,7 @@
 
     const state = {
         districtId: 0, shiftId: 0, board: null, routeId: 0,
-        places: new Map(), assignments: [], agentTarget: null, availability: null,
+        places: new Map(), assignments: [], districtManager: null, routeManagers: new Map(), agentTarget: null, availability: null,
         saved: null, editingId: 0,
         agentModal: { page: 1, filters: {}, search: '', data: null },
     };
@@ -39,16 +39,25 @@
     }
     function openModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = false; }
     function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = true; }
-    function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}`; }
+    function selectedDate() { return $('#tdBoardDate')?.value || ''; }
+    function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}:${selectedDate()}`; }
     function saveDraft() {
         if (!state.districtId || !state.shiftId) return;
-        sessionStorage.setItem(draftKey(), JSON.stringify({assignments: state.assignments, updatedAt: new Date().toISOString()}));
+        sessionStorage.setItem(draftKey(), JSON.stringify({assignments: state.assignments, districtManager: state.districtManager, routeManagers: Array.from(state.routeManagers.entries()), updatedAt: new Date().toISOString()}));
     }
     function restoreDraft() {
-        try { state.assignments = JSON.parse(sessionStorage.getItem(draftKey()) || '{}').assignments || []; }
-        catch (_) { state.assignments = []; }
+        try {
+            const draft = JSON.parse(sessionStorage.getItem(draftKey()) || '{}');
+            state.assignments = draft.assignments || []; state.districtManager = draft.districtManager || null;
+            state.routeManagers = new Map(draft.routeManagers || []);
+        } catch (_) { state.assignments = []; state.districtManager = null; state.routeManagers = new Map(); }
     }
-    function usedAgentIds(exceptAgentId = 0) { return state.assignments.map(item => Number(item.agente_id)).filter(id => id !== Number(exceptAgentId)); }
+    function usedAgentIds(exceptAgentId = 0) {
+        const ids = state.assignments.map(item => Number(item.agente_id));
+        if (state.districtManager?.agente_id) ids.push(Number(state.districtManager.agente_id));
+        for (const item of state.routeManagers.values()) if (item?.agente_id) ids.push(Number(item.agente_id));
+        return ids.filter(id => id !== Number(exceptAgentId));
+    }
     function assignmentsFor(placeId) { return state.assignments.filter(item => Number(item.lugar_id) === Number(placeId)); }
     function initials(name) { return String(name || 'A').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase(); }
 
@@ -70,8 +79,20 @@
             showEmpty(); return;
         }
         try {
-            state.board = await api(`distribucion-tablero/tablero?distrito_id=${state.districtId}&turno_id=${state.shiftId}`);
-            state.places.clear(); restoreDraft(); renderRoutes();
+            state.board = await api(`distribucion-tablero/tablero?distrito_id=${state.districtId}&turno_id=${state.shiftId}&fecha=${selectedDate()}`);
+            state.places.clear(); state.assignments = []; state.districtManager = null; state.routeManagers = new Map(); state.saved = null; state.editingId = 0;
+            if (state.board.distribucion_id) {
+                state.saved = await api(`distribucion-tablero/distribuciones/${state.board.distribucion_id}`);
+                state.editingId = Number(state.saved.id);
+                state.assignments = (state.saved.detalles || []).filter(item => item.agente_id).map(item => ({lugar_id:Number(item.lugar_id),agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}}));
+                for (const item of state.saved.encargados || []) {
+                    const manager = item.agente_id ? {agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}} : null;
+                    if (item.tipo_responsabilidad === 'ENCARGADO_DISTRITO') state.districtManager = manager;
+                    else state.routeManagers.set(Number(item.ruta_id), {requiere_encargado:Boolean(item.requiere_encargado),...(manager || {})});
+                }
+            } else restoreDraft();
+            for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado:false});
+            renderRoutes();
             const first = state.board.rutas?.find(route => Number(route.lugares || 0) > 0) || state.board.rutas?.[0];
             if (first) await selectRoute(Number(first.id)); else showEmpty('No existen rutas para la seleccion actual.');
             await refreshAvailability();
@@ -120,7 +141,30 @@
         $('#tdKpiAssigned').textContent = stats.assigned; $('#tdKpiPending').textContent = stats.pending;
         $('#tdKpiCoverage').textContent = `${stats.coverage}%`; $('#tdCoverageBar').style.width = `${Math.min(100, stats.coverage)}%`;
         $('#tdCoverageLabel').textContent = stats.coverage >= 100 ? 'Ruta completa' : 'Ruta incompleta';
+        renderManagers();
         $('#tdPlacesBody').innerHTML = places.length ? places.map((place, index) => renderPlaceRow(place, index)).join('') : '<tr><td colspan="6"><div class="td-empty-small">Esta ruta no tiene lugares de servicio activos.</div></td></tr>';
+    }
+    function managerLabel(item, fallback) {
+        return item?.agente?.nombre_completo ? `${item.agente.nombre_completo}${item.agente.cedula ? ` · ${item.agente.cedula}` : ''}` : fallback;
+    }
+    function renderManagers() {
+        const districtEnabled = Boolean(state.board?.distrito?.asignar_encargado);
+        $('#tdDistrictManagerCard').hidden = !districtEnabled;
+        if (districtEnabled) {
+            $('#tdDistrictManagerValue').textContent = managerLabel(state.districtManager, 'Sin asignar');
+            if ($('#tdAssignDistrictManager')) $('#tdAssignDistrictManager').textContent = state.districtManager ? 'Cambiar encargado' : 'Asignar encargado de distrito';
+            if ($('#tdRemoveDistrictManager')) $('#tdRemoveDistrictManager').hidden = !state.districtManager;
+        }
+        const route = routeData(); const routeEnabled = Boolean(route?.asignar_encargado);
+        $('#tdRouteManagerCard').hidden = !routeEnabled;
+        if (routeEnabled) {
+            const item = state.routeManagers.get(Number(route.id)) || {requiere_encargado:false};
+            if ($('#tdRouteManagerRequired')) $('#tdRouteManagerRequired').checked = Boolean(item.requiere_encargado);
+            if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; $('#tdAssignRouteManager').textContent = item.agente_id ? 'Cambiar encargado' : 'Seleccionar agente'; }
+            $('#tdRouteManagerValue').textContent = item.requiere_encargado
+                ? managerLabel(item, 'Debe seleccionar un encargado de ruta')
+                : 'Sin encargado de ruta · Responsable: Encargado del Distrito';
+        }
     }
     function renderPlaceRow(place, index) {
         const assigned = assignmentsFor(place.id); const required = Number(place.cantidad_requerida || 0); const covered = assigned.length >= required && required > 0;
@@ -147,6 +191,7 @@
         const place = (state.places.get(state.routeId) || []).find(item => Number(item.id) === Number(placeId));
         const replaceAgent = replaceAgentId ? state.assignments.find(a => Number(a.agente_id) === Number(replaceAgentId) && Number(a.lugar_id) === Number(placeId)) : null;
         state.agentTarget = {
+            kind: 'place', routeId: state.routeId,
             placeId: Number(placeId), replaceAgentId: Number(replaceAgentId),
             placeNombre: place?.nombre || '', rutaNombre: routeData()?.nombre || '',
             turnoNombre: $('#tdShift').selectedOptions[0]?.textContent || '',
@@ -170,15 +215,36 @@
         await fetchAgentList();
     }
 
+    async function openManagerSelector(kind, routeId = 0) {
+        const current = kind === 'district' ? state.districtManager : state.routeManagers.get(Number(routeId));
+        const route = (state.board?.rutas || []).find(item => Number(item.id) === Number(routeId));
+        state.agentTarget = {
+            kind, routeId:Number(routeId) || null, placeId:null,
+            replaceAgentId:Number(current?.agente_id || 0), placeNombre:kind === 'district' ? state.board?.distrito?.nombre : route?.nombre,
+            rutaNombre:route?.nombre || '', turnoNombre:$('#tdShift').selectedOptions[0]?.textContent || ''
+        };
+        state.agentModal = {page:1,filters:{},search:'',data:null};
+        const title = kind === 'district' ? 'Encargado de distrito' : 'Encargado de ruta';
+        $('#tdAgentModalTitle').textContent = current?.agente_id ? `Cambiar ${title.toLowerCase()}` : `Asignar ${title.toLowerCase()}`;
+        $('#tdAgentModalSubtitle').textContent = kind === 'district' ? state.board?.distrito?.nombre || '' : route?.nombre || '';
+        $('#tdAgentInfoBar').innerHTML = `<div class="td-info-row"><b>${title}:</b> ${esc(kind === 'district' ? state.board?.distrito?.nombre : route?.nombre)}</div>${current?.agente?.nombre_completo ? `<div class="td-info-row"><b>Agente actual:</b> ${esc(current.agente.nombre_completo)}</div>` : ''}<div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
+        $('#tdAgentSearch').value=''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel=>sel.value='');
+        $('#tdAgentTableBody').innerHTML='<tr><td colspan="8"><div class="td-empty-small">Consultando personal...</div></td></tr>'; $('#tdAgentPagination').innerHTML='';
+        openModal('tdAgentModal'); await fetchAgentList();
+    }
+
     async function fetchAgentList() {
         if (!state.agentTarget) return;
         const excluded = usedAgentIds(state.agentTarget.replaceAgentId);
         const body = {
             distrito_id: state.districtId, turno_id: state.shiftId,
-            ruta_id: state.routeId, lugar_id: state.agentTarget.placeId,
+            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : 'AGENTE_LUGAR',
+            fecha_distribucion: selectedDate(),
             excluidos: excluded,
             page: state.agentModal.page, limit: 20,
         };
+        if (state.agentTarget.kind !== 'district') body.ruta_id = state.agentTarget.routeId || state.routeId;
+        if (state.agentTarget.placeId) body.lugar_id = state.agentTarget.placeId;
         const search = $('#tdAgentSearch').value.trim();
         if (search) body.search = search;
         const grupoId = $('#tdFilterGrupo').value;
@@ -278,19 +344,19 @@
             return;
         }
 
-        if (target.replaceAgentId) {
-            state.assignments = state.assignments.filter(item =>
-                !(Number(item.lugar_id) === target.placeId && Number(item.agente_id) === target.replaceAgentId));
-        }
-        if (usedAgentIds().includes(Number(agentId))) return notify('El agente ya esta asignado en este borrador.', true);
-        state.assignments.push({
-            lugar_id: target.placeId, agente_id: Number(agentId),
-            tipo_asignacion: 'MANUAL', agente: {
-                id: agent.id, nombre_completo: agent.nombre_completo,
-                cedula: agent.cedula, estado_personal: agent.estado_laboral,
-            },
-        });
+        if (usedAgentIds(target.replaceAgentId).includes(Number(agentId))) return notify('El agente ya esta asignado en este borrador.', true);
+        applyAgentToTarget(target, agent, 'MANUAL');
         saveDraft(); closeModal('tdAgentModal'); state.agentTarget = null; renderWorkspace(); refreshAvailability();
+    }
+
+    function applyAgentToTarget(target, agent, assignmentType, extra = {}) {
+        const value = {agente_id:Number(agent.id),tipo_asignacion:assignmentType,agente:{id:Number(agent.id),nombre_completo:agent.nombre_completo,cedula:agent.cedula,estado_personal:agent.estado_laboral},...extra};
+        if (target.kind === 'district') state.districtManager = value;
+        else if (target.kind === 'route') state.routeManagers.set(Number(target.routeId), {requiere_encargado:true,...value});
+        else {
+            if (target.replaceAgentId) state.assignments = state.assignments.filter(item => !(Number(item.lugar_id) === Number(target.placeId) && Number(item.agente_id) === Number(target.replaceAgentId)));
+            state.assignments.push({lugar_id:Number(target.placeId),...value});
+        }
     }
 
     async function confirmForceAssignment() {
@@ -302,29 +368,16 @@
         const button = $('#tdConfirmForce');
         loading(button, true);
         try {
-            await api('distribucion-tablero/cambiar-agente', {method: 'POST', body: {
-                distrito_id: state.districtId, turno_id: state.shiftId,
-                ruta_id: state.routeId, lugar_id: target.placeId,
-                agente_nuevo_id: agent.id, agente_anterior_id: target.replaceAgentId || null,
+            if (target.kind === 'place') await api('distribucion-tablero/cambiar-agente', {method: 'POST', body: {
+                distrito_id: state.districtId, turno_id: state.shiftId, ruta_id: state.routeId, lugar_id: target.placeId,
+                agente_nuevo_id: agent.id, agente_anterior_id: target.replaceAgentId || null, tipo_responsabilidad:'AGENTE_LUGAR',
                 forzado: true, motivo_forzado: justificacion,
             }});
-            if (target.replaceAgentId) {
-                state.assignments = state.assignments.filter(item =>
-                    !(Number(item.lugar_id) === target.placeId && Number(item.agente_id) === target.replaceAgentId));
-            }
-            if (usedAgentIds().includes(Number(agent.id))) {
+            if (usedAgentIds(target.replaceAgentId).includes(Number(agent.id))) {
                 loading(button, false);
                 return notify('El agente ya esta asignado en este borrador.', true);
             }
-            state.assignments.push({
-                lugar_id: target.placeId, agente_id: Number(agent.id),
-                tipo_asignacion: 'FORZADA', estado_original: agent.estado_laboral,
-                motivo_forzado: justificacion,
-                agente: {
-                    id: agent.id, nombre_completo: agent.nombre_completo,
-                    cedula: agent.cedula, estado_personal: agent.estado_laboral,
-                },
-            });
+            applyAgentToTarget(target, agent, 'FORZADA', {estado_original:agent.estado_laboral,motivo_forzado:justificacion});
             saveDraft(); closeModal('tdForceModal'); closeModal('tdAgentModal');
             state.agentTarget = null; renderWorkspace(); refreshAvailability();
             notify('Asignacion forzada registrada correctamente.');
@@ -340,7 +393,7 @@
     async function randomAssign() {
         const button = $('#tdRandomAssign'); loading(button, true);
         try {
-            const result = await api('distribucion-tablero/asignacion-aleatoria', {method: 'POST', body: {distrito_id: state.districtId, turno_id: state.shiftId, ruta_id: state.routeId, asignaciones: state.assignments.map(({lugar_id, agente_id, tipo_asignacion}) => ({lugar_id, agente_id, tipo_asignacion}))}});
+            const result = await api('distribucion-tablero/asignacion-aleatoria', {method: 'POST', body: {distrito_id: state.districtId, turno_id: state.shiftId, ruta_id: state.routeId, excluidos:usedAgentIds(), asignaciones: state.assignments.map(({lugar_id, agente_id, tipo_asignacion}) => ({lugar_id, agente_id, tipo_asignacion}))}});
             for (const assignment of result.asignaciones || []) state.assignments.push(assignment);
             saveDraft(); renderWorkspace(); await refreshAvailability();
             notify(result.insuficiente ? result.mensaje : 'Asignacion aleatoria preparada sin repetir agentes.', Boolean(result.insuficiente));
@@ -358,19 +411,32 @@
         if (!state.districtId || !state.shiftId) return notify('Seleccione distrito y turno.', true);
         try { const totals = await draftTotals(); if (!totals.required) return notify('No existen lugares para guardar.', true); }
         catch (error) { return notify(error.message, true); }
-        const editingDate = state.editingId && state.saved ? String(state.saved.fecha_distribucion || '').slice(0, 10) : '';
+        if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Debe asignar el encargado de distrito.', true);
+        for (const route of state.board?.rutas || []) {
+            if (!route.asignar_encargado) continue;
+            const manager = state.routeManagers.get(Number(route.id));
+            if (!manager) return notify(`Defina la responsabilidad de la ruta ${route.nombre}.`, true);
+            if (manager.requiere_encargado && !manager.agente_id) return notify(`Seleccione el encargado de la ruta ${route.nombre}.`, true);
+            if (!manager.requiere_encargado && !state.districtManager?.agente_id) return notify(`La ruta ${route.nombre} necesita encargado porque no existe un encargado de distrito responsable.`, true);
+        }
+        const editingDate = selectedDate();
         $('#tdDistributionDate').value = editingDate;
         $('#tdGeneratedName').textContent = `DISTRIBUCION DE PERSONAL FECHA ${formatDate(editingDate)}`;
         openModal('tdSaveModal');
     }
     async function requestSave(force = false) {
-        const date = $('#tdDistributionDate').value; if (!date) return notify('Seleccione la fecha de distribucion.', true);
+        const date = selectedDate(); if (!date) return notify('Seleccione la fecha de distribucion.', true);
         const totals = await draftTotals();
         if (totals.pending && !force) { closeModal('tdSaveModal'); openModal('tdPendingModal'); return; }
         const button = force ? $('#tdForceSave') : $('#tdConfirmSave'); loading(button, true);
         try {
             const resource = state.editingId ? `distribucion-tablero/distribuciones/${state.editingId}` : 'distribucion-tablero/distribuciones';
-            const saved = await api(resource, {method: state.editingId ? 'PUT' : 'POST', body: {distrito_id: state.districtId, turno_id: state.shiftId, fecha_distribucion: date, guardar_con_pendientes: force, asignaciones: state.assignments.map(({lugar_id, agente_id, tipo_asignacion}) => ({lugar_id, agente_id, tipo_asignacion}))}});
+            const saved = await api(resource, {method: state.editingId ? 'PUT' : 'POST', body: {
+                distrito_id:state.districtId,turno_id:state.shiftId,fecha_distribucion:date,guardar_con_pendientes:force,
+                encargado_distrito_id:state.districtManager?.agente_id || null,
+                encargados_ruta:Array.from(state.routeManagers.entries()).map(([ruta_id,item])=>({ruta_id:Number(ruta_id),requiere_encargado:Boolean(item.requiere_encargado),agente_id:item.agente_id || null,tipo_asignacion:item.tipo_asignacion || 'MANUAL'})),
+                asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion}))
+            }});
             state.saved = await api(`distribucion-tablero/distribuciones/${saved.id}`);
             state.editingId = 0;
             sessionStorage.removeItem(draftKey()); closeModal('tdSaveModal'); closeModal('tdPendingModal'); renderSaved(); openModal('tdResultModal');
@@ -386,7 +452,7 @@
         $('#tdSavedDetail').innerHTML = Array.from(groups.entries()).map(([route, details]) => `<div class="td-saved-route"><b>${esc(route)}</b><div>${details.filter(item => item.agente_id).length} asignados · ${details.filter(item => !item.agente_id).length} pendientes</div></div>`).join('');
     }
 
-    $('#tdDistrict').addEventListener('change', loadBoard); $('#tdShift').addEventListener('change', loadBoard);
+    $('#tdDistrict').addEventListener('change', loadBoard); $('#tdShift').addEventListener('change', loadBoard); $('#tdBoardDate').addEventListener('change', loadBoard);
     $('#tdRouteSearch').addEventListener('input', renderRoutes); $('#tdRouteList').addEventListener('click', event => { const item = event.target.closest('[data-route-id]'); if (item) selectRoute(Number(item.dataset.routeId)); });
     $('#tdPlacesBody').addEventListener('click', event => {
         const assign = event.target.closest('[data-assign-place]'); const change = event.target.closest('[data-change-agent]'); const remove = event.target.closest('[data-remove-agent]');
@@ -418,6 +484,15 @@
     });
     $('#tdConfirmForce').addEventListener('click', confirmForceAssignment);
 
+    $('#tdAssignDistrictManager')?.addEventListener('click',()=>openManagerSelector('district'));
+    $('#tdRemoveDistrictManager')?.addEventListener('click',()=>{state.districtManager=null;saveDraft();renderWorkspace();refreshAvailability();});
+    $('#tdRouteManagerRequired')?.addEventListener('change',event=>{
+        const routeId=Number(state.routeId); const enabled=event.target.checked;
+        state.routeManagers.set(routeId,{requiere_encargado:enabled}); saveDraft(); renderWorkspace();
+        if(enabled) openManagerSelector('route',routeId);
+    });
+    $('#tdAssignRouteManager')?.addEventListener('click',()=>openManagerSelector('route',state.routeId));
+
     $('#tdRandomAssign')?.addEventListener('click', randomAssign); $('#tdSaveDraft')?.addEventListener('click', openSave);
     $('#tdDistributionDate').addEventListener('change', event => { $('#tdGeneratedName').textContent = `DISTRIBUCION DE PERSONAL FECHA ${formatDate(event.target.value)}`; });
     $('#tdConfirmSave').addEventListener('click', () => requestSave(false)); $('#tdForceSave').addEventListener('click', () => requestSave(true));
@@ -446,6 +521,7 @@
     const urlParams = new URLSearchParams(window.location.search);
     const preDistrict = urlParams.get('distrito_id');
     const preShift = urlParams.get('turno_id');
+    const preDate = urlParams.get('fecha_distribucion') || urlParams.get('fecha');
     if (preDistrict) {
         const distSel = $('#tdDistrict');
         if (distSel) distSel.value = preDistrict;
@@ -454,5 +530,6 @@
         const shiftSel = $('#tdShift');
         if (shiftSel) shiftSel.value = preShift;
     }
+    if (preDate && /^\d{4}-\d{2}-\d{2}$/.test(preDate)) $('#tdBoardDate').value = preDate;
     if (($('#tdDistrict').value && $('#tdShift').value) || (preDistrict && preShift)) loadBoard();
 })();

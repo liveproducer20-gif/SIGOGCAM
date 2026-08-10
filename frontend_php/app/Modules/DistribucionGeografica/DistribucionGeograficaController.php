@@ -40,11 +40,11 @@ final class DistribucionGeograficaController
             'error' => $error,
             'pageStyles' => [
                 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-                '/assets/css/distribucion-geografica.css',
+                '/assets/css/distribucion-geografica.css?v=' . (int)@filemtime(dirname(__DIR__, 3) . '/public/assets/css/distribucion-geografica.css'),
             ],
             'pageScripts' => [
                 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-                '/assets/js/distribucion-geografica.js',
+                '/assets/js/distribucion-geografica.js?v=' . (int)@filemtime(dirname(__DIR__, 3) . '/public/assets/js/distribucion-geografica.js'),
             ],
         ]);
     }

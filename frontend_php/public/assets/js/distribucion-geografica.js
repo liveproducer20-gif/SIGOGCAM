@@ -10,6 +10,9 @@
     let map, routeLayer, markerLayer, editLayer, temporaryMarker;
     let selection = { districtId: null, districtName: '', routeId: null, routeName: '', fecha: new Date().toISOString().slice(0, 10) };
     let mapData = null, mode = null, tracePoints = [], pendingLocation = null;
+    const serviceTypeInputs = () => Array.from(document.querySelectorAll('#geoServiceOptions input[type="checkbox"]'));
+    const serviceKey = value => String(value || '').trim().toLocaleUpperCase('es');
+    let selectedServiceTypes = new Set(serviceTypeInputs().filter(input => input.checked).map(input => serviceKey(input.value)));
 
     async function api(resource, options = {}) {
         const response = await fetch(`/distribucion-geografica/api?resource=${encodeURIComponent(resource)}`, {
@@ -83,7 +86,7 @@
             districtName: event.target.selectedOptions[0]?.textContent || '', routeId: null, routeName: '', fecha: fechaVal };
         routeSelect.innerHTML = '<option value="">Seleccione una ruta</option>';
         routeSelect.disabled = true;
-        if (!selection.districtId) return;
+        if (!selection.districtId) { await loadGlobalMap(); return; }
         try {
             const routes = await api(`distritos/${selection.districtId}/rutas`) || [];
             routeSelect.add(new Option('Todas las Rutas', 'all'), 0);
@@ -111,14 +114,24 @@
     $('#filterDate')?.addEventListener('change', async () => {
         const fechaVal = $('#filterDate')?.value || new Date().toISOString().slice(0, 10);
         selection.fecha = fechaVal;
-        if (!selection.districtId) return;
         resetMap();
-        if (selection.showAll) {
+        if (!selection.districtId) {
+            await loadGlobalMap();
+        } else if (selection.showAll) {
             await loadAllRoutesMap();
         } else if (selection.routeId) {
             await loadRouteMap();
         }
     });
+
+    async function loadGlobalMap() {
+        try {
+            mapData = await api(`distribucion-geografica/mapa?fecha=${encodeURIComponent(selection.fecha || '')}`);
+            renderGlobalMap();
+        } catch (error) {
+            resetMap(); notify(error.message, true);
+        }
+    }
 
     async function loadAllRoutesMap() {
         try {
@@ -140,6 +153,8 @@
         }
     }
 
+    function renderGlobalMap() { renderAllRoutesMap(); }
+
     function renderAllRoutesMap() {
         routeLayer.clearLayers();
         markerLayer.clearLayers();
@@ -156,13 +171,7 @@
                 } catch (_) {}
             }
         });
-        places.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
-        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
-        $('#statRegistered').textContent = String(places.length);
-        $('#statCovered').textContent = String(places.filter(p => p.agente_id).length);
-        $('#statUnassigned').textContent = String(places.filter(p => !p.agente_id).length);
-        $('#statPersonnel').textContent = String(new Set(places.filter(p => p.agente_id).map(p => p.agente_id)).size);
-        $('#statRoutes').textContent = String(rutas.length);
+        renderPersonnelLayer(places, mapData?.encargados || [], rutas.length);
         const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
     }
@@ -186,15 +195,30 @@
                 L.geoJSON(geojson, { style: { color: trace.color || '#2563EB', weight: Number(trace.grosor || 6), opacity: Number(trace.opacidad || .55) } }).addTo(routeLayer);
             } catch (_) { notify('El trazado guardado no contiene GeoJSON válido.', true); }
         }
-        places.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
-        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
-        $('#statRegistered').textContent = String(places.length);
-        $('#statCovered').textContent = String(places.filter(p => p.agente_id).length);
-        $('#statUnassigned').textContent = String(places.filter(p => !p.agente_id).length);
-        $('#statPersonnel').textContent = String(new Set(places.filter(p => p.agente_id).map(p => p.agente_id)).size);
-        $('#statRoutes').textContent = '1';
+        renderPersonnelLayer(places, mapData?.encargados || [], 1);
         const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
+    }
+
+    function renderPersonnelLayer(places, managers, routeCount) {
+        markerLayer.clearLayers();
+        const visiblePlaces = (places || []).filter(place => selectedServiceTypes.has(serviceKey(place.tipo_servicio)));
+        const visibleManagers = (managers || []).filter(manager => selectedServiceTypes.has(serviceKey(manager.tipo_servicio)));
+        visiblePlaces.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
+        visibleManagers.filter(manager => manager.latitud != null && manager.longitud != null).forEach(addManagerMarker);
+        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
+        $('#statRegistered').textContent = String(visiblePlaces.length);
+        $('#statCovered').textContent = String(visiblePlaces.filter(item => item.agente_id).length + visibleManagers.length);
+        $('#statUnassigned').textContent = String(visiblePlaces.filter(item => !item.agente_id).length);
+        const personnelIds = [...visiblePlaces.filter(item => item.agente_id).map(item => `P-${item.agente_id}`), ...visibleManagers.map(item => `P-${item.agente_id}`)];
+        $('#statPersonnel').textContent = String(new Set(personnelIds).size);
+        $('#statRoutes').textContent = String(routeCount || 0);
+    }
+
+    function rerenderPersonnelOnly() {
+        if (!mapData) { markerLayer?.clearLayers(); $('#visiblePointCount').textContent = '0'; return; }
+        const routeCount = selection.routeId ? 1 : Number((mapData.rutas || []).length);
+        renderPersonnelLayer(mapData.lugares || [], mapData.encargados || [], routeCount);
     }
 
     function addPlaceMarker(place) {
@@ -205,27 +229,75 @@
         marker.on('click', () => showPlaceDetail(place));
     }
 
+    function managerIcon(manager) {
+        const isDistrict = manager.tipo_responsabilidad === 'ENCARGADO_DISTRITO';
+        const color = isDistrict ? '#6d3fd1' : '#1267d5';
+        return L.divIcon({
+            className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
+            html:`<span class="geo-manager-pin" style="--manager-color:${color}"><b>${isDistrict ? 'ED' : 'ER'}</b></span>`
+        });
+    }
+
+    function addManagerMarker(manager) {
+        const marker=L.marker([Number(manager.latitud),Number(manager.longitud)],{icon:managerIcon(manager)}).addTo(markerLayer);
+        marker.bindTooltip(esc(manager.tipo_servicio),{direction:'top',offset:[0,-30]});
+        marker.bindPopup(managerPopup(manager),{maxWidth:340});
+        marker.on('click',()=>showManagerDetail(manager));
+    }
+
+    function managerPopup(manager) {
+        const routeRow=manager.tipo_responsabilidad==='ENCARGADO_RUTA'?`<dt>Ruta</dt><dd>${esc(manager.ruta || '—')}</dd>`:'';
+        return `<div class="geo-popup"><h3>${esc(manager.tipo_servicio)}</h3><dl><dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${routeRow}<dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd></dl><span class="geo-popup-state is-assigned">Asignado</span></div>`;
+    }
+
+    function showManagerDetail(manager) {
+        const detail=$('#geoDetail'); if(!detail)return;
+        const routeRow=manager.tipo_responsabilidad==='ENCARGADO_RUTA'?`<dt>Ruta</dt><dd>${esc(manager.ruta || '—')}</dd>`:'';
+        detail.innerHTML=`<header><h2>Información del encargado</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header><div class="geo-point-head"><div class="geo-point-avatar">${manager.tipo_responsabilidad==='ENCARGADO_DISTRITO'?'ED':'ER'}</div><div><span class="geo-status">${esc(manager.tipo_servicio)}</span><h3>${esc(manager.agente || '—')}</h3><small>${esc(manager.grado || '')}</small></div></div><div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${routeRow}<dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Tipo de servicio</dt><dd>${esc(manager.tipo_servicio)}</dd></dl></div>`;
+        detail.classList.add('is-open'); $('#closeDetail')?.addEventListener('click',()=>detail.classList.remove('is-open'));
+    }
+
     function placePopup(place) {
         const assigned = Boolean(place.agente_id);
         return `<div class="geo-popup"><h3>${esc(place.nombre)}</h3>
-            <dl><dt>Agente asignado</dt><dd>${assigned ? esc(place.agente) : 'Sin asignar'}</dd>
+            <dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd>
+            <dt>Agente asignado</dt><dd>${assigned ? esc(place.agente) : 'Sin asignación'}</dd>
             <dt>Grado / rango</dt><dd>${assigned ? esc(place.grado || '—') : '—'}</dd>
-            <dt>Horario</dt><dd>${assigned ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : 'Pendiente'}</dd>
+            <dt>Horario</dt><dd>${assigned ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : '—'}</dd>
             <dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl>
-            <span class="geo-popup-state ${assigned ? 'is-assigned' : ''}">${assigned ? 'Asignado' : 'Pendiente'}</span></div>`;
+            <span class="geo-popup-state ${assigned ? 'is-assigned' : ''}">${assigned ? 'Asignado' : 'Sin asignación'}</span></div>`;
     }
 
     function showPlaceDetail(place) {
         const detail = $('#geoDetail');
         if (!detail) return;
         const routeLabel = place.route_name || selection.routeName || '';
+        const canEditPin = permissions.edit && place.latitud && place.longitud;
         detail.innerHTML = `<header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
-            <div class="geo-point-head"><div class="geo-point-avatar">⌖</div><div><span class="geo-status">${place.agente_id ? 'Asignado' : 'Pendiente'}</span><h3>${esc(place.nombre)}</h3><small>${esc(place.direccion_referencial || '')}</small></div></div>
-            <div class="geo-detail-list"><dl><dt>Ruta</dt><dd>${esc(routeLabel)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
-            <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignar')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
-            <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : 'Pendiente'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>`;
+            <div class="geo-point-head"><div class="geo-point-avatar">⌖</div><div><span class="geo-status">${place.agente_id ? 'Asignado' : 'Sin asignación'}</span><h3>${esc(place.nombre)}</h3><small>${esc(place.direccion_referencial || '')}</small></div></div>
+            <div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Ruta</dt><dd>${esc(routeLabel)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
+            <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignación')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
+            <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : '—'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>
+            ${canEditPin ? `<div class="geo-detail-actions"><button class="geo-btn-delete-pin" type="button" id="deletePin" data-place-id="${place.id}">✕ Eliminar pin del mapa</button></div>` : ''}`;
         detail.classList.add('is-open');
         $('#closeDetail')?.addEventListener('click', () => detail.classList.remove('is-open'));
+        $('#deletePin')?.addEventListener('click', () => removePlacePin(place));
+    }
+
+    async function removePlacePin(place) {
+        if (!confirm(`¿Está seguro de eliminar el pin "${place.nombre}" del mapa?\n\nEl lugar de servicio seguirá existiendo, pero se perderá su ubicación geográfica.`)) return;
+        try {
+            await api(`distribucion-geografica/lugares/${place.id}/ubicacion`, { method: 'DELETE' });
+            notify('Pin eliminado correctamente');
+            $('#geoDetail')?.classList.remove('is-open');
+            if (selection.showAll) {
+                await loadAllRoutesMap();
+            } else if (selection.routeId) {
+                await loadRouteMap();
+            }
+        } catch (error) {
+            notify(error.message, true);
+        }
     }
 
     function time(value) { return value ? String(value).slice(0, 5) : '—'; }
@@ -400,5 +472,23 @@
     });
     $('#geoFilterToggle')?.addEventListener('click', () => $('#geoFilters')?.classList.toggle('is-open'));
 
+    function updateServiceTypeSelection() {
+        selectedServiceTypes = new Set(serviceTypeInputs().filter(input=>input.checked).map(input=>serviceKey(input.value)));
+        const total=serviceTypeInputs().length,selected=selectedServiceTypes.size;
+        const button=$('#geoServiceToggle');
+        if(button) button.firstChild.textContent=selected===0?'Sin tipos ':selected===total?'Todos los tipos ':`${selected} tipos seleccionados `;
+        rerenderPersonnelOnly();
+    }
+    $('#geoServiceToggle')?.addEventListener('click',()=>{
+        const menu=$('#geoServiceMenu'); const open=menu.hidden; menu.hidden=!open; $('#geoServiceToggle').setAttribute('aria-expanded',String(open));
+    });
+    $('#geoServiceOptions')?.addEventListener('change',updateServiceTypeSelection);
+    $('#geoSelectAllTypes')?.addEventListener('click',()=>{serviceTypeInputs().forEach(input=>input.checked=true);updateServiceTypeSelection();});
+    $('#geoClearTypes')?.addEventListener('click',()=>{serviceTypeInputs().forEach(input=>input.checked=false);updateServiceTypeSelection();});
+    document.addEventListener('click',event=>{
+        const filter=$('#geoServiceFilter'); if(filter&&!filter.contains(event.target)){ $('#geoServiceMenu').hidden=true; $('#geoServiceToggle').setAttribute('aria-expanded','false'); }
+    });
+
     initializeMap();
+    loadGlobalMap();
 })();

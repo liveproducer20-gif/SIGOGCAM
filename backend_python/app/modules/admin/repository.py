@@ -75,7 +75,7 @@ def list_routes() -> list[dict]:
         """
         SELECT r.id, r.nombre, r.distrito_id, d.nombre AS distrito, r.turno_id,
                t.nombre AS turno, CONVERT(VARCHAR(5),r.hora_inicio,108) AS hora_inicio,
-               CONVERT(VARCHAR(5),r.hora_fin,108) AS hora_fin, r.activo
+               CONVERT(VARCHAR(5),r.hora_fin,108) AS hora_fin, r.asignar_encargado, r.activo
         FROM dbo.rutas r
         LEFT JOIN dbo.catalogo_detalles d ON d.id=r.distrito_id
         LEFT JOIN dbo.turnos t ON t.id=r.turno_id
@@ -92,7 +92,7 @@ def list_service_places() -> list[dict]:
                l.tipo_servicio_id, ts.nombre AS tipo_servicio,
                l.turno_id, t.nombre AS turno,
                l.cantidad_requerida, l.estado_operativo, l.consignas, l.observacion,
-               l.latitud, l.longitud, l.activo
+               l.latitud, l.longitud, ISNULL(r.asignar_encargado,0) AS ruta_asignar_encargado, l.activo
         FROM dbo.lugares_servicio l
         LEFT JOIN dbo.catalogo_detalles d ON d.id=l.distrito_id
         LEFT JOIN dbo.rutas r ON r.id=l.ruta_id
@@ -150,7 +150,7 @@ def list_catalog_details(codigo: str) -> list[dict]:
     return _query(
         """
         SELECT d.id,d.catalogo_id,c.codigo AS catalogo_codigo,c.nombre AS catalogo,
-               d.codigo,d.nombre,d.descripcion,d.orden,d.estado
+               d.codigo,d.nombre,d.descripcion,d.orden,d.asignar_encargado,d.estado
         FROM dbo.catalogo_detalles d
         INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
         WHERE c.codigo=?
@@ -167,10 +167,11 @@ def create_catalog_detail(codigo: str, data: dict) -> int:
         if row is None:
             raise ValueError("Catálogo no encontrado")
         cursor.execute(
-            """INSERT INTO dbo.catalogo_detalles(catalogo_id,codigo,nombre,descripcion,orden,estado,fecha_creacion)
-               OUTPUT INSERTED.id VALUES(?,?,?,?,?,?,SYSDATETIME())""",
+            """INSERT INTO dbo.catalogo_detalles(catalogo_id,codigo,nombre,descripcion,orden,estado,asignar_encargado,fecha_creacion)
+               OUTPUT INSERTED.id VALUES(?,?,?,?,?,?,?,SYSDATETIME())""",
             row[0], data["codigo"], data["nombre"], data.get("descripcion"),
             int(data.get("orden",0)), 1 if data.get("estado",True) else 0,
+            1 if codigo.upper() == "DISTRITOS" and data.get("asignarEncargado",False) else 0,
         )
         return int(cursor.fetchone()[0])
 
@@ -179,10 +180,10 @@ def update_catalog_detail(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor=connection.cursor()
         cursor.execute(
-            """UPDATE dbo.catalogo_detalles SET codigo=?,nombre=?,descripcion=?,orden=?,estado=?,
+            """UPDATE dbo.catalogo_detalles SET codigo=?,nombre=?,descripcion=?,orden=?,estado=?,asignar_encargado=?,
                fecha_actualizacion=SYSDATETIME() WHERE id=?""",
             data["codigo"],data["nombre"],data.get("descripcion"),int(data.get("orden",0)),
-            1 if data.get("estado",True) else 0,item_id,
+            1 if data.get("estado",True) else 0,1 if data.get("asignarEncargado",False) else 0,item_id,
         )
 
 
@@ -299,12 +300,13 @@ def create_route(data: dict) -> int:
         cursor = connection.cursor()
         cursor.execute(
             """
-            INSERT INTO dbo.rutas (nombre, distrito_id, turno_id, hora_inicio, hora_fin, activo, fecha_creacion)
+            INSERT INTO dbo.rutas (nombre, distrito_id, turno_id, hora_inicio, hora_fin, asignar_encargado, activo, fecha_creacion)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, SYSDATETIME())
+            VALUES (?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data["nombre"],
             data.get("distritoId"), data.get("turnoId"), data.get("horaInicio"), data.get("horaFin"),
+            1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
         )
         return int(cursor.fetchone()[0])
@@ -316,11 +318,12 @@ def update_route(item_id: int, data: dict) -> None:
         cursor.execute(
             """
             UPDATE dbo.rutas
-            SET nombre = ?, distrito_id=?, turno_id=?, hora_inicio=?, hora_fin=?, activo = ?, fecha_actualizacion = SYSDATETIME()
+            SET nombre = ?, distrito_id=?, turno_id=?, hora_inicio=?, hora_fin=?, asignar_encargado=?, activo = ?, fecha_actualizacion = SYSDATETIME()
             WHERE id = ?
             """,
             data["nombre"],
             data.get("distritoId"), data.get("turnoId"), data.get("horaInicio"), data.get("horaFin"),
+            1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
             item_id,
         )

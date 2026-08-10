@@ -21,6 +21,9 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             <label>Turno
                 <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>" data-name="<?= $esc($item['nombre']) ?>" data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>" data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
+            <label>Fecha
+                <input id="tdBoardDate" type="date" value="<?= date('Y-m-d') ?>">
+            </label>
             <?php if ($canAssign): ?><button class="td-btn td-btn-primary td-save-button" id="tdSaveDraft" type="button"><span aria-hidden="true">▣</span> Guardar distribución</button><?php endif; ?>
         </section>
     </header>
@@ -36,7 +39,15 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
         <section class="td-workspace">
             <div class="td-empty-board" id="tdEmptyBoard"><span>⌖</span><strong>Seleccione una ruta</strong><p>Elija un distrito, turno y una ruta para comenzar la distribución.</p></div>
             <div id="tdRouteWorkspace" hidden>
+                <section class="td-manager-card" id="tdDistrictManagerCard" hidden>
+                    <div><small>RESPONSABILIDAD DEL DISTRITO</small><h3>Encargado de distrito</h3><p id="tdDistrictManagerValue">Sin asignar</p></div>
+                    <?php if ($canAssign): ?><div class="td-manager-actions"><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignDistrictManager" type="button">Asignar encargado de distrito</button><button class="td-btn td-btn-ghost td-btn-sm" id="tdRemoveDistrictManager" type="button" hidden>Quitar</button></div><?php endif; ?>
+                </section>
                 <div class="td-route-heading"><h2 id="tdRouteName">Ruta</h2><span id="tdRoutePlacesBadge">0 lugares</span></div>
+                <section class="td-manager-card td-route-manager" id="tdRouteManagerCard" hidden>
+                    <div><small>RESPONSABILIDAD DE LA RUTA</small><h3>Encargado de ruta</h3><p id="tdRouteManagerValue">Sin encargado de ruta · Responsable: Encargado del Distrito</p></div>
+                    <?php if ($canAssign): ?><div class="td-manager-actions"><label class="td-manager-switch"><input id="tdRouteManagerRequired" type="checkbox"><span></span> Asignar encargado</label><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignRouteManager" type="button" hidden>Seleccionar agente</button></div><?php endif; ?>
+                </section>
                 <div class="td-kpis">
                     <article><i class="td-kpi-teal">⌖</i><div><strong id="tdKpiPlaces">0</strong><b>Lugares</b><small>Total de lugares</small></div></article>
                     <article><i class="td-kpi-blue">♙</i><div><strong id="tdKpiRequired">0</strong><b>Requeridos</b><small>Personal necesario</small></div></article>

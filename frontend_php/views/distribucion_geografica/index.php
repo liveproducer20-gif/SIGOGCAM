@@ -16,6 +16,16 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
             <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
             <label>Fecha distribución<input type="date" id="filterDate" value="<?= date('Y-m-d') ?>"></label>
+            <div class="geo-service-filter" id="geoServiceFilter">
+                <span class="geo-filter-label">Tipos de servicio</span>
+                <button class="geo-service-toggle" type="button" id="geoServiceToggle" aria-expanded="false">Todos los tipos <span>▾</span></button>
+                <div class="geo-service-menu" id="geoServiceMenu" hidden>
+                    <div class="geo-service-options" id="geoServiceOptions">
+                        <?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><label><input type="checkbox" value="<?= $esc($item['nombre']) ?>" checked> <span><?= $esc($item['nombre']) ?></span></label><?php endforeach; ?>
+                    </div>
+                    <div class="geo-service-actions"><button type="button" id="geoSelectAllTypes">Seleccionar todos</button><button type="button" id="geoClearTypes">Limpiar selección</button></div>
+                </div>
+            </div>
             <div class="geo-filter-actions">
                 <?php if ($canTrace): ?><button class="geo-primary" type="button" id="btnTrace" disabled>⌁ Asignar trazado</button><?php endif; ?>
                 <?php if ($canEdit): ?><button class="geo-primary" type="button" id="btnLocation" disabled>⌖ Asignar ubicación</button><?php endif; ?>
@@ -25,7 +35,7 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
         <section class="geo-workspace">
             <div class="geo-map-wrap">
                 <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
-                <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> lugares visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
+                <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> registros visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
                 <div class="geo-edit-tools" id="traceTools" hidden><strong>Dibuje el recorrido haciendo clic en el mapa</strong><button class="geo-secondary" type="button" id="undoTrace">↶ Deshacer</button><button class="geo-ghost" type="button" id="cancelTrace">Cancelar</button><button class="geo-primary" type="button" id="saveTrace">Guardar trazado</button></div>
                 <aside class="geo-trace-options" id="traceOptions" hidden aria-label="Opciones del trazado">
                     <header><span>⌁</span><div><strong>Estilo del trazado</strong><small>Configure la geometría</small></div></header>

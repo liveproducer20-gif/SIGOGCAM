@@ -37,6 +37,10 @@ def catalogs() -> dict:
             WHERE c.codigo = 'TIPOS_SERVICIO_LUGAR' AND c.estado = 1 AND cd.estado = 1 ORDER BY cd.orden, cd.nombre
         """)
         service_types = _rows(cursor)
+        service_types.extend([
+            {"id": "ENCARGADO_RUTA", "nombre": "Encargado de Ruta"},
+            {"id": "ENCARGADO_DISTRITO", "nombre": "Encargado de Distrito"},
+        ])
         return {"distritos": districts, "turnos": shifts, "tiposServicio": service_types}
 
 
@@ -375,9 +379,50 @@ def _validate_route(cursor, route_id: int, district_id: int) -> dict:
     return route
 
 
-def route_map(route_id: int, district_id: int, fecha: str | None = None) -> dict:
+def _daily_managers(cursor, fecha_date: date, district_id: int | None = None, route_id: int | None = None) -> list[dict]:
+    cursor.execute("""
+        SELECT de.id, de.tipo_responsabilidad, de.distrito_id, d.nombre AS distrito,
+               de.ruta_id, r.nombre AS ruta, de.agente_id,
+               LTRIM(RTRIM(CONCAT(CASE WHEN g.nombre IS NULL THEN '' ELSE g.nombre + ' ' END,
+                                  p.nombres, ' ', p.apellidos))) AS agente,
+               g.nombre AS grado, dp.fecha_distribucion,
+               COALESCE(r.hora_inicio,t.hora_inicio) AS hora_inicio,
+               COALESCE(r.hora_fin,t.hora_fin) AS hora_fin,
+               coords.latitud, coords.longitud
+        FROM dbo.distribucion_encargados de
+        INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id
+            AND dp.deleted_at IS NULL AND dp.estado<>N'ELIMINADA'
+        INNER JOIN dbo.catalogo_detalles d ON d.id=de.distrito_id
+        LEFT JOIN dbo.rutas r ON r.id=de.ruta_id
+        INNER JOIN dbo.turnos t ON t.id=dp.turno_id
+        INNER JOIN dbo.personal p ON p.id=de.agente_id
+        LEFT JOIN dbo.grados g ON g.id=p.grado_id
+        OUTER APPLY (
+            SELECT AVG(CAST(ls.latitud AS FLOAT)) AS latitud,
+                   AVG(CAST(ls.longitud AS FLOAT)) AS longitud
+            FROM dbo.lugares_servicio ls
+            WHERE ls.activo=1 AND ls.latitud IS NOT NULL AND ls.longitud IS NOT NULL
+              AND ls.distrito_id=de.distrito_id
+              AND (de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR ls.ruta_id=de.ruta_id)
+        ) coords
+        WHERE dp.fecha_distribucion=? AND de.deleted_at IS NULL
+          AND de.requiere_encargado=1 AND de.agente_id IS NOT NULL
+          AND (? IS NULL OR de.distrito_id=?)
+          AND (? IS NULL OR de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR de.ruta_id=?)
+        ORDER BY de.distrito_id,
+                 CASE WHEN de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' THEN 0 ELSE 1 END,
+                 de.ruta_id,de.id
+    """, fecha_date, district_id, district_id, route_id, route_id)
+    managers = _rows(cursor)
+    for manager in managers:
+        manager["tipo_servicio"] = "Encargado de Distrito" if manager["tipo_responsabilidad"] == "ENCARGADO_DISTRITO" else "Encargado de Ruta"
+        manager["tipo_registro"] = "ENCARGADO"
+    return managers
+
+
+def route_map(route_id: int, district_id: int, fecha: date | None = None) -> dict:
     """Return geography and live personnel data for one district/route selection."""
-    fecha_date = fecha or str(date.today())
+    fecha_date = fecha or date.today()
     with get_connection() as connection:
         cursor = connection.cursor()
         route = _validate_route(cursor, route_id, district_id)
@@ -410,25 +455,27 @@ def route_map(route_id: int, district_id: int, fecha: str | None = None) -> dict
                 LEFT JOIN dbo.asignaciones_ruta ar ON ar.id=dd.asignacion_ruta_id AND ar.deleted_at IS NULL
                 LEFT JOIN dbo.turnos t ON t.id=dp.turno_id
                 WHERE dd.lugar_id=ls.id AND dd.ruta_id=ls.ruta_id AND dd.deleted_at IS NULL
-                  AND dp.distrito_id=ls.distrito_id AND dp.fecha_distribucion<=?
-                ORDER BY dp.fecha_distribucion DESC, dp.fecha_actualizacion DESC, dp.id DESC,
+                  AND dp.distrito_id=ls.distrito_id AND dp.fecha_distribucion=?
+                  AND dp.turno_id=COALESCE(ls.turno_id, ?)
+                ORDER BY dp.fecha_actualizacion DESC, dp.id DESC,
                          CASE WHEN dd.agente_id IS NULL THEN 1 ELSE 0 END, dd.id DESC
             ) live
             WHERE ls.ruta_id=? AND ls.distrito_id=? AND ls.activo=1
             ORDER BY ls.nombre
-        """, fecha_date, route_id, district_id)
+        """, fecha_date, route["turno_id"], route_id, district_id)
         places = _rows(cursor)
         for place in places:
             assigned = place.get("agente_id") is not None
             place["estado_mapa"] = "INACTIVO" if str(place.get("estado") or "").upper() == "INACTIVO" else ("ASIGNADO" if assigned else "PENDIENTE")
         route["tiene_trazado"] = bool(trace)
         route["trazado"] = trace
-        return {"ruta": route, "lugares": places}
+        managers = _daily_managers(cursor, fecha_date, district_id, route_id)
+        return {"ruta": route, "lugares": places, "encargados": managers}
 
 
-def all_routes_map(district_id: int, fecha: str | None = None) -> dict:
+def all_routes_map(district_id: int, fecha: date | None = None) -> dict:
     """Return geography and live personnel data for ALL routes in a district."""
-    fecha_date = fecha or str(date.today())
+    fecha_date = fecha or date.today()
     with get_connection() as connection:
         cursor = connection.cursor()
 
@@ -446,7 +493,7 @@ def all_routes_map(district_id: int, fecha: str | None = None) -> dict:
 
         route_ids = [int(r["id"]) for r in routes]
         if not route_ids:
-            return {"rutas": [], "trazados": [], "lugares": []}
+            return {"rutas": [], "trazados": [], "lugares": [], "encargados": []}
 
         placeholders = ",".join("?" * len(route_ids))
         cursor.execute(f"""
@@ -465,20 +512,30 @@ def all_routes_map(district_id: int, fecha: str | None = None) -> dict:
             SELECT ls.id, ls.nombre, ls.descripcion, ls.direccion_referencial,
                    ls.latitud, ls.longitud, ls.estado, ls.estado_operativo,
                    ls.tipo_servicio_id, ts.nombre AS tipo_servicio, ls.ruta_id,
-                   ls.distrito_id,
-                   p.id AS agente_id,
-                   LTRIM(RTRIM(ISNULL(g.nombre + ' ', '') + ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS agente,
-                   g.nombre AS grado,
-                   dd.estado AS estado_asignacion
+                   ls.distrito_id, live.distribucion_id, live.agente_id, live.agente,
+                   live.grado, live.hora_inicio, live.hora_fin, live.estado_asignacion
             FROM dbo.lugares_servicio ls
+            INNER JOIN dbo.rutas r ON r.id=ls.ruta_id AND r.activo=1
             LEFT JOIN dbo.catalogo_detalles ts ON ts.id = ls.tipo_servicio_id
-            LEFT JOIN dbo.distribucion_personal_detalle dd ON dd.lugar_id = ls.id AND dd.ruta_id = ls.ruta_id
-                AND dd.deleted_at IS NULL
-            LEFT JOIN dbo.distribuciones_personal dp ON dp.id = dd.distribucion_id
-                AND dp.deleted_at IS NULL AND dp.estado <> 'ELIMINADA'
-                AND dp.fecha_distribucion <= ?
-            LEFT JOIN dbo.personal p ON p.id = dd.agente_id
-            LEFT JOIN dbo.grados g ON g.id = p.grado_id
+            OUTER APPLY (
+                SELECT TOP 1 dp.id AS distribucion_id, dd.agente_id,
+                       LTRIM(RTRIM(CONCAT(CASE WHEN g.nombre IS NULL THEN '' ELSE g.nombre + ' ' END,
+                                           p.nombres, ' ', p.apellidos))) AS agente,
+                       g.nombre AS grado, COALESCE(ar.hora_inicio, t.hora_inicio) AS hora_inicio,
+                       COALESCE(ar.hora_fin, t.hora_fin) AS hora_fin, dd.estado AS estado_asignacion
+                FROM dbo.distribucion_personal_detalle dd
+                INNER JOIN dbo.distribuciones_personal dp ON dp.id=dd.distribucion_id
+                    AND dp.deleted_at IS NULL AND dp.estado <> 'ELIMINADA'
+                LEFT JOIN dbo.personal p ON p.id=dd.agente_id
+                LEFT JOIN dbo.grados g ON g.id=p.grado_id
+                LEFT JOIN dbo.asignaciones_ruta ar ON ar.id=dd.asignacion_ruta_id AND ar.deleted_at IS NULL
+                LEFT JOIN dbo.turnos t ON t.id=dp.turno_id
+                WHERE dd.lugar_id=ls.id AND dd.ruta_id=ls.ruta_id AND dd.deleted_at IS NULL
+                  AND dp.distrito_id=ls.distrito_id AND dp.fecha_distribucion=?
+                  AND dp.turno_id=COALESCE(ls.turno_id, r.turno_id)
+                ORDER BY dp.fecha_actualizacion DESC, dp.id DESC,
+                         CASE WHEN dd.agente_id IS NULL THEN 1 ELSE 0 END, dd.id DESC
+            ) live
             WHERE ls.ruta_id IN ({placeholders}) AND ls.distrito_id = ? AND ls.activo = 1
             ORDER BY ls.ruta_id, ls.nombre
         """, fecha_date, *route_ids, district_id)
@@ -503,7 +560,37 @@ def all_routes_map(district_id: int, fecha: str | None = None) -> dict:
             if rid in trace_map:
                 all_traces.append({"route_id": rid, "route_name": route["nombre"], "trace": trace_map[rid]})
 
-        return {"rutas": routes, "trazados": all_traces, "lugares": places}
+        managers = _daily_managers(cursor, fecha_date, district_id)
+        return {"rutas": routes, "trazados": all_traces, "lugares": places, "encargados": managers}
+
+
+def global_map(fecha: date | None = None) -> dict:
+    """Return the complete geographic base and exact-date distribution when no district is selected."""
+    fecha_date = fecha or date.today()
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT DISTINCT d.id,d.nombre
+            FROM dbo.catalogo_detalles d
+            INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id AND c.codigo='DISTRITOS'
+            INNER JOIN dbo.rutas r ON r.distrito_id=d.id AND r.activo=1
+            WHERE d.estado=1
+            ORDER BY d.nombre
+        """)
+        districts = _rows(cursor)
+
+    combined = {"distritos": districts, "rutas": [], "trazados": [], "lugares": [], "encargados": []}
+    for district in districts:
+        district_data = all_routes_map(int(district["id"]), fecha_date)
+        for route in district_data.get("rutas", []):
+            route["distrito"] = district["nombre"]
+        for place in district_data.get("lugares", []):
+            place["distrito"] = district["nombre"]
+        combined["rutas"].extend(district_data.get("rutas", []))
+        combined["trazados"].extend(district_data.get("trazados", []))
+        combined["lugares"].extend(district_data.get("lugares", []))
+        combined["encargados"].extend(district_data.get("encargados", []))
+    return combined
 
 
 def _trace_coordinates(geojson: dict, trace_type: str) -> list:
@@ -562,6 +649,28 @@ def upsert_route_trace(route_id: int, data: dict, user_id: int) -> dict:
         after = {"ruta_id": route_id, "distrito_id": data["distrito_id"], "tipo_geometria": data["tipo_geometria"], "geojson": data["geojson"]}
         _audit(cursor, user_id, action, "rutas_geograficas", trace_id, before, after)
         return {"id": trace_id, "creado": created}
+
+
+def remove_place_location(place_id: int, user_id: int) -> dict:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT id, nombre, ruta_id, distrito_id, latitud, longitud
+            FROM dbo.lugares_servicio WITH (UPDLOCK, HOLDLOCK)
+            WHERE id=? AND activo=1
+        """, place_id)
+        before = _row(cursor)
+        if not before:
+            raise HTTPException(404, "El lugar de servicio no existe")
+        if before["latitud"] is None and before["longitud"] is None:
+            raise HTTPException(422, "Este lugar de servicio no tiene ubicación asignada")
+        cursor.execute("""
+            UPDATE dbo.lugares_servicio SET latitud=NULL, longitud=NULL, actualizado_por=?,
+                fecha_actualizacion=SYSDATETIME() WHERE id=?
+        """, user_id, place_id)
+        after = {"latitud": None, "longitud": None}
+        _audit(cursor, user_id, "ELIMINAR_UBICACION", "lugares_servicio", place_id, before, after)
+        return {"id": place_id}
 
 
 def update_place_location(place_id: int, data: dict, user_id: int) -> dict:

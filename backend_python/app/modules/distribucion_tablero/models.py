@@ -46,11 +46,19 @@ class DraftAssignmentInput(BaseModel):
     tipo_asignacion: str = Field(default="MANUAL", max_length=40)
 
 
+class RouteManagerInput(BaseModel):
+    ruta_id: int = Field(gt=0)
+    requiere_encargado: bool
+    agente_id: int | None = Field(default=None, gt=0)
+    tipo_asignacion: str = Field(default="MANUAL", max_length=40)
+
+
 class RandomDraftInput(BaseModel):
     distrito_id: int = Field(gt=0)
     turno_id: int = Field(gt=0)
     ruta_id: int = Field(gt=0)
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
+    excluidos: list[int] = Field(default_factory=list)
 
 
 class SaveDistributionInput(BaseModel):
@@ -58,14 +66,18 @@ class SaveDistributionInput(BaseModel):
     turno_id: int = Field(gt=0)
     fecha_distribucion: date
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
+    encargado_distrito_id: int | None = Field(default=None, gt=0)
+    encargados_ruta: list[RouteManagerInput] = Field(default_factory=list)
     guardar_con_pendientes: bool = False
 
 
 class AgentSearchInput(BaseModel):
     distrito_id: int = Field(gt=0)
     turno_id: int = Field(gt=0)
-    ruta_id: int = Field(gt=0)
-    lugar_id: int = Field(gt=0)
+    ruta_id: int | None = Field(default=None, gt=0)
+    lugar_id: int | None = Field(default=None, gt=0)
+    tipo_responsabilidad: str = Field(default="AGENTE_LUGAR", max_length=30)
+    fecha_distribucion: date | None = None
     excluidos: list[int] = Field(default_factory=list)
     grupo_id: int | None = None
     tipo_servicio_id: int | None = None
@@ -79,8 +91,9 @@ class AgentSearchInput(BaseModel):
 class ChangeAgentInput(BaseModel):
     distrito_id: int = Field(gt=0)
     turno_id: int = Field(gt=0)
-    ruta_id: int = Field(gt=0)
-    lugar_id: int = Field(gt=0)
+    ruta_id: int | None = Field(default=None, gt=0)
+    lugar_id: int | None = Field(default=None, gt=0)
+    tipo_responsabilidad: str = Field(default="AGENTE_LUGAR", max_length=30)
     agente_nuevo_id: int = Field(gt=0)
     agente_anterior_id: int | None = None
     forzado: bool = False

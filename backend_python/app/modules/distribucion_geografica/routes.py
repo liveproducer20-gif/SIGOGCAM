@@ -1,3 +1,5 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 
 from app.core.responses import ok
@@ -50,15 +52,21 @@ def get_service_places(route_id: int, distrito_id: int | None = None, user: dict
 
 
 @router.get("/distribucion-geografica/rutas/{route_id}/mapa")
-def get_route_map(route_id: int, distrito_id: int = Query(...), fecha: str | None = Query(None),
+def get_route_map(route_id: int, distrito_id: int = Query(...), fecha: date | None = Query(None),
                   user: dict = Depends(require_permission("distribucion.ver"))):
     return ok(repository.route_map(route_id, distrito_id, fecha))
 
 
 @router.get("/distribucion-geografica/distrito/{district_id}/mapa-todas")
-def get_all_routes_map(district_id: int, fecha: str | None = Query(None),
+def get_all_routes_map(district_id: int, fecha: date | None = Query(None),
                        user: dict = Depends(require_permission("distribucion.ver"))):
     return ok(repository.all_routes_map(district_id, fecha))
+
+
+@router.get("/distribucion-geografica/mapa")
+def get_global_map(fecha: date | None = Query(None),
+                   user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.global_map(fecha))
 
 
 @router.put("/distribucion-geografica/rutas/{route_id}/trazado")
@@ -72,6 +80,11 @@ def put_route_trace(route_id: int, payload: RouteTraceInput,
 def put_place_location(place_id: int, payload: PlaceLocationInput,
                        user: dict = Depends(require_permission("distribucion.editar"))):
     return ok(repository.update_place_location(place_id, payload.model_dump(), int(user["id"])), "Ubicación guardada correctamente")
+
+
+@router.delete("/distribucion-geografica/lugares/{place_id}/ubicacion")
+def delete_place_location(place_id: int, user: dict = Depends(require_permission("distribucion.editar"))):
+    return ok(repository.remove_place_location(place_id, int(user["id"])), "Ubicación eliminada correctamente")
 
 
 @router.get("/distribucion-geografica/puntos")
