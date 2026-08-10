@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from app.core.responses import ok
 from app.middleware.auth import current_user, require_permission
@@ -262,3 +262,21 @@ def distributions_dashboard(
     user: dict = Depends(require_permission("tablero_distribucion.ver")),
 ):
     return ok(repository.get_distributions_dashboard())
+
+
+@router.delete("/distribucion-tablero/dashboard/{turno_id}")
+def delete_distribution_from_dashboard(
+    turno_id: int,
+    fecha_distribucion: str = Query(...),
+    request: Request = None,
+    user: dict = Depends(require_permission("tablero_distribucion.eliminar")),
+):
+    import re as _re
+    from datetime import date as _date
+    fecha = _date.fromisoformat(fecha_distribucion) if _re.match(r'^\d{4}-\d{2}-\d{2}$', fecha_distribucion) else None
+    if not fecha:
+        raise HTTPException(422, "Fecha de distribucion invalida")
+
+    ip = request.client.host if request and request.client else None
+    deleted = repository.delete_distribution_group(turno_id, fecha, int(user["id"]), ip)
+    return ok(None, f"{deleted} distribucion(es) eliminada(s) correctamente")

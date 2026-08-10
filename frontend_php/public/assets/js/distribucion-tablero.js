@@ -442,5 +442,17 @@
     });
     if (catalogs.distritos?.length === 1) $('#tdDistrict').value = String(catalogs.distritos[0].id);
     if (catalogs.turnos?.length === 1) $('#tdShift').value = String(catalogs.turnos[0].id);
-    if ($('#tdDistrict').value && $('#tdShift').value) loadBoard();
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const preDistrict = urlParams.get('distrito_id');
+    const preShift = urlParams.get('turno_id');
+    if (preDistrict) {
+        const distSel = $('#tdDistrict');
+        if (distSel) distSel.value = preDistrict;
+    }
+    if (preShift) {
+        const shiftSel = $('#tdShift');
+        if (shiftSel) shiftSel.value = preShift;
+    }
+    if (($('#tdDistrict').value && $('#tdShift').value) || (preDistrict && preShift)) loadBoard();
 })();

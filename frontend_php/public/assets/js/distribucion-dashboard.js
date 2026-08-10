@@ -4,19 +4,29 @@
     const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
     if (!$('.dd-app')) return;
 
-    function esc(v) { const n = document.createElement('div'); n.textContent = v ?? ''; return n.innerHTML; }
     function notify(msg, err = false) {
         const t = $('#ddToast'); if (!t) return;
         t.textContent = msg; t.classList.toggle('is-error', err); t.classList.add('is-visible');
         clearTimeout(notify._t); notify._t = setTimeout(() => t.classList.remove('is-visible'), 3500);
     }
 
+    async function apiFetch(resource, opts = {}) {
+        const res = await fetch(`/distribucion-dashboard/api?resource=${encodeURIComponent(resource)}`, {
+            method: opts.method || 'GET',
+            headers: opts.body ? {'Content-Type': 'application/json'} : {},
+            body: opts.body ? JSON.stringify(opts.body) : undefined,
+        });
+        const data = await res.json().catch(() => ({ok: false, mensaje: 'Error de conexion'}));
+        if (!res.ok || data.ok !== true) throw new Error(data.mensaje || data.detail || 'Error');
+        return data.datos;
+    }
+
     $$('.dd-card-header').forEach(header => {
-        header.addEventListener('click', () => {
-            const card = header.closest('.dd-card');
-            const id = card?.dataset.distId;
-            const detail = $(`#ddDetail-${id}`);
-            const toggle = $('[data-toggle-dist]', card);
+        header.addEventListener('click', (e) => {
+            if (e.target.closest('.dd-card-actions')) return;
+            const groupKey = header.dataset.toggleGroup;
+            const detail = $(`#ddDetail-${CSS.escape(groupKey)}`);
+            const toggle = header.querySelector('.dd-card-toggle');
             if (!detail) return;
             const expanded = !detail.hidden;
             detail.hidden = expanded;
@@ -24,36 +34,55 @@
         });
     });
 
+    $$('.dd-card-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (!confirm('¿Eliminar esta distribucion y cancelar sus asignaciones?')) return;
+            try {
+                const info = JSON.parse(btn.dataset.deleteGroup);
+                await apiFetch(`distribucion-tablero/dashboard/${info.turno_id}?fecha_distribucion=${encodeURIComponent(info.fecha)}`, {
+                    method: 'DELETE',
+                });
+                btn.closest('.dd-card')?.remove();
+                notify('Distribucion eliminada correctamente.');
+                setTimeout(() => window.location.reload(), 600);
+            } catch (err) { notify(err.message, true); }
+        });
+    });
+
+    $$('.dd-card-pdf').forEach(btn => {
+        btn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const section = $(`#ddPrint-${CSS.escape(btn.dataset.pdfGroup)}`);
+            if (!section) return notify('No se encontró el detalle de esta distribución.', true);
+            $$('.dd-print-section').forEach(item => item.classList.remove('is-printing'));
+            section.classList.add('is-printing');
+            const cleanup = () => {
+                section.classList.remove('is-printing');
+                window.removeEventListener('afterprint', cleanup);
+            };
+            window.addEventListener('afterprint', cleanup);
+            window.print();
+        });
+    });
+
     const searchInput = $('#ddSearch');
     const filterEstado = $('#ddFilterEstado');
-    const filterCobertura = $('#ddFilterCobertura');
 
     function applyFilters() {
         const query = searchInput?.value?.trim().toLowerCase() || '';
         const estado = filterEstado?.value || '';
-        const cobertura = filterCobertura?.value || '';
         $$('.dd-card').forEach(card => {
             const text = card.textContent.toLowerCase();
             const matchesSearch = !query || text.includes(query);
-            const id = card.dataset.distId;
-            const detail = $(`#ddDetail-${id}`);
-            const estadoText = card.querySelector('.dd-status-label')?.textContent?.toUpperCase() || '';
             let matchesEstado = true;
-            if (estado === 'COMPLETA') matchesEstado = card.classList.contains('dd-card-complete');
-            else if (estado === 'PARCIAL') matchesEstado = card.classList.contains('dd-card-incomplete');
-            else if (estado === 'BORRADOR') matchesEstado = text.includes('borrador');
-            let matchesCobertura = true;
-            if (cobertura === '100') {
-                const pct = parseInt(card.querySelector('.dd-card-coverage strong')?.textContent || '0');
-                matchesCobertura = pct >= 100;
-            } else if (cobertura === 'incomplete') {
-                matchesCobertura = card.classList.contains('dd-card-incomplete');
-            }
-            card.style.display = (matchesSearch && matchesEstado && matchesCobertura) ? '' : 'none';
+            if (estado === 'completa') matchesEstado = card.classList.contains('dd-card-complete');
+            else if (estado === 'incompleta') matchesEstado = card.classList.contains('dd-card-incomplete');
+            card.style.display = (matchesSearch && matchesEstado) ? '' : 'none';
         });
     }
 
     searchInput?.addEventListener('input', applyFilters);
     filterEstado?.addEventListener('change', applyFilters);
-    filterCobertura?.addEventListener('change', applyFilters);
+
 })();

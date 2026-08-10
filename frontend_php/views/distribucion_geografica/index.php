@@ -15,6 +15,7 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
         <form class="geo-filters" id="geoFilters">
             <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un distrito primero</option></select></label>
+            <label>Fecha distribución<input type="date" id="filterDate" value="<?= date('Y-m-d') ?>"></label>
             <div class="geo-filter-actions">
                 <?php if ($canTrace): ?><button class="geo-primary" type="button" id="btnTrace" disabled>⌁ Asignar trazado</button><?php endif; ?>
                 <?php if ($canEdit): ?><button class="geo-primary" type="button" id="btnLocation" disabled>⌖ Asignar ubicación</button><?php endif; ?>

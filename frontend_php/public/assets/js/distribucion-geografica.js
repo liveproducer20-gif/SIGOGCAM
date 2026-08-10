@@ -8,7 +8,7 @@
     const permissions = { trace: app.dataset.canTrace === '1', edit: app.dataset.canEdit === '1' };
     const colors = { ASIGNADO: '#22a447', PENDIENTE: '#f59e0b', NOVEDAD: '#dc3545', INACTIVO: '#8c98a8' };
     let map, routeLayer, markerLayer, editLayer, temporaryMarker;
-    let selection = { districtId: null, districtName: '', routeId: null, routeName: '' };
+    let selection = { districtId: null, districtName: '', routeId: null, routeName: '', fecha: new Date().toISOString().slice(0, 10) };
     let mapData = null, mode = null, tracePoints = [], pendingLocation = null;
 
     async function api(resource, options = {}) {
@@ -78,38 +78,93 @@
     $('#filterDistrict')?.addEventListener('change', async event => {
         const routeSelect = $('#filterRoute');
         resetMap();
+        const fechaVal = $('#filterDate')?.value || new Date().toISOString().slice(0, 10);
         selection = { districtId: event.target.value ? Number(event.target.value) : null,
-            districtName: event.target.selectedOptions[0]?.textContent || '', routeId: null, routeName: '' };
+            districtName: event.target.selectedOptions[0]?.textContent || '', routeId: null, routeName: '', fecha: fechaVal };
         routeSelect.innerHTML = '<option value="">Seleccione una ruta</option>';
         routeSelect.disabled = true;
         if (!selection.districtId) return;
         try {
             const routes = await api(`distritos/${selection.districtId}/rutas`) || [];
+            routeSelect.add(new Option('Todas las Rutas', 'all'), 0);
             routes.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
             routeSelect.disabled = false;
-            if (routes.length) {
-                routeSelect.value = String(routes[0].id);
-                routeSelect.dispatchEvent(new Event('change'));
-            }
+            routeSelect.value = 'all';
+            routeSelect.dispatchEvent(new Event('change'));
         } catch (error) { notify(error.message, true); }
     });
 
     $('#filterRoute')?.addEventListener('change', async event => {
         resetMap();
-        selection.routeId = event.target.value ? Number(event.target.value) : null;
-        selection.routeName = event.target.selectedOptions[0]?.textContent || '';
-        if (!selection.districtId || !selection.routeId) return;
-        await loadRouteMap();
+        const val = event.target.value;
+        selection.routeId = val === 'all' ? null : (val ? Number(val) : null);
+        selection.routeName = val === 'all' ? 'Todas las Rutas' : (event.target.selectedOptions[0]?.textContent || '');
+        selection.showAll = val === 'all';
+        if (!selection.districtId) return;
+        if (selection.showAll) {
+            await loadAllRoutesMap();
+        } else if (selection.routeId) {
+            await loadRouteMap();
+        }
     });
+
+    $('#filterDate')?.addEventListener('change', async () => {
+        const fechaVal = $('#filterDate')?.value || new Date().toISOString().slice(0, 10);
+        selection.fecha = fechaVal;
+        if (!selection.districtId) return;
+        resetMap();
+        if (selection.showAll) {
+            await loadAllRoutesMap();
+        } else if (selection.routeId) {
+            await loadRouteMap();
+        }
+    });
+
+    async function loadAllRoutesMap() {
+        try {
+            mapData = await api(`distribucion-geografica/distrito/${selection.districtId}/mapa-todas?fecha=${encodeURIComponent(selection.fecha || '')}`);
+            renderAllRoutesMap();
+        } catch (error) {
+            resetMap();
+            notify(error.message, true);
+        }
+    }
 
     async function loadRouteMap() {
         try {
-            mapData = await api(`distribucion-geografica/rutas/${selection.routeId}/mapa?distrito_id=${selection.districtId}`);
+            mapData = await api(`distribucion-geografica/rutas/${selection.routeId}/mapa?distrito_id=${selection.districtId}&fecha=${encodeURIComponent(selection.fecha || '')}`);
             renderRouteMap();
         } catch (error) {
             resetMap();
             notify(error.message, true);
         }
+    }
+
+    function renderAllRoutesMap() {
+        routeLayer.clearLayers();
+        markerLayer.clearLayers();
+        editLayer.clearLayers();
+        const trazados = mapData?.trazados || [];
+        const places = mapData?.lugares || [];
+        const rutas = mapData?.rutas || [];
+        trazados.forEach(item => {
+            const trace = item.trace;
+            if (trace?.geojson) {
+                try {
+                    const geojson = typeof trace.geojson === 'string' ? JSON.parse(trace.geojson) : trace.geojson;
+                    L.geoJSON(geojson, { style: { color: trace.color || '#2563EB', weight: Number(trace.grosor || 6), opacity: Number(trace.opacidad || .55) } }).addTo(routeLayer);
+                } catch (_) {}
+            }
+        });
+        places.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
+        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
+        $('#statRegistered').textContent = String(places.length);
+        $('#statCovered').textContent = String(places.filter(p => p.agente_id).length);
+        $('#statUnassigned').textContent = String(places.filter(p => !p.agente_id).length);
+        $('#statPersonnel').textContent = String(new Set(places.filter(p => p.agente_id).map(p => p.agente_id)).size);
+        $('#statRoutes').textContent = String(rutas.length);
+        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
     }
 
     function renderRouteMap() {
@@ -163,9 +218,10 @@
     function showPlaceDetail(place) {
         const detail = $('#geoDetail');
         if (!detail) return;
+        const routeLabel = place.route_name || selection.routeName || '';
         detail.innerHTML = `<header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
             <div class="geo-point-head"><div class="geo-point-avatar">⌖</div><div><span class="geo-status">${place.agente_id ? 'Asignado' : 'Pendiente'}</span><h3>${esc(place.nombre)}</h3><small>${esc(place.direccion_referencial || '')}</small></div></div>
-            <div class="geo-detail-list"><dl><dt>Ruta</dt><dd>${esc(selection.routeName)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
+            <div class="geo-detail-list"><dl><dt>Ruta</dt><dd>${esc(routeLabel)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
             <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignar')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
             <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : 'Pendiente'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>`;
         detail.classList.add('is-open');

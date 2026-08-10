@@ -1228,8 +1228,41 @@ def delete_distribution(distribution_id: int, user_id: int, ip: str | None = Non
         _audit(cursor, user_id, "ELIMINAR_DISTRIBUCION", str(distribution_id), {"ip": ip})
 
 
+def delete_distribution_group(turno_id: int, distribution_date: date, user_id: int, ip: str | None = None) -> int:
+    """Soft-delete every district record that belongs to one dashboard distribution."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        cursor.execute("""
+            SELECT id FROM dbo.distribuciones_personal WITH (UPDLOCK, HOLDLOCK)
+            WHERE turno_id=? AND fecha_distribucion=? AND deleted_at IS NULL
+        """, turno_id, distribution_date)
+        distribution_ids = [int(row[0]) for row in cursor.fetchall()]
+        if not distribution_ids:
+            raise HTTPException(404, "No se encontro la distribucion para ese turno y fecha")
+        placeholders = ",".join("?" for _ in distribution_ids)
+        cursor.execute(f"""
+            UPDATE ar SET estado='CANCELADA', deleted_at=SYSDATETIME(), fecha_actualizacion=SYSDATETIME()
+            FROM dbo.asignaciones_ruta ar
+            INNER JOIN dbo.distribucion_personal_detalle dd ON dd.asignacion_ruta_id=ar.id
+            WHERE dd.distribucion_id IN ({placeholders}) AND ar.deleted_at IS NULL
+        """, *distribution_ids)
+        cursor.execute(f"""UPDATE dbo.distribucion_personal_detalle
+                            SET deleted_at=SYSDATETIME(), fecha_actualizacion=SYSDATETIME()
+                            WHERE distribucion_id IN ({placeholders}) AND deleted_at IS NULL""", *distribution_ids)
+        cursor.execute(f"""UPDATE dbo.distribuciones_personal
+                            SET estado='ELIMINADA', eliminado_por=?, deleted_at=SYSDATETIME(), fecha_actualizacion=SYSDATETIME()
+                            WHERE id IN ({placeholders}) AND deleted_at IS NULL""", user_id, *distribution_ids)
+        for distribution_id in distribution_ids:
+            _audit(cursor, user_id, "ELIMINAR_DISTRIBUCION", str(distribution_id), {
+                "ip": ip, "fecha_distribucion": str(distribution_date), "turno_id": turno_id,
+                "eliminacion_desde": "dashboard",
+            })
+        return len(distribution_ids)
+
+
 def get_distributions_dashboard() -> dict:
-    """List all active distributions with completeness analysis per district."""
+    """Group distributions by date/shift and include every operational district for that shift."""
     with get_connection() as connection:
         cursor = connection.cursor()
 
@@ -1245,78 +1278,125 @@ def get_distributions_dashboard() -> dict:
             INNER JOIN dbo.turnos t ON t.id = dp.turno_id
             LEFT JOIN dbo.vw_personal_detalle vp ON vp.id = dp.creado_por
             WHERE dp.deleted_at IS NULL
-            ORDER BY dp.fecha_creacion DESC
+            ORDER BY dp.fecha_distribucion DESC, t.nombre, d.nombre
         """)
         distributions = _rows(cursor)
 
-        result = []
+        groups: dict[str, dict] = {}
         for dist in distributions:
-            dist_id = int(dist["id"])
+            fecha = str(dist["fecha_distribucion"]) if dist["fecha_distribucion"] else ""
+            turno_id = int(dist["turno_id"])
+            group_key = f"{fecha}:{turno_id}"
 
-            cursor.execute("""
-                SELECT dd.ruta_id, r.nombre AS ruta, dd.lugar_id, ls.nombre AS lugar,
-                       dd.cantidad_requerida, dd.agente_id, vp.nombre_completo AS agente,
-                       dd.tipo_asignacion, dd.estado AS detalle_estado
-                FROM dbo.distribucion_personal_detalle dd
-                INNER JOIN dbo.rutas r ON r.id = dd.ruta_id
-                INNER JOIN dbo.lugares_servicio ls ON ls.id = dd.lugar_id
-                LEFT JOIN dbo.vw_personal_detalle vp ON vp.id = dd.agente_id
-                WHERE dd.distribucion_id = ? AND dd.deleted_at IS NULL
-                ORDER BY r.nombre, ls.nombre
-            """, dist_id)
-            detalles = _rows(cursor)
-
-            by_ruta: dict[int, dict] = {}
-            for det in detalles:
-                rid = int(det["ruta_id"])
-                if rid not in by_ruta:
-                    by_ruta[rid] = {"ruta_id": rid, "ruta": det["ruta"], "lugares": [], "requerido": 0, "asignado": 0, "pendiente": 0}
-                lugar_info = {
-                    "lugar_id": int(det["lugar_id"]), "lugar": det["lugar"],
-                    "requerido": int(det["cantidad_requerida"] or 0),
-                    "agente_id": int(det["agente_id"]) if det["agente_id"] else None,
-                    "agente": det["agente"], "tipo_asignacion": det["tipo_asignacion"],
-                    "estado": det["detalle_estado"],
+            if group_key not in groups:
+                groups[group_key] = {
+                    "fecha_distribucion": fecha,
+                    "turno_id": turno_id,
+                    "turno": dist["turno"],
+                    "creado_por": dist["creado_por"],
+                    "fecha_creacion": str(dist["fecha_creacion"]) if dist["fecha_creacion"] else None,
+                    "distritos": [],
+                    "total_requerido": 0,
+                    "total_asignado": 0,
                 }
-                by_ruta[rid]["lugares"].append(lugar_info)
-                by_ruta[rid]["requerido"] += lugar_info["requerido"]
-                if lugar_info["agente_id"]:
-                    by_ruta[rid]["asignado"] += 1
-                else:
-                    by_ruta[rid]["pendiente"] += 1
 
-            rutas = list(by_ruta.values())
-            total_requerido = int(dist["total_requerido"] or 0)
-            total_asignado = int(dist["total_asignado"] or 0)
-            pendientes = max(0, total_requerido - total_asignado)
-            incompletas = []
-            for ruta in rutas:
-                for lugar in ruta["lugares"]:
-                    if not lugar["agente_id"]:
-                        incompletas.append({
-                            "ruta": ruta["ruta"], "lugar": lugar["lugar"],
-                            "requerido": lugar["requerido"],
-                        })
+            groups[group_key].setdefault("registros", {})[int(dist["distrito_id"])] = int(dist["id"])
 
-            es_completa = pendientes == 0 and total_requerido > 0
+        result = []
+        for key, group in groups.items():
+            cursor.execute("""
+                SELECT d.id AS distrito_id, d.nombre AS distrito, dp.id AS distribucion_id,
+                       r.id AS ruta_id, r.nombre AS ruta, ls.id AS lugar_id, ls.nombre AS lugar,
+                       ls.cantidad_requerida, dd.id AS detalle_id, dd.agente_id,
+                       vp.nombre_completo AS agente,
+                       COALESCE(ar.hora_inicio, t.hora_inicio, r.hora_inicio, ls.hora_inicio) AS hora_ingreso,
+                       COALESCE(ar.hora_fin, t.hora_fin, r.hora_fin, ls.hora_fin) AS hora_salida,
+                       ls.consignas, COALESCE(ar.observacion, ls.observacion) AS observaciones
+                FROM dbo.catalogo_detalles d
+                INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id AND c.codigo='DISTRITOS' AND c.estado=1
+                LEFT JOIN dbo.rutas r ON r.distrito_id=d.id AND r.activo=1 AND r.turno_id=?
+                LEFT JOIN dbo.lugares_servicio ls ON ls.ruta_id=r.id AND ls.activo=1
+                LEFT JOIN dbo.distribuciones_personal dp ON dp.distrito_id=d.id AND dp.turno_id=?
+                    AND dp.fecha_distribucion=? AND dp.deleted_at IS NULL
+                LEFT JOIN dbo.distribucion_personal_detalle dd ON dd.distribucion_id=dp.id
+                    AND dd.ruta_id=r.id AND dd.lugar_id=ls.id AND dd.deleted_at IS NULL
+                LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=dd.agente_id
+                LEFT JOIN dbo.asignaciones_ruta ar ON ar.id=dd.asignacion_ruta_id AND ar.deleted_at IS NULL
+                LEFT JOIN dbo.turnos t ON t.id=?
+                WHERE d.estado=1
+                ORDER BY d.nombre, r.nombre, ls.nombre, dd.id
+            """, group["turno_id"], group["turno_id"], group["fecha_distribucion"], group["turno_id"])
+            rows = _rows(cursor)
+            by_district: dict[int, dict] = {}
+            place_requirements: dict[int, dict[int, int]] = {}
+            route_lookup: dict[int, dict[int, dict]] = {}
+            for row in rows:
+                district_id = int(row["distrito_id"])
+                if district_id not in by_district:
+                    by_district[district_id] = {
+                        "id": int(row["distribucion_id"]) if row["distribucion_id"] is not None else None,
+                        "distrito_id": district_id, "distrito": row["distrito"], "total_asignado": 0,
+                        "rutas": [],
+                    }
+                    place_requirements[district_id] = {}
+                    route_lookup[district_id] = {}
+                district = by_district[district_id]
+                if row["lugar_id"] is None:
+                    continue
+                place_id = int(row["lugar_id"])
+                place_requirements[district_id][place_id] = max(1, int(row["cantidad_requerida"] or 1))
+                if row["agente_id"] is not None:
+                    district["total_asignado"] += 1
+                route_id = int(row["ruta_id"])
+                if route_id not in route_lookup[district_id]:
+                    route = {"id": route_id, "ruta": row["ruta"], "filas": []}
+                    route_lookup[district_id][route_id] = route
+                    district["rutas"].append(route)
+                route_lookup[district_id][route_id]["filas"].append({
+                    "lugar": row["lugar"], "agente": row["agente"] or "Sin asignar",
+                    "hora_ingreso": row["hora_ingreso"], "hora_salida": row["hora_salida"],
+                    "consignas": row["consignas"] or "—", "observaciones": row["observaciones"] or "—",
+                })
+
+            dists = []
+            group["total_requerido"] = 0
+            group["total_asignado"] = 0
+            for district_id, district in by_district.items():
+                required = sum(place_requirements[district_id].values())
+                assigned = int(district["total_asignado"])
+                pending = max(0, required - assigned)
+                complete = district["id"] is not None and required > 0 and pending == 0
+                district.update({
+                    "estado": "COMPLETA" if complete else "INCOMPLETA",
+                    "porcentaje_cobertura": round(assigned / required * 100, 1) if required else 0,
+                    "total_requerido": required, "pendientes": pending, "es_completa": complete,
+                })
+                dists.append(district)
+                group["total_requerido"] += required
+                group["total_asignado"] += assigned
+            total_req = group["total_requerido"]
+            total_asg = group["total_asignado"]
+            total_pend = max(0, total_req - total_asg)
+            cobertura = round(total_asg / total_req * 100, 1) if total_req > 0 else 0
+            todos_completos = bool(dists) and all(d["es_completa"] for d in dists)
+            nombre = f"DISTRIBUCION FECHA {group['fecha_distribucion']}" if group["fecha_distribucion"] else "Sin fecha"
+
             result.append({
-                "id": dist_id,
-                "nombre": dist["nombre"],
-                "fecha_distribucion": str(dist["fecha_distribucion"]) if dist["fecha_distribucion"] else None,
-                "estado": dist["estado"],
-                "porcentaje_cobertura": float(dist["porcentaje_cobertura"] or 0),
-                "total_requerido": total_requerido,
-                "total_asignado": total_asignado,
-                "pendientes": pendientes,
-                "fecha_creacion": str(dist["fecha_creacion"]) if dist["fecha_creacion"] else None,
-                "distrito": dist["distrito"],
-                "turno": dist["turno"],
-                "creado_por": dist["creado_por"],
-                "es_completa": es_completa,
-                "rutas": rutas,
-                "lugares_pendientes": incompletas,
-                "total_rutas": len(rutas),
-                "rutas_completas": sum(1 for r in rutas if r["pendiente"] == 0),
+                "id": f"{group['fecha_distribucion']}_{group['turno_id']}",
+                "nombre": nombre,
+                "fecha_distribucion": group["fecha_distribucion"],
+                "turno": group["turno"],
+                "turno_id": group["turno_id"],
+                "creado_por": group["creado_por"],
+                "fecha_creacion": group["fecha_creacion"],
+                "distritos": dists,
+                "total_requerido": total_req,
+                "total_asignado": total_asg,
+                "pendientes": total_pend,
+                "porcentaje_cobertura": cobertura,
+                "es_completa": todos_completos,
+                "total_distritos": len(dists),
+                "distritos_completos": sum(1 for d in dists if d["es_completa"]),
             })
 
         return {"distribuciones": result}

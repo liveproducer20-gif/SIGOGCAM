@@ -39,10 +39,10 @@ final class DistribucionDashboardController
             'distributions' => $distributions,
             'error' => $error,
             'pageStyles' => [
-                '/assets/css/distribucion-dashboard.css',
+                '/assets/css/distribucion-dashboard.css?v=' . (int)@filemtime(dirname(__DIR__, 3) . '/public/assets/css/distribucion-dashboard.css'),
             ],
             'pageScripts' => [
-                '/assets/js/distribucion-dashboard.js',
+                '/assets/js/distribucion-dashboard.js?v=' . (int)@filemtime(dirname(__DIR__, 3) . '/public/assets/js/distribucion-dashboard.js'),
             ],
         ]);
     }

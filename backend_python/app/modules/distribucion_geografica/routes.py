@@ -50,8 +50,15 @@ def get_service_places(route_id: int, distrito_id: int | None = None, user: dict
 
 
 @router.get("/distribucion-geografica/rutas/{route_id}/mapa")
-def get_route_map(route_id: int, distrito_id: int = Query(...), user: dict = Depends(require_permission("distribucion.ver"))):
-    return ok(repository.route_map(route_id, distrito_id))
+def get_route_map(route_id: int, distrito_id: int = Query(...), fecha: str | None = Query(None),
+                  user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.route_map(route_id, distrito_id, fecha))
+
+
+@router.get("/distribucion-geografica/distrito/{district_id}/mapa-todas")
+def get_all_routes_map(district_id: int, fecha: str | None = Query(None),
+                       user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.all_routes_map(district_id, fecha))
 
 
 @router.put("/distribucion-geografica/rutas/{route_id}/trazado")
