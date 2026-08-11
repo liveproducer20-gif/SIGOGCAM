@@ -151,10 +151,21 @@
         const amount = controls.querySelector('select');
         const counter = controls.querySelector('.table-counter');
         const [previous, next] = controls.querySelectorAll('.table-pagination button');
+        const searchCols = table.hasAttribute('data-search-cols')
+            ? table.getAttribute('data-search-cols').split(',').map(Number)
+            : null;
         let page = 0;
         const render = () => {
             const term = search.value.trim().toLowerCase();
-            const filtered = rows.filter((row) => row.textContent.toLowerCase().includes(term));
+            const filtered = rows.filter((row) => {
+                if (searchCols) {
+                    return searchCols.some((ci) => {
+                        const cell = row.cells[ci];
+                        return cell && cell.textContent.toLowerCase().includes(term);
+                    });
+                }
+                return row.textContent.toLowerCase().includes(term);
+            });
             const size = Number(amount.value);
             const pages = Math.max(1, Math.ceil(filtered.length / size));
             page = Math.min(page, pages - 1);
