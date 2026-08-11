@@ -23,23 +23,23 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
                     <span class="geo-filter-label">Visualización de trazado</span>
                     <button class="geo-service-toggle" type="button" id="geoLayerToggle" aria-expanded="false">
                         <svg class="geo-control-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-7.5 9L12 16.2l7.5-4.2M4.5 16 12 20.2l7.5-4.2"/></svg>
-                        <span class="geo-toggle-label">3 capas visibles</span><span class="geo-chevron" aria-hidden="true">▾</span>
+                        <span class="geo-toggle-label">0 capas visibles</span><span class="geo-chevron" aria-hidden="true">▾</span>
                     </button>
-                    <div class="geo-service-menu" id="geoLayerMenu" hidden><div class="geo-service-options" id="geoLayerOptions">
-                        <label><input type="checkbox" value="district" checked> <span>Distrito</span></label>
-                        <label><input type="checkbox" value="circuit" checked> <span>Circuito</span></label>
-                        <label><input type="checkbox" value="route" checked> <span>Ruta</span></label>
-                    </div></div>
+                <div class="geo-service-menu" id="geoLayerMenu" hidden><div class="geo-service-options" id="geoLayerOptions">
+                    <label><input type="checkbox" value="district"> <span>Distrito</span></label>
+                    <label><input type="checkbox" value="circuit"> <span>Circuito</span></label>
+                    <label><input type="checkbox" value="route"> <span>Ruta</span></label>
+                </div></div>
                 </div>
                 <div class="geo-service-filter" id="geoServiceFilter">
                     <span class="geo-filter-label">Tipos de servicio</span>
                     <button class="geo-service-toggle" type="button" id="geoServiceToggle" aria-expanded="false">
                         <svg class="geo-control-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
-                        <span class="geo-toggle-label">Todos los tipos</span><span class="geo-chevron" aria-hidden="true">▾</span>
+                        <span class="geo-toggle-label">Sin tipos</span><span class="geo-chevron" aria-hidden="true">▾</span>
                     </button>
                     <div class="geo-service-menu" id="geoServiceMenu" hidden>
                         <div class="geo-service-options" id="geoServiceOptions">
-                            <?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><label><input type="checkbox" value="<?= $esc($item['nombre']) ?>" checked> <span><?= $esc($item['nombre']) ?></span></label><?php endforeach; ?>
+                            <?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><label><input type="checkbox" value="<?= $esc($item['nombre']) ?>"> <span><?= $esc($item['nombre']) ?></span></label><?php endforeach; ?>
                         </div>
                         <div class="geo-service-actions"><button type="button" id="geoSelectAllTypes">Seleccionar todos</button><button type="button" id="geoClearTypes">Limpiar selección</button></div>
                     </div>

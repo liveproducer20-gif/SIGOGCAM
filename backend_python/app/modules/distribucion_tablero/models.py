@@ -53,6 +53,16 @@ class RouteManagerInput(BaseModel):
     tipo_asignacion: str = Field(default="MANUAL", max_length=40)
 
 
+class CircuitManagerInput(BaseModel):
+    circuito_id: int = Field(gt=0)
+    usar_encargado_distrito: bool = False
+    agente_id: int = Field(gt=0)
+    auxiliar_1_id: int | None = Field(default=None, gt=0)
+    auxiliar_2_id: int | None = Field(default=None, gt=0)
+    movil_id: int | None = Field(default=None, gt=0)
+    tipo_asignacion: str = Field(default="MANUAL", max_length=40)
+
+
 class RandomDraftInput(BaseModel):
     distrito_id: int = Field(gt=0)
     turno_id: int = Field(gt=0)
@@ -67,6 +77,7 @@ class SaveDistributionInput(BaseModel):
     fecha_distribucion: date
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
     encargado_distrito_id: int | None = Field(default=None, gt=0)
+    encargados_circuito: list[CircuitManagerInput] = Field(default_factory=list)
     encargados_ruta: list[RouteManagerInput] = Field(default_factory=list)
     guardar_con_pendientes: bool = False
 

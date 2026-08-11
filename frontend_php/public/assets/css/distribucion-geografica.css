@@ -165,16 +165,20 @@
 
 .geo-map-tools{position:absolute;z-index:510;right:10px;top:10px;max-width:calc(100% - 82px);display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
 .geo-map-tools>span{box-sizing:border-box;display:inline-flex;align-items:center;height:36px;padding:0 11px;border:1px solid #d5dfea;border-radius:7px;background:#fff;color:#263f60;font-size:10px;font-weight:700;box-shadow:0 2px 8px rgba(20,44,70,.1);white-space:nowrap}
-.geo-map-tools button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:36px!important;height:36px!important;padding:0!important;border:1px solid #d5dfea!important;color:#173f70!important;background:#fff!important;font-size:11px!important;font-weight:700!important;box-shadow:0 2px 8px rgba(20,44,70,.1);cursor:pointer;border-radius:7px;transition:background .15s,border-color .15s,box-shadow .15s}
-.geo-map-tools button:hover{background:#f4f8fd!important;border-color:#aec4dc!important;box-shadow:0 3px 10px rgba(20,44,70,.14)}
+.geo-map-tools button{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:36px!important;height:36px!important;padding:0!important;border:1px solid #d5dfea!important;color:#1a1a1a!important;background:#fff!important;font-size:13px!important;box-shadow:0 2px 8px rgba(20,44,70,.1);cursor:pointer;border-radius:7px;transition:background .15s,border-color .15s}
+.geo-map-tools button:hover{background:#f4f8fd!important;border-color:#aec4dc!important}
 .geo-map-tools button:disabled{opacity:.5;cursor:not-allowed;box-shadow:none}
 .geo-map-tools .geo-map-tool--label{width:auto!important;min-width:0;padding:0 11px!important;gap:7px;white-space:nowrap}
 .geo-map-tool-icon{width:17px;height:17px;flex:0 0 17px;fill:none;stroke:#1267d5;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .geo-map-tools .geo-trace-dropdown{position:relative}
-.geo-map-tools .geo-trace-dropdown>.geo-primary{display:inline-flex;align-items:center;gap:7px;width:auto!important;height:36px;padding:0 11px!important;border:1px solid #d5dfea!important;border-radius:7px!important;color:#173f70!important;background:#fff!important;font-size:11px!important;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(20,44,70,.1);transition:background .15s,border-color .15s,box-shadow .15s}
-.geo-map-tools .geo-trace-dropdown>.geo-primary:hover{background:#f0f7ff!important;border-color:#b0c4de!important}
+.geo-map-tools .geo-trace-dropdown>.geo-primary{display:inline-flex;align-items:center;gap:7px;width:auto!important;height:36px;padding:0 11px!important;border:1px solid #d5dfea!important;border-radius:7px!important;color:#1a1a1a!important;background:#fff!important;font-size:11px!important;font-weight:700;white-space:nowrap;cursor:pointer;box-shadow:0 2px 8px rgba(20,44,70,.1);transition:background .15s,border-color .15s}
+.geo-map-tools .geo-trace-dropdown>.geo-primary:hover{background:#f4f8fd!important;border-color:#aec4dc!important}
 .geo-map-tools .geo-trace-dropdown>.geo-primary:disabled{opacity:.5;cursor:not-allowed;background:#fff!important;box-shadow:none}
 .geo-map-tools .geo-trace-dropdown>.geo-primary span{font-size:9px;color:#5f7793}
+.geo-map-tools .geo-trace-menu{display:grid;grid-template-columns:1fr;gap:4px;min-width:166px;padding:6px}
+.geo-map-tools .geo-trace-menu[hidden]{display:none}
+.geo-map-tools .geo-trace-menu button{box-sizing:border-box;width:100%!important;height:34px!important;min-height:34px;padding:0 12px!important;display:flex;align-items:center;justify-content:center;border:0!important;border-radius:6px!important;color:#173f70!important;background:#fff!important;font-size:11px!important;font-weight:700!important;line-height:1.2;text-align:center;white-space:nowrap;box-shadow:none!important}
+.geo-map-tools .geo-trace-menu button:hover{color:#0d5fb8!important;background:#edf5ff!important}
 .geo-map-empty{position:absolute;z-index:510;inset:0;display:flex;align-items:center;justify-content:center;color:#8190a6;font-size:13px;background:rgba(238,242,246,.8);pointer-events:none}
 .geo-map-empty[hidden]{display:none!important}
 

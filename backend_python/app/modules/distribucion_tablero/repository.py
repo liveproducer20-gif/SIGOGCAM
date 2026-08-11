@@ -430,7 +430,7 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
             raise HTTPException(404, "El turno seleccionado no existe o no esta activo")
 
         cursor.execute("""
-            SELECT d.id, d.nombre, d.asignar_encargado
+            SELECT d.id, d.nombre, CAST(1 AS bit) AS asignar_encargado
             FROM dbo.catalogo_detalles d
             WHERE d.id = ? AND d.estado = 1
         """, district_id)
@@ -440,20 +440,38 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
 
         cursor.execute("""
             SELECT r.id, r.nombre, r.distrito_id, r.turno_id, r.asignar_encargado,
+                   cr.circuito_id, c.nombre AS circuito,
                    COALESCE(r.hora_inicio, t.hora_inicio) AS hora_inicio,
                    COALESCE(r.hora_fin, t.hora_fin) AS hora_fin,
                    COUNT(ls.id) AS lugares
             FROM dbo.rutas r
+            LEFT JOIN dbo.circuito_rutas cr ON cr.ruta_id=r.id AND cr.deleted_at IS NULL
+            LEFT JOIN dbo.circuitos c ON c.id=cr.circuito_id AND c.activo=1 AND c.deleted_at IS NULL
             LEFT JOIN dbo.turnos t ON t.id = ?
             LEFT JOIN dbo.lugares_servicio ls ON ls.ruta_id = r.id AND ls.activo = 1
                 AND (ls.turno_id IS NULL OR ls.turno_id = ?)
             WHERE r.activo = 1 AND r.distrito_id = ?
               AND (r.turno_id IS NULL OR r.turno_id = ?)
-            GROUP BY r.id, r.nombre, r.distrito_id, r.turno_id, r.asignar_encargado,
+            GROUP BY r.id, r.nombre, r.distrito_id, r.turno_id, r.asignar_encargado, cr.circuito_id, c.nombre,
                      COALESCE(r.hora_inicio, t.hora_inicio), COALESCE(r.hora_fin, t.hora_fin)
             ORDER BY r.nombre
         """, shift_id, shift_id, district_id, shift_id)
         routes = _rows(cursor)
+        cursor.execute("""
+            SELECT c.id,c.nombre,c.hora_inicio,c.hora_fin,c.lugar_formacion
+            FROM dbo.circuitos c
+            WHERE c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
+            ORDER BY c.nombre
+        """, district_id)
+        circuits = _rows(cursor)
+        cursor.execute("""
+            SELECT m.id,m.numero_movil,m.placa,tm.nombre AS tipo_movil,em.nombre AS estado_movil
+            FROM dbo.moviles m
+            LEFT JOIN dbo.catalogo_detalles tm ON tm.id=m.tipo_movil_id
+            LEFT JOIN dbo.catalogo_detalles em ON em.id=m.estado_movil_id
+            WHERE m.activo=1 ORDER BY m.numero_movil
+        """)
+        mobiles = _rows(cursor)
         distribution_id = None
         managers: list[dict] = []
         if distribution_date is not None:
@@ -465,15 +483,23 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
             if saved:
                 distribution_id = int(saved[0])
                 cursor.execute("""
-                    SELECT de.id, de.tipo_responsabilidad, de.ruta_id, de.requiere_encargado,
-                           de.agente_id, de.tipo_asignacion, vp.nombre_completo AS agente, vp.cedula
+                    SELECT de.id, de.tipo_responsabilidad, de.ruta_id, de.circuito_id,
+                           de.requiere_encargado,de.usar_encargado_distrito,
+                           de.agente_id, de.auxiliar_1_id,de.auxiliar_2_id,de.movil_id,
+                           de.tipo_asignacion, vp.nombre_completo AS agente, vp.cedula,
+                           a1.nombre_completo AS auxiliar_1,a1.cedula AS auxiliar_1_cedula,
+                           a2.nombre_completo AS auxiliar_2,a2.cedula AS auxiliar_2_cedula,
+                           m.numero_movil,m.placa
                     FROM dbo.distribucion_encargados de
                     LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=de.agente_id
+                    LEFT JOIN dbo.vw_personal_detalle a1 ON a1.id=de.auxiliar_1_id
+                    LEFT JOIN dbo.vw_personal_detalle a2 ON a2.id=de.auxiliar_2_id
+                    LEFT JOIN dbo.moviles m ON m.id=de.movil_id
                     WHERE de.distribucion_id=? AND de.deleted_at IS NULL
                     ORDER BY CASE WHEN de.tipo_responsabilidad='ENCARGADO_DISTRITO' THEN 0 ELSE 1 END, de.ruta_id
                 """, distribution_id)
                 managers = _rows(cursor)
-        return {"distrito": district, "turno": shift, "rutas": routes,
+        return {"distrito": district, "turno": shift, "circuitos": circuits, "moviles": mobiles, "rutas": routes,
                 "fecha_distribucion": distribution_date, "distribucion_id": distribution_id,
                 "encargados": managers}
 
@@ -632,22 +658,65 @@ def _validate_distribution_relations(cursor, district_id: int, shift_id: int, as
 
 
 def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dict) -> tuple[list[dict], list[int]]:
-    cursor.execute("SELECT asignar_encargado FROM dbo.catalogo_detalles WHERE id=? AND estado=1", district_id)
+    cursor.execute("SELECT id FROM dbo.catalogo_detalles WHERE id=? AND estado=1", district_id)
     district = cursor.fetchone()
     if not district:
         raise HTTPException(422, "El distrito seleccionado no es valido")
 
     district_manager_id = data.get("encargado_distrito_id")
+    if not district_manager_id:
+        raise HTTPException(422, "Debe asignar el encargado de distrito")
+    district_manager_id = int(district_manager_id)
     responsibilities: list[dict] = []
-    if bool(district[0]):
-        if not district_manager_id:
-            raise HTTPException(422, "Debe asignar el encargado de distrito")
+    responsibilities.append({
+        "tipo_responsabilidad": "ENCARGADO_DISTRITO", "ruta_id": None, "circuito_id": None,
+        "requiere_encargado": True, "agente_id": district_manager_id,
+        "auxiliar_1_id": None, "auxiliar_2_id": None, "movil_id": None,
+        "usar_encargado_distrito": False, "tipo_asignacion": "MANUAL",
+    })
+
+    cursor.execute("""
+        SELECT id,nombre FROM dbo.circuitos
+        WHERE distrito_id=? AND activo=1 AND deleted_at IS NULL ORDER BY nombre
+    """, district_id)
+    enabled_circuits = {int(row[0]): str(row[1]) for row in cursor.fetchall()}
+    circuit_inputs = data.get("encargados_circuito") or []
+    circuit_map: dict[int, dict] = {}
+    used_people: set[int] = {district_manager_id}
+    for item in circuit_inputs:
+        circuit_id = int(item["circuito_id"])
+        if circuit_id in circuit_map:
+            raise HTTPException(422, f"El circuito {circuit_id} tiene un encargado duplicado")
+        if circuit_id not in enabled_circuits:
+            raise HTTPException(422, f"El circuito {circuit_id} no pertenece al distrito seleccionado")
+        manager_id = int(item["agente_id"])
+        use_district = bool(item.get("usar_encargado_distrito"))
+        if use_district and manager_id != district_manager_id:
+            raise HTTPException(422, f"El encargado de {enabled_circuits[circuit_id]} debe coincidir con el encargado del distrito")
+        auxiliar_1_id = int(item["auxiliar_1_id"]) if item.get("auxiliar_1_id") else None
+        auxiliar_2_id = int(item["auxiliar_2_id"]) if item.get("auxiliar_2_id") else None
+        local_people = [person_id for person_id in (manager_id, auxiliar_1_id, auxiliar_2_id) if person_id]
+        if len(local_people) != len(set(local_people)):
+            raise HTTPException(422, f"No se puede repetir una persona dentro de {enabled_circuits[circuit_id]}")
+        for person_id in local_people:
+            if person_id == district_manager_id and use_district and person_id == manager_id:
+                continue
+            if person_id in used_people:
+                raise HTTPException(409, f"El agente {person_id} ya tiene otra responsabilidad en la distribucion")
+            used_people.add(person_id)
+        mobile_id = int(item["movil_id"]) if item.get("movil_id") else None
+        if mobile_id:
+            cursor.execute("SELECT id FROM dbo.moviles WHERE id=? AND activo=1", mobile_id)
+            if not cursor.fetchone():
+                raise HTTPException(422, f"El movil seleccionado para {enabled_circuits[circuit_id]} no esta activo")
+        circuit_map[circuit_id] = item
         responsibilities.append({
-            "tipo_responsabilidad": "ENCARGADO_DISTRITO", "ruta_id": None,
-            "requiere_encargado": True, "agente_id": int(district_manager_id), "tipo_asignacion": "MANUAL",
+            "tipo_responsabilidad": "ENCARGADO_CIRCUITO", "ruta_id": None, "circuito_id": circuit_id,
+            "requiere_encargado": True, "agente_id": manager_id,
+            "auxiliar_1_id": auxiliar_1_id, "auxiliar_2_id": auxiliar_2_id, "movil_id": mobile_id,
+            "usar_encargado_distrito": use_district,
+            "tipo_asignacion": str(item.get("tipo_asignacion") or "MANUAL").upper(),
         })
-    elif district_manager_id:
-        raise HTTPException(422, "El distrito no permite asignar encargado")
 
     cursor.execute("""
         SELECT id, nombre FROM dbo.rutas
@@ -679,13 +748,22 @@ def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dic
         raise HTTPException(422, "Una ruta solo puede quedar sin encargado cuando existe un encargado de distrito responsable")
     for route_id, item in route_map.items():
         responsibilities.append({
-            "tipo_responsabilidad": "ENCARGADO_RUTA", "ruta_id": route_id,
+            "tipo_responsabilidad": "ENCARGADO_RUTA", "ruta_id": route_id, "circuito_id": None,
             "requiere_encargado": bool(item.get("requiere_encargado")),
             "agente_id": int(item["agente_id"]) if item.get("agente_id") else None,
+            "auxiliar_1_id": None, "auxiliar_2_id": None, "movil_id": None,
+            "usar_encargado_distrito": False,
             "tipo_asignacion": str(item.get("tipo_asignacion") or "MANUAL").upper(),
         })
 
-    manager_ids = [int(item["agente_id"]) for item in responsibilities if item.get("agente_id")]
+    for item in responsibilities:
+        if item["tipo_responsabilidad"] != "ENCARGADO_RUTA" or not item.get("agente_id"):
+            continue
+        person_id = int(item["agente_id"])
+        if person_id in used_people:
+            raise HTTPException(409, f"El agente {person_id} ya tiene otra responsabilidad en la distribucion")
+        used_people.add(person_id)
+    manager_ids = sorted(used_people)
     return responsibilities, manager_ids
 
 
@@ -693,11 +771,13 @@ def _insert_responsibilities(cursor, distribution_id: int, district_id: int, res
     for item in responsibilities:
         cursor.execute("""
             INSERT INTO dbo.distribucion_encargados
-                (distribucion_id,distrito_id,ruta_id,tipo_responsabilidad,requiere_encargado,
-                 agente_id,tipo_asignacion,estado,creado_por,fecha_creacion)
-            VALUES (?,?,?,?,?,?,?,?,?,SYSDATETIME())
-        """, distribution_id, district_id, item["ruta_id"], item["tipo_responsabilidad"],
-             1 if item["requiere_encargado"] else 0, item["agente_id"], item["tipo_asignacion"],
+                (distribucion_id,distrito_id,ruta_id,circuito_id,tipo_responsabilidad,requiere_encargado,
+                 agente_id,auxiliar_1_id,auxiliar_2_id,movil_id,usar_encargado_distrito,
+                 tipo_asignacion,estado,creado_por,fecha_creacion)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,SYSDATETIME())
+        """, distribution_id, district_id, item["ruta_id"], item["circuito_id"], item["tipo_responsabilidad"],
+             1 if item["requiere_encargado"] else 0, item["agente_id"],item["auxiliar_1_id"],
+             item["auxiliar_2_id"],item["movil_id"],1 if item["usar_encargado_distrito"] else 0,item["tipo_asignacion"],
              "ASIGNADO" if item["agente_id"] else "NO_REQUERIDO", user_id)
 
 
@@ -773,9 +853,9 @@ def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
                 SELECT TOP 1 de.id
                 FROM dbo.distribucion_encargados de WITH (UPDLOCK, HOLDLOCK)
                 INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id
-                WHERE de.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                WHERE (de.agente_id=? OR de.auxiliar_1_id=? OR de.auxiliar_2_id=?) AND dp.fecha_distribucion=? AND dp.turno_id=?
                   AND de.deleted_at IS NULL AND dp.deleted_at IS NULL
-            """, agent_id, distribution_date, shift_id)
+            """, agent_id,agent_id,agent_id, distribution_date, shift_id)
             if cursor.fetchone():
                 raise HTTPException(409, f"El agente {agent_id} ya es encargado en la misma fecha y turno")
 
@@ -869,12 +949,21 @@ def get_distribution(distribution_id: int) -> dict:
         """, distribution_id)
         header["detalles"] = _rows(cursor)
         cursor.execute("""
-            SELECT de.id,de.tipo_responsabilidad,de.ruta_id,de.requiere_encargado,
-                   de.agente_id,de.tipo_asignacion,vp.nombre_completo AS agente,vp.cedula
+            SELECT de.id,de.tipo_responsabilidad,de.ruta_id,de.circuito_id,de.requiere_encargado,
+                   de.usar_encargado_distrito,de.agente_id,de.auxiliar_1_id,de.auxiliar_2_id,de.movil_id,
+                   de.tipo_asignacion,vp.nombre_completo AS agente,vp.cedula,
+                   a1.nombre_completo AS auxiliar_1,a1.cedula AS auxiliar_1_cedula,
+                   a2.nombre_completo AS auxiliar_2,a2.cedula AS auxiliar_2_cedula,
+                   m.numero_movil,m.placa,c.nombre AS circuito
             FROM dbo.distribucion_encargados de
             LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=de.agente_id
+            LEFT JOIN dbo.vw_personal_detalle a1 ON a1.id=de.auxiliar_1_id
+            LEFT JOIN dbo.vw_personal_detalle a2 ON a2.id=de.auxiliar_2_id
+            LEFT JOIN dbo.moviles m ON m.id=de.movil_id
+            LEFT JOIN dbo.circuitos c ON c.id=de.circuito_id
             WHERE de.distribucion_id=? AND de.deleted_at IS NULL
-            ORDER BY CASE WHEN de.tipo_responsabilidad='ENCARGADO_DISTRITO' THEN 0 ELSE 1 END,de.ruta_id
+            ORDER BY CASE de.tipo_responsabilidad WHEN 'ENCARGADO_DISTRITO' THEN 0 WHEN 'ENCARGADO_CIRCUITO' THEN 1 ELSE 2 END,
+                     de.circuito_id,de.ruta_id
         """, distribution_id)
         header["encargados"] = _rows(cursor)
         return header
@@ -970,9 +1059,9 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
                 SELECT TOP 1 de.id
                 FROM dbo.distribucion_encargados de WITH (UPDLOCK, HOLDLOCK)
                 INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id
-                WHERE de.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                WHERE (de.agente_id=? OR de.auxiliar_1_id=? OR de.auxiliar_2_id=?) AND dp.fecha_distribucion=? AND dp.turno_id=?
                   AND de.distribucion_id<>? AND de.deleted_at IS NULL AND dp.deleted_at IS NULL
-            """, agent_id, distribution_date, shift_id, distribution_id)
+            """, agent_id,agent_id,agent_id, distribution_date, shift_id, distribution_id)
             if cursor.fetchone():
                 raise HTTPException(409, f"El agente {agent_id} ya es encargado en la misma fecha y turno")
 
@@ -1184,13 +1273,14 @@ def get_agents_for_modal(data: dict) -> dict:
                 SELECT TOP 1 de.tipo_responsabilidad
                 FROM dbo.distribucion_encargados de
                 INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id
-                WHERE de.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                WHERE (de.agente_id=? OR de.auxiliar_1_id=? OR de.auxiliar_2_id=?)
+                  AND dp.fecha_distribucion=? AND dp.turno_id=?
                   AND de.deleted_at IS NULL AND dp.deleted_at IS NULL
-            """, agent_id, today, turno_id)
+            """, agent_id,agent_id,agent_id,today,turno_id)
             manager = cursor.fetchone()
             if manager:
                 disponible = False
-                motivo_no_disponible = "Ya asignado como encargado para esta fecha y turno"
+                motivo_no_disponible = "Ya tiene una responsabilidad para esta fecha y turno"
 
             if disponible and estado_laboral == "ACTIVO":
                 cursor.execute("""

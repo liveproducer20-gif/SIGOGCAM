@@ -18,6 +18,9 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             <label>Distrito
                 <select id="tdDistrict"><option value="">Seleccione distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
+            <label>Circuito
+                <select id="tdCircuit" disabled><option value="">Seleccione distrito</option></select>
+            </label>
             <label>Turno
                 <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
@@ -40,8 +43,17 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             <div class="td-empty-board" id="tdEmptyBoard"><span>⌖</span><strong>Seleccione una ruta</strong><p>Elija un distrito, turno y una ruta para comenzar la distribución.</p></div>
             <div id="tdRouteWorkspace" hidden>
                 <section class="td-manager-card" id="tdDistrictManagerCard" hidden>
-                    <div><small>RESPONSABILIDAD DEL DISTRITO</small><h3>Encargado de distrito</h3><p id="tdDistrictManagerValue">Sin asignar</p></div>
+                    <div class="td-manager-copy"><small>RESPONSABILIDAD DEL DISTRITO</small><h3>Encargado de distrito</h3><p id="tdDistrictManagerValue">Sin asignar</p>
+                        <div class="td-district-circuit-option" id="tdDistrictCircuitOption">
+                            <label><input id="tdDistrictAsCircuitManager" type="checkbox"> Asignar también como encargado de circuito</label>
+                            <select id="tdDistrictManagerCircuit"><option value="">Seleccione circuito</option></select>
+                        </div>
+                    </div>
                     <?php if ($canAssign): ?><div class="td-manager-actions"><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignDistrictManager" type="button">Asignar encargado de distrito</button><button class="td-btn td-btn-ghost td-btn-sm" id="tdRemoveDistrictManager" type="button" hidden>Quitar</button></div><?php endif; ?>
+                </section>
+                <section class="td-circuit-managers" id="tdCircuitManagersCard">
+                    <header><div><small>RESPONSABILIDAD OPERATIVA</small><h3>Encargados de circuito</h3></div><?php if ($canAssign): ?><button class="td-btn td-btn-primary td-btn-sm" id="tdAddCircuitManager" type="button">+ Agregar encargado de circuito</button><?php endif; ?></header>
+                    <div id="tdCircuitManagersList"><p class="td-empty-small">No existen encargados de circuito asignados.</p></div>
                 </section>
                 <div class="td-route-heading"><h2 id="tdRouteName">Ruta</h2><span id="tdRoutePlacesBadge">0 lugares</span></div>
                 <section class="td-manager-card td-route-manager" id="tdRouteManagerCard" hidden>
@@ -107,6 +119,20 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             <footer>
                 <button class="td-btn td-btn-ghost" type="button" data-close="tdAgentModal">Cancelar</button>
             </footer>
+        </div>
+    </div>
+
+    <div class="td-modal td-modal-md" id="tdCircuitManagerModal" hidden>
+        <div class="td-modal-dialog">
+            <header><div><small>Responsabilidad operativa</small><h3>Encargado de circuito</h3></div><button type="button" data-close="tdCircuitManagerModal">&times;</button></header>
+            <div class="td-modal-body td-circuit-editor">
+                <label>Circuito<select id="tdCircuitManagerCircuit"><option value="">Seleccione circuito</option></select></label>
+                <label class="td-circuit-role"><span>Encargado</span><strong id="tdCircuitManagerName">Sin seleccionar</strong><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-circuit-role="manager">Buscar usuario</button></label>
+                <label class="td-circuit-role"><span>Auxiliar 1</span><strong id="tdCircuitAux1Name">Sin seleccionar</strong><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-circuit-role="aux1">Buscar usuario</button></label>
+                <label class="td-circuit-role"><span>Auxiliar 2</span><strong id="tdCircuitAux2Name">Sin seleccionar</strong><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-circuit-role="aux2">Buscar usuario</button></label>
+                <label>Móvil asignado<select id="tdCircuitMobile"><option value="">Sin móvil</option></select></label>
+            </div>
+            <footer><button class="td-btn td-btn-ghost" type="button" data-close="tdCircuitManagerModal">Cancelar</button><button class="td-btn td-btn-primary" id="tdSaveCircuitManager" type="button">Guardar encargado</button></footer>
         </div>
     </div>
 

@@ -10,9 +10,10 @@
     let map, districtLayer, circuitLayer, routeLayer, pointLayer, personnelLayer, editLayer, temporaryMarker;
     let selection = { districtId: null, districtName: '', circuitoId: null, circuitoName: '', routeId: null, routeName: '', shiftId: null, fecha: new Date().toISOString().slice(0, 10) };
     let mapData = null, mode = null, traceTarget = 'RUTA', tracePoints = [], pendingLocation = null;
+    let cachedRoutes = [];
     const serviceTypeInputs = () => Array.from(document.querySelectorAll('#geoServiceOptions input[type="checkbox"]'));
     const serviceKey = value => String(value || '').trim().toLocaleUpperCase('es');
-    let selectedServiceTypes = new Set(serviceTypeInputs().filter(input => input.checked).map(input => serviceKey(input.value)));
+    let selectedServiceTypes = new Set();
 
     async function api(resource, options = {}) {
         const response = await fetch(`/distribucion-geografica/api?resource=${encodeURIComponent(resource)}`, {
@@ -152,6 +153,20 @@
         } catch (error) { notify(error.message, true); }
     });
 
+    function populateRouteDropdown(routes) {
+        const routeSelect = $('#filterRoute');
+        const turnoId = selection.shiftId;
+        const filtered = turnoId ? routes.filter(r => !r.turno_id || Number(r.turno_id) === turnoId) : routes;
+        routeSelect.innerHTML = '<option value="">Todas las Rutas</option>';
+        if (filtered.length === 0) {
+            routeSelect.innerHTML = '<option value="">Sin rutas para este turno</option>';
+        } else {
+            filtered.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
+        }
+        routeSelect.disabled = false;
+        routeSelect.value = '';
+    }
+
     $('#filterCircuito')?.addEventListener('change', async event => {
         const routeSelect = $('#filterRoute');
         resetMap();
@@ -163,21 +178,15 @@
         routeSelect.innerHTML = '<option value="">Cargando rutas...</option>';
         routeSelect.disabled = true;
         if (!selection.circuitoId) {
+            cachedRoutes = [];
             routeSelect.innerHTML = '<option value="">Todas las rutas</option>';
             selection.showAll = true;
             await loadAllRoutesMap();
             return;
         }
         try {
-            const routes = await api(`circuitos/${selection.circuitoId}/rutas`) || [];
-            routeSelect.innerHTML = '<option value="">Todas las Rutas</option>';
-            if (routes.length === 0) {
-                routeSelect.innerHTML = '<option value="">Sin rutas disponibles</option>';
-            } else {
-                routes.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
-            }
-            routeSelect.disabled = false;
-            routeSelect.value = '';
+            cachedRoutes = await api(`circuitos/${selection.circuitoId}/rutas`) || [];
+            populateRouteDropdown(cachedRoutes);
             routeSelect.dispatchEvent(new Event('change'));
         } catch (error) { notify(error.message, true); }
     });
@@ -211,6 +220,11 @@
 
     $('#filterShift')?.addEventListener('change', async event => {
         selection.shiftId = event.target.value ? Number(event.target.value) : null;
+        if (cachedRoutes.length > 0) {
+            populateRouteDropdown(cachedRoutes);
+            const routeSelect = $('#filterRoute');
+            routeSelect.dispatchEvent(new Event('change'));
+        }
         if (!selection.districtId) { await loadGlobalMap(); return; }
         await loadPersonnelOnly();
     });
@@ -363,11 +377,18 @@
 
     function managerIcon(manager) {
         const isDistrict = manager.tipo_responsabilidad === 'ENCARGADO_DISTRITO';
-        const color = isDistrict ? '#6d3fd1' : '#1267d5';
+        const isCircuit = manager.tipo_responsabilidad === 'ENCARGADO_CIRCUITO';
+        const color = isDistrict ? '#6d3fd1' : isCircuit ? '#0891b2' : '#1267d5';
         if (isDistrict) {
             return L.divIcon({
                 className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
                 html:`<span class="geo-manager-pin" style="--manager-color:${color}"><b>ED</b></span>`
+            });
+        }
+        if (isCircuit) {
+            return L.divIcon({
+                className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
+                html:`<span class="geo-manager-pin" style="--manager-color:${color}"><b>EC</b></span>`
             });
         }
         return L.divIcon({
@@ -385,13 +406,16 @@
 
     function managerPopup(manager) {
         const routeRow=manager.tipo_responsabilidad==='ENCARGADO_RUTA'?`<dt>Ruta</dt><dd>${esc(manager.ruta || '—')}</dd>`:'';
-        return `<div class="geo-popup"><h3>${esc(manager.tipo_servicio)}</h3><dl><dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${routeRow}<dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd></dl><span class="geo-popup-state is-assigned">Asignado</span></div>`;
+        const circuitRow=manager.tipo_responsabilidad==='ENCARGADO_CIRCUITO'?`<dt>Circuito</dt><dd>${esc(manager.circuito || '—')}</dd>`:'';
+        return `<div class="geo-popup"><h3>${esc(manager.tipo_servicio)}</h3><dl><dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${circuitRow}${routeRow}<dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd></dl><span class="geo-popup-state is-assigned">Asignado</span></div>`;
     }
 
     function showManagerDetail(manager) {
         const detail=$('#geoDetail'); if(!detail)return;
         const routeRow=manager.tipo_responsabilidad==='ENCARGADO_RUTA'?`<dt>Ruta</dt><dd>${esc(manager.ruta || '—')}</dd>`:'';
-        detail.innerHTML=`<header><h2>Información del encargado</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header><div class="geo-point-head"><div class="geo-point-avatar">${manager.tipo_responsabilidad==='ENCARGADO_DISTRITO'?'ED':'ER'}</div><div><span class="geo-status">${esc(manager.tipo_servicio)}</span><h3>${esc(manager.agente || '—')}</h3><small>${esc(manager.grado || '')}</small></div></div><div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${routeRow}<dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Tipo de servicio</dt><dd>${esc(manager.tipo_servicio)}</dd></dl></div>`;
+        const circuitRow=manager.tipo_responsabilidad==='ENCARGADO_CIRCUITO'?`<dt>Circuito</dt><dd>${esc(manager.circuito || '—')}</dd>`:'';
+        const managerCode=manager.tipo_responsabilidad==='ENCARGADO_DISTRITO'?'ED':manager.tipo_responsabilidad==='ENCARGADO_CIRCUITO'?'EC':'ER';
+        detail.innerHTML=`<header><h2>Información del encargado</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header><div class="geo-point-head"><div class="geo-point-avatar">${managerCode}</div><div><span class="geo-status">${esc(manager.tipo_servicio)}</span><h3>${esc(manager.agente || '—')}</h3><small>${esc(manager.grado || '')}</small></div></div><div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${circuitRow}${routeRow}<dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Tipo de servicio</dt><dd>${esc(manager.tipo_servicio)}</dd></dl></div>`;
         openDetailPanel();
     }
 

@@ -38,6 +38,7 @@ def catalogs() -> dict:
         """)
         service_types = _rows(cursor)
         service_types.extend([
+            {"id": "ENCARGADO_CIRCUITO", "nombre": "Encargado de Circuito"},
             {"id": "ENCARGADO_RUTA", "nombre": "Encargado de Ruta"},
             {"id": "ENCARGADO_DISTRITO", "nombre": "Encargado de Distrito"},
         ])
@@ -405,10 +406,10 @@ def _validate_route(cursor, route_id: int, district_id: int) -> dict:
 
 
 def _daily_managers(cursor, fecha_date: date, district_id: int | None = None, route_id: int | None = None,
-                    turno_id: int | None = None) -> list[dict]:
+                    turno_id: int | None = None, circuit_id: int | None = None) -> list[dict]:
     cursor.execute("""
         SELECT de.id, de.tipo_responsabilidad, de.distrito_id, d.nombre AS distrito,
-               de.ruta_id, r.nombre AS ruta, de.agente_id,
+               de.ruta_id, r.nombre AS ruta, de.circuito_id, c.nombre AS circuito, de.agente_id,
                LTRIM(RTRIM(CONCAT(CASE WHEN g.nombre IS NULL THEN '' ELSE g.nombre + ' ' END,
                                   p.nombres, ' ', p.apellidos))) AS agente,
                g.nombre AS grado, dp.fecha_distribucion,
@@ -420,6 +421,7 @@ def _daily_managers(cursor, fecha_date: date, district_id: int | None = None, ro
             AND dp.deleted_at IS NULL AND dp.estado<>N'ELIMINADA'
         INNER JOIN dbo.catalogo_detalles d ON d.id=de.distrito_id
         LEFT JOIN dbo.rutas r ON r.id=de.ruta_id
+        LEFT JOIN dbo.circuitos c ON c.id=de.circuito_id
         INNER JOIN dbo.turnos t ON t.id=dp.turno_id
         INNER JOIN dbo.personal p ON p.id=de.agente_id
         LEFT JOIN dbo.grados g ON g.id=p.grado_id
@@ -429,20 +431,36 @@ def _daily_managers(cursor, fecha_date: date, district_id: int | None = None, ro
             FROM dbo.lugares_servicio ls
             WHERE ls.activo=1 AND ls.latitud IS NOT NULL AND ls.longitud IS NOT NULL
               AND ls.distrito_id=de.distrito_id
-              AND (de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR ls.ruta_id=de.ruta_id)
+              AND (de.tipo_responsabilidad=N'ENCARGADO_DISTRITO'
+                   OR (de.tipo_responsabilidad=N'ENCARGADO_RUTA' AND ls.ruta_id=de.ruta_id)
+                   OR (de.tipo_responsabilidad=N'ENCARGADO_CIRCUITO' AND EXISTS (
+                       SELECT 1 FROM dbo.circuito_rutas cr
+                       WHERE cr.circuito_id=de.circuito_id AND cr.ruta_id=ls.ruta_id AND cr.deleted_at IS NULL)))
         ) coords
         WHERE dp.fecha_distribucion=? AND de.deleted_at IS NULL
           AND de.requiere_encargado=1 AND de.agente_id IS NOT NULL
           AND (? IS NULL OR de.distrito_id=?)
-          AND (? IS NULL OR de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR de.ruta_id=?)
+          AND (? IS NULL OR de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR de.ruta_id=?
+               OR (de.tipo_responsabilidad=N'ENCARGADO_CIRCUITO' AND EXISTS (
+                   SELECT 1 FROM dbo.circuito_rutas cr
+                   WHERE cr.circuito_id=de.circuito_id AND cr.ruta_id=? AND cr.deleted_at IS NULL)))
           AND (? IS NULL OR dp.turno_id=?)
+          AND (? IS NULL OR de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' OR de.circuito_id=?
+               OR (de.tipo_responsabilidad=N'ENCARGADO_RUTA' AND EXISTS (
+                   SELECT 1 FROM dbo.circuito_rutas cr
+                   WHERE cr.circuito_id=? AND cr.ruta_id=de.ruta_id AND cr.deleted_at IS NULL)))
         ORDER BY de.distrito_id,
-                 CASE WHEN de.tipo_responsabilidad=N'ENCARGADO_DISTRITO' THEN 0 ELSE 1 END,
-                 de.ruta_id,de.id
-    """, fecha_date, district_id, district_id, route_id, route_id, turno_id, turno_id)
+                 CASE de.tipo_responsabilidad WHEN N'ENCARGADO_DISTRITO' THEN 0 WHEN N'ENCARGADO_CIRCUITO' THEN 1 ELSE 2 END,
+                 de.circuito_id,de.ruta_id,de.id
+    """, fecha_date, district_id, district_id, route_id, route_id, route_id, turno_id, turno_id,
+         circuit_id, circuit_id, circuit_id)
     managers = _rows(cursor)
     for manager in managers:
-        manager["tipo_servicio"] = "Encargado de Distrito" if manager["tipo_responsabilidad"] == "ENCARGADO_DISTRITO" else "Encargado de Ruta"
+        manager["tipo_servicio"] = {
+            "ENCARGADO_DISTRITO": "Encargado de Distrito",
+            "ENCARGADO_CIRCUITO": "Encargado de Circuito",
+            "ENCARGADO_RUTA": "Encargado de Ruta",
+        }.get(manager["tipo_responsabilidad"], "Encargado")
         manager["tipo_registro"] = "ENCARGADO"
     return managers
 
@@ -583,7 +601,7 @@ def route_map(route_id: int, district_id: int, fecha: date | None = None,
         trace=_level_trace(cursor,"RUTA",district_id,route_id=route_id)
         route["tiene_trazado"]=bool(trace); route["trazado"]=trace
         places=_personnel_places(cursor,district_id,[route_id],fecha_date,turno_id)
-        managers=_daily_managers(cursor,fecha_date,district_id,route_id,turno_id)
+        managers=_daily_managers(cursor,fecha_date,district_id,route_id,turno_id,circuit_id)
         return {
             "ruta":route,"rutas":[route],"lugares":places,"encargados":managers,
             "trazado_distrito":_level_trace(cursor,"DISTRITO",district_id),
@@ -719,10 +737,7 @@ def all_routes_map(district_id: int, fecha: date | None = None, circuit_id: int 
         places=_personnel_places(cursor,district_id,route_ids,fecha_date,turno_id)
         route_names={int(route["id"]):route["nombre"] for route in routes}
         for place in places: place["route_name"]=route_names.get(int(place["ruta_id"]),"")
-        managers=_daily_managers(cursor,fecha_date,district_id,None,turno_id)
-        if circuit_id is not None:
-            allowed=set(route_ids)
-            managers=[m for m in managers if m.get("tipo_responsabilidad")=="ENCARGADO_DISTRITO" or int(m.get("ruta_id") or 0) in allowed]
+        managers=_daily_managers(cursor,fecha_date,district_id,None,turno_id,circuit_id)
         return {
             "rutas":routes,"trazados":traces,"lugares":places,"encargados":managers,
             "trazado_distrito":_level_trace(cursor,"DISTRITO",district_id),
@@ -739,7 +754,7 @@ def personnel_map(district_id: int, fecha: date | None = None, circuit_id: int |
         _validate_district(cursor,district_id)
         route_ids=_route_ids_for_scope(cursor,district_id,circuit_id,route_id)
         places=_personnel_places(cursor,district_id,route_ids,fecha_date,turno_id)
-        managers=_daily_managers(cursor,fecha_date,district_id,route_id,turno_id)
+        managers=_daily_managers(cursor,fecha_date,district_id,route_id,turno_id,circuit_id)
         if circuit_id is not None and route_id is None:
             allowed=set(route_ids)
             managers=[m for m in managers if m.get("tipo_responsabilidad")=="ENCARGADO_DISTRITO" or int(m.get("ruta_id") or 0) in allowed]
