@@ -7,9 +7,9 @@
     const esc = value => { const node = document.createElement('div'); node.textContent = value ?? ''; return node.innerHTML; };
     const permissions = { trace: app.dataset.canTrace === '1', edit: app.dataset.canEdit === '1' };
     const colors = { ASIGNADO: '#22a447', PENDIENTE: '#f59e0b', NOVEDAD: '#dc3545', INACTIVO: '#8c98a8' };
-    let map, routeLayer, markerLayer, editLayer, temporaryMarker;
-    let selection = { districtId: null, districtName: '', circuitoId: null, circuitoName: '', routeId: null, routeName: '', fecha: new Date().toISOString().slice(0, 10) };
-    let mapData = null, mode = null, tracePoints = [], pendingLocation = null;
+    let map, districtLayer, circuitLayer, routeLayer, pointLayer, personnelLayer, editLayer, temporaryMarker;
+    let selection = { districtId: null, districtName: '', circuitoId: null, circuitoName: '', routeId: null, routeName: '', shiftId: null, fecha: new Date().toISOString().slice(0, 10) };
+    let mapData = null, mode = null, traceTarget = 'RUTA', tracePoints = [], pendingLocation = null;
     const serviceTypeInputs = () => Array.from(document.querySelectorAll('#geoServiceOptions input[type="checkbox"]'));
     const serviceKey = value => String(value || '').trim().toLocaleUpperCase('es');
     let selectedServiceTypes = new Set(serviceTypeInputs().filter(input => input.checked).map(input => serviceKey(input.value)));
@@ -25,6 +25,14 @@
         return payload.datos;
     }
 
+    function qs(params) {
+        const parts = [];
+        for (const [k, v] of Object.entries(params)) {
+            if (v !== null && v !== undefined && v !== '') parts.push(`${k}=${encodeURIComponent(v)}`);
+        }
+        return parts.length ? '?' + parts.join('&') : '';
+    }
+
     function notify(message, error = false) {
         const toast = $('#geoToast');
         if (!toast) return;
@@ -34,6 +42,30 @@
         clearTimeout(notify.timer);
         notify.timer = setTimeout(() => toast.classList.remove('is-visible'), 4200);
     }
+
+    function openDetailPanel() {
+        const detail = $('#geoDetail');
+        const workspace = $('.geo-workspace');
+        if (!detail || !workspace) return;
+        workspace.classList.remove('is-detail-closed');
+        detail.classList.add('is-open');
+        detail.setAttribute('aria-hidden', 'false');
+        setTimeout(() => map?.invalidateSize(), 300);
+    }
+
+    function closeDetailPanel() {
+        const detail = $('#geoDetail');
+        const workspace = $('.geo-workspace');
+        if (!detail || !workspace) return;
+        detail.classList.remove('is-open');
+        detail.setAttribute('aria-hidden', 'true');
+        workspace.classList.add('is-detail-closed');
+        setTimeout(() => map?.invalidateSize(), 300);
+    }
+
+    $('#geoDetail')?.addEventListener('click', event => {
+        if (event.target.closest('#closeDetail')) closeDetailPanel();
+    });
 
     function pinIcon(state, temporary = false, serviceType = '') {
         const color = temporary ? '#2563EB' : (colors[state] || colors.PENDIENTE);
@@ -64,8 +96,11 @@
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 20, attribution: '&copy; OpenStreetMap'
         }).addTo(map);
+        districtLayer = L.featureGroup().addTo(map);
+        circuitLayer = L.featureGroup().addTo(map);
         routeLayer = L.featureGroup().addTo(map);
-        markerLayer = L.featureGroup().addTo(map);
+        pointLayer = L.featureGroup().addTo(map);
+        personnelLayer = L.featureGroup().addTo(map);
         editLayer = L.featureGroup().addTo(map);
         map.on('click', onMapClick);
         setTimeout(() => map.invalidateSize(), 100);
@@ -73,8 +108,11 @@
 
     function resetMap() {
         cancelEditing(false);
+        districtLayer?.clearLayers();
+        circuitLayer?.clearLayers();
         routeLayer?.clearLayers();
-        markerLayer?.clearLayers();
+        pointLayer?.clearLayers();
+        personnelLayer?.clearLayers();
         editLayer?.clearLayers();
         mapData = null;
         $('#visiblePointCount').textContent = '0';
@@ -83,7 +121,7 @@
         const locationButton = $('#btnLocation');
         if (traceButton) traceButton.disabled = true;
         if (locationButton) locationButton.disabled = true;
-        $('#geoDetail')?.classList.remove('is-open');
+        closeDetailPanel();
     }
 
     $('#filterDistrict')?.addEventListener('change', async event => {
@@ -91,9 +129,10 @@
         const routeSelect = $('#filterRoute');
         resetMap();
         const fechaVal = $('#filterDate')?.value || new Date().toISOString().slice(0, 10);
+        const shiftVal = $('#filterShift')?.value || '';
         selection = { districtId: event.target.value ? Number(event.target.value) : null,
             districtName: event.target.selectedOptions[0]?.textContent || '',
-            circuitoId: null, circuitoName: '', routeId: null, routeName: '', fecha: fechaVal };
+            circuitoId: null, circuitoName: '', routeId: null, routeName: '', shiftId: shiftVal ? Number(shiftVal) : null, fecha: fechaVal };
         circuitoSelect.innerHTML = '<option value="">Cargando circuitos...</option>';
         circuitoSelect.disabled = true;
         routeSelect.innerHTML = '<option value="">Seleccione un circuito primero</option>';
@@ -106,11 +145,7 @@
         try {
             const circuits = await api(`distritos/${selection.districtId}/circuitos`) || [];
             circuitoSelect.innerHTML = '<option value="">Todos los circuitos</option>';
-            if (circuits.length === 0) {
-                circuitoSelect.innerHTML = '<option value="">Sin circuitos disponibles</option>';
-            } else {
-                circuits.forEach(c => circuitoSelect.add(new Option(c.nombre, c.id)));
-            }
+            circuits.forEach(c => circuitoSelect.add(new Option(c.nombre, c.id)));
             circuitoSelect.disabled = false;
             circuitoSelect.value = '';
             circuitoSelect.dispatchEvent(new Event('change'));
@@ -128,7 +163,9 @@
         routeSelect.innerHTML = '<option value="">Cargando rutas...</option>';
         routeSelect.disabled = true;
         if (!selection.circuitoId) {
-            routeSelect.innerHTML = '<option value="">Seleccione un circuito primero</option>';
+            routeSelect.innerHTML = '<option value="">Todas las rutas</option>';
+            selection.showAll = true;
+            await loadAllRoutesMap();
             return;
         }
         try {
@@ -172,9 +209,15 @@
         }
     });
 
+    $('#filterShift')?.addEventListener('change', async event => {
+        selection.shiftId = event.target.value ? Number(event.target.value) : null;
+        if (!selection.districtId) { await loadGlobalMap(); return; }
+        await loadPersonnelOnly();
+    });
+
     async function loadGlobalMap() {
         try {
-            mapData = await api(`distribucion-geografica/mapa?fecha=${encodeURIComponent(selection.fecha || '')}`);
+            mapData = await api(`distribucion-geografica/mapa${qs({fecha: selection.fecha, turno_id: selection.shiftId})}`);
             renderGlobalMap();
         } catch (error) {
             resetMap(); notify(error.message, true);
@@ -183,7 +226,7 @@
 
     async function loadAllRoutesMap() {
         try {
-            mapData = await api(`distribucion-geografica/distrito/${selection.districtId}/mapa-todas?fecha=${encodeURIComponent(selection.fecha || '')}`);
+            mapData = await api(`distribucion-geografica/distrito/${selection.districtId}/mapa-todas${qs({fecha: selection.fecha, circuito_id: selection.circuitoId, turno_id: selection.shiftId})}`);
             renderAllRoutesMap();
         } catch (error) {
             resetMap();
@@ -193,7 +236,7 @@
 
     async function loadRouteMap() {
         try {
-            mapData = await api(`distribucion-geografica/rutas/${selection.routeId}/mapa?distrito_id=${selection.districtId}&fecha=${encodeURIComponent(selection.fecha || '')}`);
+            mapData = await api(`distribucion-geografica/rutas/${selection.routeId}/mapa${qs({distrito_id: selection.districtId, circuito_id: selection.circuitoId, fecha: selection.fecha, turno_id: selection.shiftId})}`);
             renderRouteMap();
         } catch (error) {
             resetMap();
@@ -201,64 +244,93 @@
         }
     }
 
+    async function loadPersonnelOnly() {
+        try {
+            const personnel = await api(`distribucion-geografica/personal-mapa${qs({distrito_id: selection.districtId, circuito_id: selection.circuitoId, ruta_id: selection.routeId, fecha: selection.fecha, turno_id: selection.shiftId})}`);
+            mapData.lugares = personnel?.lugares || [];
+            mapData.encargados = personnel?.encargados || [];
+            renderPersonnelOnly(mapData.lugares, mapData.encargados, selection.routeId ? 1 : (mapData.rutas || []).length);
+        } catch (error) { notify(error.message, true); }
+    }
+
+    async function reloadCurrentMap() {
+        if (!selection.districtId) return loadGlobalMap();
+        if (selection.routeId) return loadRouteMap();
+        return loadAllRoutesMap();
+    }
+
     function renderGlobalMap() { renderAllRoutesMap(); }
 
+    function addTrace(trace, layer, fallbackColor) {
+        if (!trace?.geojson) return;
+        try {
+            const geojson = typeof trace.geojson === 'string' ? JSON.parse(trace.geojson) : trace.geojson;
+            L.geoJSON(geojson, { style: {
+                color: trace.color || fallbackColor, weight: Number(trace.grosor || 5),
+                opacity: Number(trace.opacidad || .55), fillColor: trace.color || fallbackColor,
+                fillOpacity: trace.tipo_geometria === 'area' ? Math.min(Number(trace.opacidad || .35), .35) : 0
+            }}).addTo(layer);
+        } catch (_) { notify('Uno de los trazados guardados no contiene GeoJSON válido.', true); }
+    }
+
+    function renderTraceLayers() {
+        districtLayer.clearLayers(); circuitLayer.clearLayers(); routeLayer.clearLayers(); editLayer.clearLayers();
+        if (mapData?.trazado_distrito) addTrace(mapData.trazado_distrito, districtLayer, '#7C3AED');
+        (mapData?.trazados_distritos || []).forEach(item => addTrace(item.trace, districtLayer, '#7C3AED'));
+        (mapData?.trazados_circuitos || []).forEach(item => addTrace(item.trace, circuitLayer, '#0891B2'));
+        (mapData?.trazados || []).forEach(item => addTrace(item.trace, routeLayer, '#2563EB'));
+        applyTraceVisibility();
+        updateTraceButtons();
+    }
+
+    function updateTraceButtons() {
+        const routeButton=$('#btnTrace');
+        if (routeButton) {
+            routeButton.disabled=!permissions.trace||(!selection.districtId&&!selection.circuitoId&&!selection.routeId);
+        }
+    }
+
     function renderAllRoutesMap() {
-        routeLayer.clearLayers();
-        markerLayer.clearLayers();
-        editLayer.clearLayers();
-        const trazados = mapData?.trazados || [];
         const places = mapData?.lugares || [];
         const rutas = mapData?.rutas || [];
-        trazados.forEach(item => {
-            const trace = item.trace;
-            if (trace?.geojson) {
-                try {
-                    const geojson = typeof trace.geojson === 'string' ? JSON.parse(trace.geojson) : trace.geojson;
-                    L.geoJSON(geojson, { style: { color: trace.color || '#2563EB', weight: Number(trace.grosor || 6), opacity: Number(trace.opacidad || .55) } }).addTo(routeLayer);
-                } catch (_) {}
-            }
-        });
+        renderTraceLayers();
         renderPersonnelLayer(places, mapData?.encargados || [], rutas.length);
-        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        const bounds = L.featureGroup([districtLayer,circuitLayer,routeLayer,pointLayer,personnelLayer]).getBounds();
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
     }
 
     function renderRouteMap() {
-        routeLayer.clearLayers();
-        markerLayer.clearLayers();
-        editLayer.clearLayers();
         const route = mapData?.ruta;
         const places = mapData?.lugares || [];
         if (!route) return;
         selection.routeName = route.nombre;
-        const traceButton = $('#btnTrace');
         const locationButton = $('#btnLocation');
-        if (traceButton) { traceButton.disabled = !permissions.trace; traceButton.textContent = route.tiene_trazado ? '⌁ Redibujar trazado' : '⌁ Asignar trazado'; }
         if (locationButton) locationButton.disabled = !permissions.edit;
-        const trace = route.trazado;
-        if (trace?.geojson) {
-            try {
-                const geojson = typeof trace.geojson === 'string' ? JSON.parse(trace.geojson) : trace.geojson;
-                L.geoJSON(geojson, { style: { color: trace.color || '#2563EB', weight: Number(trace.grosor || 6), opacity: Number(trace.opacidad || .55) } }).addTo(routeLayer);
-            } catch (_) { notify('El trazado guardado no contiene GeoJSON válido.', true); }
-        }
+        renderTraceLayers();
         renderPersonnelLayer(places, mapData?.encargados || [], 1);
-        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        const bounds = L.featureGroup([districtLayer,circuitLayer,routeLayer,pointLayer,personnelLayer]).getBounds();
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [42, 42], maxZoom: 17 });
     }
 
     function renderPersonnelLayer(places, managers, routeCount) {
-        markerLayer.clearLayers();
+        pointLayer.clearLayers();
+        renderPersonnelOnly(places,managers,routeCount);
+    }
+
+    function renderPersonnelOnly(places,managers,routeCount) {
+        personnelLayer.clearLayers();
         const allServiceTypesSelected = serviceTypeInputs().length > 0 && serviceTypeInputs().every(input => input.checked);
         const visiblePlaces = (places || []).filter(place => {
             const key = serviceKey(place.tipo_servicio);
             return selectedServiceTypes.has(key) || (allServiceTypesSelected && !key);
         });
         const visibleManagers = (managers || []).filter(manager => selectedServiceTypes.has(serviceKey(manager.tipo_servicio)));
-        visiblePlaces.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
+        visiblePlaces.filter(place=>place.latitud!=null&&place.longitud!=null).forEach(place=>{
+            if (!pointLayer.getLayers().some(layer=>Number(layer.options?.placeId)===Number(place.id))) addPointBaseMarker(place);
+            if (place.agente_id) addPlaceMarker(place,personnelLayer);
+        });
         visibleManagers.filter(manager => manager.latitud != null && manager.longitud != null).forEach(addManagerMarker);
-        $('#visiblePointCount').textContent = String(markerLayer.getLayers().length);
+        $('#visiblePointCount').textContent = String(visiblePlaces.length+visibleManagers.length);
         $('#statRegistered').textContent = String(visiblePlaces.length);
         $('#statCovered').textContent = String(visiblePlaces.filter(item => item.agente_id).length + visibleManagers.length);
         $('#statUnassigned').textContent = String(visiblePlaces.filter(item => !item.agente_id).length);
@@ -268,14 +340,22 @@
     }
 
     function rerenderPersonnelOnly() {
-        if (!mapData) { markerLayer?.clearLayers(); $('#visiblePointCount').textContent = '0'; return; }
+        if (!mapData) { personnelLayer?.clearLayers(); pointLayer?.clearLayers(); $('#visiblePointCount').textContent = '0'; return; }
         const routeCount = selection.routeId ? 1 : Number((mapData.rutas || []).length);
         renderPersonnelLayer(mapData.lugares || [], mapData.encargados || [], routeCount);
     }
 
-    function addPlaceMarker(place) {
+    function addPointBaseMarker(place) {
+        const base={...place,agente_id:null,agente:null,grado:null,hora_inicio:null,hora_fin:null,estado_mapa:'PENDIENTE'};
+        const marker=L.marker([Number(place.latitud),Number(place.longitud)],{icon:pinIcon('PENDIENTE',false,place.tipo_servicio),placeId:Number(place.id)}).addTo(pointLayer);
+        marker.bindTooltip(esc(place.nombre),{direction:'top',offset:[0,-30]});
+        marker.bindPopup(placePopup(base),{maxWidth:320});
+        marker.on('click',()=>showPlaceDetail(base));
+    }
+
+    function addPlaceMarker(place, layer = personnelLayer) {
         const state = String(place.estado_operativo || '').toUpperCase() === 'NOVEDAD' ? 'NOVEDAD' : place.estado_mapa;
-        const marker = L.marker([Number(place.latitud), Number(place.longitud)], { icon: pinIcon(state, false, place.tipo_servicio) }).addTo(markerLayer);
+        const marker = L.marker([Number(place.latitud), Number(place.longitud)], { icon: pinIcon(state, false, place.tipo_servicio) }).addTo(layer);
         marker.bindTooltip(esc(place.nombre), { direction: 'top', offset: [0, -30] });
         marker.bindPopup(placePopup(place), { maxWidth: 320 });
         marker.on('click', () => showPlaceDetail(place));
@@ -297,7 +377,7 @@
     }
 
     function addManagerMarker(manager) {
-        const marker=L.marker([Number(manager.latitud),Number(manager.longitud)],{icon:managerIcon(manager)}).addTo(markerLayer);
+        const marker=L.marker([Number(manager.latitud),Number(manager.longitud)],{icon:managerIcon(manager)}).addTo(personnelLayer);
         marker.bindTooltip(esc(manager.tipo_servicio),{direction:'top',offset:[0,-30]});
         marker.bindPopup(managerPopup(manager),{maxWidth:340});
         marker.on('click',()=>showManagerDetail(manager));
@@ -312,7 +392,7 @@
         const detail=$('#geoDetail'); if(!detail)return;
         const routeRow=manager.tipo_responsabilidad==='ENCARGADO_RUTA'?`<dt>Ruta</dt><dd>${esc(manager.ruta || '—')}</dd>`:'';
         detail.innerHTML=`<header><h2>Información del encargado</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header><div class="geo-point-head"><div class="geo-point-avatar">${manager.tipo_responsabilidad==='ENCARGADO_DISTRITO'?'ED':'ER'}</div><div><span class="geo-status">${esc(manager.tipo_servicio)}</span><h3>${esc(manager.agente || '—')}</h3><small>${esc(manager.grado || '')}</small></div></div><div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Distrito</dt><dd>${esc(manager.distrito || '—')}</dd>${routeRow}<dt>Agente</dt><dd>${esc(manager.agente || '—')}</dd><dt>Rango / grado</dt><dd>${esc(manager.grado || '—')}</dd><dt>Horario</dt><dd>${time(manager.hora_inicio)} - ${time(manager.hora_fin)}</dd><dt>Tipo de servicio</dt><dd>${esc(manager.tipo_servicio)}</dd></dl></div>`;
-        detail.classList.add('is-open'); $('#closeDetail')?.addEventListener('click',()=>detail.classList.remove('is-open'));
+        openDetailPanel();
     }
 
     function placePopup(place) {
@@ -337,8 +417,7 @@
             <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignación')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
             <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : '—'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>
             ${canEditPin ? `<div class="geo-detail-actions"><button class="geo-btn-delete-pin" type="button" id="deletePin" data-place-id="${place.id}">✕ Eliminar pin del mapa</button></div>` : ''}`;
-        detail.classList.add('is-open');
-        $('#closeDetail')?.addEventListener('click', () => detail.classList.remove('is-open'));
+        openDetailPanel();
         $('#deletePin')?.addEventListener('click', () => removePlacePin(place));
     }
 
@@ -347,7 +426,7 @@
         try {
             await api(`distribucion-geografica/lugares/${place.id}/ubicacion`, { method: 'DELETE' });
             notify('Pin eliminado correctamente');
-            $('#geoDetail')?.classList.remove('is-open');
+            closeDetailPanel();
             if (selection.showAll) {
                 await loadAllRoutesMap();
             } else if (selection.routeId) {
@@ -360,23 +439,56 @@
 
     function time(value) { return value ? String(value).slice(0, 5) : '—'; }
 
-    $('#btnTrace')?.addEventListener('click', () => {
-        if (!selection.routeId) return notify('Seleccione un distrito y una ruta.', true);
+    function traceForTarget(target) {
+        if (target==='DISTRITO') return mapData?.trazado_distrito;
+        if (target==='CIRCUITO') return (mapData?.trazados_circuitos||[]).find(x=>Number(x.circuito_id)===selection.circuitoId)?.trace;
+        return mapData?.ruta?.trazado||(mapData?.trazados||[]).find(x=>Number(x.route_id)===selection.routeId)?.trace;
+    }
+
+    function startTrace(target) {
+        if (!selection.districtId) return notify('Seleccione un distrito.',true);
+        if (target==='CIRCUITO'&&!selection.circuitoId) return notify('Seleccione un circuito específico; “Todos los circuitos” no se puede editar.',true);
+        if (target==='RUTA'&&!selection.routeId) return notify('Seleccione una ruta específica.',true);
         cancelEditing(false);
         mode = 'trace';
+        traceTarget=target;
         tracePoints = [];
         editLayer.clearLayers();
-        routeLayer.clearLayers();
-        const savedTrace = mapData?.ruta?.trazado;
-        $('#traceType').value = savedTrace?.tipo_geometria === 'area' ? 'area' : 'lineal';
+        ({DISTRITO:districtLayer,CIRCUITO:circuitLayer,RUTA:routeLayer}[target])?.clearLayers();
+        const savedTrace=traceForTarget(target);
+        $('#traceType').value=savedTrace?.tipo_geometria==='lineal'?'lineal':(target==='RUTA'?'lineal':'area');
         $('#traceColor').value = /^#[0-9a-f]{6}$/i.test(savedTrace?.color || '') ? savedTrace.color : '#2563EB';
         $('#traceWidth').value = String(Number(savedTrace?.grosor || 6));
         updateTraceOptions();
         map.getContainer().classList.add('is-drawing');
         $('#traceTools').hidden = false;
         $('#traceOptions').hidden = false;
-        notify('Haga clic en el mapa para definir el recorrido de la ruta.');
-    });
+        const label=target==='DISTRITO'?'distrito':target==='CIRCUITO'?'circuito':'ruta';
+        notify(`Haga clic en el mapa para definir el trazado del ${label}.`);
+    }
+    const traceDropdown=$('#traceDropdown');
+    const traceMenu=$('#traceMenu');
+    if ($('#btnTrace')) {
+        $('#btnTrace').addEventListener('click',e=>{
+            e.stopPropagation();
+            if ($('#btnTrace').disabled) return;
+            const open=!traceMenu.hidden;
+            traceMenu.hidden=open;
+            $('#btnTrace').setAttribute('aria-expanded',String(!open));
+        });
+    }
+    if (traceMenu) {
+        traceMenu.querySelectorAll('button').forEach(btn=>{
+            btn.addEventListener('click',()=>{
+                traceMenu.hidden=true;
+                $('#btnTrace')?.setAttribute('aria-expanded','false');
+                const target=btn.dataset.traceTarget||btn.id==='btnDistrictTrace'?'DISTRITO':btn.id==='btnCircuitTrace'?'CIRCUITO':'RUTA';
+                startTrace(target);
+            });
+        });
+    }
+    document.addEventListener('click',()=>{if(traceMenu)traceMenu.hidden=true;});
+    if (traceDropdown) traceDropdown.addEventListener('click',e=>e.stopPropagation());
 
     function onMapClick(event) {
         if (mode === 'trace') {
@@ -425,20 +537,22 @@
         const traceType = $('#traceType').value;
         const minimum = traceType === 'area' ? 3 : 2;
         if (tracePoints.length < minimum) return notify(`Dibuje al menos ${minimum} puntos para guardar ${traceType === 'area' ? 'el área' : 'el trazado'}.`, true);
-        if (!window.confirm(`¿Desea asignar este trazado a ${selection.routeName}?`)) return;
+        const targetName=traceTarget==='DISTRITO'?selection.districtName:traceTarget==='CIRCUITO'?selection.circuitoName:selection.routeName;
+        if (!window.confirm(`¿Desea guardar este trazado para ${targetName}?`)) return;
         try {
             const coordinates = tracePoints.map(point => [point[1], point[0]]);
             const geojson = traceType === 'area'
                 ? { type: 'Polygon', coordinates: [[...coordinates, coordinates[0]]] }
                 : { type: 'LineString', coordinates };
-            await api(`distribucion-geografica/rutas/${selection.routeId}/trazado`, { method: 'PUT', body: {
-                distrito_id: selection.districtId,
-                tipo_geometria: traceType, geojson,
-                color: $('#traceColor').value, grosor: Number($('#traceWidth').value), opacidad: .55
-            }});
+            const body={tipo_geometria:traceType,geojson,color:$('#traceColor').value,grosor:Number($('#traceWidth').value),opacidad:.55};
+            let resource;
+            if(traceTarget==='DISTRITO') resource=`distribucion-geografica/distritos/${selection.districtId}/trazado`;
+            else if(traceTarget==='CIRCUITO') resource=`distribucion-geografica/circuitos/${selection.circuitoId}/trazado`;
+            else { resource=`distribucion-geografica/rutas/${selection.routeId}/trazado`; body.distrito_id=selection.districtId; body.circuito_id=selection.circuitoId; }
+            await api(resource,{method:'PUT',body});
             cancelEditing(false);
             notify('Trazado guardado correctamente.');
-            await loadRouteMap();
+            await reloadCurrentMap();
         } catch (error) { notify(error.message, true); }
     });
 
@@ -501,7 +615,7 @@
         document.body.style.overflow = '';
         pendingLocation = null;
         if (temporaryMarker) { editLayer.removeLayer(temporaryMarker); temporaryMarker = null; }
-        if (restore && mapData) renderRouteMap();
+        if (restore && mapData) (selection.routeId ? renderRouteMap() : renderAllRoutesMap());
     }
     $('#closeLocation')?.addEventListener('click', () => closeLocationModal(true));
     $('#cancelLocationModal')?.addEventListener('click', () => closeLocationModal(true));
@@ -516,11 +630,11 @@
         if ($('#traceTools')) $('#traceTools').hidden = true;
         if ($('#traceOptions')) $('#traceOptions').hidden = true;
         if ($('#locationHint')) $('#locationHint').hidden = true;
-        if (restore && mapData) renderRouteMap();
+        if (restore && mapData) (selection.routeId ? renderRouteMap() : renderAllRoutesMap());
     }
 
     $('#centerGeoMap')?.addEventListener('click', () => {
-        const bounds = L.featureGroup([routeLayer, markerLayer]).getBounds();
+        const bounds = L.featureGroup([districtLayer,circuitLayer,routeLayer,pointLayer,personnelLayer]).getBounds();
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [35, 35], maxZoom: 17 });
         else map.setView([-2.1894, -79.8891], 14);
     });
@@ -534,7 +648,8 @@
         selectedServiceTypes = new Set(serviceTypeInputs().filter(input=>input.checked).map(input=>serviceKey(input.value)));
         const total=serviceTypeInputs().length,selected=selectedServiceTypes.size;
         const button=$('#geoServiceToggle');
-        if(button) button.firstChild.textContent=selected===0?'Sin tipos ':selected===total?'Todos los tipos ':`${selected} tipos seleccionados `;
+        const label=button?.querySelector('.geo-toggle-label');
+        if(label) label.textContent=selected===0?'Sin tipos':selected===total?'Todos los tipos':`${selected} tipos seleccionados`;
         rerenderPersonnelOnly();
     }
     $('#geoServiceToggle')?.addEventListener('click',()=>{
@@ -543,8 +658,21 @@
     $('#geoServiceOptions')?.addEventListener('change',updateServiceTypeSelection);
     $('#geoSelectAllTypes')?.addEventListener('click',()=>{serviceTypeInputs().forEach(input=>input.checked=true);updateServiceTypeSelection();});
     $('#geoClearTypes')?.addEventListener('click',()=>{serviceTypeInputs().forEach(input=>input.checked=false);updateServiceTypeSelection();});
+    function applyTraceVisibility(){
+        if(!map)return;
+        const visible=new Set(Array.from(document.querySelectorAll('#geoLayerOptions input:checked')).map(input=>input.value));
+        [[districtLayer,'district'],[circuitLayer,'circuit'],[routeLayer,'route']].forEach(([layer,key])=>{
+            if(!layer)return;
+            if(visible.has(key)){if(!map.hasLayer(layer))layer.addTo(map);}else if(map.hasLayer(layer))map.removeLayer(layer);
+        });
+        const button=$('#geoLayerToggle'); const label=button?.querySelector('.geo-toggle-label');
+        if(label)label.textContent=`${visible.size} ${visible.size===1?'capa visible':'capas visibles'}`;
+    }
+    $('#geoLayerToggle')?.addEventListener('click',()=>{const menu=$('#geoLayerMenu');const open=menu.hidden;menu.hidden=!open;$('#geoLayerToggle').setAttribute('aria-expanded',String(open));});
+    $('#geoLayerOptions')?.addEventListener('change',applyTraceVisibility);
     document.addEventListener('click',event=>{
         const filter=$('#geoServiceFilter'); if(filter&&!filter.contains(event.target)){ $('#geoServiceMenu').hidden=true; $('#geoServiceToggle').setAttribute('aria-expanded','false'); }
+        const layerFilter=$('#geoLayerFilter'); if(layerFilter&&!layerFilter.contains(event.target)){ $('#geoLayerMenu').hidden=true; $('#geoLayerToggle').setAttribute('aria-expanded','false'); }
     });
 
     initializeMap();

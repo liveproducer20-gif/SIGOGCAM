@@ -16,27 +16,68 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
             <label>Distrito<select name="distrito_id" id="filterDistrict" required><option value="">Seleccione un distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Circuito<select name="circuito_id" id="filterCircuito" disabled><option value="">Seleccione un distrito primero</option></select></label>
             <label>Ruta<select name="ruta_id" id="filterRoute" disabled><option value="">Seleccione un circuito primero</option></select></label>
+            <label>Turno<select name="turno_id" id="filterShift"><option value="">Todos los turnos</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select></label>
             <label>Fecha distribución<input type="date" id="filterDate" value="<?= date('Y-m-d') ?>"></label>
-            <div class="geo-service-filter" id="geoServiceFilter">
-                <span class="geo-filter-label">Tipos de servicio</span>
-                <button class="geo-service-toggle" type="button" id="geoServiceToggle" aria-expanded="false">Todos los tipos <span>▾</span></button>
-                <div class="geo-service-menu" id="geoServiceMenu" hidden>
-                    <div class="geo-service-options" id="geoServiceOptions">
-                        <?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><label><input type="checkbox" value="<?= $esc($item['nombre']) ?>" checked> <span><?= $esc($item['nombre']) ?></span></label><?php endforeach; ?>
-                    </div>
-                    <div class="geo-service-actions"><button type="button" id="geoSelectAllTypes">Seleccionar todos</button><button type="button" id="geoClearTypes">Limpiar selección</button></div>
+            <div class="geo-service-group">
+                <div class="geo-service-filter geo-service-filter--layers" id="geoLayerFilter">
+                    <span class="geo-filter-label">Visualización de trazado</span>
+                    <button class="geo-service-toggle" type="button" id="geoLayerToggle" aria-expanded="false">
+                        <svg class="geo-control-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-7.5 9L12 16.2l7.5-4.2M4.5 16 12 20.2l7.5-4.2"/></svg>
+                        <span class="geo-toggle-label">3 capas visibles</span><span class="geo-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="geo-service-menu" id="geoLayerMenu" hidden><div class="geo-service-options" id="geoLayerOptions">
+                        <label><input type="checkbox" value="district" checked> <span>Distrito</span></label>
+                        <label><input type="checkbox" value="circuit" checked> <span>Circuito</span></label>
+                        <label><input type="checkbox" value="route" checked> <span>Ruta</span></label>
+                    </div></div>
                 </div>
-            </div>
-            <div class="geo-filter-actions">
-                <?php if ($canTrace): ?><button class="geo-primary" type="button" id="btnTrace" disabled>⌁ Trazado</button><?php endif; ?>
-                <?php if ($canEdit): ?><button class="geo-primary" type="button" id="btnLocation" disabled>⌖ Marcador</button><?php endif; ?>
+                <div class="geo-service-filter" id="geoServiceFilter">
+                    <span class="geo-filter-label">Tipos de servicio</span>
+                    <button class="geo-service-toggle" type="button" id="geoServiceToggle" aria-expanded="false">
+                        <svg class="geo-control-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 13 13 20l-9-9V4h7l9 9Z"/><circle cx="8.5" cy="8.5" r="1.5"/></svg>
+                        <span class="geo-toggle-label">Todos los tipos</span><span class="geo-chevron" aria-hidden="true">▾</span>
+                    </button>
+                    <div class="geo-service-menu" id="geoServiceMenu" hidden>
+                        <div class="geo-service-options" id="geoServiceOptions">
+                            <?php foreach (($catalogos['tiposServicio'] ?? []) as $item): ?><label><input type="checkbox" value="<?= $esc($item['nombre']) ?>" checked> <span><?= $esc($item['nombre']) ?></span></label><?php endforeach; ?>
+                        </div>
+                        <div class="geo-service-actions"><button type="button" id="geoSelectAllTypes">Seleccionar todos</button><button type="button" id="geoClearTypes">Limpiar selección</button></div>
+                    </div>
+                </div>
             </div>
         </form>
 
         <section class="geo-workspace">
             <div class="geo-map-wrap">
                 <div id="geoMap" aria-label="Mapa de distribución geográfica"></div>
-                <div class="geo-map-tools"><span><b id="visiblePointCount">0</b> registros visibles</span><button type="button" id="centerGeoMap" title="Centrar mapa">⌖</button><button type="button" id="fullscreenGeoMap" title="Pantalla completa">⛶</button></div>
+                <div class="geo-map-tools">
+                    <?php if ($canTrace): ?>
+                    <div class="geo-trace-dropdown" id="traceDropdown">
+                        <button class="geo-primary geo-map-tool--label" type="button" id="btnTrace" disabled>
+                            <svg class="geo-map-tool-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Zm-7.5 9L12 16.2l7.5-4.2M4.5 16 12 20.2l7.5-4.2"/></svg>
+                            Trazados <span aria-hidden="true">▾</span>
+                        </button>
+                        <div class="geo-trace-menu" id="traceMenu" hidden>
+                            <button type="button" id="btnDistrictTrace">⌁ Distrito</button>
+                            <button type="button" id="btnCircuitTrace">⌁ Circuito</button>
+                            <button type="button" data-trace-target="RUTA">⌁ Ruta</button>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($canEdit): ?>
+                    <button class="geo-map-tool--label" type="button" id="btnLocation" disabled>
+                        <svg class="geo-map-tool-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                        Marcador
+                    </button>
+                    <?php endif; ?>
+                    <span><b id="visiblePointCount">0</b> registros visibles</span>
+                    <button type="button" id="centerGeoMap" title="Ubicación" aria-label="Centrar el mapa en la ubicación visible">
+                        <svg class="geo-map-tool-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>
+                    </button>
+                    <button type="button" id="fullscreenGeoMap" title="Pantalla completa" aria-label="Ver mapa en pantalla completa">
+                        <svg class="geo-map-tool-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M8 21H3v-5m13 5h5v-5"/></svg>
+                    </button>
+                </div>
                 <div class="geo-edit-tools" id="traceTools" hidden><strong>Dibuje el recorrido haciendo clic en el mapa</strong><button class="geo-secondary" type="button" id="undoTrace">↶ Deshacer</button><button class="geo-ghost" type="button" id="cancelTrace">Cancelar</button><button class="geo-primary" type="button" id="saveTrace">Guardar trazado</button></div>
                 <aside class="geo-trace-options" id="traceOptions" hidden aria-label="Opciones del trazado">
                     <header><span>⌁</span><div><strong>Estilo del trazado</strong><small>Configure la geometría</small></div></header>
@@ -46,10 +87,10 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
                     <p id="traceTypeHelp">Marque al menos dos puntos para formar el recorrido.</p>
                 </aside>
                 <div class="geo-edit-hint" id="locationHint" hidden>Seleccione en el mapa la ubicación del lugar de servicio. <button type="button" id="cancelLocation">Cancelar</button></div>
-                <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="route"></i> Ruta trazada</span></div>
+                <div class="geo-legend"><strong>Leyenda</strong><span><i class="covered"></i> Cubierto</span><span><i class="unassigned"></i> Sin asignación</span><span><i class="district-trace"></i> Distrito</span><span><i class="circuit-trace"></i> Circuito</span><span><i class="route"></i> Ruta</span></div>
                 <div class="geo-map-empty" id="geoMapEmpty" hidden>Seleccione un distrito y una ruta para visualizar el trazado y los lugares de servicio.</div>
             </div>
-            <aside class="geo-detail" id="geoDetail" aria-live="polite">
+            <aside class="geo-detail is-open" id="geoDetail" aria-live="polite" aria-hidden="false">
                 <header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
                 <div class="geo-detail-empty"><span>📍</span><strong>Seleccione un lugar de servicio</strong><p>Aquí verá la información, ubicación y personal asignado.</p></div>
             </aside>

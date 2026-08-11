@@ -7,7 +7,7 @@ from app.middleware.auth import current_user, require_permission
 from app.modules.distribucion_geografica import repository
 from app.modules.distribucion_geografica.models import (
     AssignmentInput, AssignmentUpdate, PlaceLocationInput, PointInput,
-    RouteInput, RouteTraceInput, SectorInput,
+    HierarchicalTraceInput, RouteInput, RouteTraceInput, SectorInput,
 )
 
 
@@ -63,20 +63,43 @@ def get_service_places(route_id: int, distrito_id: int | None = None, user: dict
 
 @router.get("/distribucion-geografica/rutas/{route_id}/mapa")
 def get_route_map(route_id: int, distrito_id: int = Query(...), fecha: date | None = Query(None),
+                  circuito_id: int | None = Query(None), turno_id: int | None = Query(None),
                   user: dict = Depends(require_permission("distribucion.ver"))):
-    return ok(repository.route_map(route_id, distrito_id, fecha))
+    return ok(repository.route_map(route_id, distrito_id, fecha, circuito_id, turno_id))
 
 
 @router.get("/distribucion-geografica/distrito/{district_id}/mapa-todas")
-def get_all_routes_map(district_id: int, fecha: date | None = Query(None),
+def get_all_routes_map(district_id: int, fecha: date | None = Query(None), circuito_id: int | None = Query(None),
+                       turno_id: int | None = Query(None),
                        user: dict = Depends(require_permission("distribucion.ver"))):
-    return ok(repository.all_routes_map(district_id, fecha))
+    return ok(repository.all_routes_map(district_id, fecha, circuito_id, turno_id))
 
 
 @router.get("/distribucion-geografica/mapa")
-def get_global_map(fecha: date | None = Query(None),
+def get_global_map(fecha: date | None = Query(None), turno_id: int | None = Query(None),
                    user: dict = Depends(require_permission("distribucion.ver"))):
-    return ok(repository.global_map(fecha))
+    return ok(repository.global_map(fecha, turno_id))
+
+
+@router.get("/distribucion-geografica/personal-mapa")
+def get_map_personnel(distrito_id: int, fecha: date | None = Query(None), circuito_id: int | None = Query(None),
+                      ruta_id: int | None = Query(None), turno_id: int | None = Query(None),
+                      user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.personnel_map(distrito_id, fecha, circuito_id, ruta_id, turno_id))
+
+
+@router.put("/distribucion-geografica/distritos/{district_id}/trazado")
+def put_district_trace(district_id: int, payload: HierarchicalTraceInput,
+                       user: dict = Depends(require_permission("rutas_geograficas.gestionar"))):
+    result = repository.upsert_hierarchical_trace("DISTRITO", district_id, payload.model_dump(), int(user["id"]))
+    return ok(result, "Trazado del distrito guardado correctamente")
+
+
+@router.put("/distribucion-geografica/circuitos/{circuit_id}/trazado")
+def put_circuit_trace(circuit_id: int, payload: HierarchicalTraceInput,
+                      user: dict = Depends(require_permission("rutas_geograficas.gestionar"))):
+    result = repository.upsert_hierarchical_trace("CIRCUITO", circuit_id, payload.model_dump(), int(user["id"]))
+    return ok(result, "Trazado del circuito guardado correctamente")
 
 
 @router.put("/distribucion-geografica/rutas/{route_id}/trazado")

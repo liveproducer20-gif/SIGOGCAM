@@ -76,11 +76,20 @@ class SectorInput(BaseModel):
 
 class RouteTraceInput(BaseModel):
     distrito_id: int
+    circuito_id: int | None = None
     geojson: dict
     tipo_geometria: Literal["lineal", "area"] = "lineal"
     color: str = Field(default="#2563EB", pattern=r"^#[0-9A-Fa-f]{6}$")
     grosor: float = Field(default=6, ge=1, le=20)
     opacidad: float = Field(default=0.55, ge=0.1, le=1)
+
+
+class HierarchicalTraceInput(BaseModel):
+    geojson: dict
+    tipo_geometria: Literal["lineal", "area"] = "area"
+    color: str = Field(default="#2563EB", pattern=r"^#[0-9A-Fa-f]{6}$")
+    grosor: float = Field(default=4, ge=1, le=20)
+    opacidad: float = Field(default=0.35, ge=0.1, le=1)
 
 
 class PlaceLocationInput(BaseModel):

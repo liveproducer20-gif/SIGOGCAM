@@ -716,7 +716,9 @@ IF OBJECT_ID(N'dbo.rutas_geograficas', N'U') IS NULL
 CREATE TABLE dbo.rutas_geograficas (
     id                    BIGINT IDENTITY(1,1) NOT NULL,
     distrito_id           INT NOT NULL,
-    ruta_id               INT NOT NULL,
+    circuito_id           INT NULL,
+    ruta_id               INT NULL,
+    nivel_geografico      NVARCHAR(12) NOT NULL CONSTRAINT DF_rutasgeo_nivel DEFAULT (N'RUTA'),
     nombre                NVARCHAR(150) NOT NULL,
     descripcion           NVARCHAR(500) NULL,
     tipo_geometria        NVARCHAR(20) NOT NULL CONSTRAINT DF_rutasgeo_tipo DEFAULT (N'lineal'),
@@ -732,8 +734,17 @@ CREATE TABLE dbo.rutas_geograficas (
     fecha_actualizacion   DATETIME2 NULL,
     CONSTRAINT PK_rutas_geograficas PRIMARY KEY CLUSTERED (id),
     CONSTRAINT FK_rutasgeo_distrito FOREIGN KEY (distrito_id) REFERENCES dbo.catalogo_detalles(id),
-    CONSTRAINT FK_rutasgeo_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.rutas(id)
+    CONSTRAINT FK_rutasgeo_circuito FOREIGN KEY (circuito_id) REFERENCES dbo.circuitos(id),
+    CONSTRAINT FK_rutasgeo_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.rutas(id),
+    CONSTRAINT CK_rutasgeo_nivel_objetivo CHECK (
+        (nivel_geografico=N'DISTRITO' AND circuito_id IS NULL AND ruta_id IS NULL) OR
+        (nivel_geografico=N'CIRCUITO' AND circuito_id IS NOT NULL AND ruta_id IS NULL) OR
+        (nivel_geografico=N'RUTA' AND ruta_id IS NOT NULL)
+    )
 );
+CREATE UNIQUE INDEX UX_rutasgeo_distrito_activo ON dbo.rutas_geograficas(distrito_id) WHERE activo=1 AND nivel_geografico=N'DISTRITO';
+CREATE UNIQUE INDEX UX_rutasgeo_circuito_activo ON dbo.rutas_geograficas(circuito_id) WHERE activo=1 AND nivel_geografico=N'CIRCUITO';
+CREATE UNIQUE INDEX UX_rutasgeo_ruta_activo ON dbo.rutas_geograficas(ruta_id) WHERE activo=1 AND nivel_geografico=N'RUTA';
 GO
 
 PRINT 'Tablas de EAS central creadas.';
