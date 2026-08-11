@@ -91,7 +91,7 @@ def list_service_places() -> list[dict]:
                d.nombre AS distrito, l.ruta_id, r.nombre AS ruta,
                l.tipo_servicio_id, ts.nombre AS tipo_servicio,
                l.turno_id, t.nombre AS turno,
-               l.cantidad_requerida, l.estado_operativo, l.consignas, l.observacion,
+               l.cantidad_requerida, l.estado_operativo, l.consignas, l.observacion, l.lugar_formacion,
                l.latitud, l.longitud, ISNULL(r.asignar_encargado,0) AS ruta_asignar_encargado, l.activo
         FROM dbo.lugares_servicio l
         LEFT JOIN dbo.catalogo_detalles d ON d.id=l.distrito_id
@@ -467,15 +467,15 @@ def create_service_place(data: dict) -> int:
             INSERT INTO dbo.lugares_servicio (
                 nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,tipo_servicio_id,turno_id,
                 cantidad_requerida,estado_operativo,
-                consignas,observacion,latitud,longitud,activo,fecha_creacion
+                consignas,observacion,lugar_formacion,latitud,longitud,activo,fecha_creacion
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
             data.get("tipoServicioId"),data.get("turnoId"),
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
-            data.get("consignas"),data.get("observacion"),data.get("latitud"),data.get("longitud"),
+            data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
         )
         return int(cursor.fetchone()[0])
@@ -489,13 +489,13 @@ def update_service_place(item_id: int, data: dict) -> None:
             UPDATE dbo.lugares_servicio
             SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,tipo_servicio_id=?,turno_id=?,
                 cantidad_requerida=?,estado_operativo=?,
-                consignas=?,observacion=?,latitud=?,longitud=?,activo=?,fecha_actualizacion=SYSDATETIME()
+                consignas=?,observacion=?,lugar_formacion=?,latitud=?,longitud=?,activo=?,fecha_actualizacion=SYSDATETIME()
             WHERE id = ?
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
             data.get("tipoServicioId"),data.get("turnoId"),
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
-            data.get("consignas"),data.get("observacion"),data.get("latitud"),data.get("longitud"),
+            data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
             item_id,
         )
@@ -503,6 +503,179 @@ def update_service_place(item_id: int, data: dict) -> None:
 
 def delete_service_place(item_id: int) -> None:
     _soft_delete("lugares_servicio", item_id)
+
+
+def _import_key(value) -> str:
+    return " ".join(str(value or "").strip().split()).casefold()
+
+
+def import_service_places(rows: list[dict], confirm: bool = False) -> dict:
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("El archivo CSV no contiene registros")
+    if len(rows) > 2000:
+        raise ValueError("El archivo CSV no puede contener más de 2000 registros")
+
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute(
+            """SELECT d.id,d.nombre FROM dbo.catalogo_detalles d
+               INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
+               WHERE c.codigo='DISTRITOS' AND d.estado=1"""
+        )
+        districts: dict[str, list[tuple[int, str]]] = {}
+        for item_id, name in cursor.fetchall():
+            districts.setdefault(_import_key(name), []).append((int(item_id), str(name)))
+
+        cursor.execute(
+            """SELECT d.id,d.nombre FROM dbo.catalogo_detalles d
+               INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
+               WHERE c.codigo='TIPOS_SERVICIO_LUGAR' AND d.estado=1"""
+        )
+        service_types: dict[str, list[tuple[int, str]]] = {}
+        for item_id, name in cursor.fetchall():
+            service_types.setdefault(_import_key(name), []).append((int(item_id), str(name)))
+
+        cursor.execute("SELECT id,nombre,distrito_id,turno_id FROM dbo.rutas")
+        routes: dict[str, list[tuple[int, str, int | None, int | None]]] = {}
+        for item_id, name, district_id, shift_id in cursor.fetchall():
+            routes.setdefault(_import_key(name), []).append(
+                (int(item_id), str(name), int(district_id) if district_id is not None else None,
+                 int(shift_id) if shift_id is not None else None)
+            )
+
+        lock_hint = " WITH (UPDLOCK, HOLDLOCK)" if confirm else ""
+        cursor.execute(
+            f"SELECT distrito_id,ruta_id,nombre FROM dbo.lugares_servicio{lock_hint}"
+        )
+        existing = {
+            (int(district_id or 0), int(route_id or 0), _import_key(name))
+            for district_id, route_id, name in cursor.fetchall()
+        }
+
+        reviewed: list[dict] = []
+        file_keys: set[tuple[int, int, str]] = set()
+        valid_payloads: list[dict] = []
+        for index, raw in enumerate(rows):
+            row = raw if isinstance(raw, dict) else {}
+            row_number = int(row.get("fila") or index + 2)
+            district_name = str(row.get("distrito") or "").strip()
+            route_name = str(row.get("ruta") or "").strip()
+            service_name = str(row.get("tipo_servicio") or "").strip()
+            place_name = str(row.get("nombre_lugar_servicio") or "").strip()
+            amount_raw = str(row.get("cantidad_requerida") or "").strip()
+            errors: list[str] = []
+            if row.get("_parse_error"):
+                errors.append(str(row["_parse_error"]))
+
+            district_matches = districts.get(_import_key(district_name), [])
+            district = district_matches[0] if len(district_matches) == 1 else None
+            if not district_name:
+                errors.append("Distrito es obligatorio")
+            elif not district_matches:
+                errors.append(f"El distrito '{district_name}' no existe o no está activo")
+            elif len(district_matches) > 1:
+                errors.append(f"El distrito '{district_name}' es ambiguo")
+
+            type_matches = service_types.get(_import_key(service_name), [])
+            service_type = type_matches[0] if len(type_matches) == 1 else None
+            if not service_name:
+                errors.append("Tipo de servicio es obligatorio")
+            elif not type_matches:
+                errors.append(f"El tipo de servicio '{service_name}' no existe o no está activo")
+            elif len(type_matches) > 1:
+                errors.append(f"El tipo de servicio '{service_name}' es ambiguo")
+
+            route_matches = routes.get(_import_key(route_name), [])
+            route = None
+            if not route_name:
+                errors.append("Ruta es obligatoria")
+            elif not route_matches:
+                errors.append(f"La ruta '{route_name}' no existe")
+            elif district:
+                matching_district = [item for item in route_matches if item[2] == district[0]]
+                if len(matching_district) == 1:
+                    route = matching_district[0]
+                elif not matching_district:
+                    errors.append(f"La ruta '{route_name}' no pertenece al distrito '{district_name}'")
+                else:
+                    errors.append(f"La ruta '{route_name}' es ambigua dentro del distrito")
+
+            amount = None
+            if not amount_raw.isdigit():
+                errors.append("Cantidad requerida debe ser numérica y mayor a 0")
+            else:
+                amount = int(amount_raw)
+                if amount <= 0:
+                    errors.append("Cantidad requerida debe ser mayor a 0")
+            if not place_name:
+                errors.append("Nombre del lugar de servicio es obligatorio")
+
+            duplicate_key = None
+            if district and route and place_name:
+                duplicate_key = (district[0], route[0], _import_key(place_name))
+                if duplicate_key in existing:
+                    errors.append("Ya existe un lugar de servicio con ese nombre en la ruta indicada")
+                elif duplicate_key in file_keys:
+                    errors.append("Lugar de servicio duplicado dentro del archivo CSV")
+                elif not errors:
+                    file_keys.add(duplicate_key)
+
+            normalized = None
+            if not errors and district and route and service_type and amount is not None:
+                normalized = {
+                    "nombre": place_name,
+                    "direccion": place_name,
+                    "ubicacionEspecifica": None,
+                    "distritoId": district[0],
+                    "rutaId": route[0],
+                    "tipoServicioId": service_type[0],
+                    "turnoId": route[3],
+                    "cantidadRequerida": amount,
+                    "estadoOperativo": "ACTIVO",
+                    "consignas": str(row.get("consignas") or "").strip() or None,
+                    "observacion": str(row.get("observacion") or "").strip() or None,
+                    "lugarFormacion": str(row.get("lugar_formacion") or "").strip() or None,
+                    "activo": True,
+                }
+                valid_payloads.append(normalized)
+
+            reviewed.append({
+                "fila": row_number,
+                "distrito": district_name,
+                "ruta": route_name,
+                "tipo_servicio": service_name,
+                "cantidad_requerida": amount_raw,
+                "nombre_lugar_servicio": place_name,
+                "consignas": str(row.get("consignas") or "").strip(),
+                "observacion": str(row.get("observacion") or "").strip(),
+                "lugar_formacion": str(row.get("lugar_formacion") or "").strip(),
+                "valida": not errors,
+                "errores": errors,
+            })
+
+        imported = 0
+        if confirm:
+            for data in valid_payloads:
+                cursor.execute(
+                    """INSERT INTO dbo.lugares_servicio (
+                           nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,tipo_servicio_id,turno_id,
+                           cantidad_requerida,estado_operativo,consignas,observacion,lugar_formacion,
+                           latitud,longitud,activo,fecha_creacion
+                       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, 1, SYSDATETIME())""",
+                    data["nombre"], data["direccion"], data["ubicacionEspecifica"], data["distritoId"],
+                    data["rutaId"], data["tipoServicioId"], data["turnoId"], data["cantidadRequerida"],
+                    data["estadoOperativo"], data["consignas"], data["observacion"], data["lugarFormacion"],
+                )
+                imported += 1
+
+        valid_count = sum(1 for row in reviewed if row["valida"])
+        return {
+            "filas": reviewed,
+            "total": len(reviewed),
+            "validos": valid_count,
+            "rechazados": len(reviewed) - valid_count,
+            "importados": imported,
+        }
 
 
 _fk_cache: dict[str, list[tuple[str, str]]] | None = None

@@ -7,6 +7,7 @@ $completas = array_sum(array_column($dists, 'distritos_completos'));
 $incompletas = $totalDists - $completas;
 $totalAgentes = array_sum(array_column($dists, 'total_asignado'));
 $totalRequerido = array_sum(array_column($dists, 'total_requerido'));
+$totalFaltantes = array_sum(array_column($dists, 'pendientes'));
 $promedioCobertura = $totalRequerido > 0 ? round($totalAgentes / $totalRequerido * 100) : 0;
 $permissions = $usuario['permisos'] ?? [];
 $isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['rol'] ?? '')), 'ADMINISTRADOR');
@@ -25,7 +26,7 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
     <div class="dd-kpis">
         <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-teal">&#9632;</div><div><strong><?= $totalGroups ?></strong><b>Distribuciones</b><small>Registradas</small></div></article>
         <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-green">&#10003;</div><div><strong><?= $completas ?>/<?= $totalDists ?></strong><b>Distritos</b><small>Completos</small></div></article>
-        <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-orange">&#9888;</div><div><strong><?= $incompletas ?></strong><b>Pendientes</b><small>Distritos incompletos</small></div></article>
+        <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-orange">&#9888;</div><div><strong><?= $totalFaltantes ?></strong><b>Puestos faltantes</b><small>Por cubrir</small></div></article>
         <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-blue">&#9823;</div><div><strong><?= $totalAgentes ?>/<?= $totalRequerido ?></strong><b>Agentes</b><small>Asignados / Requeridos</small></div></article>
         <article class="dd-kpi-card"><div class="dd-kpi-icon dd-kpi-purple">&#9711;</div><div><strong><?= $promedioCobertura ?>%</strong><b>Cobertura</b><small>Promedio general</small></div></article>
     </div>
@@ -43,6 +44,7 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
                 <?php
                     $allComplete = $group['es_completa'];
                     $groupKey = $group['fecha_distribucion'] . '_' . $group['turno_id'];
+                    $incompleteInGroup = $group['total_distritos'] - $group['distritos_completos'];
                 ?>
                 <article class="dd-card <?= $allComplete ? 'dd-card-complete' : 'dd-card-incomplete' ?>" data-group-key="<?= $esc($groupKey) ?>">
                     <div class="dd-card-header" data-toggle-group="<?= $esc($groupKey) ?>">
@@ -66,22 +68,19 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
                     </div>
                     <div class="dd-card-bar"><div class="dd-bar-fill" style="width:<?= min(100, $group['porcentaje_cobertura']) ?>%"></div></div>
                     <div class="dd-card-summary">
-                        <span><b><?= $group['total_asignado'] ?></b> asignados</span>
-                        <span><b><?= $group['pendientes'] ?></b> pendientes</span>
-                        <span><b><?= $group['total_distritos'] ?></b> distritos</span>
-                        <span><b><?= $group['distritos_completos'] ?>/<?= $group['total_distritos'] ?></b> completos</span>
+                        <span><b><?= $group['pendientes'] ?></b> puestos faltantes</span>
+                        <span><b><?= $incompleteInGroup ?></b> distritos con faltantes</span>
                     </div>
                     <div class="dd-card-detail" id="ddDetail-<?= $esc($groupKey) ?>" hidden>
                         <table class="dd-district-table">
-                            <thead><tr><th>Distrito</th><th>Estado</th><th>Requerido</th><th>Asignado</th><th>Cobertura</th><th>Accion</th></tr></thead>
+                            <thead><tr><th>Distrito</th><th>Estado</th><th>Faltantes</th><th>Detalle de lo que falta</th><th>Acción</th></tr></thead>
                             <tbody>
                             <?php foreach ($group['distritos'] as $d): ?>
                                 <tr>
                                     <td><b><?= $esc($d['distrito']) ?></b></td>
                                     <td><span class="dd-chip <?= $d['es_completa'] ? 'dd-chip-green' : 'dd-chip-orange' ?>"><?= $d['es_completa'] ? 'Completo' : 'Incompleto' ?></span></td>
-                                    <td><?= $d['total_requerido'] ?></td>
-                                    <td><?= $d['total_asignado'] ?></td>
-                                    <td><?= $d['porcentaje_cobertura'] ?>%</td>
+                                    <td><b><?= $d['pendientes'] ?></b></td>
+                                    <td><?php if (empty($d['faltantes_detalle'])): ?><span class="dd-done-label">&#10003; Ninguno</span><?php else: ?><ul class="dd-missing-list"><?php foreach ($d['faltantes_detalle'] as $missing): ?><li><b><?= $esc($missing['lugar']) ?></b><small><?= $esc($missing['ruta']) ?></small></li><?php endforeach; ?></ul><?php endif; ?></td>
                                     <td>
                                         <?php if ($d['es_completa']): ?>
                                             <span class="dd-done-label">&#10003; Asignado</span>

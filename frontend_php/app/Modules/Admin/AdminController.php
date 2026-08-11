@@ -11,7 +11,7 @@ final class AdminController
 {
     private const TABS = ['resumen', 'catalogos', 'lugares', 'rutas', 'grados', 'eas', 'moviles', 'asignaciones', 'mantenimiento'];
 
-    public function index(?string $message = null): void
+    public function index(?string $message = null, ?array $importPreview = null): void
     {
         if (!AuthSession::check()) {
             header('Location: /');
@@ -59,6 +59,7 @@ final class AdminController
             'isAdministrator' => str_contains(strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? '')), 'ADMINISTRADOR'),
             'message' => $message,
             'error' => $error,
+            'importPreview' => $importPreview,
             'pageTitle' => 'Administración',
             'pageDescription' => 'Gestión integral de recursos y catálogos operativos',
         ]);
@@ -85,6 +86,7 @@ final class AdminController
                 $tipoServicioId = $this->nullableInt($_POST['tipo_servicio_id'] ?? null);
                 $consignas = $this->text('consignas');
                 $observacion = $this->text('observacion');
+                $lugarFormacion = $this->text('lugar_formacion');
                 $creados = 0;
                 foreach ($nombres as $nombre) {
                     $nombre = trim((string)$nombre);
@@ -97,6 +99,7 @@ final class AdminController
                         'tipoServicioId' => $tipoServicioId,
                         'consignas' => $consignas,
                         'observacion' => $observacion,
+                        'lugarFormacion' => $lugarFormacion,
                         'cantidadRequerida' => 1,
                         'estadoOperativo' => 'ACTIVO',
                         'activo' => true,
@@ -114,6 +117,66 @@ final class AdminController
                 else $api->post("admin/{$path}", $payload);
             }
             $this->index($id > 0 ? 'Registro actualizado correctamente.' : 'Registro creado correctamente.');
+        } catch (\Throwable $exception) {
+            $this->index($exception->getMessage());
+        }
+    }
+
+    public function downloadServicePlaceTemplate(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        if (!$this->can('lugares_servicio.ver', $user)) {
+            http_response_code(403);
+            echo 'No tiene permiso para descargar la plantilla.';
+            return;
+        }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="plantilla-lugares-servicio.csv"');
+        header('Cache-Control: no-store');
+        $output = fopen('php://output', 'wb');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, self::CSV_HEADERS);
+        fputcsv($output, [
+            '9 de Octubre', 'Ruta 9 de Octubre', 'Pedestre', '1',
+            '9 de Octubre | Boyacá y Escobedo', 'Mantener presencia preventiva',
+            'Punto de alta afluencia', '9 de Octubre y Boyacá',
+        ]);
+        fclose($output);
+    }
+
+    public function importServicePlaces(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        $_GET['tab'] = 'lugares';
+        if (!$this->can('lugares_servicio.crear', $user)) {
+            http_response_code(403);
+            $this->index('No tiene permiso para importar lugares de servicio.');
+            return;
+        }
+
+        try {
+            $action = (string)($_POST['import_action'] ?? 'preview');
+            if ($action === 'confirm') {
+                $token = (string)($_POST['import_token'] ?? '');
+                $stored = $_SESSION['lugares_csv_import'][$token] ?? null;
+                if (!is_array($stored)) throw new \RuntimeException('La vista previa expiró. Seleccione nuevamente el archivo CSV.');
+                unset($_SESSION['lugares_csv_import'][$token]);
+                $result = $this->api()->post('admin/lugares-servicio/importar', ['filas'=>$stored, 'confirmar'=>true])['datos'] ?? [];
+                $this->index(sprintf(
+                    'Importación finalizada: %d registro(s) importado(s) y %d rechazado(s).',
+                    (int)($result['importados'] ?? 0), (int)($result['rechazados'] ?? 0)
+                ));
+                return;
+            }
+
+            $rows = $this->readServicePlaceCsv($_FILES['archivo_csv'] ?? []);
+            $preview = $this->api()->post('admin/lugares-servicio/importar', ['filas'=>$rows, 'confirmar'=>false])['datos'] ?? [];
+            $token = bin2hex(random_bytes(16));
+            $_SESSION['lugares_csv_import'] = [$token => $rows];
+            $preview['token'] = $token;
+            $this->index(null, $preview);
         } catch (\Throwable $exception) {
             $this->index($exception->getMessage());
         }
@@ -145,7 +208,7 @@ final class AdminController
             'eas' => ['eas', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacion'=>$this->text('ubicacion'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'activo'=>isset($_POST['activo'])]],
             'movil' => ['moviles', ['numeroMovil'=>$this->text('numero_movil'),'placa'=>$this->text('placa'),'tipoMovilId'=>(int)($_POST['tipo_movil_id'] ?? 0),'estadoMovilId'=>(int)($_POST['estado_movil_id'] ?? 0),'kilometrajeActual'=>(int)($_POST['kilometraje_actual'] ?? 0),'kilometrajeUltimoMantenimiento'=>(int)($_POST['kilometraje_ultimo_mantenimiento'] ?? 0),'proximoMantenimiento'=>$this->nullableInt($_POST['proximo_mantenimiento'] ?? null),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'ruta' => ['rutas', ['nombre'=>$this->text('nombre'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'asignarEncargado'=>isset($_POST['asignar_encargado']),'activo'=>isset($_POST['activo'])]],
-            'lugar' => ['lugares-servicio', ['nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>isset($_POST['activo'])]],
+            'lugar' => ['lugares-servicio', ['nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>isset($_POST['activo'])]],
             'grado' => ['grados', ['nombre'=>$this->text('nombre'),'activo'=>isset($_POST['activo'])]],
             'asignacion' => ['movil-eas-asignaciones', ['easId'=>(int)($_POST['eas_id'] ?? 0),'movilId'=>(int)($_POST['movil_id'] ?? 0),'estadoAsignacionId'=>(int)($_POST['estado_asignacion_id'] ?? 0),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'catalogo_detalle' => ['catalogos', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'descripcion'=>$this->text('descripcion'),'orden'=>(int)($_POST['orden'] ?? 0),'asignarEncargado'=>isset($_POST['asignar_encargado']),'estado'=>isset($_POST['estado'])]],
@@ -157,6 +220,54 @@ final class AdminController
     private function emptyData(): array
     {
         return ['eas'=>[],'moviles'=>[],'rutas'=>[],'lugares'=>[],'grados'=>[],'catalogos'=>[],'detallesCatalogo'=>[],'asignaciones'=>[],'mantenimientos'=>[],'referencias'=>[]];
+    }
+
+    private const CSV_HEADERS = [
+        'distrito', 'ruta', 'tipo_servicio', 'cantidad_requerida',
+        'nombre_lugar_servicio', 'consignas', 'observacion', 'lugar_formacion',
+    ];
+
+    private function readServicePlaceCsv(array $file): array
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('Seleccione un archivo CSV válido.');
+        }
+        if ((int)($file['size'] ?? 0) > 2 * 1024 * 1024) {
+            throw new \RuntimeException('El archivo CSV no puede superar 2 MB.');
+        }
+        if (strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION)) !== 'csv') {
+            throw new \RuntimeException('El archivo seleccionado debe tener extensión .csv.');
+        }
+        $content = file_get_contents((string)$file['tmp_name']);
+        if ($content === false || trim($content) === '') throw new \RuntimeException('El archivo CSV está vacío.');
+        if (substr($content, 0, 3) === "\xEF\xBB\xBF") $content = substr($content, 3);
+        if (!preg_match('//u', $content)) {
+            $converted = iconv('Windows-1252', 'UTF-8//IGNORE', $content);
+            if ($converted !== false) $content = $converted;
+        }
+        $stream = fopen('php://temp', 'w+b');
+        fwrite($stream, $content);
+        rewind($stream);
+        $headers = fgetcsv($stream);
+        $headers = is_array($headers) ? array_map(static fn($value) => trim((string)$value), $headers) : [];
+        if ($headers !== self::CSV_HEADERS) {
+            throw new \RuntimeException('Las columnas del CSV no coinciden con la plantilla oficial o no están en el orden requerido.');
+        }
+        $rows = [];
+        $line = 1;
+        while (($values = fgetcsv($stream)) !== false) {
+            $line++;
+            if (count(array_filter($values, static fn($value) => trim((string)$value) !== '')) === 0) continue;
+            $parseError = count($values) === count(self::CSV_HEADERS) ? null : 'La fila no contiene exactamente 8 columnas';
+            $values = array_slice(array_pad($values, count(self::CSV_HEADERS), ''), 0, count(self::CSV_HEADERS));
+            $row = array_combine(self::CSV_HEADERS, array_map(static fn($value) => trim((string)$value), $values));
+            $row['fila'] = $line;
+            if ($parseError !== null) $row['_parse_error'] = $parseError;
+            $rows[] = $row;
+        }
+        fclose($stream);
+        if (!$rows) throw new \RuntimeException('El archivo CSV no contiene filas para importar.');
+        return $rows;
     }
 
     private function api(): ApiClient { return new ApiClient(Config::get('API_BASE_URL'), AuthSession::token()); }

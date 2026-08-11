@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
 
 from app.core.responses import ok
 from app.middleware.auth import require_permission
@@ -91,6 +91,16 @@ def lugares(user: dict = Depends(require_permission("lugares_servicio.ver"))):
 @router.post("/lugares-servicio", status_code=201)
 def crear_lugar(payload: dict = Body(...), user: dict = Depends(require_permission("lugares_servicio.crear"))):
     return result_created(repo.create_service_place(payload), "Lugar creado correctamente")
+
+
+@router.post("/lugares-servicio/importar")
+def importar_lugares(payload: dict = Body(...), user: dict = Depends(require_permission("lugares_servicio.crear"))):
+    try:
+        result = repo.import_service_places(payload.get("filas", []), bool(payload.get("confirmar", False)))
+    except ValueError as exception:
+        raise HTTPException(status_code=422, detail=str(exception)) from exception
+    message = "Importación completada" if payload.get("confirmar") else "Archivo validado correctamente"
+    return ok(result, message)
 
 
 @router.put("/lugares-servicio/{item_id}")

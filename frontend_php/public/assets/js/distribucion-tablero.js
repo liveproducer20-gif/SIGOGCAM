@@ -424,15 +424,13 @@
         $('#tdGeneratedName').textContent = `DISTRIBUCION DE PERSONAL FECHA ${formatDate(editingDate)}`;
         openModal('tdSaveModal');
     }
-    async function requestSave(force = false) {
+    async function requestSave() {
         const date = selectedDate(); if (!date) return notify('Seleccione la fecha de distribucion.', true);
-        const totals = await draftTotals();
-        if (totals.pending && !force) { closeModal('tdSaveModal'); openModal('tdPendingModal'); return; }
-        const button = force ? $('#tdForceSave') : $('#tdConfirmSave'); loading(button, true);
+        const button = $('#tdConfirmSave'); loading(button, true);
         try {
             const resource = state.editingId ? `distribucion-tablero/distribuciones/${state.editingId}` : 'distribucion-tablero/distribuciones';
             const saved = await api(resource, {method: state.editingId ? 'PUT' : 'POST', body: {
-                distrito_id:state.districtId,turno_id:state.shiftId,fecha_distribucion:date,guardar_con_pendientes:force,
+                distrito_id:state.districtId,turno_id:state.shiftId,fecha_distribucion:date,guardar_con_pendientes:true,
                 encargado_distrito_id:state.districtManager?.agente_id || null,
                 encargados_ruta:Array.from(state.routeManagers.entries()).map(([ruta_id,item])=>({ruta_id:Number(ruta_id),requiere_encargado:Boolean(item.requiere_encargado),agente_id:item.agente_id || null,tipo_asignacion:item.tipo_asignacion || 'MANUAL'})),
                 asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion}))
@@ -440,7 +438,7 @@
             state.saved = await api(`distribucion-tablero/distribuciones/${saved.id}`);
             state.editingId = 0;
             sessionStorage.removeItem(draftKey()); closeModal('tdSaveModal'); closeModal('tdPendingModal'); renderSaved(); openModal('tdResultModal');
-            notify('Distribucion guardada correctamente.');
+            notify(saved.pendientes ? `Distribucion guardada. Quedaron ${saved.pendientes} puestos pendientes.` : 'Distribucion guardada correctamente.');
         } catch (error) { notify(error.message, true); }
         finally { loading(button, false); }
     }
@@ -495,7 +493,7 @@
 
     $('#tdRandomAssign')?.addEventListener('click', randomAssign); $('#tdSaveDraft')?.addEventListener('click', openSave);
     $('#tdDistributionDate').addEventListener('change', event => { $('#tdGeneratedName').textContent = `DISTRIBUCION DE PERSONAL FECHA ${formatDate(event.target.value)}`; });
-    $('#tdConfirmSave').addEventListener('click', () => requestSave(false)); $('#tdForceSave').addEventListener('click', () => requestSave(true));
+    $('#tdConfirmSave').addEventListener('click', requestSave); $('#tdForceSave')?.addEventListener('click', requestSave);
     $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
     $$('.td-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.hidden = true; }));
     $('#tdViewSaved').addEventListener('click', () => { renderSaved(); notify('Detalle de la distribucion cargado.'); });

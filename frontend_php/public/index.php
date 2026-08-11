@@ -167,6 +167,16 @@ if ($path === '/admin/eliminar' && $method === 'POST') {
     return;
 }
 
+if ($path === '/admin/lugares-servicio/plantilla.csv' && $method === 'GET') {
+    (new AdminController())->downloadServicePlaceTemplate();
+    return;
+}
+
+if ($path === '/admin/lugares-servicio/importar' && $method === 'POST') {
+    (new AdminController())->importServicePlaces();
+    return;
+}
+
 if ($path === '/insignias' && $method === 'GET') {
     (new InsigniasController())->index();
     return;

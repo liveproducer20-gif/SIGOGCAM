@@ -734,8 +734,8 @@ def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
         required = sum(int(place["cantidad_requerida"] or 0) for place in places)
         assigned = len(assignments)
         pending = max(0, required - assigned)
-        if pending and not data.get("guardar_con_pendientes"):
-            raise HTTPException(409, "La distribucion posee lugares de servicio pendientes de asignacion")
+        # Una distribución parcial es un registro válido: los cupos no cubiertos
+        # se persisten como detalles PENDIENTE y se informan en el dashboard.
 
         cursor.execute("""
             SELECT TOP 1 id FROM dbo.distribuciones_personal WITH (UPDLOCK, HOLDLOCK)
@@ -932,8 +932,7 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
         required = sum(int(place["cantidad_requerida"] or 0) for place in places)
         assigned = len(assignments)
         pending = max(0, required - assigned)
-        if pending and not data.get("guardar_con_pendientes"):
-            raise HTTPException(409, "La distribucion posee lugares de servicio pendientes de asignacion")
+        # Al editar también se conserva la distribución aunque queden pendientes.
 
         cursor.execute("""
             SELECT TOP 1 id FROM dbo.distribuciones_personal WITH (UPDLOCK, HOLDLOCK)
@@ -1481,7 +1480,7 @@ def get_distributions_dashboard() -> dict:
                 LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=dd.agente_id
                 LEFT JOIN dbo.asignaciones_ruta ar ON ar.id=dd.asignacion_ruta_id AND ar.deleted_at IS NULL
                 LEFT JOIN dbo.turnos t ON t.id=?
-                WHERE d.estado=1
+                WHERE d.estado=1 AND dp.id IS NOT NULL
                 ORDER BY d.nombre, r.nombre, ls.nombre, dd.id
             """, group["turno_id"], group["turno_id"], group["fecha_distribucion"], group["turno_id"])
             rows = _rows(cursor)
@@ -1494,7 +1493,7 @@ def get_distributions_dashboard() -> dict:
                     by_district[district_id] = {
                         "id": int(row["distribucion_id"]) if row["distribucion_id"] is not None else None,
                         "distrito_id": district_id, "distrito": row["distrito"], "total_asignado": 0,
-                        "rutas": [],
+                        "rutas": [], "faltantes_detalle": [],
                     }
                     place_requirements[district_id] = {}
                     route_lookup[district_id] = {}
@@ -1505,6 +1504,10 @@ def get_distributions_dashboard() -> dict:
                 place_requirements[district_id][place_id] = max(1, int(row["cantidad_requerida"] or 1))
                 if row["agente_id"] is not None:
                     district["total_asignado"] += 1
+                else:
+                    district["faltantes_detalle"].append({
+                        "ruta": row["ruta"], "lugar": row["lugar"],
+                    })
                 route_id = int(row["ruta_id"])
                 if route_id not in route_lookup[district_id]:
                     route = {"id": route_id, "ruta": row["ruta"], "filas": []}

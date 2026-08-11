@@ -37,12 +37,20 @@
 
     function pinIcon(state, temporary = false, serviceType = '') {
         const color = temporary ? '#2563EB' : (colors[state] || colors.PENDIENTE);
-        const isPedestrian = String(serviceType).toUpperCase().includes('PEDESTRE');
-        if (isPedestrian && !temporary) {
-            return L.divIcon({
-                className: 'geo-pin-host geo-service-pin-host', iconSize: [46, 54], iconAnchor: [23, 52], popupAnchor: [0, -50],
-                html: `<span class="geo-service-pin" style="--pin-color:${color}"><img src="/assets/img/pinp.png" alt="" draggable="false"></span>`
-            });
+        const normalizedType = String(serviceType).toUpperCase().replace(/\s+/g, '');
+        if (!temporary) {
+            if (normalizedType.includes('PEDESTRE')) {
+                return L.divIcon({
+                    className: 'geo-pin-host geo-service-pin-host', iconSize: [46, 54], iconAnchor: [23, 52], popupAnchor: [0, -50],
+                    html: `<span class="geo-service-pin" style="--pin-color:${color}"><img src="/assets/img/pinp.png" alt="" draggable="false"></span>`
+                });
+            }
+            if (normalizedType.includes('ENCARGADODERUTA')) {
+                return L.divIcon({
+                    className: 'geo-pin-host geo-service-pin-host', iconSize: [46, 54], iconAnchor: [23, 52], popupAnchor: [0, -50],
+                    html: `<span class="geo-service-pin" style="--pin-color:${color}"><img src="/assets/img/aj-icon.png?v=2" alt="" draggable="false"></span>`
+                });
+            }
         }
         return L.divIcon({
             className: 'geo-pin-host', iconSize: [34, 44], iconAnchor: [17, 42], popupAnchor: [0, -39],
@@ -202,7 +210,11 @@
 
     function renderPersonnelLayer(places, managers, routeCount) {
         markerLayer.clearLayers();
-        const visiblePlaces = (places || []).filter(place => selectedServiceTypes.has(serviceKey(place.tipo_servicio)));
+        const allServiceTypesSelected = serviceTypeInputs().length > 0 && serviceTypeInputs().every(input => input.checked);
+        const visiblePlaces = (places || []).filter(place => {
+            const key = serviceKey(place.tipo_servicio);
+            return selectedServiceTypes.has(key) || (allServiceTypesSelected && !key);
+        });
         const visibleManagers = (managers || []).filter(manager => selectedServiceTypes.has(serviceKey(manager.tipo_servicio)));
         visiblePlaces.filter(place => place.latitud != null && place.longitud != null).forEach(addPlaceMarker);
         visibleManagers.filter(manager => manager.latitud != null && manager.longitud != null).forEach(addManagerMarker);
@@ -240,7 +252,7 @@
         }
         return L.divIcon({
             className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
-            html:`<span class="geo-manager-pin geo-manager-pin--route" style="--manager-color:${color}"><img src="/assets/img/aj-icon.png" alt="ER"></span>`
+            html:`<span class="geo-manager-pin geo-manager-pin--route" style="--manager-color:${color}"><img src="/assets/img/aj-icon.png?v=2" alt="ER"></span>`
         });
     }
 
