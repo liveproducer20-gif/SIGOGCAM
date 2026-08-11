@@ -20,6 +20,7 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
         <?php if ($can('roles.ver')): ?><a href="/configuracion">Roles</a><?php endif; ?>
         <?php if ($can('lugares_servicio.ver')): ?><a class="<?= $tab === 'lugares' ? 'is-active' : '' ?>" href="<?= $tabUrl('lugares') ?>">Lugares</a><?php endif; ?>
         <?php if ($can('rutas.ver')): ?><a class="<?= $tab === 'rutas' ? 'is-active' : '' ?>" href="<?= $tabUrl('rutas') ?>">Rutas</a><?php endif; ?>
+        <?php if ($can('circuitos.ver')): ?><a class="<?= $tab === 'circuitos' ? 'is-active' : '' ?>" href="<?= $tabUrl('circuitos') ?>">Circuitos</a><?php endif; ?>
         <?php if ($can('personal.ver')): ?><a class="<?= $tab === 'grados' ? 'is-active' : '' ?>" href="<?= $tabUrl('grados') ?>">Grados</a><?php endif; ?>
         <?php if ($can('eas.ver')): ?><a class="<?= $tab === 'eas' ? 'is-active' : '' ?>" href="<?= $tabUrl('eas') ?>">EAS</a><?php endif; ?>
         <?php if ($can('moviles.ver')): ?><a class="<?= $tab === 'moviles' ? 'is-active' : '' ?>" href="<?= $tabUrl('moviles') ?>">Móviles</a><?php endif; ?>
@@ -72,6 +73,68 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
     <header class="admin-section-heading"><div><h2>Rutas operativas</h2><p>Distrito, turno y franja horaria relacionada.</p></div><span><?= count($adminData['rutas']) ?> rutas</span></header>
     <?php if ($can('catalogos.crear') || $can('catalogos.editar')): ?><form class="form-panel admin-form" method="post" action="/admin" id="form-ruta"><input type="hidden" name="entity" value="ruta"><input type="hidden" name="tab" value="rutas"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nueva ruta</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>Nombre<input name="nombre" required></label><label>Distrito<select name="distrito_id"><?php $optionList($refs['distritos'] ?? []); ?></select></label><label>Turno<select name="turno_id"><?php $optionList($refs['turnos'] ?? []); ?></select></label><label>Hora inicio<input type="time" name="hora_inicio"></label><label>Hora fin<input type="time" name="hora_fin"></label><label class="check-row"><input type="checkbox" name="asignar_encargado"> Asignar encargado</label><label class="check-row"><input type="checkbox" name="activo" checked> Activa</label></div><button type="submit">Guardar ruta</button></form><?php endif; ?>
     <section class="table-wrap"><table><thead><tr><th>Ruta</th><th>Distrito</th><th>Turno</th><th>Horario</th><th>Encargado</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['rutas'] as $item): $payload=['id'=>$item['id'],'nombre'=>$item['nombre'],'distrito_id'=>$item['distrito_id'],'turno_id'=>$item['turno_id'],'hora_inicio'=>$item['hora_inicio'],'hora_fin'=>$item['hora_fin'],'asignar_encargado'=>(bool)$item['asignar_encargado'],'activo'=>(bool)$item['activo']]; ?><tr><td><strong><?= $e($item['nombre']) ?></strong></td><td><?= $e($item['distrito'] ?? '—') ?></td><td><?= $e($item['turno'] ?? '—') ?></td><td><?= $e(($item['hora_inicio'] ?? '—').' – '.($item['hora_fin'] ?? '—')) ?></td><td><span class="status-pill <?= $item['asignar_encargado'] ? 'is-active' : '' ?>"><?= $item['asignar_encargado'] ? 'Permitido' : 'No requerido' ?></span></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $item['activo'] ? 'Activa' : 'Inactiva' ?></span></td><td class="actions"><?php if ($can('catalogos.editar')): ?><button type="button" class="secondary" data-edit-target="#form-ruta" data-payload="<?= $json($payload) ?>">Editar</button><?php endif; ?><?php if ($can('catalogos.estado')): ?><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="ruta"><input type="hidden" name="tab" value="rutas"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Eliminar</button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
+    <?php endif; ?>
+
+    <?php if ($tab === 'circuitos' && $can('circuitos.ver')): ?>
+    <?php
+    $circuitos = $adminData['circuitos'] ?? [];
+    $circuitPayload = static function (array $item): array {
+        return [
+            'id'=>(int)$item['id'],'distrito_id'=>(int)$item['distrito_id'],'nombre'=>$item['nombre'],
+            'encargado_id'=>(int)$item['encargado_id'],'usar_encargado_distrito'=>(bool)$item['usar_encargado_distrito'],
+            'auxiliar_1_id'=>$item['auxiliar_1_id'],'auxiliar_2_id'=>$item['auxiliar_2_id'],'movil_id'=>$item['movil_id'],
+            'hora_inicio'=>$item['hora_inicio'],'hora_fin'=>$item['hora_fin'],'lugar_formacion'=>$item['lugar_formacion'],
+            'consignas'=>$item['consignas'],'observaciones'=>$item['observaciones'],'perimetro'=>$item['perimetro'],
+            'ruta_ids'=>$item['ruta_ids'] ?? [],
+        ];
+    };
+    ?>
+    <header class="admin-section-heading circuit-heading">
+        <div><h2>Circuitos</h2><p>Organice las rutas de cada distrito y su equipo operativo.</p></div>
+        <?php if ($can('circuitos.crear')): ?><button type="button" data-circuit-create>+ Crear circuito</button><?php endif; ?>
+    </header>
+    <form class="circuit-filters" method="get" action="/admin">
+        <input type="hidden" name="tab" value="circuitos">
+        <label>Distrito<select name="distrito_id"><option value="">Todos los distritos</option><?php foreach (($refs['distritos'] ?? []) as $district): ?><option value="<?= (int)$district['id'] ?>" <?= (string)($_GET['distrito_id'] ?? '') === (string)$district['id'] ? 'selected' : '' ?>><?= $e($district['nombre']) ?></option><?php endforeach; ?></select></label>
+        <label>Buscar<input type="search" name="buscar" value="<?= $e($_GET['buscar'] ?? '') ?>" placeholder="Circuito, distrito o encargado"></label>
+        <button type="submit">Filtrar</button><a class="button secondary" href="/admin?tab=circuitos">Limpiar</a>
+    </form>
+
+    <?php if ($can('circuitos.crear') || $can('circuitos.editar')): ?>
+    <form class="form-panel admin-form circuit-form" method="post" action="/admin" id="form-circuito" hidden>
+        <input type="hidden" name="entity" value="circuito"><input type="hidden" name="tab" value="circuitos"><input type="hidden" name="id">
+        <div class="admin-form-title"><h3 data-circuit-form-title>Nuevo circuito</h3><button type="reset" class="secondary" data-circuit-cancel>Cancelar</button></div>
+        <div class="form-grid">
+            <label>Distrito<select name="distrito_id" required><option value="">Seleccione</option><?php foreach (($refs['distritos'] ?? []) as $district): ?><option value="<?= (int)$district['id'] ?>"><?= $e($district['nombre']) ?></option><?php endforeach; ?></select></label>
+            <label>Nombre del circuito<input name="nombre" maxlength="180" required></label>
+            <label>Encargado de circuito<select name="encargado_id" required><option value="">Seleccione</option><?php foreach (($refs['personal'] ?? []) as $person): ?><option value="<?= (int)$person['id'] ?>"><?= $e($person['nombre'].' · '.$person['cedula']) ?></option><?php endforeach; ?></select></label>
+            <label class="check-row span-2"><input type="checkbox" name="usar_encargado_distrito"> El encargado de distrito también será encargado de este circuito</label>
+            <label>Auxiliar 1<select name="auxiliar_1_id"><option value="">Sin auxiliar</option><?php foreach (($refs['personal'] ?? []) as $person): ?><option value="<?= (int)$person['id'] ?>"><?= $e($person['nombre']) ?></option><?php endforeach; ?></select></label>
+            <label>Auxiliar 2<select name="auxiliar_2_id"><option value="">Sin auxiliar</option><?php foreach (($refs['personal'] ?? []) as $person): ?><option value="<?= (int)$person['id'] ?>"><?= $e($person['nombre']) ?></option><?php endforeach; ?></select></label>
+            <label>Móvil asignado<select name="movil_id"><option value="">Sin móvil</option><?php foreach (($refs['moviles'] ?? []) as $mobile): ?><option value="<?= (int)$mobile['id'] ?>"><?= $e($mobile['nombre']) ?></option><?php endforeach; ?></select></label>
+            <label>Hora inicio<input type="time" name="hora_inicio"></label><label>Hora fin<input type="time" name="hora_fin"></label>
+            <label class="span-2">Lugar de formación<input name="lugar_formacion" maxlength="300"></label>
+            <fieldset class="circuit-routes span-3"><legend>Rutas asignadas</legend><p>Solo se habilitan rutas del distrito seleccionado.</p><div data-circuit-route-options><?php foreach (($refs['rutas'] ?? []) as $route): ?><label data-district-id="<?= (int)$route['distrito_id'] ?>" hidden><input type="checkbox" name="ruta_ids[]" value="<?= (int)$route['id'] ?>"> <?= $e($route['nombre']) ?></label><?php endforeach; ?></div></fieldset>
+            <label class="span-3">Consignas<textarea name="consignas" rows="3"></textarea></label>
+            <label class="span-3">Observaciones<textarea name="observaciones" rows="3"></textarea></label>
+            <label class="span-3">Perímetro escrito<textarea name="perimetro" rows="4" placeholder="Describa calles, límites y referencias del perímetro"></textarea></label>
+        </div><button type="submit">Guardar circuito</button>
+    </form>
+    <?php endif; ?>
+
+    <section class="table-wrap circuit-table"><table data-search-cols="0,1,2,3,4"><thead><tr><th>Circuito</th><th>Distrito</th><th>Encargado</th><th>Auxiliares</th><th>Móvil</th><th>Horario</th><th>Rutas</th><th>Acciones</th></tr></thead><tbody>
+    <?php foreach ($circuitos as $item): $payload=$circuitPayload($item); ?>
+        <tr><td><strong><?= $e($item['nombre']) ?></strong></td><td><?= $e($item['distrito']) ?></td><td><?= $e($item['encargado']) ?><?php if ($item['usar_encargado_distrito']): ?><small>También encargado de distrito</small><?php endif; ?></td><td><?= $e(implode(' · ',array_filter([$item['auxiliar_1'] ?? null,$item['auxiliar_2'] ?? null])) ?: 'Sin auxiliares') ?></td><td><?= $e($item['movil'] ?: 'Sin móvil') ?></td><td><?= $e(($item['hora_inicio'] ?: '—').' – '.($item['hora_fin'] ?: '—')) ?></td><td><strong><?= (int)$item['total_rutas'] ?></strong><small><?= $e($item['rutas'] ?: 'Sin rutas') ?></small></td>
+        <td class="circuit-actions"><details><summary aria-label="Acciones">⋮</summary><div>
+            <button type="button" data-circuit-view data-payload="<?= $json(array_merge($payload,['distrito'=>$item['distrito'],'encargado'=>$item['encargado'],'auxiliar_1'=>$item['auxiliar_1'],'auxiliar_2'=>$item['auxiliar_2'],'movil'=>$item['movil'],'rutas'=>$item['rutas']])) ?>">Ver</button>
+            <?php if ($can('circuitos.editar')): ?><button type="button" data-edit-target="#form-circuito" data-circuit-edit data-payload="<?= $json($payload) ?>">Editar</button><?php endif; ?>
+            <?php if ($can('circuitos.rutas')): ?><button type="button" data-circuit-routes data-id="<?= (int)$item['id'] ?>" data-name="<?= $e($item['nombre']) ?>" data-district="<?= (int)$item['distrito_id'] ?>" data-routes="<?= $e(implode(',',array_map('intval',$item['ruta_ids'] ?? []))) ?>">Gestionar rutas</button><?php endif; ?>
+            <?php if ($can('circuitos.eliminar')): ?><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="circuito"><input type="hidden" name="tab" value="circuitos"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Eliminar</button></form><?php endif; ?>
+        </div></details></td></tr>
+    <?php endforeach; ?></tbody></table></section>
+
+    <dialog class="circuit-dialog" id="circuitViewDialog"><form method="dialog"><button aria-label="Cerrar">×</button></form><h3 data-view-name></h3><dl data-circuit-view-content></dl></dialog>
+    <dialog class="circuit-dialog" id="circuitRoutesDialog"><form method="post" action="/admin" id="circuitRoutesForm"><input type="hidden" name="entity" value="circuito_rutas"><input type="hidden" name="tab" value="circuitos"><input type="hidden" name="id"><div class="dialog-title"><h3>Gestionar rutas · <span data-routes-name></span></h3><button type="button" data-dialog-close>×</button></div><div class="dialog-route-list"><?php foreach (($refs['rutas'] ?? []) as $route): ?><label data-district-id="<?= (int)$route['distrito_id'] ?>"><input type="checkbox" name="ruta_ids[]" value="<?= (int)$route['id'] ?>"> <?= $e($route['nombre']) ?></label><?php endforeach; ?></div><button type="submit">Guardar rutas</button></form></dialog>
     <?php endif; ?>
 
     <?php if ($tab === 'grados' && $can('personal.ver')): ?>

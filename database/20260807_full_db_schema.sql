@@ -530,6 +530,60 @@ CREATE TABLE dbo.moviles (
 );
 GO
 
+-- 5.2 Circuitos: jerarquía Distrito -> Circuito -> Rutas
+IF OBJECT_ID(N'dbo.circuitos', N'U') IS NULL
+CREATE TABLE dbo.circuitos (
+    id INT IDENTITY(1,1) NOT NULL,
+    distrito_id INT NOT NULL,
+    nombre NVARCHAR(180) NOT NULL,
+    encargado_id INT NOT NULL,
+    usar_encargado_distrito BIT NOT NULL CONSTRAINT DF_circuitos_encargado_distrito DEFAULT (0),
+    auxiliar_1_id INT NULL,
+    auxiliar_2_id INT NULL,
+    movil_id INT NULL,
+    hora_inicio TIME(0) NULL,
+    hora_fin TIME(0) NULL,
+    lugar_formacion NVARCHAR(300) NULL,
+    consignas NVARCHAR(MAX) NULL,
+    observaciones NVARCHAR(MAX) NULL,
+    perimetro NVARCHAR(MAX) NULL,
+    activo BIT NOT NULL CONSTRAINT DF_circuitos_activo DEFAULT (1),
+    fecha_creacion DATETIME2 NOT NULL CONSTRAINT DF_circuitos_fecha DEFAULT (SYSDATETIME()),
+    fecha_actualizacion DATETIME2 NULL,
+    deleted_at DATETIME2 NULL,
+    CONSTRAINT PK_circuitos PRIMARY KEY (id),
+    CONSTRAINT FK_circuitos_distrito FOREIGN KEY (distrito_id) REFERENCES dbo.catalogo_detalles(id),
+    CONSTRAINT FK_circuitos_encargado FOREIGN KEY (encargado_id) REFERENCES dbo.personal(id),
+    CONSTRAINT FK_circuitos_auxiliar_1 FOREIGN KEY (auxiliar_1_id) REFERENCES dbo.personal(id),
+    CONSTRAINT FK_circuitos_auxiliar_2 FOREIGN KEY (auxiliar_2_id) REFERENCES dbo.personal(id),
+    CONSTRAINT FK_circuitos_movil FOREIGN KEY (movil_id) REFERENCES dbo.moviles(id),
+    CONSTRAINT CK_circuitos_personal_distinto CHECK (
+        (auxiliar_1_id IS NULL OR auxiliar_1_id <> encargado_id) AND
+        (auxiliar_2_id IS NULL OR auxiliar_2_id <> encargado_id) AND
+        (auxiliar_1_id IS NULL OR auxiliar_2_id IS NULL OR auxiliar_1_id <> auxiliar_2_id)
+    )
+);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_circuitos_distrito_nombre_activo' AND object_id=OBJECT_ID(N'dbo.circuitos'))
+    CREATE UNIQUE INDEX UX_circuitos_distrito_nombre_activo ON dbo.circuitos(distrito_id,nombre) WHERE deleted_at IS NULL;
+GO
+
+IF OBJECT_ID(N'dbo.circuito_rutas', N'U') IS NULL
+CREATE TABLE dbo.circuito_rutas (
+    id BIGINT IDENTITY(1,1) NOT NULL,
+    circuito_id INT NOT NULL,
+    ruta_id INT NOT NULL,
+    fecha_creacion DATETIME2 NOT NULL CONSTRAINT DF_circuito_rutas_fecha DEFAULT (SYSDATETIME()),
+    deleted_at DATETIME2 NULL,
+    CONSTRAINT PK_circuito_rutas PRIMARY KEY (id),
+    CONSTRAINT FK_circuito_rutas_circuito FOREIGN KEY (circuito_id) REFERENCES dbo.circuitos(id),
+    CONSTRAINT FK_circuito_rutas_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.rutas(id)
+);
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_circuito_rutas_circuito_ruta_activa' AND object_id=OBJECT_ID(N'dbo.circuito_rutas'))
+    CREATE UNIQUE INDEX UX_circuito_rutas_circuito_ruta_activa ON dbo.circuito_rutas(circuito_id,ruta_id) WHERE deleted_at IS NULL;
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_circuito_rutas_ruta_activa' AND object_id=OBJECT_ID(N'dbo.circuito_rutas'))
+    CREATE UNIQUE INDEX UX_circuito_rutas_ruta_activa ON dbo.circuito_rutas(ruta_id) WHERE deleted_at IS NULL;
+GO
+
 -- 5.2 dbo.movil_mantenimiento
 IF OBJECT_ID(N'dbo.movil_mantenimiento', N'U') IS NULL
 CREATE TABLE dbo.movil_mantenimiento (
@@ -1441,6 +1495,11 @@ IF NOT EXISTS (SELECT 1 FROM dbo.permisos)
     ('lugares_servicio.crear','Crear lugares de servicio','administracion'),
     ('lugares_servicio.editar','Editar lugares de servicio','administracion'),
     ('lugares_servicio.estado','Activar o inactivar lugares de servicio','administracion'),
+    ('circuitos.ver','Ver circuitos','administracion'),
+    ('circuitos.crear','Crear circuitos','administracion'),
+    ('circuitos.editar','Editar circuitos','administracion'),
+    ('circuitos.rutas','Asignar y desasignar rutas de circuitos','administracion'),
+    ('circuitos.eliminar','Eliminar circuitos','administracion'),
     ('eas.ver','Ver EAS','administracion'),
     ('eas.crear','Crear EAS','administracion'),
     ('eas.editar','Editar EAS','administracion'),

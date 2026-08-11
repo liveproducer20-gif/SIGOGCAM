@@ -12,6 +12,13 @@ def result_created(item_id: int, message: str) -> dict:
     return {**ok(None, message), "id": item_id}
 
 
+def circuit_action(action):
+    try:
+        return action()
+    except ValueError as exception:
+        raise HTTPException(status_code=422, detail=str(exception)) from exception
+
+
 @router.get("/referencias")
 def referencias(user: dict = Depends(require_permission("administracion.ver"))):
     return ok(repo.admin_references())
@@ -81,6 +88,49 @@ def actualizar_ruta(item_id: int, payload: dict = Body(...), user: dict = Depend
 def eliminar_ruta(item_id: int, user: dict = Depends(require_permission("catalogos.estado"))):
     repo.delete_route(item_id)
     return ok(None, "Registro eliminado correctamente")
+
+
+@router.get("/circuitos")
+def circuitos(
+    distrito_id: int | None = None,
+    buscar: str | None = None,
+    user: dict = Depends(require_permission("circuitos.ver")),
+):
+    return ok(repo.list_circuits(distrito_id, buscar))
+
+
+@router.get("/circuitos/{item_id}")
+def circuito(item_id: int, user: dict = Depends(require_permission("circuitos.ver"))):
+    return circuit_action(lambda: ok(repo.get_circuit(item_id)))
+
+
+@router.post("/circuitos", status_code=201)
+def crear_circuito(payload: dict = Body(...), user: dict = Depends(require_permission("circuitos.crear"))):
+    return circuit_action(lambda: result_created(repo.create_circuit(payload), "Circuito creado correctamente"))
+
+
+@router.put("/circuitos/{item_id}")
+def actualizar_circuito(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("circuitos.editar"))):
+    def action():
+        repo.update_circuit(item_id, payload)
+        return ok(None, "Circuito actualizado correctamente")
+    return circuit_action(action)
+
+
+@router.put("/circuitos/{item_id}/rutas")
+def gestionar_rutas_circuito(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("circuitos.rutas"))):
+    def action():
+        repo.replace_circuit_routes(item_id, payload.get("rutaIds") or [])
+        return ok(None, "Rutas del circuito actualizadas correctamente")
+    return circuit_action(action)
+
+
+@router.delete("/circuitos/{item_id}")
+def eliminar_circuito(item_id: int, user: dict = Depends(require_permission("circuitos.eliminar"))):
+    def action():
+        repo.delete_circuit(item_id)
+        return ok(None, "Circuito eliminado correctamente")
+    return circuit_action(action)
 
 
 @router.get("/lugares-servicio")

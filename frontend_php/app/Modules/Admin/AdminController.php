@@ -9,7 +9,7 @@ use App\Core\View;
 
 final class AdminController
 {
-    private const TABS = ['resumen', 'catalogos', 'lugares', 'rutas', 'grados', 'eas', 'moviles', 'asignaciones', 'mantenimiento'];
+    private const TABS = ['resumen', 'catalogos', 'lugares', 'rutas', 'circuitos', 'grados', 'eas', 'moviles', 'asignaciones', 'mantenimiento'];
 
     public function index(?string $message = null, ?array $importPreview = null): void
     {
@@ -37,6 +37,13 @@ final class AdminController
             if ($this->can('eas.ver', $user)) $data['eas'] = $api->get('admin/eas')['datos'] ?? [];
             if ($this->can('moviles.ver', $user)) $data['moviles'] = $api->get('admin/moviles')['datos'] ?? [];
             if ($this->can('rutas.ver', $user)) $data['rutas'] = $api->get('admin/rutas')['datos'] ?? [];
+            if ($this->can('circuitos.ver', $user)) {
+                $query = http_build_query([
+                    'distrito_id' => $this->nullableInt($_GET['distrito_id'] ?? null),
+                    'buscar' => trim((string)($_GET['buscar'] ?? '')),
+                ]);
+                $data['circuitos'] = $api->get('admin/circuitos' . ($query !== '' ? '?' . $query : ''))['datos'] ?? [];
+            }
             if ($this->can('lugares_servicio.ver', $user)) $data['lugares'] = $api->get('admin/lugares-servicio')['datos'] ?? [];
             if ($this->can('personal.ver', $user)) $data['grados'] = $api->get('admin/grados')['datos'] ?? [];
             if ($this->can('catalogos.ver', $user)) {
@@ -60,6 +67,8 @@ final class AdminController
             'message' => $message,
             'error' => $error,
             'importPreview' => $importPreview,
+            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260811'],
+            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260811'],
             'pageTitle' => 'Administración',
             'pageDescription' => 'Gestión integral de recursos y catálogos operativos',
         ]);
@@ -75,7 +84,11 @@ final class AdminController
         if (!empty($_POST['catalogo_codigo'])) $_GET['catalogo'] = $_POST['catalogo_codigo'];
         try {
             $api = $this->api();
-            if ($entity === 'mantenimiento') {
+            if ($entity === 'circuito_rutas') {
+                $api->put('admin/circuitos/' . $id . '/rutas', [
+                    'rutaIds' => array_values(array_map('intval', (array)($_POST['ruta_ids'] ?? []))),
+                ]);
+            } elseif ($entity === 'mantenimiento') {
                 [$path, $payload] = $this->payloadFor($entity);
                 $api->post('admin/moviles/' . (int)$_POST['movil_id'] . '/mantenimientos', $payload);
             } elseif ($entity === 'lugar' && $id <= 0 && !empty($_POST['nombre'])) {
@@ -189,7 +202,7 @@ final class AdminController
         $id = (int)($_POST['id'] ?? 0);
         $paths = [
             'eas'=>'eas','movil'=>'moviles','ruta'=>'rutas','lugar'=>'lugares-servicio',
-            'grado'=>'grados','asignacion'=>'movil-eas-asignaciones','catalogo_detalle'=>'catalogos/detalles',
+            'grado'=>'grados','asignacion'=>'movil-eas-asignaciones','catalogo_detalle'=>'catalogos/detalles','circuito'=>'circuitos',
         ];
         $_GET['tab'] = (string)($_POST['tab'] ?? 'resumen');
         if (!empty($_POST['catalogo_codigo'])) $_GET['catalogo'] = $_POST['catalogo_codigo'];
@@ -208,6 +221,7 @@ final class AdminController
             'eas' => ['eas', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacion'=>$this->text('ubicacion'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'activo'=>isset($_POST['activo'])]],
             'movil' => ['moviles', ['numeroMovil'=>$this->text('numero_movil'),'placa'=>$this->text('placa'),'tipoMovilId'=>(int)($_POST['tipo_movil_id'] ?? 0),'estadoMovilId'=>(int)($_POST['estado_movil_id'] ?? 0),'kilometrajeActual'=>(int)($_POST['kilometraje_actual'] ?? 0),'kilometrajeUltimoMantenimiento'=>(int)($_POST['kilometraje_ultimo_mantenimiento'] ?? 0),'proximoMantenimiento'=>$this->nullableInt($_POST['proximo_mantenimiento'] ?? null),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'ruta' => ['rutas', ['nombre'=>$this->text('nombre'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'asignarEncargado'=>isset($_POST['asignar_encargado']),'activo'=>isset($_POST['activo'])]],
+            'circuito' => ['circuitos', ['distritoId'=>(int)($_POST['distrito_id'] ?? 0),'nombre'=>$this->text('nombre'),'encargadoId'=>(int)($_POST['encargado_id'] ?? 0),'usarEncargadoDistrito'=>isset($_POST['usar_encargado_distrito']),'auxiliar1Id'=>$this->nullableInt($_POST['auxiliar_1_id'] ?? null),'auxiliar2Id'=>$this->nullableInt($_POST['auxiliar_2_id'] ?? null),'movilId'=>$this->nullableInt($_POST['movil_id'] ?? null),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'lugarFormacion'=>$this->text('lugar_formacion'),'consignas'=>$this->text('consignas'),'observaciones'=>$this->text('observaciones'),'perimetro'=>$this->text('perimetro'),'rutaIds'=>array_values(array_map('intval',(array)($_POST['ruta_ids'] ?? [])))]],
             'lugar' => ['lugares-servicio', ['nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>isset($_POST['activo'])]],
             'grado' => ['grados', ['nombre'=>$this->text('nombre'),'activo'=>isset($_POST['activo'])]],
             'asignacion' => ['movil-eas-asignaciones', ['easId'=>(int)($_POST['eas_id'] ?? 0),'movilId'=>(int)($_POST['movil_id'] ?? 0),'estadoAsignacionId'=>(int)($_POST['estado_asignacion_id'] ?? 0),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
@@ -219,7 +233,7 @@ final class AdminController
 
     private function emptyData(): array
     {
-        return ['eas'=>[],'moviles'=>[],'rutas'=>[],'lugares'=>[],'grados'=>[],'catalogos'=>[],'detallesCatalogo'=>[],'asignaciones'=>[],'mantenimientos'=>[],'referencias'=>[]];
+        return ['eas'=>[],'moviles'=>[],'rutas'=>[],'circuitos'=>[],'lugares'=>[],'grados'=>[],'catalogos'=>[],'detallesCatalogo'=>[],'asignaciones'=>[],'mantenimientos'=>[],'referencias'=>[]];
     }
 
     private const CSV_HEADERS = [

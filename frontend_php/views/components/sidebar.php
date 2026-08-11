@@ -22,7 +22,7 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
         <a class="sigo-nav-link<?= $active(['/dashboard']) ?>" href="/dashboard"><span class="sigo-nav-icon">▣</span><span>Panel principal</span><b>›</b></a>
         <p class="sigo-nav-label">Módulos</p>
 
-        <?php if ($sidebarCan(['administracion.ver', 'personal.ver', 'catalogos.ver'])): ?>
+        <?php if ($sidebarCan(['administracion.ver', 'personal.ver', 'catalogos.ver', 'circuitos.ver'])): ?>
         <section class="sigo-nav-group<?= $open(['/admin', '/personal']) ?>" data-nav-group>
             <button type="button" aria-expanded="<?= in_array($path, ['/admin', '/personal'], true) ? 'true' : 'false' ?>"><span class="sigo-nav-icon">♙</span><span>Administración</span><b>⌄</b></button>
             <div class="sigo-submenu">
@@ -31,6 +31,7 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
                 <?php if ($sidebarCan(['roles.ver', 'permisos.ver'])): ?><a href="/configuracion">Roles y permisos</a><?php endif; ?>
                 <?php if ($sidebarCan(['lugares_servicio.ver'])): ?><a href="/admin?tab=lugares">Lugares de servicio</a><?php endif; ?>
                 <?php if ($sidebarCan(['rutas.ver'])): ?><a href="/admin?tab=rutas">Rutas</a><?php endif; ?>
+                <?php if ($sidebarCan(['circuitos.ver'])): ?><a href="/admin?tab=circuitos">Circuitos</a><?php endif; ?>
                 <?php if ($sidebarCan(['personal.ver'])): ?><a href="/admin?tab=grados">Grados</a><?php endif; ?>
                 <?php if ($sidebarCan(['eas.ver'])): ?><a href="/admin?tab=eas">EAS</a><?php endif; ?>
                 <?php if ($sidebarCan(['moviles.ver'])): ?><a href="/admin?tab=moviles">Móviles</a><?php endif; ?>
