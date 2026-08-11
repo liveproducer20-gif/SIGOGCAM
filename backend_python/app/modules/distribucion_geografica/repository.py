@@ -44,6 +44,31 @@ def catalogs() -> dict:
         return {"distritos": districts, "turnos": shifts, "tiposServicio": service_types}
 
 
+def circuits_by_district(district_id: int) -> list[dict]:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT c.id, c.nombre, c.hora_inicio, c.hora_fin
+            FROM dbo.circuitos c
+            WHERE c.activo = 1 AND c.deleted_at IS NULL AND c.distrito_id = ?
+            ORDER BY c.nombre
+        """, district_id)
+        return _rows(cursor)
+
+
+def routes_by_circuit(circuit_id: int) -> list[dict]:
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT r.id, r.nombre, r.distrito_id, r.turno_id, r.hora_inicio, r.hora_fin
+            FROM dbo.circuito_rutas cr
+            INNER JOIN dbo.rutas r ON r.id = cr.ruta_id
+            WHERE cr.circuito_id = ? AND cr.deleted_at IS NULL AND r.activo = 1
+            ORDER BY r.nombre
+        """, circuit_id)
+        return _rows(cursor)
+
+
 def routes_by_district(district_id: int) -> list[dict]:
     with get_connection() as connection:
         cursor = connection.cursor()

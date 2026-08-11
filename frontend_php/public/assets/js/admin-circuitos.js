@@ -39,20 +39,9 @@
         });
     });
 
-    form.addEventListener('submit', (event) => {
-        const values = ['encargado_id', 'auxiliar_1_id', 'auxiliar_2_id']
-            .map((name) => String(form.elements.namedItem(name).value || ''))
-            .filter(Boolean);
-        if (new Set(values).size !== values.length) {
-            event.preventDefault();
-            window.alert('El encargado y los auxiliares deben ser personas diferentes.');
-        }
-    }, true);
-
     const viewDialog = document.getElementById('circuitViewDialog');
     const viewFields = [
-        ['Distrito', 'distrito'], ['Encargado', 'encargado'], ['Auxiliar 1', 'auxiliar_1'],
-        ['Auxiliar 2', 'auxiliar_2'], ['Móvil', 'movil'], ['Hora inicio', 'hora_inicio'],
+        ['Distrito', 'distrito'], ['Hora inicio', 'hora_inicio'],
         ['Hora fin', 'hora_fin'], ['Lugar de formación', 'lugar_formacion'], ['Rutas', 'rutas'],
         ['Consignas', 'consignas'], ['Observaciones', 'observaciones'], ['Perímetro', 'perimetro'],
     ];

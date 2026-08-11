@@ -536,11 +536,6 @@ CREATE TABLE dbo.circuitos (
     id INT IDENTITY(1,1) NOT NULL,
     distrito_id INT NOT NULL,
     nombre NVARCHAR(180) NOT NULL,
-    encargado_id INT NOT NULL,
-    usar_encargado_distrito BIT NOT NULL CONSTRAINT DF_circuitos_encargado_distrito DEFAULT (0),
-    auxiliar_1_id INT NULL,
-    auxiliar_2_id INT NULL,
-    movil_id INT NULL,
     hora_inicio TIME(0) NULL,
     hora_fin TIME(0) NULL,
     lugar_formacion NVARCHAR(300) NULL,
@@ -552,16 +547,7 @@ CREATE TABLE dbo.circuitos (
     fecha_actualizacion DATETIME2 NULL,
     deleted_at DATETIME2 NULL,
     CONSTRAINT PK_circuitos PRIMARY KEY (id),
-    CONSTRAINT FK_circuitos_distrito FOREIGN KEY (distrito_id) REFERENCES dbo.catalogo_detalles(id),
-    CONSTRAINT FK_circuitos_encargado FOREIGN KEY (encargado_id) REFERENCES dbo.personal(id),
-    CONSTRAINT FK_circuitos_auxiliar_1 FOREIGN KEY (auxiliar_1_id) REFERENCES dbo.personal(id),
-    CONSTRAINT FK_circuitos_auxiliar_2 FOREIGN KEY (auxiliar_2_id) REFERENCES dbo.personal(id),
-    CONSTRAINT FK_circuitos_movil FOREIGN KEY (movil_id) REFERENCES dbo.moviles(id),
-    CONSTRAINT CK_circuitos_personal_distinto CHECK (
-        (auxiliar_1_id IS NULL OR auxiliar_1_id <> encargado_id) AND
-        (auxiliar_2_id IS NULL OR auxiliar_2_id <> encargado_id) AND
-        (auxiliar_1_id IS NULL OR auxiliar_2_id IS NULL OR auxiliar_1_id <> auxiliar_2_id)
-    )
+    CONSTRAINT FK_circuitos_distrito FOREIGN KEY (distrito_id) REFERENCES dbo.catalogo_detalles(id)
 );
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_circuitos_distrito_nombre_activo' AND object_id=OBJECT_ID(N'dbo.circuitos'))
     CREATE UNIQUE INDEX UX_circuitos_distrito_nombre_activo ON dbo.circuitos(distrito_id,nombre) WHERE deleted_at IS NULL;

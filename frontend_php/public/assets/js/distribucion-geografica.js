@@ -8,7 +8,7 @@
     const permissions = { trace: app.dataset.canTrace === '1', edit: app.dataset.canEdit === '1' };
     const colors = { ASIGNADO: '#22a447', PENDIENTE: '#f59e0b', NOVEDAD: '#dc3545', INACTIVO: '#8c98a8' };
     let map, routeLayer, markerLayer, editLayer, temporaryMarker;
-    let selection = { districtId: null, districtName: '', routeId: null, routeName: '', fecha: new Date().toISOString().slice(0, 10) };
+    let selection = { districtId: null, districtName: '', circuitoId: null, circuitoName: '', routeId: null, routeName: '', fecha: new Date().toISOString().slice(0, 10) };
     let mapData = null, mode = null, tracePoints = [], pendingLocation = null;
     const serviceTypeInputs = () => Array.from(document.querySelectorAll('#geoServiceOptions input[type="checkbox"]'));
     const serviceKey = value => String(value || '').trim().toLocaleUpperCase('es');
@@ -87,20 +87,60 @@
     }
 
     $('#filterDistrict')?.addEventListener('change', async event => {
+        const circuitoSelect = $('#filterCircuito');
         const routeSelect = $('#filterRoute');
         resetMap();
         const fechaVal = $('#filterDate')?.value || new Date().toISOString().slice(0, 10);
         selection = { districtId: event.target.value ? Number(event.target.value) : null,
-            districtName: event.target.selectedOptions[0]?.textContent || '', routeId: null, routeName: '', fecha: fechaVal };
-        routeSelect.innerHTML = '<option value="">Seleccione una ruta</option>';
+            districtName: event.target.selectedOptions[0]?.textContent || '',
+            circuitoId: null, circuitoName: '', routeId: null, routeName: '', fecha: fechaVal };
+        circuitoSelect.innerHTML = '<option value="">Cargando circuitos...</option>';
+        circuitoSelect.disabled = true;
+        routeSelect.innerHTML = '<option value="">Seleccione un circuito primero</option>';
         routeSelect.disabled = true;
-        if (!selection.districtId) { await loadGlobalMap(); return; }
+        if (!selection.districtId) {
+            circuitoSelect.innerHTML = '<option value="">Seleccione un distrito primero</option>';
+            await loadGlobalMap();
+            return;
+        }
         try {
-            const routes = await api(`distritos/${selection.districtId}/rutas`) || [];
-            routeSelect.add(new Option('Todas las Rutas', 'all'), 0);
-            routes.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
+            const circuits = await api(`distritos/${selection.districtId}/circuitos`) || [];
+            circuitoSelect.innerHTML = '<option value="">Todos los circuitos</option>';
+            if (circuits.length === 0) {
+                circuitoSelect.innerHTML = '<option value="">Sin circuitos disponibles</option>';
+            } else {
+                circuits.forEach(c => circuitoSelect.add(new Option(c.nombre, c.id)));
+            }
+            circuitoSelect.disabled = false;
+            circuitoSelect.value = '';
+            circuitoSelect.dispatchEvent(new Event('change'));
+        } catch (error) { notify(error.message, true); }
+    });
+
+    $('#filterCircuito')?.addEventListener('change', async event => {
+        const routeSelect = $('#filterRoute');
+        resetMap();
+        const val = event.target.value;
+        selection.circuitoId = val ? Number(val) : null;
+        selection.circuitoName = val ? (event.target.selectedOptions[0]?.textContent || '') : '';
+        selection.routeId = null;
+        selection.routeName = '';
+        routeSelect.innerHTML = '<option value="">Cargando rutas...</option>';
+        routeSelect.disabled = true;
+        if (!selection.circuitoId) {
+            routeSelect.innerHTML = '<option value="">Seleccione un circuito primero</option>';
+            return;
+        }
+        try {
+            const routes = await api(`circuitos/${selection.circuitoId}/rutas`) || [];
+            routeSelect.innerHTML = '<option value="">Todas las Rutas</option>';
+            if (routes.length === 0) {
+                routeSelect.innerHTML = '<option value="">Sin rutas disponibles</option>';
+            } else {
+                routes.forEach(route => routeSelect.add(new Option(route.nombre, route.id)));
+            }
             routeSelect.disabled = false;
-            routeSelect.value = 'all';
+            routeSelect.value = '';
             routeSelect.dispatchEvent(new Event('change'));
         } catch (error) { notify(error.message, true); }
     });
@@ -108,11 +148,11 @@
     $('#filterRoute')?.addEventListener('change', async event => {
         resetMap();
         const val = event.target.value;
-        selection.routeId = val === 'all' ? null : (val ? Number(val) : null);
-        selection.routeName = val === 'all' ? 'Todas las Rutas' : (event.target.selectedOptions[0]?.textContent || '');
-        selection.showAll = val === 'all';
+        selection.routeId = val ? Number(val) : null;
+        selection.routeName = val ? (event.target.selectedOptions[0]?.textContent || '') : '';
+        selection.showAll = !val;
         if (!selection.districtId) return;
-        if (selection.showAll) {
+        if (selection.showAll && selection.circuitoId) {
             await loadAllRoutesMap();
         } else if (selection.routeId) {
             await loadRouteMap();

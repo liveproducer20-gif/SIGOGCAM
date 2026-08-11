@@ -129,15 +129,6 @@ def admin_references() -> dict:
         "tiposServicio": catalog("TIPOS_SERVICIO_LUGAR"),
         "turnos": _query("SELECT id,nombre FROM dbo.turnos WHERE activo=1 ORDER BY nombre"),
         "sectores": _query("SELECT id,nombre,ruta_id FROM dbo.sectores WHERE activo=1 ORDER BY nombre"),
-        "personal": _query(
-            """SELECT p.id, p.cedula, LTRIM(RTRIM(CONCAT(p.apellidos, ' ', p.nombres))) AS nombre
-               FROM dbo.personal p WHERE p.activo=1 ORDER BY p.apellidos,p.nombres"""
-        ),
-        "moviles": _query(
-            """SELECT id, LTRIM(RTRIM(CONCAT(numero_movil,
-                       CASE WHEN placa IS NULL OR LTRIM(RTRIM(placa))='' THEN '' ELSE ' · '+placa END))) AS nombre
-               FROM dbo.moviles WHERE activo=1 ORDER BY numero_movil"""
-        ),
         "rutas": _query(
             "SELECT id,nombre,distrito_id FROM dbo.rutas WHERE activo=1 AND distrito_id IS NOT NULL ORDER BY nombre"
         ),
@@ -148,23 +139,13 @@ def list_circuits(district_id: int | None = None, search: str | None = None) -> 
     term = (search or "").strip()
     rows = _query(
         """
-        SELECT c.id,c.distrito_id,d.nombre AS distrito,c.nombre,c.encargado_id,
-               LTRIM(RTRIM(CONCAT(pe.apellidos,' ',pe.nombres))) AS encargado,
-               c.usar_encargado_distrito,c.auxiliar_1_id,
-               LTRIM(RTRIM(CONCAT(p1.apellidos,' ',p1.nombres))) AS auxiliar_1,
-               c.auxiliar_2_id,LTRIM(RTRIM(CONCAT(p2.apellidos,' ',p2.nombres))) AS auxiliar_2,
-               c.movil_id,LTRIM(RTRIM(CONCAT(m.numero_movil,
-                   CASE WHEN m.placa IS NULL OR LTRIM(RTRIM(m.placa))='' THEN '' ELSE ' · '+m.placa END))) AS movil,
+        SELECT c.id,c.distrito_id,d.nombre AS distrito,c.nombre,
                CONVERT(VARCHAR(5),c.hora_inicio,108) AS hora_inicio,
                CONVERT(VARCHAR(5),c.hora_fin,108) AS hora_fin,
                c.lugar_formacion,c.consignas,c.observaciones,c.perimetro,c.activo,
                ISNULL(ra.total_rutas,0) AS total_rutas,ra.ruta_ids,ra.rutas
         FROM dbo.circuitos c
         INNER JOIN dbo.catalogo_detalles d ON d.id=c.distrito_id
-        INNER JOIN dbo.personal pe ON pe.id=c.encargado_id
-        LEFT JOIN dbo.personal p1 ON p1.id=c.auxiliar_1_id
-        LEFT JOIN dbo.personal p2 ON p2.id=c.auxiliar_2_id
-        LEFT JOIN dbo.moviles m ON m.id=c.movil_id
         OUTER APPLY (
             SELECT COUNT(*) AS total_rutas,
                    STRING_AGG(CONVERT(NVARCHAR(MAX),x.ruta_id),',') WITHIN GROUP (ORDER BY x.nombre) AS ruta_ids,
@@ -178,11 +159,10 @@ def list_circuits(district_id: int | None = None, search: str | None = None) -> 
         ) ra
         WHERE c.deleted_at IS NULL
           AND (? IS NULL OR c.distrito_id=?)
-          AND (?='' OR c.nombre LIKE '%'+?+'%' OR d.nombre LIKE '%'+?+'%'
-               OR pe.nombres LIKE '%'+?+'%' OR pe.apellidos LIKE '%'+?+'%')
+          AND (?='' OR c.nombre LIKE '%'+?+'%' OR d.nombre LIKE '%'+?+'%')
         ORDER BY d.nombre,c.nombre
         """,
-        district_id,district_id,term,term,term,term,term,
+        district_id,district_id,term,term,term,
     )
     for row in rows:
         row["ruta_ids"] = [int(value) for value in (row.get("ruta_ids") or "").split(",") if value]
@@ -197,45 +177,24 @@ def get_circuit(item_id: int) -> dict:
     raise ValueError("Circuito no encontrado")
 
 
-def _nullable_person_id(value) -> int | None:
-    if value in (None, "", 0, "0"):
-        return None
-    return int(value)
-
-
 def _validate_circuit(cursor, data: dict, item_id: int | None = None) -> tuple:
     district_id = int(data.get("distritoId") or 0)
-    manager_id = int(data.get("encargadoId") or 0)
-    assistant_1 = _nullable_person_id(data.get("auxiliar1Id"))
-    assistant_2 = _nullable_person_id(data.get("auxiliar2Id"))
-    mobile_id = _nullable_person_id(data.get("movilId"))
     name = str(data.get("nombre") or "").strip()
-    if not district_id or not manager_id or not name:
-        raise ValueError("Distrito, nombre y encargado son obligatorios")
-    people = [manager_id] + [value for value in (assistant_1,assistant_2) if value is not None]
-    if len(people) != len(set(people)):
-        raise ValueError("El encargado y los auxiliares deben ser personas diferentes")
+    if not district_id or not name:
+        raise ValueError("Distrito y nombre son obligatorios")
     cursor.execute(
         """SELECT COUNT(*) FROM dbo.catalogo_detalles d INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
            WHERE d.id=? AND d.estado=1 AND c.codigo='DISTRITOS'""", district_id,
     )
     if int(cursor.fetchone()[0]) != 1:
         raise ValueError("El distrito seleccionado no es válido")
-    placeholders = ",".join("?" for _ in people)
-    cursor.execute(f"SELECT COUNT(*) FROM dbo.personal WHERE activo=1 AND id IN ({placeholders})", *people)
-    if int(cursor.fetchone()[0]) != len(people):
-        raise ValueError("El encargado o uno de los auxiliares no está activo")
-    if mobile_id is not None:
-        cursor.execute("SELECT COUNT(*) FROM dbo.moviles WHERE id=? AND activo=1", mobile_id)
-        if int(cursor.fetchone()[0]) != 1:
-            raise ValueError("El móvil seleccionado no está activo")
     cursor.execute(
         "SELECT COUNT(*) FROM dbo.circuitos WHERE distrito_id=? AND nombre=? AND deleted_at IS NULL AND (? IS NULL OR id<>?)",
         district_id,name,item_id,item_id,
     )
     if int(cursor.fetchone()[0]):
         raise ValueError("Ya existe un circuito con ese nombre en el distrito")
-    return district_id,name,manager_id,assistant_1,assistant_2,mobile_id
+    return district_id,name
 
 
 def _replace_circuit_routes(cursor, circuit_id: int, district_id: int, route_ids: list) -> None:
@@ -273,14 +232,12 @@ def _replace_circuit_routes(cursor, circuit_id: int, district_id: int, route_ids
 def create_circuit(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
-        district_id,name,manager_id,assistant_1,assistant_2,mobile_id = _validate_circuit(cursor,data)
+        district_id,name = _validate_circuit(cursor,data)
         cursor.execute(
             """INSERT INTO dbo.circuitos(
-                   distrito_id,nombre,encargado_id,usar_encargado_distrito,auxiliar_1_id,auxiliar_2_id,
-                   movil_id,hora_inicio,hora_fin,lugar_formacion,consignas,observaciones,perimetro,activo)
-               OUTPUT INSERTED.id VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1)""",
-            district_id,name,manager_id,1 if data.get("usarEncargadoDistrito") else 0,assistant_1,assistant_2,
-            mobile_id,data.get("horaInicio") or None,data.get("horaFin") or None,data.get("lugarFormacion") or None,
+                   distrito_id,nombre,hora_inicio,hora_fin,lugar_formacion,consignas,observaciones,perimetro,activo)
+               OUTPUT INSERTED.id VALUES(?,?,?,?,?,?,?,?,1)""",
+            district_id,name,data.get("horaInicio") or None,data.get("horaFin") or None,data.get("lugarFormacion") or None,
             data.get("consignas") or None,data.get("observaciones") or None,data.get("perimetro") or None,
         )
         circuit_id = int(cursor.fetchone()[0])
@@ -294,13 +251,11 @@ def update_circuit(item_id: int, data: dict) -> None:
         cursor.execute("SELECT COUNT(*) FROM dbo.circuitos WHERE id=? AND deleted_at IS NULL",item_id)
         if int(cursor.fetchone()[0]) != 1:
             raise ValueError("Circuito no encontrado")
-        district_id,name,manager_id,assistant_1,assistant_2,mobile_id = _validate_circuit(cursor,data,item_id)
+        district_id,name = _validate_circuit(cursor,data,item_id)
         cursor.execute(
-            """UPDATE dbo.circuitos SET distrito_id=?,nombre=?,encargado_id=?,usar_encargado_distrito=?,
-                   auxiliar_1_id=?,auxiliar_2_id=?,movil_id=?,hora_inicio=?,hora_fin=?,lugar_formacion=?,
+            """UPDATE dbo.circuitos SET distrito_id=?,nombre=?,hora_inicio=?,hora_fin=?,lugar_formacion=?,
                    consignas=?,observaciones=?,perimetro=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
-            district_id,name,manager_id,1 if data.get("usarEncargadoDistrito") else 0,assistant_1,assistant_2,
-            mobile_id,data.get("horaInicio") or None,data.get("horaFin") or None,data.get("lugarFormacion") or None,
+            district_id,name,data.get("horaInicio") or None,data.get("horaFin") or None,data.get("lugarFormacion") or None,
             data.get("consignas") or None,data.get("observaciones") or None,data.get("perimetro") or None,item_id,
         )
         _replace_circuit_routes(cursor,item_id,district_id,data.get("rutaIds") or [])

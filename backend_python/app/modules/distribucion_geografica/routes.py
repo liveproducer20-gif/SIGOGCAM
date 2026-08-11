@@ -29,6 +29,16 @@ def get_routes(district_id: int, user: dict = Depends(require_permission("distri
     return ok(repository.routes_by_district(district_id))
 
 
+@router.get("/distritos/{district_id}/circuitos")
+def get_circuits(district_id: int, user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.circuits_by_district(district_id))
+
+
+@router.get("/circuitos/{circuit_id}/rutas")
+def get_routes_by_circuit(circuit_id: int, user: dict = Depends(require_permission("distribucion.ver"))):
+    return ok(repository.routes_by_circuit(circuit_id))
+
+
 @router.post("/distritos/{district_id}/rutas", status_code=201)
 def post_route(district_id: int, payload: RouteInput, user: dict = Depends(require_permission("distribucion.catalogos"))):
     data = payload.model_dump(); data["distrito_id"] = district_id

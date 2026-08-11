@@ -59,7 +59,7 @@ final class DistribucionGeograficaController
         }
 
         $resource = ltrim((string)($_GET['resource'] ?? ''), '/');
-        $allowed = preg_match('#^(distribucion-geografica|distritos|rutas|rutas-geograficas|lugares-servicio|asignaciones-punto|personal)(/|\?|$)#', $resource) === 1;
+        $allowed = preg_match('#^(distribucion-geografica|distritos|circuitos|rutas|rutas-geograficas|lugares-servicio|asignaciones-punto|personal)(/|\?|$)#', $resource) === 1;
         if (!$allowed || str_contains($resource, '..')) {
             http_response_code(400);
             echo json_encode(['ok' => false, 'mensaje' => 'Recurso no permitido']);

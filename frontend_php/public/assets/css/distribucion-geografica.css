@@ -5,7 +5,7 @@
 
 .geo-alert{margin-bottom:10px;padding:11px 14px;border:1px solid #fecaca;border-radius:8px;color:#991b1b;background:#fef2f2}
 
-.geo-filters{padding:13px 16px;display:grid;grid-template-columns:minmax(175px,.9fr) minmax(210px,1.1fr) minmax(155px,.7fr) minmax(210px,1fr) auto;gap:12px;align-items:end;border:1px solid var(--geo-line);border-radius:9px;background:#fff}
+.geo-filters{padding:13px 16px;display:grid;grid-template-columns:minmax(160px,.85fr) minmax(180px,.95fr) minmax(180px,.95fr) minmax(145px,.7fr) minmax(190px,1fr) auto;gap:10px;align-items:end;border:1px solid var(--geo-line);border-radius:9px;background:#fff}
 .geo-filters label{display:grid;gap:6px;margin:0;color:#485979;font-size:12px;font-weight:700}
 .geo-filters select,.geo-filters input{min-height:39px;padding:9px 11px;border:1px solid #d7e0eb;border-radius:6px;color:#233651;background:#fff;font-size:12px}
 .geo-filters select:focus,.geo-filters input:focus{outline:2px solid rgba(23,105,232,.18);border-color:var(--geo-blue)}
