@@ -82,7 +82,7 @@ $canTrace = $isAdmin || in_array('rutas_geograficas.gestionar', $permissions, tr
                 <aside class="geo-trace-options" id="traceOptions" hidden aria-label="Opciones del trazado">
                     <header><span>⌁</span><div><strong>Estilo del trazado</strong><small>Configure la geometría</small></div></header>
                     <label>Tipo de trazado<select id="traceType"><option value="lineal">Lineal (recorrido)</option><option value="area">Área (polígono)</option></select></label>
-                    <label>Color<div class="geo-color-control"><input type="color" id="traceColor" value="#2563EB"><output id="traceColorValue">#2563EB</output></div></label>
+                    <label>Color<div class="geo-color-control"><input type="color" id="traceColor" value="#f8f8f8"><output id="traceColorValue">#2563EB</output></div></label>
                     <label>Grosor <output id="traceWidthValue">6 px</output><input type="range" id="traceWidth" min="1" max="20" value="6"></label>
                     <p id="traceTypeHelp">Marque al menos dos puntos para formar el recorrido.</p>
                 </aside>
