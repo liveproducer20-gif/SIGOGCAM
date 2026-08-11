@@ -232,9 +232,15 @@
     function managerIcon(manager) {
         const isDistrict = manager.tipo_responsabilidad === 'ENCARGADO_DISTRITO';
         const color = isDistrict ? '#6d3fd1' : '#1267d5';
+        if (isDistrict) {
+            return L.divIcon({
+                className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
+                html:`<span class="geo-manager-pin" style="--manager-color:${color}"><b>ED</b></span>`
+            });
+        }
         return L.divIcon({
             className:'geo-manager-pin-host',iconSize:[46,54],iconAnchor:[23,52],popupAnchor:[0,-48],
-            html:`<span class="geo-manager-pin" style="--manager-color:${color}"><b>${isDistrict ? 'ED' : 'ER'}</b></span>`
+            html:`<span class="geo-manager-pin geo-manager-pin--route" style="--manager-color:${color}"><img src="/assets/img/aj-icon.png" alt="ER"></span>`
         });
     }
 
