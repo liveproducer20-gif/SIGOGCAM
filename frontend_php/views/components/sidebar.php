@@ -51,6 +51,10 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
         </section>
         <?php endif; ?>
 
+        <?php if ($sidebarCan(['asistencia.ver', 'asistencia.registrar'])): ?>
+        <a class="sigo-nav-link<?= $active(['/panel-asistencia']) ?>" href="/panel-asistencia"><span class="sigo-nav-icon">&#9744;</span><span>Panel de Asistencia</span><b>›</b></a>
+        <?php endif; ?>
+
         <?php if ($sidebarCan(['eventos.ver', 'anuncios.ver', 'eventos.crear'])): ?>
         <section class="sigo-nav-group<?= $open(['/eventos', '/anuncios']) ?>" data-nav-group>
             <button type="button" aria-expanded="<?= in_array($path, ['/eventos', '/anuncios'], true) ? 'true' : 'false' ?>"><span class="sigo-nav-icon">▧</span><span>Eventos y anuncios</span><b>⌄</b></button>

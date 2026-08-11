@@ -31,6 +31,7 @@ use App\Modules\Insignias\InsigniasController;
 use App\Modules\Personal\PersonalController;
 use App\Modules\Perfil\PerfilController;
 use App\Modules\Soporte\SoporteController;
+use App\Modules\PanelAsistencia\PanelAsistenciaController;
 
 Config::load(dirname(__DIR__));
 date_default_timezone_set('America/Guayaquil');
@@ -86,6 +87,16 @@ if ($path === '/distribucion-dashboard' && $method === 'GET') {
 
 if ($path === '/distribucion-dashboard/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
     (new DistribucionDashboardController())->proxy();
+    return;
+}
+
+if ($path === '/panel-asistencia' && $method === 'GET') {
+    (new PanelAsistenciaController())->index();
+    return;
+}
+
+if ($path === '/panel-asistencia/api' && in_array($method, ['GET', 'POST', 'PUT', 'DELETE'], true)) {
+    (new PanelAsistenciaController())->proxy();
     return;
 }
 

@@ -12,6 +12,7 @@ $titles = [
     '/configuracion' => ['Configuración', 'Roles, permisos y estructura'],
     '/distribucion-geografica' => ['Distribución geográfica', 'Personal asignado por puntos de servicio'],
     '/distribucion-tablero' => ['Tablero de distribución', 'Distribución de personal por ruta y sector'],
+    '/panel-asistencia' => ['Panel de Asistencia', 'Control de asistencia del personal'],
 ];
 $current = $titles[$path] ?? ['SIGO', 'Sistema Inteligente de Gestión Operativa'];
 $title = $pageTitle ?? $current[0];

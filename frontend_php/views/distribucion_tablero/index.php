@@ -19,7 +19,7 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
                 <select id="tdDistrict"><option value="">Seleccione distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
             <label>Turno
-                <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>" data-name="<?= $esc($item['nombre']) ?>" data-start="<?= $esc(substr((string)$item['hora_inicio'], 0, 5)) ?>" data-end="<?= $esc(substr((string)$item['hora_fin'], 0, 5)) ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
+                <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
             <label>Fecha
                 <input id="tdBoardDate" type="date" value="<?= date('Y-m-d') ?>">

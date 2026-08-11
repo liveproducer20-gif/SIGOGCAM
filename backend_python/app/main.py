@@ -19,6 +19,7 @@ from app.modules.insignias.routes import router as insignias_router
 from app.modules.personal.routes import router as personal_router
 from app.modules.soporte.routes import router as soporte_router
 from app.modules.usuarios.routes import router as usuarios_router
+from app.modules.asistencia.routes import router as asistencia_router
 
 
 app = FastAPI(
@@ -54,3 +55,4 @@ app.include_router(anuncios_router, prefix=f"{settings.api_prefix}/anuncios")
 app.include_router(insignias_router, prefix=f"{settings.api_prefix}/insignias")
 app.include_router(soporte_router, prefix=f"{settings.api_prefix}/soporte")
 app.include_router(usuarios_router, prefix=f"{settings.api_prefix}/usuarios")
+app.include_router(asistencia_router, prefix=settings.api_prefix)
