@@ -108,7 +108,8 @@
             if (state.board.distribucion_id) {
                 state.saved = await api(`distribucion-tablero/distribuciones/${state.board.distribucion_id}`);
                 state.editingId = Number(state.saved.id);
-                state.assignments = (state.saved.detalles || []).filter(item => item.agente_id).map(item => ({lugar_id:Number(item.lugar_id),agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}}));
+                const routeManagerDetails = (state.saved.detalles || []).filter(item => String(item.lugar || '').trim().toUpperCase() === 'ENCARGADO DE RUTA');
+                state.assignments = (state.saved.detalles || []).filter(item => item.agente_id && String(item.lugar || '').trim().toUpperCase() !== 'ENCARGADO DE RUTA').map(item => ({lugar_id:Number(item.lugar_id),agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}}));
                 for (const item of state.saved.encargados || []) {
                     const manager = item.agente_id ? {agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}} : null;
                     if (item.tipo_responsabilidad === 'ENCARGADO_DISTRITO') state.districtManager = manager;
@@ -119,6 +120,12 @@
                         auxiliar_2_id:item.auxiliar_2_id?Number(item.auxiliar_2_id):null,auxiliar_2:item.auxiliar_2?{id:Number(item.auxiliar_2_id),nombre_completo:item.auxiliar_2,cedula:item.auxiliar_2_cedula}:null
                     });
                     else state.routeManagers.set(Number(item.ruta_id), {requiere_encargado:Boolean(item.requiere_encargado),...(manager || {})});
+                }
+                // Convierte asignaciones antiguas del registro tecnico en la responsabilidad superior.
+                for (const item of routeManagerDetails) {
+                    const routeId = Number(item.ruta_id);
+                    if (!item.agente_id || state.routeManagers.get(routeId)?.agente_id) continue;
+                    state.routeManagers.set(routeId, {requiere_encargado:true,agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}});
                 }
             } else restoreDraft();
             for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado:false});
@@ -336,7 +343,7 @@
         const excluded = usedAgentIds(state.agentTarget.replaceAgentId);
         const body = {
             distrito_id: state.districtId, turno_id: state.shiftId,
-            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind.startsWith('circuit') ? 'ENCARGADO_CIRCUITO' : 'AGENTE_LUGAR',
+            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind === 'circuitManager' ? 'ENCARGADO_CIRCUITO' : state.agentTarget.kind.startsWith('circuitAux') ? 'AUXILIAR_CIRCUITO' : 'AGENTE_LUGAR',
             fecha_distribucion: selectedDate(),
             excluidos: excluded,
             page: state.agentModal.page, limit: 20,
@@ -498,12 +505,22 @@
     }
 
     async function randomAssign() {
+        if (!state.circuitId) return notify('Seleccione un circuito para realizar la asignación aleatoria.', true);
+        if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Primero seleccione el encargado del distrito.', true);
+        const circuitManager = state.circuitManagers.get(Number(state.circuitId));
+        if (!circuitManager?.agente_id) return notify(`Primero seleccione el encargado de ${circuitName(state.circuitId)}.`, true);
+        const circuitRoutes = (state.board?.rutas || []).filter(route => Number(route.circuito_id) === Number(state.circuitId));
+        for (const route of circuitRoutes) {
+            if (!route.asignar_encargado) continue;
+            const manager = state.routeManagers.get(Number(route.id));
+            if (!manager || (manager.requiere_encargado && !manager.agente_id)) return notify(`Primero defina el encargado de la ruta ${route.nombre}.`, true);
+        }
         const button = $('#tdRandomAssign'); loading(button, true);
         try {
-            const result = await api('distribucion-tablero/asignacion-aleatoria', {method: 'POST', body: {distrito_id: state.districtId, turno_id: state.shiftId, ruta_id: state.routeId, excluidos:usedAgentIds(), asignaciones: state.assignments.map(({lugar_id, agente_id, tipo_asignacion}) => ({lugar_id, agente_id, tipo_asignacion}))}});
+            const result = await api('distribucion-tablero/asignacion-aleatoria', {method: 'POST', body: {distrito_id: state.districtId, turno_id: state.shiftId, circuito_id: state.circuitId, excluidos:usedAgentIds(), asignaciones: state.assignments.map(({lugar_id, agente_id, tipo_asignacion}) => ({lugar_id, agente_id, tipo_asignacion}))}});
             for (const assignment of result.asignaciones || []) state.assignments.push(assignment);
             saveDraft(); renderWorkspace(); await refreshAvailability();
-            notify(result.insuficiente ? result.mensaje : 'Asignacion aleatoria preparada sin repetir agentes.', Boolean(result.insuficiente));
+            notify(result.insuficiente ? result.mensaje : 'Circuito asignado aleatoriamente sin repetir agentes.', Boolean(result.insuficiente));
         } catch (error) { notify(error.message, true); }
         finally { loading(button, false); }
     }

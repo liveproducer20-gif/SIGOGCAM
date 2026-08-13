@@ -74,7 +74,7 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
                 </section>
 
                 <div class="td-bottom-bar">
-                    <section class="td-random-card"><div class="td-tool-title"><i>◇</i><h3>Asignación aleatoria</h3></div><p>Asigna personal disponible de forma aleatoria sin repetir agentes.</p><?php if ($canAssign): ?><button class="td-btn td-btn-primary" id="tdRandomAssign" type="button">Asignación aleatoria</button><?php endif; ?><div class="td-no-repeat"><b>◆ <span>Sin repetir agentes</span></b><p>El sistema garantiza que ningún agente asignado se repita en otros lugares.</p></div></section>
+                    <section class="td-random-card"><div class="td-tool-title"><i>◇</i><h3>Asignación aleatoria</h3></div><p>Asigna personal disponible a todos los lugares del circuito seleccionado.</p><?php if ($canAssign): ?><button class="td-btn td-btn-primary" id="tdRandomAssign" type="button">Asignar circuito</button><?php endif; ?><div class="td-no-repeat"><b>◆ <span>Prioridad operativa</span></b><p>Primero deben definirse los encargados de distrito, circuito y rutas. Los agentes no se repiten.</p></div></section>
                     <section class="td-availability-card"><h3>Disponibilidad actual</h3><dl><div><dt><i class="is-available"></i>Disponibles</dt><dd id="tdAvailable">0</dd></div><div><dt><i class="is-service"></i>En servicio</dt><dd id="tdInService">0</dd></div><div><dt><i class="is-unavailable"></i>No disponibles</dt><dd id="tdUnavailable">0</dd></div><div class="td-total"><dt>Total agentes</dt><dd id="tdTotalAgents">0</dd></div></dl></section>
                 </div>
 

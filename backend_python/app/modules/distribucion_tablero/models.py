@@ -66,7 +66,7 @@ class CircuitManagerInput(BaseModel):
 class RandomDraftInput(BaseModel):
     distrito_id: int = Field(gt=0)
     turno_id: int = Field(gt=0)
-    ruta_id: int = Field(gt=0)
+    circuito_id: int = Field(gt=0)
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
     excluidos: list[int] = Field(default_factory=list)
 

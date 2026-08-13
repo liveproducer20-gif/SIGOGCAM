@@ -439,11 +439,21 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
             raise HTTPException(404, "El distrito seleccionado no existe o no esta activo")
 
         cursor.execute("""
-            SELECT r.id, r.nombre, r.distrito_id, r.turno_id, r.asignar_encargado,
+            SELECT r.id, r.nombre, r.distrito_id, r.turno_id,
+                   CAST(CASE
+                       WHEN r.asignar_encargado = 1 OR MAX(CASE
+                           WHEN UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) = N'ENCARGADO DE RUTA' THEN 1
+                           ELSE 0
+                       END) = 1 THEN 1 ELSE 0
+                   END AS bit) AS asignar_encargado,
                    cr.circuito_id, c.nombre AS circuito,
                    COALESCE(r.hora_inicio, t.hora_inicio) AS hora_inicio,
                    COALESCE(r.hora_fin, t.hora_fin) AS hora_fin,
-                   COUNT(ls.id) AS lugares
+                   SUM(CASE
+                       WHEN ls.id IS NOT NULL
+                        AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) <> N'ENCARGADO DE RUTA'
+                       THEN 1 ELSE 0
+                   END) AS lugares
             FROM dbo.rutas r
             LEFT JOIN dbo.circuito_rutas cr ON cr.ruta_id=r.id AND cr.deleted_at IS NULL
             LEFT JOIN dbo.circuitos c ON c.id=cr.circuito_id AND c.activo=1 AND c.deleted_at IS NULL
@@ -515,6 +525,7 @@ def get_route_places(route_id: int, shift_id: int) -> list[dict]:
             FROM dbo.lugares_servicio ls
             INNER JOIN dbo.rutas r ON r.id = ls.ruta_id AND r.activo = 1
             WHERE ls.ruta_id = ? AND ls.activo = 1
+              AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) <> N'ENCARGADO DE RUTA'
               AND (ls.turno_id IS NULL OR ls.turno_id = ?)
               AND (r.turno_id IS NULL OR r.turno_id = ?)
             ORDER BY ls.nombre
@@ -582,7 +593,7 @@ def get_board_availability(district_id: int, shift_id: int, excluded: set[int] |
 
 
 def generate_draft_assignments(data: dict) -> dict:
-    route_id = int(data["ruta_id"])
+    circuit_id = int(data["circuito_id"])
     district_id = int(data["distrito_id"])
     shift_id = int(data["turno_id"])
     current = data.get("asignaciones") or []
@@ -592,13 +603,23 @@ def generate_draft_assignments(data: dict) -> dict:
 
     with get_connection() as connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT id FROM dbo.rutas WHERE id=? AND distrito_id=? AND activo=1", route_id, district_id)
-        if not cursor.fetchone():
-            raise HTTPException(422, "La ruta no pertenece al distrito seleccionado")
-        places = get_route_places(route_id, shift_id)
+        cursor.execute("""
+            SELECT r.id
+            FROM dbo.circuitos c
+            INNER JOIN dbo.circuito_rutas cr ON cr.circuito_id=c.id AND cr.deleted_at IS NULL
+            INNER JOIN dbo.rutas r ON r.id=cr.ruta_id AND r.activo=1
+            WHERE c.id=? AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
+              AND (r.turno_id IS NULL OR r.turno_id=?)
+            ORDER BY r.nombre
+        """, circuit_id, district_id, shift_id)
+        route_ids = [int(row[0]) for row in cursor.fetchall()]
+        if not route_ids:
+            raise HTTPException(422, "El circuito no tiene rutas disponibles para el distrito y turno seleccionados")
+        places = [place for route_id in route_ids for place in get_route_places(route_id, shift_id)]
         if not places:
-            raise HTTPException(422, "La ruta no tiene lugares de servicio para este turno")
+            raise HTTPException(422, "El circuito no tiene lugares de servicio para este turno")
         agents = get_board_availability(district_id, shift_id, used)["agentes"]
+        agents = [agent for agent in agents if str(agent.get("grado") or "").strip().upper() in {"AGENTE 1", "AGENTE 2", "AGENTE 3"}]
         random.SystemRandom().shuffle(agents)
 
         by_place: dict[int, list[dict]] = {}
@@ -626,7 +647,7 @@ def generate_draft_assignments(data: dict) -> dict:
             "requeridos": required,
             "asignados": assigned_on_route,
             "insuficiente": assigned_on_route < required,
-            "mensaje": "No existe suficiente personal disponible para cubrir toda la ruta." if assigned_on_route < required else None,
+            "mensaje": "No existe suficiente personal de grado Agente 1, 2 o 3 para cubrir todo el circuito." if assigned_on_route < required else None,
         }
 
 
@@ -655,6 +676,23 @@ def _validate_distribution_relations(cursor, district_id: int, shift_id: int, as
         if counts[place_id] > int(place_map[place_id]["cantidad_requerida"] or 0):
             raise HTTPException(422, f"El lugar {place_map[place_id]['lugar']} supera su cantidad requerida")
     return places, place_map
+
+
+def _validate_place_agent_grades(cursor, assignments: list[dict]) -> None:
+    agent_ids = sorted({int(item["agente_id"]) for item in assignments})
+    if not agent_ids:
+        return
+    placeholders = ",".join("?" * len(agent_ids))
+    cursor.execute(f"""
+        SELECT p.id, UPPER(ISNULL(g.nombre,'')) AS grado
+        FROM dbo.personal p
+        LEFT JOIN dbo.grados g ON g.id=p.grado_id
+        WHERE p.id IN ({placeholders})
+    """, *agent_ids)
+    grades = {int(row[0]): str(row[1]) for row in cursor.fetchall()}
+    invalid = [agent_id for agent_id in agent_ids if grades.get(agent_id) not in {"AGENTE 1", "AGENTE 2", "AGENTE 3"}]
+    if invalid:
+        raise HTTPException(422, "Los lugares de servicio solo permiten personal con grado Agente 1, Agente 2 o Agente 3")
 
 
 def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dict) -> tuple[list[dict], list[int]]:
@@ -720,7 +758,12 @@ def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dic
 
     cursor.execute("""
         SELECT id, nombre FROM dbo.rutas
-        WHERE distrito_id=? AND activo=1 AND asignar_encargado=1
+        WHERE distrito_id=? AND activo=1
+          AND (asignar_encargado=1 OR EXISTS (
+              SELECT 1 FROM dbo.lugares_servicio ls
+              WHERE ls.ruta_id=rutas.id AND ls.activo=1
+                AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre,''))))=N'ENCARGADO DE RUTA'
+          ))
           AND (turno_id IS NULL OR turno_id=?)
         ORDER BY nombre
     """, district_id, shift_id)
@@ -763,6 +806,23 @@ def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dic
         if person_id in used_people:
             raise HTTPException(409, f"El agente {person_id} ya tiene otra responsabilidad en la distribucion")
         used_people.add(person_id)
+    for item in responsibilities:
+        person_id = item.get("agente_id")
+        if not person_id:
+            continue
+        responsibility = item["tipo_responsabilidad"]
+        allowed = ({"INSPECTOR", "SUBINSPECTOR"} if responsibility in {"ENCARGADO_DISTRITO", "ENCARGADO_CIRCUITO"}
+                   else {"AGENTE 2", "AGENTE 3", "AGENTE 4"} if responsibility == "ENCARGADO_RUTA" else None)
+        if not allowed:
+            continue
+        cursor.execute("""
+            SELECT UPPER(REPLACE(ISNULL(g.nombre,''),'-',''))
+            FROM dbo.personal p LEFT JOIN dbo.grados g ON g.id=p.grado_id WHERE p.id=?
+        """, int(person_id))
+        row = cursor.fetchone()
+        if not row or str(row[0]) not in allowed:
+            label = "distrito o circuito" if responsibility in {"ENCARGADO_DISTRITO", "ENCARGADO_CIRCUITO"} else "ruta"
+            raise HTTPException(422, f"El grado del encargado de {label} no cumple la regla operativa")
     manager_ids = sorted(used_people)
     return responsibilities, manager_ids
 
@@ -811,6 +871,7 @@ def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
             raise HTTPException(409, "Un agente no puede repetirse entre encargados y lugares de servicio")
 
         places, place_map = _validate_distribution_relations(cursor, district_id, shift_id, assignments)
+        _validate_place_agent_grades(cursor, assignments)
         required = sum(int(place["cantidad_requerida"] or 0) for place in places)
         assigned = len(assignments)
         pending = max(0, required - assigned)
@@ -1018,6 +1079,7 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
         if len(agent_ids) != len(set(agent_ids)):
             raise HTTPException(409, "Un agente no puede repetirse entre encargados y lugares de servicio")
         places, place_map = _validate_distribution_relations(cursor, district_id, shift_id, assignments)
+        _validate_place_agent_grades(cursor, assignments)
         required = sum(int(place["cantidad_requerida"] or 0) for place in places)
         assigned = len(assignments)
         pending = max(0, required - assigned)
@@ -1175,8 +1237,15 @@ def get_agents_for_modal(data: dict) -> dict:
         """)
         estados = [{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()]
 
+        responsibility = str(data.get("tipo_responsabilidad") or "AGENTE_LUGAR").upper()
         where = ["p.activo = 1", "UPPER(ISNULL(r.codigo, '')) IN ('AGENTE','ENCARGADO','INSPECTOR','OPERACIONES','SUPERVISOR')"]
         params: list = []
+        if responsibility in {"ENCARGADO_DISTRITO", "ENCARGADO_CIRCUITO"}:
+            where.append("UPPER(REPLACE(ISNULL(g.nombre,''),'-','')) IN ('INSPECTOR','SUBINSPECTOR')")
+        elif responsibility == "ENCARGADO_RUTA":
+            where.append("UPPER(ISNULL(g.nombre,'')) IN ('AGENTE 2','AGENTE 3','AGENTE 4')")
+        elif responsibility == "AGENTE_LUGAR":
+            where.append("UPPER(ISNULL(g.nombre,'')) IN ('AGENTE 1','AGENTE 2','AGENTE 3')")
 
         if excluded_ids:
             placeholders = ",".join("?" * len(excluded_ids))
@@ -1361,6 +1430,7 @@ def validate_and_change_agent(data: dict, user_id: int, ip: str | None = None) -
             FROM dbo.lugares_servicio ls
             INNER JOIN dbo.rutas r ON r.id = ls.ruta_id AND r.activo = 1
             WHERE ls.id = ? AND ls.ruta_id = ? AND ls.activo = 1
+              AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) <> N'ENCARGADO DE RUTA'
         """, lugar_id, ruta_id)
         lugar = _row(cursor)
         if not lugar:
@@ -1368,7 +1438,8 @@ def validate_and_change_agent(data: dict, user_id: int, ip: str | None = None) -
 
         cursor.execute("""
             SELECT p.id, LTRIM(RTRIM(ISNULL(g.nombre + ' ', '') + ISNULL(p.nombres, '') + ' ' + ISNULL(p.apellidos, ''))) AS nombre_completo,
-                   p.cedula, ISNULL(ep.nombre, 'SIN ESTADO') AS estado_laboral
+                   p.cedula, ISNULL(ep.nombre, 'SIN ESTADO') AS estado_laboral,
+                   UPPER(ISNULL(g.nombre,'')) AS grado
             FROM dbo.personal p
             LEFT JOIN dbo.catalogo_detalles ep ON ep.id = p.estado_personal_id
             LEFT JOIN dbo.grados g ON g.id = p.grado_id
@@ -1379,6 +1450,8 @@ def validate_and_change_agent(data: dict, user_id: int, ip: str | None = None) -
         nuevo = _row(cursor)
         if not nuevo:
             raise HTTPException(422, "El agente seleccionado no existe o no esta habilitado")
+        if str(nuevo["grado"]) not in {"AGENTE 1", "AGENTE 2", "AGENTE 3"}:
+            raise HTTPException(422, "Los lugares de servicio solo permiten personal con grado Agente 1, Agente 2 o Agente 3")
 
         estado_nuevo = str(nuevo["estado_laboral"]).upper()
         es_estado_no_disponible = estado_nuevo in ("VACACIONES", "FRANCO", "PERMISO", "INCAPACIDAD", "AUSENTE", "SUSPENDIDO", "REPOSO MEDICO", "COMISION_SERVICIO")
@@ -1563,6 +1636,7 @@ def get_distributions_dashboard() -> dict:
                 INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id AND c.codigo='DISTRITOS' AND c.estado=1
                 LEFT JOIN dbo.rutas r ON r.distrito_id=d.id AND r.activo=1 AND r.turno_id=?
                 LEFT JOIN dbo.lugares_servicio ls ON ls.ruta_id=r.id AND ls.activo=1
+                    AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) <> N'ENCARGADO DE RUTA'
                 LEFT JOIN dbo.distribuciones_personal dp ON dp.distrito_id=d.id AND dp.turno_id=?
                     AND dp.fecha_distribucion=? AND dp.deleted_at IS NULL
                 LEFT JOIN dbo.distribucion_personal_detalle dd ON dd.distribucion_id=dp.id
