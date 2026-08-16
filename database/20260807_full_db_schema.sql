@@ -1001,7 +1001,7 @@ CREATE TABLE dbo.distribucion_encargados (
     id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_distribucion_encargados PRIMARY KEY,
     distribucion_id BIGINT NOT NULL, distrito_id INT NOT NULL, ruta_id INT NULL, circuito_id INT NULL,
     tipo_responsabilidad NVARCHAR(30) NOT NULL, requiere_encargado BIT NOT NULL,
-    agente_id INT NULL, auxiliar_1_id INT NULL, auxiliar_2_id INT NULL, movil_id INT NULL,
+    agente_id INT NULL, conductor_id INT NULL, auxiliar_1_id INT NULL, auxiliar_2_id INT NULL, movil_id INT NULL,
     usar_encargado_distrito BIT NOT NULL CONSTRAINT DF_distribucion_encargados_usar_distrito DEFAULT (0),
     tipo_asignacion NVARCHAR(40) NULL,
     estado NVARCHAR(20) NOT NULL CONSTRAINT DF_distribucion_encargados_estado DEFAULT (N'ASIGNADO'),
@@ -1012,15 +1012,16 @@ CREATE TABLE dbo.distribucion_encargados (
     CONSTRAINT FK_distribucion_encargados_ruta FOREIGN KEY (ruta_id) REFERENCES dbo.rutas(id),
     CONSTRAINT FK_distribucion_encargados_circuito FOREIGN KEY (circuito_id) REFERENCES dbo.circuitos(id),
     CONSTRAINT FK_distribucion_encargados_agente FOREIGN KEY (agente_id) REFERENCES dbo.personal(id),
+    CONSTRAINT FK_distribucion_encargados_conductor FOREIGN KEY (conductor_id) REFERENCES dbo.personal(id),
     CONSTRAINT FK_distribucion_encargados_auxiliar_1 FOREIGN KEY (auxiliar_1_id) REFERENCES dbo.personal(id),
     CONSTRAINT FK_distribucion_encargados_auxiliar_2 FOREIGN KEY (auxiliar_2_id) REFERENCES dbo.personal(id),
     CONSTRAINT FK_distribucion_encargados_movil FOREIGN KEY (movil_id) REFERENCES dbo.moviles(id),
     CONSTRAINT FK_distribucion_encargados_creador FOREIGN KEY (creado_por) REFERENCES dbo.personal(id),
     CONSTRAINT CK_distribucion_encargados_tipo CHECK (tipo_responsabilidad IN (N'ENCARGADO_DISTRITO',N'ENCARGADO_CIRCUITO',N'ENCARGADO_RUTA')),
     CONSTRAINT CK_distribucion_encargados_consistencia CHECK (
-        (tipo_responsabilidad=N'ENCARGADO_DISTRITO' AND ruta_id IS NULL AND circuito_id IS NULL AND requiere_encargado=1 AND agente_id IS NOT NULL AND auxiliar_1_id IS NULL AND auxiliar_2_id IS NULL AND movil_id IS NULL)
-        OR (tipo_responsabilidad=N'ENCARGADO_CIRCUITO' AND ruta_id IS NULL AND circuito_id IS NOT NULL AND requiere_encargado=1 AND agente_id IS NOT NULL AND (auxiliar_1_id IS NULL OR auxiliar_1_id<>agente_id) AND (auxiliar_2_id IS NULL OR auxiliar_2_id<>agente_id) AND (auxiliar_1_id IS NULL OR auxiliar_2_id IS NULL OR auxiliar_1_id<>auxiliar_2_id))
-        OR (tipo_responsabilidad=N'ENCARGADO_RUTA' AND ruta_id IS NOT NULL AND circuito_id IS NULL AND auxiliar_1_id IS NULL AND auxiliar_2_id IS NULL AND movil_id IS NULL AND ((requiere_encargado=1 AND agente_id IS NOT NULL) OR (requiere_encargado=0 AND agente_id IS NULL))))
+        (tipo_responsabilidad=N'ENCARGADO_DISTRITO' AND ruta_id IS NULL AND circuito_id IS NULL AND requiere_encargado=1 AND agente_id IS NOT NULL)
+        OR (tipo_responsabilidad=N'ENCARGADO_CIRCUITO' AND ruta_id IS NULL AND circuito_id IS NOT NULL AND requiere_encargado=1 AND agente_id IS NOT NULL)
+        OR (tipo_responsabilidad=N'ENCARGADO_RUTA' AND ruta_id IS NOT NULL AND circuito_id IS NULL AND conductor_id IS NULL AND auxiliar_1_id IS NULL AND auxiliar_2_id IS NULL AND movil_id IS NULL AND ((requiere_encargado=1 AND agente_id IS NOT NULL) OR (requiere_encargado=0 AND agente_id IS NULL))))
 );
 GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name=N'UX_distribucion_encargado_distrito' AND object_id=OBJECT_ID(N'dbo.distribucion_encargados'))

@@ -57,6 +57,7 @@ class CircuitManagerInput(BaseModel):
     circuito_id: int = Field(gt=0)
     usar_encargado_distrito: bool = False
     agente_id: int = Field(gt=0)
+    conductor_id: int | None = Field(default=None, gt=0)
     auxiliar_1_id: int | None = Field(default=None, gt=0)
     auxiliar_2_id: int | None = Field(default=None, gt=0)
     movil_id: int | None = Field(default=None, gt=0)
@@ -77,6 +78,10 @@ class SaveDistributionInput(BaseModel):
     fecha_distribucion: date
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
     encargado_distrito_id: int | None = Field(default=None, gt=0)
+    distrito_movil_id: int | None = Field(default=None, gt=0)
+    distrito_conductor_id: int | None = Field(default=None, gt=0)
+    distrito_auxiliar_1_id: int | None = Field(default=None, gt=0)
+    distrito_auxiliar_2_id: int | None = Field(default=None, gt=0)
     encargados_circuito: list[CircuitManagerInput] = Field(default_factory=list)
     encargados_ruta: list[RouteManagerInput] = Field(default_factory=list)
     guardar_con_pendientes: bool = False

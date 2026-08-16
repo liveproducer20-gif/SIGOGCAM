@@ -38,8 +38,8 @@
         if (active) { button.dataset.label = button.innerHTML; button.innerHTML = '<span class="td-loading"></span> Procesando...'; }
         else if (button.dataset.label) button.innerHTML = button.dataset.label;
     }
-    function openModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = false; }
-    function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = true; }
+    function openModal(id) { const modal = document.getElementById(id); if (modal) { if(modal.parentElement!==document.body)document.body.appendChild(modal);modal.hidden=false;document.body.classList.add('td-modal-open'); } }
+    function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = true; if(!document.querySelector('.td-modal:not([hidden])'))document.body.classList.remove('td-modal-open'); }
     function selectedDate() { return $('#tdBoardDate')?.value || ''; }
     function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}:${selectedDate()}`; }
     function saveDraft() {
@@ -57,16 +57,21 @@
     function usedAgentIds(exceptAgentId = 0) {
         const ids = state.assignments.map(item => Number(item.agente_id));
         if (state.districtManager?.agente_id) ids.push(Number(state.districtManager.agente_id));
+        if (state.districtManager?.conductor_id) ids.push(Number(state.districtManager.conductor_id));
+        if (state.districtManager?.auxiliar_1_id) ids.push(Number(state.districtManager.auxiliar_1_id));
+        if (state.districtManager?.auxiliar_2_id) ids.push(Number(state.districtManager.auxiliar_2_id));
         for (const item of state.circuitManagers.values()) {
             if (item?.agente_id && !item.usar_encargado_distrito) ids.push(Number(item.agente_id));
-            if (item?.auxiliar_1_id) ids.push(Number(item.auxiliar_1_id));
-            if (item?.auxiliar_2_id) ids.push(Number(item.auxiliar_2_id));
+            if (item?.conductor_id && !item.usar_encargado_distrito) ids.push(Number(item.conductor_id));
+            if (item?.auxiliar_1_id && !item.usar_encargado_distrito) ids.push(Number(item.auxiliar_1_id));
+            if (item?.auxiliar_2_id && !item.usar_encargado_distrito) ids.push(Number(item.auxiliar_2_id));
         }
         for (const item of state.routeManagers.values()) if (item?.agente_id) ids.push(Number(item.agente_id));
         return ids.filter(id => id !== Number(exceptAgentId));
     }
     function assignmentsFor(placeId) { return state.assignments.filter(item => Number(item.lugar_id) === Number(placeId)); }
     function initials(name) { return String(name || 'A').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase(); }
+    function personDisplayName(name){return String(name||'').replace(/^Agente\s+[1-4]\s+/i,'').trim();}
 
     const estadoChipColors = {
         'ACTIVO': 'td-chip-green', 'FRANCO': 'td-chip-blue', 'VACACIONES': 'td-chip-orange',
@@ -112,12 +117,13 @@
                 state.assignments = (state.saved.detalles || []).filter(item => item.agente_id && String(item.lugar || '').trim().toUpperCase() !== 'ENCARGADO DE RUTA').map(item => ({lugar_id:Number(item.lugar_id),agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}}));
                 for (const item of state.saved.encargados || []) {
                     const manager = item.agente_id ? {agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}} : null;
-                    if (item.tipo_responsabilidad === 'ENCARGADO_DISTRITO') state.districtManager = manager;
+                    const resources={movil_id:item.movil_id?Number(item.movil_id):null,numero_movil:item.numero_movil,placa:item.placa,
+                        conductor_id:item.conductor_id?Number(item.conductor_id):null,conductor:item.conductor?{id:Number(item.conductor_id),nombre_completo:item.conductor,grado:item.conductor_grado}:null,
+                        auxiliar_1_id:item.auxiliar_1_id?Number(item.auxiliar_1_id):null,auxiliar_1:item.auxiliar_1?{id:Number(item.auxiliar_1_id),nombre_completo:item.auxiliar_1,grado:item.auxiliar_1_grado}:null,
+                        auxiliar_2_id:item.auxiliar_2_id?Number(item.auxiliar_2_id):null,auxiliar_2:item.auxiliar_2?{id:Number(item.auxiliar_2_id),nombre_completo:item.auxiliar_2,grado:item.auxiliar_2_grado}:null};
+                    if (item.tipo_responsabilidad === 'ENCARGADO_DISTRITO') state.districtManager = {...(manager||{}),...resources};
                     else if (item.tipo_responsabilidad === 'ENCARGADO_CIRCUITO') state.circuitManagers.set(Number(item.circuito_id), {
-                        usar_encargado_distrito:Boolean(item.usar_encargado_distrito),...(manager || {}),movil_id:item.movil_id?Number(item.movil_id):null,
-                        numero_movil:item.numero_movil,placa:item.placa,
-                        auxiliar_1_id:item.auxiliar_1_id?Number(item.auxiliar_1_id):null,auxiliar_1:item.auxiliar_1?{id:Number(item.auxiliar_1_id),nombre_completo:item.auxiliar_1,cedula:item.auxiliar_1_cedula}:null,
-                        auxiliar_2_id:item.auxiliar_2_id?Number(item.auxiliar_2_id):null,auxiliar_2:item.auxiliar_2?{id:Number(item.auxiliar_2_id),nombre_completo:item.auxiliar_2,cedula:item.auxiliar_2_cedula}:null
+                        usar_encargado_distrito:Boolean(item.usar_encargado_distrito),...(manager || {}),...resources
                     });
                     else state.routeManagers.set(Number(item.ruta_id), {requiere_encargado:Boolean(item.requiere_encargado),...(manager || {})});
                 }
@@ -150,7 +156,7 @@
         const routes = visibleRoutes().filter(route => String(route.nombre).toLowerCase().includes(query));
         $('#tdRouteList').innerHTML = routes.length ? routes.map(route => `
             <button class="td-route-item ${Number(route.id) === state.routeId ? 'is-active' : ''}" type="button" data-route-id="${route.id}">
-                <i class="td-shift-icon">${shiftIcon()}</i><span><b>${esc(route.nombre)}</b><small>${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}</small></span>
+                <span><b>${esc(route.nombre)}</b><small>${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}</small></span>
             </button>`).join('') : '<div class="td-empty-small">No se encontraron rutas.</div>';
     }
     function visibleRoutes() {
@@ -194,11 +200,14 @@
         $('#tdKpiCoverage').textContent = `${stats.coverage}%`; $('#tdCoverageBar').style.width = `${Math.min(100, stats.coverage)}%`;
         $('#tdCoverageLabel').textContent = stats.coverage >= 100 ? 'Ruta completa' : 'Ruta incompleta';
         renderManagers();
-        $('#tdPlacesBody').innerHTML = places.length ? places.map((place, index) => renderPlaceRow(place, index)).join('') : '<tr><td colspan="6"><div class="td-empty-small">Esta ruta no tiene lugares de servicio activos.</div></td></tr>';
+        $('#tdPlacesBody').innerHTML = places.length ? places.map((place, index) => renderPlaceRow(place, index)).join('') : '<tr><td colspan="5"><div class="td-empty-small">Esta ruta no tiene lugares de servicio activos.</div></td></tr>';
     }
     function managerLabel(item, fallback) {
-        return item?.agente?.nombre_completo ? `${item.agente.nombre_completo}${item.agente.cedula ? ` · ${item.agente.cedula}` : ''}` : fallback;
+        return personDisplayName(item?.agente?.nombre_completo) || fallback;
     }
+    function resourcesComplete(item){return Boolean(item?.movil_id&&item?.conductor_id&&item?.auxiliar_1_id);}
+    function resourcePerson(label,person,required=true){return `<div><span>${label}${required?' <em>Requerido</em>':' <em>Opcional</em>'}</span><strong>${esc(personDisplayName(person?.nombre_completo)||'Sin asignar')}</strong>${person?.grado?`<small>${esc(person.grado)}</small>`:''}</div>`;}
+    function resourceSummary(item){const complete=resourcesComplete(item);return `<header><b>RECURSOS ASIGNADOS</b><span class="td-resource-state ${complete?'is-complete':'is-incomplete'}">${complete?'Completo':'Incompleto'}</span></header><div><div><span>Móvil <em>Requerido</em></span><strong>${esc(item?.numero_movil||'Sin asignar')}</strong></div>${resourcePerson('Conductor',item?.conductor)}${resourcePerson('Auxiliar 1',item?.auxiliar_1)}${resourcePerson('Auxiliar 2',item?.auxiliar_2,false)}</div>`;}
     function populateOperationalCatalogs() {
         const circuits=state.board?.circuitos || [];
         const options='<option value="">Todos los circuitos</option>'+circuits.map(item=>`<option value="${item.id}">${esc(item.nombre)}</option>`).join('');
@@ -207,13 +216,14 @@
         const circuitOptions='<option value="">Seleccione circuito</option>'+circuits.map(item=>`<option value="${item.id}">${esc(item.nombre)}</option>`).join('');
         if($('#tdDistrictManagerCircuit')) $('#tdDistrictManagerCircuit').innerHTML=circuitOptions;
         if($('#tdCircuitManagerCircuit')) $('#tdCircuitManagerCircuit').innerHTML=circuitOptions;
-        if($('#tdCircuitMobile')) $('#tdCircuitMobile').innerHTML='<option value="">Sin móvil</option>'+(state.board?.moviles||[]).map(item=>`<option value="${item.id}">${esc(item.numero_movil)}${item.placa?` · ${esc(item.placa)}`:''}</option>`).join('');
+        if($('#tdCircuitMobile')) $('#tdCircuitMobile').innerHTML='<option value="">Seleccione móvil</option>'+(state.board?.moviles||[]).map(item=>`<option value="${item.id}">${esc(item.numero_movil)}${item.placa?` · ${esc(item.placa)}`:''}</option>`).join('');
     }
     function renderManagers() {
         const districtEnabled = Boolean(state.board?.distrito?.asignar_encargado);
         $('#tdDistrictManagerCard').hidden = !districtEnabled;
         if (districtEnabled) {
             $('#tdDistrictManagerValue').textContent = managerLabel(state.districtManager, 'Sin asignar');
+            if($('#tdDistrictResources')) $('#tdDistrictResources').innerHTML=resourceSummary(state.districtManager);
             if ($('#tdAssignDistrictManager')) $('#tdAssignDistrictManager').textContent = state.districtManager ? 'Cambiar encargado' : 'Asignar encargado de distrito';
             if ($('#tdRemoveDistrictManager')) $('#tdRemoveDistrictManager').hidden = !state.districtManager;
             const shared=Array.from(state.circuitManagers.entries()).find(([,item])=>item.usar_encargado_distrito);
@@ -227,26 +237,35 @@
             const item = state.routeManagers.get(Number(route.id)) || {requiere_encargado:false};
             if ($('#tdRouteManagerRequired')) $('#tdRouteManagerRequired').checked = Boolean(item.requiere_encargado);
             if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; $('#tdAssignRouteManager').textContent = item.agente_id ? 'Cambiar encargado' : 'Seleccionar agente'; }
-            $('#tdRouteManagerValue').textContent = item.requiere_encargado
-                ? managerLabel(item, 'Debe seleccionar un encargado de ruta')
-                : 'Sin encargado de ruta · Responsable: Encargado del Distrito';
+            if (item.requiere_encargado) $('#tdRouteManagerValue').textContent = managerLabel(item, 'Debe seleccionar un encargado de ruta');
+            else $('#tdRouteManagerValue').innerHTML = 'Sin encargado de ruta<br><em>Responsable: Encargado del circuito</em>';
         }
     }
     function circuitName(circuitId){return (state.board?.circuitos||[]).find(item=>Number(item.id)===Number(circuitId))?.nombre || `Circuito ${circuitId}`;}
     function renderCircuitManagers(){
         const list=$('#tdCircuitManagersList'); if(!list)return;
         const items=Array.from(state.circuitManagers.entries()).filter(([id])=>!state.circuitId||Number(id)===state.circuitId);
-        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b><strong>${esc(item.agente?.nombre_completo||'Sin encargado')}</strong><small>${item.usar_encargado_distrito?'También encargado del distrito':'Encargado propio'} · Móvil: ${esc(item.numero_movil||'Sin móvil')}</small><small>Auxiliares: ${esc(item.auxiliar_1?.nombre_completo||'—')} / ${esc(item.auxiliar_2?.nombre_completo||'—')}</small></div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}">Editar</button><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}">Quitar</button></div>`:''}</article>`).join(''):'<p class="td-empty-small">No existen encargados de circuito asignados.</p>';
+        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b><strong>${esc(personDisplayName(item.agente?.nombre_completo)||'Sin encargado')}</strong>${resourceSummary(item)}</div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}">Editar</button><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}">Quitar</button></div>`:''}</article>`).join(''):'<p class="td-empty-small">No existen encargados de circuito asignados.</p>';
     }
     function renderPlaceRow(place, index) {
         const assigned = assignmentsFor(place.id); const required = Number(place.cantidad_requerida || 0); const covered = assigned.length >= required && required > 0;
         const agents = assigned.length ? assigned.map(item => {
             const isForced = item.tipo_asignacion === 'FORZADA';
             const forcedBadge = isForced ? '<span class="td-forced-badge" title="Este agente fue asignado manualmente a pesar de encontrarse en estado no disponible.">&#9888; Forzada</span>' : '';
-            return `<div class="td-agent"><span class="td-avatar">${esc(initials(item.agente?.nombre_completo))}</span><div><b>${esc(item.agente?.nombre_completo || `Agente ${item.agente_id}`)}</b><small>${esc(item.agente?.cedula || '')}</small>${forcedBadge}${isForced ? `<small class="td-forced-original">Estado original: ${esc(item.estado_original || '')}</small>` : ''}</div></div>`;
+            const displayName=personDisplayName(item.agente?.nombre_completo);
+            return `<div class="td-agent"><span class="td-avatar">${esc(initials(displayName))}</span><div><b>${esc(displayName||'Sin nombre')}</b>${item.agente?.grado ? `<small>Grado: ${esc(item.agente.grado)}</small>` : ''}${forcedBadge}${isForced ? `<small class="td-forced-original">Estado original: ${esc(item.estado_original || '')}</small>` : ''}</div></div>`;
         }).join('') : '<div class="td-empty-agent"><span class="td-avatar">&#9823;</span><div><b>Sin asignar</b><small>Seleccione un agente</small></div></div>';
-        const actions = canAssign ? `${assigned.map(item => `<button type="button" data-change-agent="${item.agente_id}" data-place-id="${place.id}">Cambiar</button><button class="td-remove" type="button" data-remove-agent="${item.agente_id}" data-place-id="${place.id}">Quitar</button>`).join('')}${assigned.length < required ? `<button type="button" data-assign-place="${place.id}">&#9823; Asignar</button>` : ''}` : '&mdash;';
-        return `<tr><td><span class="td-row-number">${index + 1}</span></td><td><div class="td-place-cell"><i>&#9214;</i><div><b>${esc(place.nombre)}</b><small>${esc(place.referencia)}</small></div></div></td><td class="td-required"><b>${required}</b>${required === 1 ? 'Agente' : 'Agentes'}</td><td>${agents}</td><td><span class="td-status ${covered ? 'td-status-assigned' : 'td-status-pending'}">${covered ? 'Asignado' : 'Pendiente'}</span></td><td><div class="td-actions">${actions}</div></td></tr>`;
+        let actions = '&mdash;';
+        if (canAssign) {
+            if (assigned.length === 0) {
+                actions = `<button type="button" data-assign-place="${place.id}">&#9823; Asignar</button>`;
+            } else if (assigned.length === 1) {
+                actions = `<button class="td-action-icon td-action-change" type="button" data-change-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Cambiar agente" aria-label="Cambiar agente"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.9-4M4 5v5h5M4 13a8 8 0 0 0 14.9 4M20 19v-5h-5"/></svg></button><button class="td-action-icon td-remove" type="button" data-remove-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Eliminar asignación" aria-label="Eliminar asignación"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>`;
+            } else {
+                actions = `<button type="button" data-manage-place="${place.id}">Gestionar</button>`;
+            }
+        }
+        return `<tr><td><div class="td-place-cell"><div><b>${esc(place.nombre)}</b></div></div></td><td class="td-required"><b>${required}</b>${required === 1 ? 'Agente' : 'Agentes'}</td><td>${agents}</td><td><span class="td-status ${covered ? 'td-status-assigned' : 'td-status-pending'}">${covered ? 'Asignado' : 'Pendiente'}</span></td><td><div class="td-actions">${actions}</div></td></tr>`;
     }
 
     async function refreshAvailability() {
@@ -281,7 +300,7 @@
 
         $('#tdAgentSearch').value = '';
         $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel => sel.value = '');
-        $('#tdAgentTableBody').innerHTML = '<tr><td colspan="8"><div class="td-empty-small">Consultando personal...</div></td></tr>';
+        $('#tdAgentTableBody').innerHTML = '<tr><td colspan="7"><div class="td-empty-small">Consultando personal...</div></td></tr>';
         $('#tdAgentPagination').innerHTML = '';
         openModal('tdAgentModal');
         await fetchAgentList();
@@ -301,49 +320,69 @@
         $('#tdAgentModalSubtitle').textContent = kind === 'district' ? state.board?.distrito?.nombre || '' : route?.nombre || '';
         $('#tdAgentInfoBar').innerHTML = `<div class="td-info-row"><b>${title}:</b> ${esc(kind === 'district' ? state.board?.distrito?.nombre : route?.nombre)}</div>${current?.agente?.nombre_completo ? `<div class="td-info-row"><b>Agente actual:</b> ${esc(current.agente.nombre_completo)}</div>` : ''}<div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
         $('#tdAgentSearch').value=''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel=>sel.value='');
-        $('#tdAgentTableBody').innerHTML='<tr><td colspan="8"><div class="td-empty-small">Consultando personal...</div></td></tr>'; $('#tdAgentPagination').innerHTML='';
+        $('#tdAgentTableBody').innerHTML='<tr><td colspan="7"><div class="td-empty-small">Consultando personal...</div></td></tr>'; $('#tdAgentPagination').innerHTML='';
         openModal('tdAgentModal'); await fetchAgentList();
     }
 
     function emptyCircuitDraft(circuitId=0){
-        return {circuito_id:Number(circuitId||0),usar_encargado_distrito:false,agente_id:null,agente:null,auxiliar_1_id:null,auxiliar_1:null,auxiliar_2_id:null,auxiliar_2:null,movil_id:null};
+        return {_scope:'circuit',circuito_id:Number(circuitId||0),usar_encargado_distrito:false,agente_id:null,agente:null,conductor_id:null,conductor:null,auxiliar_1_id:null,auxiliar_1:null,auxiliar_2_id:null,auxiliar_2:null,movil_id:null};
     }
     function openCircuitEditor(circuitId=0,useDistrictManager=false){
         const selected=Number(circuitId||state.circuitId||0);
         const current=state.circuitManagers.get(selected);
-        state.circuitDraft=current?structuredClone({...current,circuito_id:selected,_original_circuito_id:selected}):emptyCircuitDraft(selected);
-        if(useDistrictManager&&state.districtManager){state.circuitDraft.usar_encargado_distrito=true;state.circuitDraft.agente_id=Number(state.districtManager.agente_id);state.circuitDraft.agente=state.districtManager.agente;}
+        state.circuitDraft=current?structuredClone({...current,_scope:'circuit',circuito_id:selected,_original_circuito_id:selected}):emptyCircuitDraft(selected);
+        if(useDistrictManager&&state.districtManager){
+            state.circuitDraft={...state.circuitDraft,usar_encargado_distrito:true,
+                agente_id:Number(state.districtManager.agente_id),agente:state.districtManager.agente,
+                conductor_id:state.districtManager.conductor_id||null,conductor:state.districtManager.conductor||null,
+                auxiliar_1_id:state.districtManager.auxiliar_1_id||null,auxiliar_1:state.districtManager.auxiliar_1||null,
+                auxiliar_2_id:state.districtManager.auxiliar_2_id||null,auxiliar_2:state.districtManager.auxiliar_2||null,
+                movil_id:state.districtManager.movil_id||null,numero_movil:state.districtManager.numero_movil||null,placa:state.districtManager.placa||null};
+        }
         renderCircuitEditor(); openModal('tdCircuitManagerModal');
+    }
+    function openDistrictResourceEditor(){
+        if(!state.districtManager?.agente_id)return notify('Primero seleccione el encargado del distrito.',true);
+        state.circuitDraft=structuredClone({...state.districtManager,_scope:'district',circuito_id:0});
+        renderCircuitEditor();openModal('tdCircuitManagerModal');
     }
     function renderCircuitEditor(){
         const draft=state.circuitDraft||emptyCircuitDraft();
+        const districtScope=draft._scope==='district';
+        $('#tdResourceModalTitle').textContent=districtScope?'Recursos del encargado de distrito':'Recursos del encargado de circuito';
+        $('#tdResourceModalSubtitle').textContent=districtScope?(state.board?.distrito?.nombre||''):circuitName(draft.circuito_id);
+        $('#tdCircuitManagerCircuitField').hidden=districtScope;
         $('#tdCircuitManagerCircuit').value=draft.circuito_id?String(draft.circuito_id):'';
-        $('#tdCircuitManagerName').textContent=draft.agente?.nombre_completo||'Sin seleccionar';
-        $('#tdCircuitAux1Name').textContent=draft.auxiliar_1?.nombre_completo||'Sin seleccionar';
-        $('#tdCircuitAux2Name').textContent=draft.auxiliar_2?.nombre_completo||'Sin seleccionar';
+        $('#tdCircuitManagerName').textContent=personDisplayName(draft.agente?.nombre_completo)||'Sin seleccionar';
+        $('#tdCircuitDriverName').textContent=personDisplayName(draft.conductor?.nombre_completo)||'Sin seleccionar';
+        $('#tdCircuitAux1Name').textContent=personDisplayName(draft.auxiliar_1?.nombre_completo)||'Sin seleccionar';
+        $('#tdCircuitAux2Name').textContent=personDisplayName(draft.auxiliar_2?.nombre_completo)||'Sin seleccionar';
         $('#tdCircuitMobile').value=draft.movil_id?String(draft.movil_id):'';
-        const managerButton=$('[data-circuit-role="manager"]'); if(managerButton)managerButton.disabled=Boolean(draft.usar_encargado_distrito);
+        const managerButton=$('[data-circuit-role="manager"]'); if(managerButton){managerButton.hidden=districtScope;managerButton.disabled=Boolean(draft.usar_encargado_distrito);}
     }
     async function openCircuitRoleSelector(role){
-        const draft=state.circuitDraft; if(!draft?.circuito_id)return notify('Seleccione un circuito.',true);
-        const roleConfig={manager:['circuitManager','agente_id','agente','Encargado de circuito'],aux1:['circuitAux1','auxiliar_1_id','auxiliar_1','Auxiliar 1'],aux2:['circuitAux2','auxiliar_2_id','auxiliar_2','Auxiliar 2']}[role];
+        const draft=state.circuitDraft; if(!draft)return;
+        if(draft._scope!=='district'&&!draft.circuito_id)return notify('Seleccione un circuito.',true);
+        const roleConfig={manager:['circuitManager','agente_id','agente','Encargado de circuito'],driver:['circuitDriver','conductor_id','conductor','Conductor'],aux1:['circuitAux1','auxiliar_1_id','auxiliar_1','Auxiliar 1'],aux2:['circuitAux2','auxiliar_2_id','auxiliar_2','Auxiliar 2']}[role];
         if(!roleConfig)return;
         const [kind,idKey,valueKey,title]=roleConfig; const current=draft[valueKey];
-        state.agentTarget={kind,circuitRole:role,replaceAgentId:Number(draft[idKey]||0),placeNombre:circuitName(draft.circuito_id),rutaNombre:'',turnoNombre:$('#tdShift').selectedOptions[0]?.textContent||''};
+        const scopeName=draft._scope==='district'?(state.board?.distrito?.nombre||'Distrito'):circuitName(draft.circuito_id);
+        state.agentTarget={kind,circuitRole:role,replaceAgentId:Number(draft[idKey]||0),placeNombre:scopeName,rutaNombre:'',turnoNombre:$('#tdShift').selectedOptions[0]?.textContent||''};
         state.agentModal={page:1,filters:{},search:'',data:null};
         $('#tdAgentModalTitle').textContent=current?`Cambiar ${title.toLowerCase()}`:`Seleccionar ${title.toLowerCase()}`;
-        $('#tdAgentModalSubtitle').textContent=circuitName(draft.circuito_id);
-        $('#tdAgentInfoBar').innerHTML=`<div class="td-info-row"><b>${title}:</b> ${esc(circuitName(draft.circuito_id))}</div><div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
+        $('#tdAgentModalSubtitle').textContent=scopeName;
+        $('#tdAgentInfoBar').innerHTML=`<div class="td-info-row"><b>${title}:</b> ${esc(scopeName)}</div><div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
         $('#tdAgentSearch').value=''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel=>sel.value='');
         openModal('tdAgentModal'); await fetchAgentList();
     }
 
     async function fetchAgentList() {
         if (!state.agentTarget) return;
-        const excluded = usedAgentIds(state.agentTarget.replaceAgentId);
+        const draftPeople=state.circuitDraft?[state.circuitDraft.agente_id,state.circuitDraft.conductor_id,state.circuitDraft.auxiliar_1_id,state.circuitDraft.auxiliar_2_id].filter(Boolean).map(Number):[];
+        const excluded = Array.from(new Set([...usedAgentIds(state.agentTarget.replaceAgentId),...draftPeople])).filter(id=>id!==Number(state.agentTarget.replaceAgentId||0));
         const body = {
             distrito_id: state.districtId, turno_id: state.shiftId,
-            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind === 'circuitManager' ? 'ENCARGADO_CIRCUITO' : state.agentTarget.kind.startsWith('circuitAux') ? 'AUXILIAR_CIRCUITO' : 'AGENTE_LUGAR',
+            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind === 'circuitManager' ? 'ENCARGADO_CIRCUITO' : state.agentTarget.kind === 'circuitDriver' ? 'CONDUCTOR' : state.agentTarget.kind.startsWith('circuitAux') ? 'AUXILIAR' : 'AGENTE_LUGAR',
             fecha_distribucion: selectedDate(),
             excluidos: excluded,
             page: state.agentModal.page, limit: 20,
@@ -367,7 +406,7 @@
             populateFilterOptions(data.catalogos);
             renderAgentTable(data);
         } catch (error) {
-            $('#tdAgentTableBody').innerHTML = `<tr><td colspan="8"><div class="td-empty-small">${esc(error.message)}</div></td></tr>`;
+            $('#tdAgentTableBody').innerHTML = `<tr><td colspan="7"><div class="td-empty-small">${esc(error.message)}</div></td></tr>`;
         }
     }
 
@@ -392,9 +431,10 @@
     }
 
     function renderAgentTable(data) {
-        const agents = data.agentes || [];
+        const resourceSelector=Boolean(state.agentTarget&&!['place'].includes(state.agentTarget.kind));
+        const agents = (data.agentes || []).filter(agent=>!resourceSelector||agent.disponible);
         if (!agents.length) {
-            $('#tdAgentTableBody').innerHTML = '<tr><td colspan="8"><div class="td-empty-small">No se encontraron agentes con los filtros seleccionados.</div></td></tr>';
+            $('#tdAgentTableBody').innerHTML = '<tr><td colspan="7"><div class="td-empty-small">No se encontraron agentes con los filtros seleccionados.</div></td></tr>';
             $('#tdAgentPagination').innerHTML = '';
             return;
         }
@@ -408,8 +448,7 @@
                     ? `<button class="td-btn td-btn-warning td-btn-sm" type="button" data-select-agent="${agent.id}" data-requires-force="1">Forzar</button>`
                     : `<span class="td-avail td-avail-no">No disponible</span>`;
             return `<tr class="${isAvailable ? '' : 'td-row-unavailable'}">
-                <td><div class="td-agent-cell"><span class="td-avatar-sm">${esc(initials(agent.nombre_completo))}</span><b>${esc(agent.nombre_completo)}</b></div></td>
-                <td>${esc(agent.cedula)}</td>
+                <td><div class="td-agent-cell"><span class="td-avatar-sm">${esc(initials(personDisplayName(agent.nombre_completo)))}</span><b>${esc(personDisplayName(agent.nombre_completo))}</b></div></td>
                 <td>${esc(agent.grupo)}</td>
                 <td>${esc(agent.tipo_servicio)}</td>
                 <td>${esc(agent.grado)}</td>
@@ -439,7 +478,7 @@
 
         if (requiresForce || agent.requiere_forzado) {
             $('#tdForceAgentStatus').textContent = agent.estado_laboral;
-            $('#tdForceAgentName').textContent = agent.nombre_completo;
+            $('#tdForceAgentName').textContent = personDisplayName(agent.nombre_completo);
             $('#tdForceAgentEstado').textContent = agent.estado_laboral;
             $('#tdForceLugar').textContent = `${target.placeNombre} | ${target.rutaNombre}`;
             $('#tdForceTurno').textContent = target.turnoNombre;
@@ -456,14 +495,14 @@
     }
 
     function applyAgentToTarget(target, agent, assignmentType, extra = {}) {
-        const value = {agente_id:Number(agent.id),tipo_asignacion:assignmentType,agente:{id:Number(agent.id),nombre_completo:agent.nombre_completo,cedula:agent.cedula,estado_personal:agent.estado_laboral},...extra};
+        const value = {agente_id:Number(agent.id),tipo_asignacion:assignmentType,agente:{id:Number(agent.id),nombre_completo:agent.nombre_completo,grado:agent.grado,estado_personal:agent.estado_laboral},...extra};
         if (target.kind === 'district') {
-            state.districtManager = value;
+            state.districtManager = {...state.districtManager,...value};
             for(const [circuitId,item] of state.circuitManagers.entries())if(item.usar_encargado_distrito)state.circuitManagers.set(circuitId,{...item,agente_id:value.agente_id,agente:value.agente});
         }
         else if (target.kind === 'route') state.routeManagers.set(Number(target.routeId), {requiere_encargado:true,...value});
         else if (target.kind.startsWith('circuit')) {
-            const mapping={circuitManager:['agente_id','agente'],circuitAux1:['auxiliar_1_id','auxiliar_1'],circuitAux2:['auxiliar_2_id','auxiliar_2']}[target.kind];
+            const mapping={circuitManager:['agente_id','agente'],circuitDriver:['conductor_id','conductor'],circuitAux1:['auxiliar_1_id','auxiliar_1'],circuitAux2:['auxiliar_2_id','auxiliar_2']}[target.kind];
             if(mapping&&state.circuitDraft){state.circuitDraft[mapping[0]]=Number(agent.id);state.circuitDraft[mapping[1]]=value.agente;}
         }
         else {
@@ -504,6 +543,45 @@
         saveDraft(); renderWorkspace(); refreshAvailability();
     }
 
+    function openManageAgents(placeId) {
+        const place = (state.places.get(state.routeId) || []).find(p => Number(p.id) === Number(placeId));
+        if (!place) return;
+        const assigned = assignmentsFor(placeId);
+        const required = Number(place.cantidad_requerida || 0);
+        const title = $('#tdManageAgentsTitle');
+        const info = $('#tdManagePlaceInfo');
+        const list = $('#tdManageAgentsList');
+        const reqInfo = $('#tdManageRequiredInfo');
+        if (title) title.textContent = `Agentes - ${place.nombre}`;
+        if (info) info.innerHTML = `<b>${esc(place.nombre)}</b><span>${assigned.length} de ${required} asignados</span>`;
+        if (list) {
+            list.innerHTML = assigned.length ? assigned.map(item => {
+                const isForced = item.tipo_asignacion === 'FORZADA';
+                return `<div class="td-manage-agent-row">
+                    <div class="td-manage-agent-info">
+                        <span class="td-avatar">${esc(initials(personDisplayName(item.agente?.nombre_completo)))}</span>
+                        <div><b>${esc(personDisplayName(item.agente?.nombre_completo)||'Sin nombre')}</b>
+                        <small>${esc(item.agente?.grado || '')}${isForced ? ' &middot; <em style="color:#c2410c">Forzada</em>' : ''}</small></div>
+                    </div>
+                    <div class="td-manage-agent-actions">
+                        <button class="td-btn td-btn-ghost td-btn-sm" type="button" data-manage-change="${item.agente_id}" data-place-id="${placeId}">Cambiar</button>
+                        <button class="td-btn td-btn-danger td-btn-sm" type="button" data-manage-remove="${item.agente_id}" data-place-id="${placeId}">Quitar</button>
+                    </div>
+                </div>`;
+            }).join('') : '<p class="td-empty-small">Sin agentes asignados.</p>';
+            list.onclick = function(e) {
+                const changeBtn = e.target.closest('[data-manage-change]');
+                const removeBtn = e.target.closest('[data-manage-remove]');
+                if (changeBtn) { closeModal('tdManageAgentsModal'); openAgentSelector(changeBtn.dataset.placeId, changeBtn.dataset.manageChange); }
+                if (removeBtn) { removeAgent(removeBtn.dataset.placeId, removeBtn.dataset.manageRemove); openManageAgents(placeId); }
+            };
+        }
+        if (reqInfo) reqInfo.textContent = `Requeridos: ${required}`;
+        openModal('tdManageAgentsModal');
+        const addBtn = $('#tdManageAddAgent');
+        if (addBtn) { addBtn.onclick = () => { closeModal('tdManageAgentsModal'); openAgentSelector(placeId); }; }
+    }
+
     async function randomAssign() {
         if (!state.circuitId) return notify('Seleccione un circuito para realizar la asignación aleatoria.', true);
         if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Primero seleccione el encargado del distrito.', true);
@@ -526,15 +604,19 @@
     }
 
     function saveCircuitManagerDraft(){
-        const draft=state.circuitDraft; const circuitId=Number($('#tdCircuitManagerCircuit').value||0);
-        if(!draft||!circuitId)return notify('Seleccione un circuito.',true);
-        if(!draft.agente_id)return notify('Seleccione el encargado del circuito.',true);
-        const people=[draft.agente_id,draft.auxiliar_1_id,draft.auxiliar_2_id].filter(Boolean).map(Number);
-        if(new Set(people).size!==people.length)return notify('No puede repetir una persona como encargado y auxiliar.',true);
-        draft.circuito_id=circuitId;draft.movil_id=Number($('#tdCircuitMobile').value||0)||null;
+        const draft=state.circuitDraft;if(!draft)return;
+        const districtScope=draft._scope==='district';const circuitId=Number($('#tdCircuitManagerCircuit').value||0);
+        if(!districtScope&&!circuitId)return notify('Seleccione un circuito.',true);
+        if(!draft.agente_id)return notify(`Seleccione el encargado del ${districtScope?'distrito':'circuito'}.`,true);
+        draft.movil_id=Number($('#tdCircuitMobile').value||0)||null;
+        if(!draft.movil_id||!draft.conductor_id||!draft.auxiliar_1_id)return notify('Debe asignar móvil, conductor y auxiliar 1.',true);
+        const people=[draft.agente_id,draft.conductor_id,draft.auxiliar_1_id,draft.auxiliar_2_id].filter(Boolean).map(Number);
+        if(new Set(people).size!==people.length)return notify('No puede repetir una persona como encargado, conductor o auxiliar.',true);
         const mobile=(state.board?.moviles||[]).find(item=>Number(item.id)===Number(draft.movil_id));draft.numero_movil=mobile?.numero_movil||null;draft.placa=mobile?.placa||null;
+        if(districtScope){const {_scope,...resources}=draft;state.districtManager={...state.districtManager,...resources};for(const [id,item] of state.circuitManagers.entries())if(item.usar_encargado_distrito)state.circuitManagers.set(id,{...item,agente_id:state.districtManager.agente_id,agente:state.districtManager.agente,conductor_id:resources.conductor_id,conductor:resources.conductor,auxiliar_1_id:resources.auxiliar_1_id,auxiliar_1:resources.auxiliar_1,auxiliar_2_id:resources.auxiliar_2_id,auxiliar_2:resources.auxiliar_2,movil_id:resources.movil_id,numero_movil:resources.numero_movil,placa:resources.placa});state.circuitDraft=null;saveDraft();closeModal('tdCircuitManagerModal');renderManagers();refreshAvailability();return;}
+        draft.circuito_id=circuitId;
         if(draft._original_circuito_id&&Number(draft._original_circuito_id)!==circuitId)state.circuitManagers.delete(Number(draft._original_circuito_id));
-        const {_original_circuito_id,...persisted}=draft;state.circuitManagers.set(circuitId,{...persisted});state.circuitDraft=null;saveDraft();closeModal('tdCircuitManagerModal');renderManagers();refreshAvailability();
+        const {_original_circuito_id,_scope,...persisted}=draft;state.circuitManagers.set(circuitId,{...persisted});state.circuitDraft=null;saveDraft();closeModal('tdCircuitManagerModal');renderManagers();refreshAvailability();
     }
     function syncDistrictCircuitAssignment(){
         const checked=$('#tdDistrictAsCircuitManager').checked; const circuitId=Number($('#tdDistrictManagerCircuit').value||0);
@@ -543,7 +625,7 @@
         if(!state.districtManager?.agente_id){$('#tdDistrictAsCircuitManager').checked=false;notify('Primero seleccione el encargado del distrito.',true);openManagerSelector('district');return;}
         if(!circuitId)return notify('Seleccione el circuito que también tendrá a cargo.',true);
         const current=state.circuitManagers.get(circuitId)||emptyCircuitDraft(circuitId);
-        state.circuitManagers.set(circuitId,{...current,usar_encargado_distrito:true,agente_id:Number(state.districtManager.agente_id),agente:state.districtManager.agente});
+        state.circuitManagers.set(circuitId,{...current,usar_encargado_distrito:true,agente_id:Number(state.districtManager.agente_id),agente:state.districtManager.agente,conductor_id:state.districtManager.conductor_id||null,conductor:state.districtManager.conductor||null,auxiliar_1_id:state.districtManager.auxiliar_1_id||null,auxiliar_1:state.districtManager.auxiliar_1||null,auxiliar_2_id:state.districtManager.auxiliar_2_id||null,auxiliar_2:state.districtManager.auxiliar_2||null,movil_id:state.districtManager.movil_id||null,numero_movil:state.districtManager.numero_movil||null,placa:state.districtManager.placa||null});
         saveDraft();renderManagers();
     }
 
@@ -558,9 +640,11 @@
         try { const totals = await draftTotals(); if (!totals.required) return notify('No existen lugares para guardar.', true); }
         catch (error) { return notify(error.message, true); }
         if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Debe asignar el encargado de distrito.', true);
+        if(!resourcesComplete(state.districtManager))return notify('Complete móvil, conductor y auxiliar 1 del encargado de distrito.',true);
         for(const [circuitId,item] of state.circuitManagers.entries()){
             if(!item.agente_id)return notify(`Seleccione el encargado de ${circuitName(circuitId)}.`,true);
-            const people=[item.agente_id,item.auxiliar_1_id,item.auxiliar_2_id].filter(Boolean).map(Number);
+            if(!resourcesComplete(item))return notify(`Complete móvil, conductor y auxiliar 1 de ${circuitName(circuitId)}.`,true);
+            const people=[item.agente_id,item.conductor_id,item.auxiliar_1_id,item.auxiliar_2_id].filter(Boolean).map(Number);
             if(new Set(people).size!==people.length)return notify(`Revise las personas asignadas en ${circuitName(circuitId)}.`,true);
         }
         for (const route of state.board?.rutas || []) {
@@ -583,7 +667,9 @@
             const saved = await api(resource, {method: state.editingId ? 'PUT' : 'POST', body: {
                 distrito_id:state.districtId,turno_id:state.shiftId,fecha_distribucion:date,guardar_con_pendientes:true,
                 encargado_distrito_id:state.districtManager?.agente_id || null,
-                encargados_circuito:Array.from(state.circuitManagers.entries()).map(([circuito_id,item])=>({circuito_id:Number(circuito_id),usar_encargado_distrito:Boolean(item.usar_encargado_distrito),agente_id:Number(item.agente_id),auxiliar_1_id:item.auxiliar_1_id||null,auxiliar_2_id:item.auxiliar_2_id||null,movil_id:item.movil_id||null,tipo_asignacion:item.tipo_asignacion||'MANUAL'})),
+                distrito_movil_id:state.districtManager?.movil_id||null,distrito_conductor_id:state.districtManager?.conductor_id||null,
+                distrito_auxiliar_1_id:state.districtManager?.auxiliar_1_id||null,distrito_auxiliar_2_id:state.districtManager?.auxiliar_2_id||null,
+                encargados_circuito:Array.from(state.circuitManagers.entries()).map(([circuito_id,item])=>({circuito_id:Number(circuito_id),usar_encargado_distrito:Boolean(item.usar_encargado_distrito),agente_id:Number(item.agente_id),conductor_id:item.conductor_id||null,auxiliar_1_id:item.auxiliar_1_id||null,auxiliar_2_id:item.auxiliar_2_id||null,movil_id:item.movil_id||null,tipo_asignacion:item.tipo_asignacion||'MANUAL'})),
                 encargados_ruta:Array.from(state.routeManagers.entries()).map(([ruta_id,item])=>({ruta_id:Number(ruta_id),requiere_encargado:Boolean(item.requiere_encargado),agente_id:item.agente_id || null,tipo_asignacion:item.tipo_asignacion || 'MANUAL'})),
                 asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion}))
             }});
@@ -607,10 +693,11 @@
     $('#tdShift').addEventListener('change', loadBoard); $('#tdBoardDate').addEventListener('change', loadBoard);
     $('#tdRouteSearch').addEventListener('input', renderRoutes); $('#tdRouteList').addEventListener('click', event => { const item = event.target.closest('[data-route-id]'); if (item) selectRoute(Number(item.dataset.routeId)); });
     $('#tdPlacesBody').addEventListener('click', event => {
-        const assign = event.target.closest('[data-assign-place]'); const change = event.target.closest('[data-change-agent]'); const remove = event.target.closest('[data-remove-agent]');
+        const assign = event.target.closest('[data-assign-place]'); const change = event.target.closest('[data-change-agent]'); const remove = event.target.closest('[data-remove-agent]'); const manage = event.target.closest('[data-manage-place]');
         if (assign) openAgentSelector(assign.dataset.assignPlace);
         if (change) openAgentSelector(change.dataset.placeId, change.dataset.changeAgent);
         if (remove) removeAgent(remove.dataset.placeId, remove.dataset.removeAgent);
+        if (manage) openManageAgents(Number(manage.dataset.managePlace));
     });
 
     let agentSearchDebounce = null;
@@ -637,6 +724,7 @@
     $('#tdConfirmForce').addEventListener('click', confirmForceAssignment);
 
     $('#tdAssignDistrictManager')?.addEventListener('click',()=>openManagerSelector('district'));
+    $('#tdEditDistrictResources')?.addEventListener('click',openDistrictResourceEditor);
     $('#tdRemoveDistrictManager')?.addEventListener('click',()=>{state.districtManager=null;for(const [id,item] of state.circuitManagers.entries())if(item.usar_encargado_distrito)state.circuitManagers.delete(id);saveDraft();renderWorkspace();refreshAvailability();});
     $('#tdDistrictAsCircuitManager')?.addEventListener('change',syncDistrictCircuitAssignment);
     $('#tdDistrictManagerCircuit')?.addEventListener('change',()=>{if($('#tdDistrictAsCircuitManager').checked)syncDistrictCircuitAssignment();});
