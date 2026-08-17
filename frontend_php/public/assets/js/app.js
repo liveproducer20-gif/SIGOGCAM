@@ -154,17 +154,33 @@
         const searchCols = table.hasAttribute('data-search-cols')
             ? table.getAttribute('data-search-cols').split(',').map(Number)
             : null;
+        const externalFilters = table.id
+            ? Array.from(document.querySelectorAll(`[data-table-filter="${table.id}"]`))
+            : [];
+        const clearExternalFilters = table.id
+            ? Array.from(document.querySelectorAll(`[data-clear-table-filters="${table.id}"]`))
+            : [];
         let page = 0;
         const render = () => {
             const term = search.value.trim().toLowerCase();
             const filtered = rows.filter((row) => {
-                if (searchCols) {
-                    return searchCols.some((ci) => {
+                const matchesSearch = searchCols
+                    ? searchCols.some((ci) => {
                         const cell = row.cells[ci];
                         return cell && cell.textContent.toLowerCase().includes(term);
-                    });
-                }
-                return row.textContent.toLowerCase().includes(term);
+                    })
+                    : row.textContent.toLowerCase().includes(term);
+                if (!matchesSearch) return false;
+                return externalFilters.every((control) => {
+                    const value = control.value.trim().toLowerCase();
+                    if (!value) return true;
+                    const attribute = control.dataset.filterAttribute || '';
+                    const rowValue = String(row.dataset[attribute] || '').trim().toLowerCase();
+                    if (value === '__empty__') return rowValue === '';
+                    return control.dataset.filterMode === 'contains'
+                        ? rowValue.includes(value)
+                        : rowValue === value;
+                });
             });
             const size = Number(amount.value);
             const pages = Math.max(1, Math.ceil(filtered.length / size));
@@ -178,6 +194,16 @@
         };
         search.addEventListener('input', () => { page = 0; render(); });
         amount.addEventListener('change', () => { page = 0; render(); });
+        externalFilters.forEach((control) => {
+            control.addEventListener(control.matches('input') ? 'input' : 'change', () => { page = 0; render(); });
+        });
+        clearExternalFilters.forEach((button) => {
+            button.addEventListener('click', () => {
+                externalFilters.forEach((control) => { control.value = ''; });
+                page = 0;
+                render();
+            });
+        });
         previous.addEventListener('click', () => { page = Math.max(0, page - 1); render(); });
         next.addEventListener('click', () => { page += 1; render(); });
         render();

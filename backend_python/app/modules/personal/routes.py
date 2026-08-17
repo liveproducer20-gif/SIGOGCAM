@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.core.responses import ok
-from app.middleware.auth import current_user, require_permission
+from app.middleware.auth import current_user, require_any_permission, require_permission
 from app.modules.personal.models import PersonalInput
 from app.modules.personal.repository import list_people, list_people_paginated, my_profile, get_person, create_person, update_person, delete_person, reset_password, catalogs_for_personal
 
@@ -25,7 +25,7 @@ def listar_personal(
     grupo: int | None = Query(default=None),
     jornada: int | None = Query(default=None),
     activo: int | None = Query(default=None),
-    user: dict = Depends(current_user),
+    user: dict = Depends(require_permission("personal.ver")),
 ):
     result = list_people_paginated(
         search=buscar, estado=estado, grado=grado, rol=rol,
@@ -36,27 +36,29 @@ def listar_personal(
 
 
 @router.get("/buscar")
-def buscar_personal(q: str | None = Query(default=None), user: dict = Depends(current_user)):
+def buscar_personal(q: str | None = Query(default=None), user: dict = Depends(require_permission("personal.ver"))):
     return ok(list_people(q))
 
 
 @router.get("/operativos")
-def operativos(user: dict = Depends(current_user)):
+def operativos(user: dict = Depends(require_any_permission("personal.ver", "personal.ver_asignado", "eventos.convocar", "anuncios.crear"))):
     return ok(list_people())
 
 
 @router.get("/disponibles")
-def disponibles(user: dict = Depends(current_user)):
+def disponibles(user: dict = Depends(require_any_permission("personal.ver", "personal.ver_asignado", "eventos.convocar", "anuncios.crear"))):
     return ok(list_people())
 
 
 @router.get("/catalogos")
-def get_catalogs(user: dict = Depends(current_user)):
+def get_catalogs(user: dict = Depends(require_permission("personal.ver"))):
     return ok(catalogs_for_personal())
 
 
 @router.get("/{person_id}")
 def get_person_by_id(person_id: int, user: dict = Depends(current_user)):
+    if person_id != int(user["id"]):
+        require_permission("personal.ver")(user)
     return ok(get_person(person_id))
 
 

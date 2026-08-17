@@ -18,10 +18,54 @@
             if (!row) return;
             const isVisible = !row.hidden;
             row.hidden = isVisible;
-            button.textContent = isVisible ? '▼' : '▲';
+            button.textContent = button.hasAttribute('data-toggle-text')
+                ? (isVisible ? 'Detalle' : 'Ocultar')
+                : (isVisible ? '▼' : '▲');
             button.setAttribute('aria-expanded', String(!isVisible));
         });
     });
+
+    const bulkDeleteButton = document.querySelector('[data-bulk-delete-places]');
+    const bulkDeleteDialog = document.getElementById('bulkDeletePlacesDialog');
+    if (bulkDeleteButton && bulkDeleteDialog) {
+        const routeSelect = document.querySelector('[data-table-filter="admin-places-table"][data-filter-attribute="route"]');
+        const circuitSelect = document.querySelector('[data-table-filter="admin-places-table"][data-filter-attribute="circuit"]');
+        const deleteForm = bulkDeleteDialog.querySelector('form');
+        const routeInput = deleteForm.elements.namedItem('ruta_id');
+        const circuitInput = deleteForm.elements.namedItem('circuito_id');
+
+        bulkDeleteButton.addEventListener('click', () => {
+            const routeId = routeSelect?.value || '';
+            const circuitId = circuitSelect?.value || '';
+            const byRoute = routeId !== '' && routeId !== '__empty__';
+            const byCircuit = !byRoute && circuitId !== '' && circuitId !== '__empty__';
+            if (!byRoute && !byCircuit) {
+                window.alert('Seleccione una ruta o un circuito antes de eliminar lugares.');
+                return;
+            }
+
+            const attribute = byRoute ? 'route' : 'circuit';
+            const value = byRoute ? routeId : circuitId;
+            const scopeSelect = byRoute ? routeSelect : circuitSelect;
+            const count = Array.from(document.querySelectorAll('#admin-places-table tbody tr'))
+                .filter((row) => row.dataset[attribute] === value).length;
+            if (count === 0) {
+                window.alert('No existen lugares para eliminar en la selección indicada.');
+                return;
+            }
+
+            routeInput.value = byRoute ? routeId : '';
+            circuitInput.value = byCircuit ? circuitId : '';
+            bulkDeleteDialog.querySelector('[data-bulk-delete-count]').textContent = String(count);
+            bulkDeleteDialog.querySelector('[data-bulk-delete-scope]').textContent =
+                `${byRoute ? 'la ruta' : 'el circuito'} “${scopeSelect.options[scopeSelect.selectedIndex].text}”`;
+            bulkDeleteDialog.showModal();
+        });
+
+        bulkDeleteDialog.querySelectorAll('[data-bulk-delete-close]').forEach((button) => {
+            button.addEventListener('click', () => bulkDeleteDialog.close());
+        });
+    }
 
     const form = document.getElementById('form-circuito');
     if (!form) return;

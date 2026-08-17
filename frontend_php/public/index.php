@@ -177,6 +177,11 @@ if ($path === '/admin/lugares-servicio/importar' && $method === 'POST') {
     return;
 }
 
+if ($path === '/admin/lugares-servicio/eliminar-por-alcance' && $method === 'POST') {
+    (new AdminController())->deleteServicePlacesByScope();
+    return;
+}
+
 if ($path === '/admin/rutas/plantilla.csv' && $method === 'GET') {
     (new AdminController())->downloadRouteTemplate();
     return;

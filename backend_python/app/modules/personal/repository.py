@@ -4,6 +4,7 @@ from datetime import date
 from fastapi import HTTPException
 
 from app.core.db import get_connection
+from app.core.security import hash_password
 
 
 def _rows(cursor) -> list[dict]:
@@ -14,11 +15,6 @@ def _rows(cursor) -> list[dict]:
 def _row(cursor) -> dict | None:
     rows = _rows(cursor)
     return rows[0] if rows else None
-
-
-def _hash_password(password: str) -> str:
-    import hashlib
-    return hashlib.sha256(password.encode("utf-8")).hexdigest()
 
 
 def list_people_paginated(
@@ -232,7 +228,7 @@ def create_person(data: dict, user_id: int) -> int:
         cursor.execute("SELECT id FROM dbo.personal WHERE cedula = ?", data["cedula"])
         if cursor.fetchone():
             raise HTTPException(409, "Ya existe una persona con esa cédula")
-        password_hash = _hash_password(data["password"]) if data.get("password") else None
+        password_hash = hash_password(data["password"]) if data.get("password") else None
         cursor.execute("""
             INSERT INTO dbo.personal
               (cedula, nombres, apellidos, correo_institucional, telefono,
@@ -277,7 +273,7 @@ def update_person(person_id: int, data: dict, user_id: int) -> None:
         ]
         if data.get("password"):
             sets.append("password_hash = ?")
-            params.append(_hash_password(data["password"]))
+            params.append(hash_password(data["password"]))
         params.append(person_id)
         cursor.execute(f"UPDATE dbo.personal SET {', '.join(sets)} WHERE id = ?", *params)
 
@@ -319,7 +315,7 @@ def reset_password(person_id: int, new_password: str) -> None:
             raise HTTPException(404, "La persona no existe")
         cursor.execute(
             "UPDATE dbo.personal SET password_hash = ?, fecha_actualizacion = SYSDATETIME() WHERE id = ?",
-            _hash_password(new_password), person_id,
+            hash_password(new_password), person_id,
         )
 
 

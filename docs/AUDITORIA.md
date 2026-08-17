@@ -42,7 +42,7 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 
 #### C2. Control de acceso roto en Distribución Geográfica v2
 
-> ✅ **Corregido (2026-08-16):** las mutaciones exigen permisos finos (`rutas_geograficas.gestionar`/`distribucion.catalogos` para rutas geográficas; `distribucion.catalogos`/`distribucion.crear` para crear lugares; `distribucion.editar` para actualizar; `distribucion.desactivar` para eliminar; `distribucion.asignar` para asignaciones), además de `distribucion.ver` a nivel de router.
+> ✅ **Corregido (2026-08-16):** el módulo v2 se consolidó en la v1 (un solo router `routes.py` y un solo repositorio `repository.py`); las mutaciones exigen permisos finos (`rutas_geograficas.gestionar`/`distribucion.catalogos` para rutas geográficas; `distribucion.catalogos`/`distribucion.crear` para crear lugares; `distribucion.editar` para actualizar; `distribucion.desactivar` para eliminar; `distribucion.asignar` para asignaciones) y las lecturas solo `distribucion.ver`.
 
 - **Archivos:** `backend_python/app/modules/distribucion_geografica/routes_geo.py`
 - **Detalle:** El router `distribucion-v2` tiene como única dependencia `require_permission("distribucion.ver")`. Todos los endpoints de escritura (`POST/PUT/DELETE /rutas-geograficas`, `POST/PUT/DELETE /lugares-servicio`, `POST /lugares-servicio/{id}/asignaciones`, `DELETE /asignaciones-punto/{id}`) quedan abiertos a cualquier usuario con permiso de solo lectura.
@@ -61,6 +61,21 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 ### 3.2 ALTO
 
 #### A1. Exposición masiva de datos personales a cualquier usuario autenticado
+
+> ✅ **Corregido (2026-08-16):** lecturas de personal/usuarios ahora protegidas. Matriz aplicada:
+>
+> | Endpoint | Permiso |
+> | --- | --- |
+> | `GET /api/personal` (listado) | `personal.ver` |
+> | `GET /api/personal/buscar` | `personal.ver` |
+> | `GET /api/personal/operativos` y `/disponibles` | `personal.ver` **o** `personal.ver_asignado` **o** `eventos.convocar` **o** `anuncios.crear` |
+> | `GET /api/personal/catalogos` | `personal.ver` |
+> | `GET /api/personal/{id}` | propio **o** `personal.ver` |
+> | `GET /api/usuarios/{id}/perfil` | propio **o** `personal.ver` |
+> | `GET /api/usuarios/{id}/insignias` y `/progreso-insignias` | propio **o** `insignias.ver` |
+>
+> `GET /api/dashboard/resumen` y el módulo de soporte se dejan como están: el resumen son métricas agregadas no sensibles (página de inicio de todos los roles autenticados) y soporte ya filtra por usuario propietario salvo `soporte.listar`/admin.
+
 - **Archivos:** `backend_python/app/modules/personal/routes.py`, `backend_python/app/modules/usuarios/routes.py`
 - **Detalle:** `GET /api/personal`, `GET /api/personal/buscar`, `GET /api/personal/operativos`, `GET /api/personal/disponibles`, `GET /api/personal/{id}`, `GET /api/usuarios/{id}/perfil` y `GET /api/usuarios/{id}/insignias` solo exigen `current_user` (estar autenticado). No hay verificación de permiso ni de propiedad del recurso.
 - **Impacto:** Cualquier agente con la cuenta más básica puede enumerar cédulas, teléfonos, correos institucionales y perfiles completos de todo el personal. En Ecuador, la cédula combinada con otros datos facilita suplantación de identidad.
@@ -82,13 +97,20 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 - **Detalle:** El manejador de errores inesperados devuelve `{"detalle": str(exc)}`, exponiendo mensajes internos de pyodbc, rutas de archivos y detalles de consultas a cualquier cliente (incluso no autenticado).
 - **Corrección:** En producción, loguear el detalle completo en el servidor y devolver un mensaje genérico. Solo en desarrollo incluir detalles.
 
-#### A5. Documentación de API (Swagger) expuesta en producción
+#### A5. Contraseñas guardadas con sha256 y passlib incompatible con bcrypt ≥ 4.1
+
+> ✅ **Corregido (2026-08-16):** `app/core/security.py` ahora usa `bcrypt` directamente (hash/verify); `personal/repository.py` dejó de usar sha256 y `requirements.txt` reemplaza `passlib[bcrypt]==1.7.4` por `bcrypt==5.0.0`.
+
+- **Archivos:** `backend_python/app/modules/personal/repository.py`, `backend_python/app/core/security.py`, `backend_python/requirements.txt`
+- **Detalle:** `_hash_password` guardaba `sha256` (sin sal) mientras el login verificaba con bcrypt, por lo que las contraseñas creadas/restablecidas desde el módulo Personal eran inutilizables. Además, `passlib 1.7.4` es incompatible con `bcrypt >= 4.1` (rompe con `bcrypt 5.0.0`, instalado en el venv y en Docker), lo que hacía fallar toda verificación de hash.
+
+#### A6. Documentación de API (Swagger) expuesta en producción
 - **Archivo:** `backend_python/app/main.py` (`docs_url=f"{settings.api_prefix}/docs"`)
 - **Detalle:** `/api/docs` está habilitado siempre, sin importar `APP_ENV`.
 - **Impacto:** Muestra el inventario completo de endpoints (superficie de ataque) a cualquier visitante.
 - **Corrección:** Deshabilitar `docs_url`/`openapi_url` cuando `APP_ENV=production` o protegerlo tras autenticación.
 
-#### A6. Permisos embebidos en el JWT con expiración de 12 horas
+#### A7. Permisos embebidos en el JWT con expiración de 12 horas
 - **Archivos:** `backend_python/app/core/security.py` (`jwt_expire_minutes: int = 720`), `backend_python/app/modules/auth/routes.py`
 - **Detalle:** Los permisos del usuario se incrustan en el token al iniciar sesión y no se recargan hasta que expira (12 h). Además, `require_permission` en `app/middleware/auth.py` concede acceso total si el código del rol contiene "ADMINISTRADOR", ignorando los permisos granulares.
 - **Impacto:** (a) Si un administrador revoca permisos, el usuario conserva acceso hasta 12 h; (b) el bypass por nombre de rol hace que los permisos granulares sean decorativos para roles "ADMINISTRADOR" y rompe si se renombra un rol.
@@ -129,9 +151,8 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 - **Corrección:** Guardar archivos en disco/object storage y solo la ruta en la BD; validar tipo y tamaño en el backend.
 
 #### M7. Duplicación del módulo de distribución con autorizaciones divergentes
-- **Archivos:** `distribucion_geografica/routes.py` (v1, permisos finos) vs `routes_geo.py` (v2, solo ver)
-- **Detalle:** Existen dos implementaciones paralelas de rutas/lugares/asignaciones con distinta seguridad (ver C2). Mantener ambas aumenta la superficie de ataque y la deuda técnica.
-- **Corrección:** Consolidar en una sola versión con permisos finos y eliminar la otra.
+
+> ✅ **Resuelto (2026-08-16):** el módulo v2 (`routes_geo.py`/`repository_geo.py`) se eliminó y su funcionalidad única (rutas geográficas, lugares de servicio y asignaciones de punto) se integró en la v1 con permisos finos. Los endpoints duplicados (`/distritos`, `/distritos/{id}/rutas`, `/rutas/{id}/lugares-servicio`) los sirve ahora la implementación v1.
 
 ### 3.4 BAJO / OPERATIVO
 

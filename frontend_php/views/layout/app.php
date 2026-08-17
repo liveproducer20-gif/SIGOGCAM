@@ -31,7 +31,7 @@ $usuarioActual = AuthSession::user();
     <?php else: ?>
         <main class="app-shell"><?php require $viewFile; ?></main>
     <?php endif; ?>
-    <script src="/assets/js/app.js"></script>
+    <script src="/assets/js/app.js?v=20260816-table-filters"></script>
     <?php foreach (($pageScripts ?? []) as $script): ?>
         <script src="<?= htmlspecialchars($script) ?>"></script>
     <?php endforeach; ?>

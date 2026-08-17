@@ -764,9 +764,16 @@ def delete_mobile_unit(item_id: int) -> None:
     _soft_delete("moviles", item_id)
 
 
+def _route_turno(cursor, ruta_id: int) -> int | None:
+    cursor.execute("SELECT turno_id FROM dbo.rutas WHERE id = ?", ruta_id)
+    row = cursor.fetchone()
+    return int(row[0]) if row and row[0] is not None else None
+
+
 def create_service_place(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
+        turno_id = data.get("turnoId") or _route_turno(cursor, int(data["rutaId"]))
         cursor.execute(
             """
             INSERT INTO dbo.lugares_servicio (
@@ -778,7 +785,7 @@ def create_service_place(data: dict) -> int:
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("tipoServicioId"),data.get("turnoId"),
+            data.get("tipoServicioId"),turno_id,
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
@@ -789,6 +796,7 @@ def create_service_place(data: dict) -> int:
 def update_service_place(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
+        turno_id = data.get("turnoId") or _route_turno(cursor, int(data["rutaId"]))
         cursor.execute(
             """
             UPDATE dbo.lugares_servicio
@@ -798,7 +806,7 @@ def update_service_place(item_id: int, data: dict) -> None:
             WHERE id = ?
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("tipoServicioId"),data.get("turnoId"),
+            data.get("tipoServicioId"),turno_id,
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
@@ -808,6 +816,36 @@ def update_service_place(item_id: int, data: dict) -> None:
 
 def delete_service_place(item_id: int) -> None:
     _soft_delete("lugares_servicio", item_id)
+
+
+def delete_service_places_by_scope(route_id: int | None = None, circuit_id: int | None = None) -> int:
+    route_id = int(route_id or 0)
+    circuit_id = int(circuit_id or 0)
+    if bool(route_id) == bool(circuit_id):
+        raise ValueError("Seleccione una ruta o un circuito, pero no ambos")
+
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        if route_id:
+            cursor.execute("SELECT id FROM dbo.rutas WHERE id=?", route_id)
+            if cursor.fetchone() is None:
+                raise ValueError("La ruta seleccionada no existe")
+            cursor.execute("SELECT id FROM dbo.lugares_servicio WHERE ruta_id=? ORDER BY id", route_id)
+        else:
+            cursor.execute("SELECT id FROM dbo.circuitos WHERE id=? AND deleted_at IS NULL", circuit_id)
+            if cursor.fetchone() is None:
+                raise ValueError("El circuito seleccionado no existe")
+            cursor.execute(
+                """SELECT DISTINCT l.id FROM dbo.lugares_servicio l
+                   INNER JOIN dbo.circuito_rutas cr ON cr.ruta_id=l.ruta_id
+                   WHERE cr.circuito_id=? AND cr.deleted_at IS NULL ORDER BY l.id""",
+                circuit_id,
+            )
+
+        place_ids = [int(row[0]) for row in cursor.fetchall()]
+        for place_id in place_ids:
+            _cascade_delete(cursor, "lugares_servicio", place_id, set())
+        return len(place_ids)
 
 
 def _import_key(value) -> str:
@@ -846,6 +884,16 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                  int(shift_id) if shift_id is not None else None)
             )
 
+        cursor.execute(
+            """SELECT d.id,d.nombre FROM dbo.catalogo_detalles d
+               INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
+               WHERE c.codigo='TIPOS_SERVICIO_LUGAR' AND d.estado=1"""
+        )
+        service_types: dict[str, tuple[int, str]] = {
+            _import_key(name): (int(item_id), str(name))
+            for item_id, name in cursor.fetchall()
+        }
+
         lock_hint = " WITH (UPDLOCK, HOLDLOCK)" if confirm else ""
         cursor.execute(f"SELECT id,ruta_id,nombre FROM dbo.lugares_servicio{lock_hint}")
         existing = {
@@ -862,11 +910,12 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
             row = raw if isinstance(raw, dict) else {}
             row_number = int(row.get("fila") or index + 2)
             route_name = str(row.get("ruta") or "").strip()
-            place_name = str(row.get("lugar_servicio") or "").strip()
+            place_name = str(row.get("lugar_servicio") or "")
             horario = str(row.get("horario") or "").strip()
             lugar_formacion = str(row.get("lugar_formacion") or "").strip()
             consignas = str(row.get("consignas") or "").strip()
             observacion = str(row.get("observacion") or "").strip()
+            service_type_name = str(row.get("tipo_servicio") or "").strip()
             errors: list[str] = []
             warnings: list[str] = []
             duplicate_type = None
@@ -874,17 +923,23 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
             if row.get("_parse_error"):
                 errors.append(str(row["_parse_error"]))
 
-            if not route_name:
+            if _csv_empty(route_name):
                 errors.append("Ruta es obligatoria")
             elif _import_key(route_name) not in routes:
-                errors.append(f"La ruta '{route_name}' no existe en el sistema")
+                errors.append("Ruta no encontrada")
                 ruta_no_encontradas.add(_import_key(route_name))
 
-            if not place_name:
+            if _csv_empty(place_name):
                 errors.append("Lugar de servicio es obligatorio")
 
+            service_type_match = None
+            if not _csv_empty(service_type_name):
+                service_type_match = service_types.get(_import_key(service_type_name))
+                if service_type_match is None:
+                    errors.append("Tipo de servicio no encontrado")
+
             route_match = None
-            if route_name and _import_key(route_name) in routes:
+            if not _csv_empty(route_name) and _import_key(route_name) in routes:
                 candidates = routes[_import_key(route_name)]
                 if len(candidates) == 1:
                     route_match = candidates[0]
@@ -894,12 +949,12 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                     errors.append(f"La ruta '{route_name}' es ambigua en el sistema")
 
             dup_key = None
-            if route_match and place_name:
+            if route_match and not _csv_empty(place_name):
                 dup_key = (route_match[0], _import_key(place_name))
                 if dup_key in existing:
                     duplicate_type = "BASE_DATOS"
                     existing_id = existing[dup_key]
-                    warnings.append("El lugar ya existe en esta ruta")
+                    warnings.append("Lugar de servicio ya registrado en esta ruta.")
                 elif dup_key in file_keys:
                     duplicate_type = "ARCHIVO"
                     warnings.append("Lugar repetido dentro del archivo CSV")
@@ -912,13 +967,14 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                     "fila": row_number,
                     "nombre": place_name,
                     "direccion": place_name,
-                    "ubicacion_especifica": horario or None,
+                    "ubicacion_especifica": _csv_clean(horario),
                     "ruta_id": route_match[0],
                     "distrito_id": route_match[2],
                     "turno_id": route_match[3],
                     "consignas": _csv_clean(consignas),
                     "observacion": _csv_clean(observacion),
                     "lugar_formacion": _csv_clean(lugar_formacion),
+                    "tipo_servicio_id": service_type_match[0] if service_type_match else None,
                     "activo": True,
                     "existente_id": existing_id,
                 }
@@ -932,6 +988,7 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                 "lugar_formacion": lugar_formacion,
                 "consignas": consignas,
                 "observacion": observacion,
+                "tipo_servicio": service_type_name,
                 "valida": not errors,
                 "duplicado": duplicate_type is not None,
                 "tipo_duplicado": duplicate_type,
@@ -949,12 +1006,11 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                         continue
                     cursor.execute(
                         """UPDATE dbo.lugares_servicio
-                           SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,turno_id=?,
-                               consignas=?,observacion=?,lugar_formacion=?,activo=1,fecha_actualizacion=SYSDATETIME()
+                           SET ubicacion_especifica=?,consignas=?,observacion=?,lugar_formacion=?,
+                               tipo_servicio_id=?,activo=1,fecha_actualizacion=SYSDATETIME()
                            WHERE id=?""",
-                        data["nombre"], data["direccion"], data["ubicacion_especifica"],
-                        data["distrito_id"], data["ruta_id"], data["turno_id"], data["consignas"],
-                        data["observacion"], data["lugar_formacion"], data["existente_id"],
+                        data["ubicacion_especifica"], data["consignas"], data["observacion"],
+                        data["lugar_formacion"], data["tipo_servicio_id"], data["existente_id"],
                     )
                     updated += 1
                 else:
@@ -963,10 +1019,10 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                                ruta_id,nombre,direccion,ubicacion_especifica,distrito_id,turno_id,
                                consignas,observacion,lugar_formacion,estado_operativo,cantidad_requerida,
                                activo,fecha_creacion,tipo_servicio_id,latitud,longitud
-                           ) VALUES (?,?,?,?,?,?,?,?,?,'ACTIVO',1,1,SYSDATETIME(),NULL,NULL,NULL)""",
+                           ) VALUES (?,?,?,?,?,?,?,?,?,'ACTIVO',1,1,SYSDATETIME(),?,NULL,NULL)""",
                         data["ruta_id"], data["nombre"], data["direccion"], data["ubicacion_especifica"],
                         data["distrito_id"], data["turno_id"], data["consignas"], data["observacion"],
-                        data["lugar_formacion"],
+                        data["lugar_formacion"], data["tipo_servicio_id"],
                     )
                     imported += 1
 

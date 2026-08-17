@@ -146,6 +146,27 @@ La plataforma fue validada con:
 - Gestión de alcance de datos por rol y módulo.
 - Gestión de condiciones por rol.
 
+## Matriz de permisos de lecturas sensibles
+
+Permisos finos que protegen los endpoints de consulta de datos personales (definidos en la auditoría 2026-08-16):
+
+| Endpoint | Permiso requerido |
+| --- | --- |
+| `GET /api/personal` (listado paginado) | `personal.ver` |
+| `GET /api/personal/buscar` | `personal.ver` |
+| `GET /api/personal/operativos` | `personal.ver` o `personal.ver_asignado` o `eventos.convocar` o `anuncios.crear` |
+| `GET /api/personal/disponibles` | igual que `operativos` |
+| `GET /api/personal/catalogos` | `personal.ver` |
+| `GET /api/personal/{id}` | propio o `personal.ver` |
+| `GET /api/personal/perfil/me` | autenticado (perfil propio) |
+| `GET /api/usuarios/{id}/perfil` | propio o `personal.ver` |
+| `GET /api/usuarios/{id}/insignias` | propio o `insignias.ver` |
+| `GET /api/usuarios/{id}/progreso-insignias` | propio o `insignias.ver` |
+| `GET /api/dashboard/resumen` | autenticado (métricas agregadas, no sensibles) |
+| Soporte (`/api/soporte/*`) | autenticado; datos limitados al usuario propietario salvo `soporte.listar` o administrador |
+
+Los permisos de escritura del módulo de distribución y configuración se documentan en `docs/AUDITORIA.md` (secciones C1, C2 y M7).
+
 ## Pendientes de Equivalencia Completa
 
 Aunque todos los módulos principales ya están migrados y funcionales, quedan mejoras de paridad avanzada:

@@ -167,6 +167,15 @@ def importar_lugares(payload: dict = Body(...), user: dict = Depends(require_per
     return ok(result, message)
 
 
+@router.post("/lugares-servicio/eliminar-por-alcance")
+def eliminar_lugares_por_alcance(payload: dict = Body(...), user: dict = Depends(require_permission("lugares_servicio.estado"))):
+    try:
+        deleted = repo.delete_service_places_by_scope(payload.get("rutaId"), payload.get("circuitoId"))
+    except ValueError as exception:
+        raise HTTPException(status_code=422, detail=str(exception)) from exception
+    return ok({"eliminados": deleted}, f"{deleted} lugar(es) eliminado(s) correctamente")
+
+
 @router.put("/lugares-servicio/{item_id}")
 def actualizar_lugar(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("lugares_servicio.editar"))):
     repo.update_service_place(item_id, payload)

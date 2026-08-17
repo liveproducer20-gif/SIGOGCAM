@@ -437,7 +437,7 @@
         const canEditPin = permissions.edit && place.latitud && place.longitud;
         detail.innerHTML = `<header><h2>Información del lugar</h2><button type="button" id="closeDetail" aria-label="Cerrar">×</button></header>
             <div class="geo-point-head"><div class="geo-point-avatar">⌖</div><div><span class="geo-status">${place.agente_id ? 'Asignado' : 'Sin asignación'}</span><h3>${esc(place.nombre)}</h3><small>${esc(place.direccion_referencial || '')}</small></div></div>
-            <div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Ruta</dt><dd>${esc(routeLabel)}</dd><dt>Coordenadas</dt><dd>${place.latitud}, ${place.longitud}</dd>
+            <div class="geo-detail-list"><dl><dt>Fecha</dt><dd>${esc(selection.fecha || '—')}</dd><dt>Ruta</dt><dd>${esc(routeLabel)}</dd><dt>Coordenadas</dt><dd>${place.latitud != null && place.longitud != null ? `${place.latitud}, ${place.longitud}` : '—'}</dd>
             <dt>Agente</dt><dd>${esc(place.agente || 'Sin asignación')}</dd><dt>Grado</dt><dd>${esc(place.grado || '—')}</dd>
             <dt>Horario</dt><dd>${place.agente_id ? `${time(place.hora_inicio)} - ${time(place.hora_fin)}` : '—'}</dd><dt>Tipo de servicio</dt><dd>${esc(place.tipo_servicio || '—')}</dd></dl></div>
             ${canEditPin ? `<div class="geo-detail-actions"><button class="geo-btn-delete-pin" type="button" id="deletePin" data-place-id="${place.id}">✕ Eliminar pin del mapa</button></div>` : ''}`;

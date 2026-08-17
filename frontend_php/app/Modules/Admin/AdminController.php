@@ -67,8 +67,8 @@ final class AdminController
             'message' => $message,
             'error' => $error,
             'importPreview' => $importPreview,
-            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260816-import-dialogs'],
-            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260816-import-dialogs'],
+            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260817-service-place-csv-v2'],
+            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260817-service-place-csv-v2'],
             'pageTitle' => 'Administración',
             'pageDescription' => 'Gestión integral de recursos y catálogos operativos',
         ]);
@@ -151,10 +151,16 @@ final class AdminController
         fwrite($output, "\xEF\xBB\xBF");
         fputcsv($output, self::CSV_HEADERS);
         fputcsv($output, [
-            'Ruta Plaza Bicentenario', 'Olmedo acera norte y Eloy Alfaro',
-            '10:30 a 18:00', 'Club de la Unión | Olmedo y Malecón',
-            'Ejecución operativa control del espacio y vía pública en apoyo a la seguridad ciudadana.',
-            'El encargado se hará cargo del interior y exterior del Parque Olmedo',
+            'Ruta Clemente Ballén', 'Ruta Clemente Ballén | Pío Montúfar | esquina',
+            '09:30 a 17:00', 'MERCADO CENTRAL | PUERTA DE LORENZO DE GARAICOA',
+            'EJECUCION OPERATIVA CONTROL DEL ESPACIO Y VIA PUBLICA Y EN APOYO A LA SEGURIDAD CIUDADANA .',
+            '...', 'Pedestre',
+        ]);
+        fputcsv($output, [
+            'Ruta Clemente Ballén', 'Ruta Clemente Ballén | ENCARGADO DE RUTA',
+            '09:30 a 17:00', 'MERCADO CENTRAL | PUERTA DE LORENZO DE GARAICOA',
+            'EJECUCION OPERATIVA CONTROL DEL ESPACIO Y VIA PUBLICA Y EN APOYO A LA SEGURIDAD CIUDADANA .',
+            '...', 'Pedestre',
         ]);
         fclose($output);
     }
@@ -272,6 +278,36 @@ final class AdminController
         }
     }
 
+    public function deleteServicePlacesByScope(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $_GET['tab'] = 'lugares';
+        $user = AuthSession::user() ?? [];
+        if (!$this->can('lugares_servicio.estado', $user)) {
+            http_response_code(403);
+            $this->index('No tiene permiso para eliminar lugares de servicio.');
+            return;
+        }
+
+        $routeId = (int)($_POST['ruta_id'] ?? 0);
+        $circuitId = (int)($_POST['circuito_id'] ?? 0);
+        if (($routeId > 0) === ($circuitId > 0)) {
+            $this->index('Seleccione una ruta o un circuito válido.');
+            return;
+        }
+
+        try {
+            $response = $this->api()->post('admin/lugares-servicio/eliminar-por-alcance', [
+                'rutaId' => $routeId ?: null,
+                'circuitoId' => $circuitId ?: null,
+            ]);
+            $deleted = (int)($response['datos']['eliminados'] ?? 0);
+            $this->index("{$deleted} lugar(es) eliminado(s) correctamente.");
+        } catch (\Throwable $exception) {
+            $this->index($exception->getMessage());
+        }
+    }
+
     private function payloadFor(string $entity): array
     {
         return match ($entity) {
@@ -295,12 +331,12 @@ final class AdminController
 
     private const CSV_HEADERS = [
         'Ruta', 'Lugar de servicio', 'Horario', 'Lugar de formación',
-        'Consignas / Base legal', 'Observación',
+        'Consignas / Base legal', 'Observación', 'Tipo de servicio',
     ];
 
     private const CSV_DB_KEYS = [
         'ruta', 'lugar_servicio', 'horario', 'lugar_formacion',
-        'consignas', 'observacion',
+        'consignas', 'observacion', 'tipo_servicio',
     ];
 
     private const ROUTE_CSV_HEADERS = [
@@ -354,13 +390,10 @@ final class AdminController
         fwrite($stream, $content);
         rewind($stream);
         $headers = fgetcsv($stream);
-        $headers = is_array($headers) ? array_map(static fn($value) => trim((string)$value), $headers) : [];
-
-        $normalized = array_map(static fn($h) => preg_replace('/\s+/u', ' ', trim($h)), $headers);
-        $expectedNorm = array_map(static fn($h) => preg_replace('/\s+/u', ' ', trim($h)), self::CSV_HEADERS);
-        if ($normalized !== $expectedNorm) {
+        $headers = is_array($headers) ? array_map(static fn($value) => (string)$value, $headers) : [];
+        if ($headers !== self::CSV_HEADERS) {
             throw new \RuntimeException(
-                'Las columnas del CSV no coinciden con la plantilla oficial. '
+                'Las columnas del CSV no coinciden con la plantilla oficial.' . PHP_EOL
                 . 'Se esperan: ' . implode(', ', self::CSV_HEADERS)
             );
         }
@@ -373,8 +406,7 @@ final class AdminController
             if (count(array_filter($values, static fn($value) => trim((string)$value) !== '')) === 0) continue;
             $parseError = count($values) === $colCount ? null : 'La fila no contiene exactamente ' . $colCount . ' columnas';
             $values = array_slice(array_pad($values, $colCount, ''), 0, $colCount);
-            $displayRow = array_combine(self::CSV_HEADERS, array_map(static fn($value) => trim((string)$value), $values));
-            $dbRow = array_combine(self::CSV_DB_KEYS, array_map(static fn($value) => trim((string)$value), $values));
+            $dbRow = array_combine(self::CSV_DB_KEYS, array_map(static fn($value) => (string)$value, $values));
             $dbRow['fila'] = $line;
             if ($parseError !== null) $dbRow['_parse_error'] = $parseError;
             $rows[] = $dbRow;
