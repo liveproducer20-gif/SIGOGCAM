@@ -5,8 +5,9 @@ $isAdmin = str_contains(strtoupper((string)($usuario['rolNombre'] ?? $usuario['r
 $canAssign = $isAdmin || in_array('tablero_distribucion.asignar', $permissions, true);
 $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions, true);
 $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions, true);
+$canConfigure = $isAdmin || in_array('tablero_distribucion.configurar', $permissions, true);
 ?>
-<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>" data-can-force="<?= $canForce ? '1' : '0' ?>">
+<div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>" data-can-force="<?= $canForce ? '1' : '0' ?>" data-can-configure="<?= $canConfigure ? '1' : '0' ?>">
     <?php if (!empty($error)): ?><div class="td-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
     <header class="td-page-head">
@@ -95,16 +96,20 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
 
     <div class="td-modal td-modal-lg" id="tdAgentModal" hidden>
         <div class="td-modal-dialog">
+            <span class="td-modal-accent" aria-hidden="true"></span>
             <header>
                 <div>
-                    <small>Cambiar agente asignado</small>
+                    <small id="tdAgentModalEyebrow">Seleccion de personal</small>
                     <h3 id="tdAgentModalTitle">Seleccionar agente</h3>
                     <p id="tdAgentModalSubtitle" class="td-modal-subtitle"></p>
                 </div>
-                <button type="button" data-close="tdAgentModal">&times;</button>
+                <div class="td-modal-close-wrap">
+                    <span class="td-modal-required-chip" id="tdAgentRequiredChip" hidden>Requerido: 1</span>
+                    <button type="button" data-close="tdAgentModal" aria-label="Cerrar">&times;</button>
+                </div>
             </header>
             <div class="td-modal-body">
-                <div class="td-agent-info-bar" id="tdAgentInfoBar"></div>
+                <div class="td-agent-summary" id="tdAgentInfoBar"></div>
                 <div class="td-agent-filters">
                     <label class="td-agent-search-label">
                         <span>&#128269;</span>
@@ -126,7 +131,8 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
                 </div>
                 <div class="td-agent-pagination" id="tdAgentPagination"></div>
             </div>
-            <footer>
+            <footer class="td-agent-modal-footer">
+                <span id="tdAgentFooterInfo">Consultando personal...</span>
                 <button class="td-btn td-btn-ghost" type="button" data-close="tdAgentModal">Cancelar</button>
             </footer>
         </div>

@@ -8,6 +8,7 @@
     const canAssign = app.dataset.canAssign === '1';
     const canDelete = app.dataset.canDelete === '1';
     const canForce = app.dataset.canForce === '1';
+    const canConfigure = app.dataset.canConfigure === '1';
 
     const state = {
         districtId: 0, circuitId: 0, shiftId: 0, board: null, routeId: 0,
@@ -359,15 +360,44 @@
         }).join('') : '<div class="td-empty-agent"><span class="td-avatar">&#9823;</span><div><b>Sin asignar</b><small>Seleccione un agente</small></div></div>';
         let actions = '&mdash;';
         if (canAssign) {
+            const missing = required - assigned.length;
+            const addBtn = missing > 0
+                ? `<button class="td-action-add" type="button" data-assign-place="${place.id}">&#9823; ${assigned.length === 0 ? 'Asignar' : 'Agregar agente'}</button>`
+                : '';
             if (assigned.length === 0) {
-                actions = `<button type="button" data-assign-place="${place.id}">&#9823; Asignar</button>`;
+                actions = addBtn || '&mdash;';
             } else if (assigned.length === 1) {
-                actions = `<button class="td-action-icon td-action-change" type="button" data-change-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Cambiar agente" aria-label="Cambiar agente"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.9-4M4 5v5h5M4 13a8 8 0 0 0 14.9 4M20 19v-5h-5"/></svg></button><button class="td-action-icon td-remove" type="button" data-remove-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Eliminar asignación" aria-label="Eliminar asignación"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>`;
+                actions = `${addBtn}<button class="td-action-icon td-action-change" type="button" data-change-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Cambiar agente" aria-label="Cambiar agente"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.9-4M4 5v5h5M4 13a8 8 0 0 0 14.9 4M20 19v-5h-5"/></svg></button><button class="td-action-icon td-remove" type="button" data-remove-agent="${assigned[0].agente_id}" data-place-id="${place.id}" title="Eliminar asignación" aria-label="Eliminar asignación"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>`;
             } else {
-                actions = `<button type="button" data-manage-place="${place.id}">Gestionar</button>`;
+                actions = `${addBtn}<button type="button" data-manage-place="${place.id}">Gestionar</button>`;
             }
         }
-        return `<tr><td><div class="td-place-cell"><div><b>${esc(place.nombre)}</b></div></div></td><td class="td-required"><b>${required}</b>${required === 1 ? 'Agente' : 'Agentes'}</td><td>${agents}</td><td><span class="td-status ${covered ? 'td-status-assigned' : 'td-status-pending'}">${covered ? 'Asignado' : 'Pendiente'}</span></td><td><div class="td-actions">${actions}</div></td></tr>`;
+        const requiredCell = canConfigure
+            ? `<div class="td-required-stepper" title="Agentes requeridos para este lugar de servicio"><button type="button" class="td-req-btn" data-req-minus="${place.id}" ${required <= assigned.length ? 'disabled' : ''} aria-label="Disminuir requeridos" aria-disabled="${required <= assigned.length}">−</button><b>${required}</b><button type="button" class="td-req-btn" data-req-plus="${place.id}" ${required >= 100 ? 'disabled' : ''} aria-label="Aumentar requeridos" aria-disabled="${required >= 100}">+</button><small>${required === 1 ? 'Agente' : 'Agentes'}</small></div>`
+            : `<b>${required}</b>${required === 1 ? 'Agente' : 'Agentes'}`;
+        return `<tr><td><div class="td-place-cell"><div><b>${esc(place.nombre)}</b></div></div></td><td class="td-required">${requiredCell}</td><td>${agents}</td><td><span class="td-status ${covered ? 'td-status-assigned' : 'td-status-pending'}">${covered ? 'Asignado' : 'Pendiente'}</span></td><td><div class="td-actions">${actions}</div></td></tr>`;
+    }
+
+    async function updatePlaceRequirement(placeId, delta) {
+        if (!canConfigure || !state.routeId) return;
+        const places = state.places.get(state.routeId) || [];
+        const place = places.find(item => Number(item.id) === Number(placeId));
+        if (!place) return;
+        const assigned = assignmentsFor(placeId).length;
+        const next = Math.max(0, Math.min(100, Number(place.cantidad_requerida || 0) + delta));
+        if (next < assigned) return notify('No puede reducir los requeridos por debajo de los agentes ya asignados.', true);
+        try {
+            await api('distribucion-tablero/sectores/requerimiento', {method: 'PUT', body: {ruta_id: state.routeId, sectores: [{sector_id: Number(placeId), cantidad_agentes_requeridos: next}]}});
+            place.cantidad_requerida = next;
+            renderWorkspace();
+            await loadDistrictSummaries();
+            if (next > assigned && canAssign) {
+                notify('Requeridos actualizados. Seleccione el agente adicional.');
+                openAgentSelector(place.id);
+            } else {
+                notify(delta > 0 ? `Requeridos aumentados a ${next} para ${place.nombre}.` : `Requeridos reducidos a ${next} para ${place.nombre}.`);
+            }
+        } catch (error) { notify(error.message, true); }
     }
 
     async function refreshAvailability() {
@@ -392,18 +422,22 @@
         };
         state.agentModal = { page: 1, filters: {}, search: '', data: null };
 
+        $('#tdAgentModalEyebrow').textContent = replaceAgentId ? 'Cambiar agente asignado' : 'Asignacion de personal';
         $('#tdAgentModalTitle').textContent = replaceAgentId ? 'Cambiar agente asignado' : 'Asignar agente al lugar';
         $('#tdAgentModalSubtitle').textContent = `${place?.nombre || ''} | ${routeData()?.nombre || ''}`;
+        const reqChip = $('#tdAgentRequiredChip');
+        if (reqChip) { reqChip.hidden = false; reqChip.textContent = `Requerido: ${Number(place?.cantidad_requerida || 0)}`; }
         $('#tdAgentInfoBar').innerHTML = `
-            <div class="td-info-row"><b>Lugar de servicio:</b> ${esc(place?.nombre || '')} | ${esc(routeData()?.nombre || '')}</div>
-            ${replaceAgentId ? `<div class="td-info-row"><b>Agente actual:</b> ${esc(replaceAgent?.agente?.nombre_completo || '')}</div>` : ''}
-            <div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>
+            <div class="td-agent-summary-item"><i>&#128506;</i><span><small>Lugar de servicio</small><b>${esc(place?.nombre || '—')}</b><em>${esc(routeData()?.nombre || '')}</em></span></div>
+            <div class="td-agent-summary-item"><i>&#128100;</i><span><small>Agente actual</small><b>${esc(replaceAgent?.agente?.nombre_completo || 'Sin asignar')}</b><em>${replaceAgent?.agente?.grado ? esc(replaceAgent.agente.grado) : ''}</em></span></div>
+            <div class="td-agent-summary-item"><i>&#128337;</i><span><small>Turno</small><b>${esc(state.agentTarget.turnoNombre || '—')}</b></span></div>
         `;
 
         $('#tdAgentSearch').value = '';
         $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel => sel.value = '');
         $('#tdAgentTableBody').innerHTML = '<tr><td colspan="7"><div class="td-empty-small">Consultando personal...</div></td></tr>';
         $('#tdAgentPagination').innerHTML = '';
+        $('#tdAgentFooterInfo').textContent = 'Consultando personal...';
         openModal('tdAgentModal');
         await fetchAgentList();
     }
@@ -418,11 +452,19 @@
         };
         state.agentModal = {page:1,filters:{},search:'',data:null};
         const title = kind === 'district' ? 'Encargado de distrito' : 'Encargado de ruta';
+        const scopeName = kind === 'district' ? (state.board?.distrito?.nombre || '') : (route?.nombre || '');
+        $('#tdAgentModalEyebrow').textContent = current?.agente_id ? `Cambiar ${title.toLowerCase()}` : `Asignacion de ${title.toLowerCase()}`;
         $('#tdAgentModalTitle').textContent = current?.agente_id ? `Cambiar ${title.toLowerCase()}` : `Asignar ${title.toLowerCase()}`;
-        $('#tdAgentModalSubtitle').textContent = kind === 'district' ? state.board?.distrito?.nombre || '' : route?.nombre || '';
-        $('#tdAgentInfoBar').innerHTML = `<div class="td-info-row"><b>${title}:</b> ${esc(kind === 'district' ? state.board?.distrito?.nombre : route?.nombre)}</div>${current?.agente?.nombre_completo ? `<div class="td-info-row"><b>Agente actual:</b> ${esc(current.agente.nombre_completo)}</div>` : ''}<div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
+        $('#tdAgentModalSubtitle').textContent = scopeName;
+        const reqChip = $('#tdAgentRequiredChip'); if (reqChip) reqChip.hidden = true;
+        $('#tdAgentInfoBar').innerHTML = `
+            <div class="td-agent-summary-item"><i>&#128205;</i><span><small>${title}</small><b>${esc(scopeName)}</b></span></div>
+            <div class="td-agent-summary-item"><i>&#128100;</i><span><small>Agente actual</small><b>${esc(current?.agente?.nombre_completo || 'Sin asignar')}</b></span></div>
+            <div class="td-agent-summary-item"><i>&#128337;</i><span><small>Turno</small><b>${esc(state.agentTarget.turnoNombre || '—')}</b></span></div>
+        `;
         $('#tdAgentSearch').value=''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel=>sel.value='');
         $('#tdAgentTableBody').innerHTML='<tr><td colspan="7"><div class="td-empty-small">Consultando personal...</div></td></tr>'; $('#tdAgentPagination').innerHTML='';
+        $('#tdAgentFooterInfo').textContent = 'Consultando personal...';
         openModal('tdAgentModal'); await fetchAgentList();
     }
 
@@ -471,10 +513,17 @@
         const scopeName=draft._scope==='district'?(state.board?.distrito?.nombre||'Distrito'):circuitName(draft.circuito_id);
         state.agentTarget={kind,circuitRole:role,replaceAgentId:Number(draft[idKey]||0),placeNombre:scopeName,rutaNombre:'',turnoNombre:$('#tdShift').selectedOptions[0]?.textContent||''};
         state.agentModal={page:1,filters:{},search:'',data:null};
+        $('#tdAgentModalEyebrow').textContent=current?`Cambiar ${title.toLowerCase()}`:`Seleccionar ${title.toLowerCase()}`;
         $('#tdAgentModalTitle').textContent=current?`Cambiar ${title.toLowerCase()}`:`Seleccionar ${title.toLowerCase()}`;
         $('#tdAgentModalSubtitle').textContent=scopeName;
-        $('#tdAgentInfoBar').innerHTML=`<div class="td-info-row"><b>${title}:</b> ${esc(scopeName)}</div><div class="td-info-row"><b>Turno:</b> ${esc(state.agentTarget.turnoNombre)}</div>`;
+        const reqChip = $('#tdAgentRequiredChip'); if (reqChip) reqChip.hidden = true;
+        $('#tdAgentInfoBar').innerHTML=`
+            <div class="td-agent-summary-item"><i>&#128205;</i><span><small>${title}</small><b>${esc(scopeName)}</b></span></div>
+            <div class="td-agent-summary-item"><i>&#128100;</i><span><small>Responsable</small><b>${esc(current?.nombre_completo || 'Sin asignar')}</b></span></div>
+            <div class="td-agent-summary-item"><i>&#128337;</i><span><small>Turno</small><b>${esc(state.agentTarget.turnoNombre || '—')}</b></span></div>
+        `;
         $('#tdAgentSearch').value=''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel=>sel.value='');
+        $('#tdAgentFooterInfo').textContent = 'Consultando personal...';
         openModal('tdAgentModal'); await fetchAgentList();
     }
 
@@ -538,6 +587,7 @@
         if (!agents.length) {
             $('#tdAgentTableBody').innerHTML = '<tr><td colspan="7"><div class="td-empty-small">No se encontraron agentes con los filtros seleccionados.</div></td></tr>';
             $('#tdAgentPagination').innerHTML = '';
+            $('#tdAgentFooterInfo').textContent = 'No se encontraron agentes.';
             return;
         }
         $('#tdAgentTableBody').innerHTML = agents.map(agent => {
@@ -562,6 +612,7 @@
 
         const totalPages = data.total_pages || 1;
         const currentPage = data.page || 1;
+        $('#tdAgentFooterInfo').textContent = `Mostrando ${(currentPage-1)*20+1}-${Math.min(currentPage*20, data.total)} de ${data.total} agentes`;
         let paginationHtml = `<span class="td-pagination-info">Mostrando ${(currentPage-1)*20+1}-${Math.min(currentPage*20, data.total)} de ${data.total}</span><div class="td-pagination-btns">`;
         if (currentPage > 1) paginationHtml += `<button class="td-btn td-btn-ghost td-btn-sm" data-page="${currentPage-1}">&lt;</button>`;
         for (let p = 1; p <= totalPages && p <= 7; p++) {
@@ -813,10 +864,13 @@
     $('#tdRouteSearch').addEventListener('input', renderRoutes); $('#tdRouteList').addEventListener('click', event => { const item = event.target.closest('[data-route-id]'); if (item) selectRoute(Number(item.dataset.routeId)); });
     $('#tdPlacesBody').addEventListener('click', event => {
         const assign = event.target.closest('[data-assign-place]'); const change = event.target.closest('[data-change-agent]'); const remove = event.target.closest('[data-remove-agent]'); const manage = event.target.closest('[data-manage-place]');
+        const reqMinus = event.target.closest('[data-req-minus]'); const reqPlus = event.target.closest('[data-req-plus]');
         if (assign) openAgentSelector(assign.dataset.assignPlace);
         if (change) openAgentSelector(change.dataset.placeId, change.dataset.changeAgent);
         if (remove) removeAgent(remove.dataset.placeId, remove.dataset.removeAgent);
         if (manage) openManageAgents(Number(manage.dataset.managePlace));
+        if (reqMinus) updatePlaceRequirement(reqMinus.dataset.reqMinus, -1);
+        if (reqPlus) updatePlaceRequirement(reqPlus.dataset.reqPlus, 1);
     });
 
     let agentSearchDebounce = null;

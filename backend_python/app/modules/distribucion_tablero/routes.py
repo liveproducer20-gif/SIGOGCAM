@@ -237,7 +237,7 @@ def update_requirements(
 ):
     result = repository.update_sector_requirements(
         route_id=payload.ruta_id,
-        sectores=payload.sectores,
+        sectores=[sector.model_dump() for sector in payload.sectores],
         user_id=int(user["id"]),
     )
     return ok(result, "Requerimiento de personal actualizado")
