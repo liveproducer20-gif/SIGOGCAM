@@ -1,4 +1,28 @@
 (function () {
+    [
+        ['routeImportDialog', '/admin?tab=rutas'],
+        ['servicePlaceImportDialog', '/admin?tab=lugares'],
+    ].forEach(([dialogId, returnUrl]) => {
+        const dialog = document.getElementById(dialogId);
+        if (!dialog) return;
+        dialog.showModal();
+        dialog.querySelector('[data-import-close]')?.addEventListener('click', () => {
+            dialog.close();
+            window.location.assign(returnUrl);
+        });
+    });
+
+    document.querySelectorAll('.csv-toggle-detail').forEach((button) => {
+        button.addEventListener('click', () => {
+            const row = document.getElementById(button.dataset.target || '');
+            if (!row) return;
+            const isVisible = !row.hidden;
+            row.hidden = isVisible;
+            button.textContent = isVisible ? '▼' : '▲';
+            button.setAttribute('aria-expanded', String(!isVisible));
+        });
+    });
+
     const form = document.getElementById('form-circuito');
     if (!form) return;
 

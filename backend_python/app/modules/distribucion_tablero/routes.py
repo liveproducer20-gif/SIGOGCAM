@@ -31,6 +31,14 @@ def board_data(
     return ok(repository.get_board_data(distrito_id, turno_id, fecha))
 
 
+@router.get("/distribucion-tablero/resumen-distritos")
+def district_summaries(
+    fecha: date = Query(...),
+    user: dict = Depends(require_permission("tablero_distribucion.ver")),
+):
+    return ok(repository.get_district_distribution_summaries(fecha))
+
+
 @router.get("/distribucion-tablero/rutas/{route_id}/lugares")
 def route_places(
     route_id: int,

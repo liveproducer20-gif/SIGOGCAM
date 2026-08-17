@@ -67,8 +67,8 @@ final class AdminController
             'message' => $message,
             'error' => $error,
             'importPreview' => $importPreview,
-            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260811'],
-            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260811'],
+            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260816-import-dialogs'],
+            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260816-import-dialogs'],
             'pageTitle' => 'Administración',
             'pageDescription' => 'Gestión integral de recursos y catálogos operativos',
         ]);
@@ -151,11 +151,62 @@ final class AdminController
         fwrite($output, "\xEF\xBB\xBF");
         fputcsv($output, self::CSV_HEADERS);
         fputcsv($output, [
-            '9 de Octubre', 'Ruta 9 de Octubre', 'Pedestre', '1',
-            '9 de Octubre | Boyacá y Escobedo', 'Mantener presencia preventiva',
-            'Punto de alta afluencia', '9 de Octubre y Boyacá',
+            'Ruta Plaza Bicentenario', 'Olmedo acera norte y Eloy Alfaro',
+            '10:30 a 18:00', 'Club de la Unión | Olmedo y Malecón',
+            'Ejecución operativa control del espacio y vía pública en apoyo a la seguridad ciudadana.',
+            'El encargado se hará cargo del interior y exterior del Parque Olmedo',
         ]);
         fclose($output);
+    }
+
+    public function downloadRouteTemplate(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        if (!$this->can('rutas.ver', $user)) { http_response_code(403); echo 'No tiene permiso para descargar la plantilla.'; return; }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="plantilla-rutas.csv"');
+        header('Cache-Control: no-store');
+        $output = fopen('php://output', 'wb');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, self::ROUTE_CSV_HEADERS);
+        fputcsv($output, ['Ruta Plaza Bicentenario','9 de Octubre','Segundo Turno','10:30','18:00','SI','SI']);
+        fclose($output);
+    }
+
+    public function importRoutes(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        $_GET['tab'] = 'rutas';
+        if (!$this->can('catalogos.crear', $user)) { http_response_code(403); $this->index('No tiene permiso para importar rutas.'); return; }
+        try {
+            $action = (string)($_POST['import_action'] ?? 'preview');
+            if ($action === 'confirm') {
+                $token = (string)($_POST['import_token'] ?? '');
+                $stored = $_SESSION['rutas_csv_import'][$token] ?? null;
+                if (!is_array($stored)) throw new \RuntimeException('La vista previa expiró. Seleccione nuevamente el archivo CSV.');
+                unset($_SESSION['rutas_csv_import'][$token]);
+                $result = $this->api()->post('admin/rutas/importar', [
+                    'filas'=>$stored, 'confirmar'=>true,
+                    'accionesExistentes'=>(array)($_POST['existing_action'] ?? []),
+                ])['datos'] ?? [];
+                $this->index(sprintf(
+                    'Importación completada: %d ruta(s) creada(s), %d actualizada(s) y %d fila(s) omitida(s).',
+                    (int)($result['creados'] ?? 0), (int)($result['actualizados'] ?? 0), (int)($result['omitidos'] ?? 0)
+                ));
+                return;
+            }
+            $rows = $this->readRouteCsv($_FILES['archivo_csv'] ?? []);
+            $preview = $this->api()->post('admin/rutas/importar', ['filas'=>$rows, 'confirmar'=>false])['datos'] ?? [];
+            $token = bin2hex(random_bytes(16));
+            $_SESSION['rutas_csv_import'] = [$token=>$rows];
+            $preview['token'] = $token;
+            $preview['tipo'] = 'rutas';
+            $this->index(null, $preview);
+        } catch (\Throwable $exception) {
+            $this->index($exception->getMessage());
+        }
     }
 
     public function importServicePlaces(): void
@@ -175,11 +226,17 @@ final class AdminController
                 $token = (string)($_POST['import_token'] ?? '');
                 $stored = $_SESSION['lugares_csv_import'][$token] ?? null;
                 if (!is_array($stored)) throw new \RuntimeException('La vista previa expiró. Seleccione nuevamente el archivo CSV.');
+                $result = $this->api()->post('admin/lugares-servicio/importar', [
+                    'filas'=>$stored,
+                    'confirmar'=>true,
+                    'accionesExistentes'=>(array)($_POST['existing_action'] ?? []),
+                ])['datos'] ?? [];
                 unset($_SESSION['lugares_csv_import'][$token]);
-                $result = $this->api()->post('admin/lugares-servicio/importar', ['filas'=>$stored, 'confirmar'=>true])['datos'] ?? [];
                 $this->index(sprintf(
-                    'Importación finalizada: %d registro(s) importado(s) y %d rechazado(s).',
-                    (int)($result['importados'] ?? 0), (int)($result['rechazados'] ?? 0)
+                    'Importación finalizada: %d lugar(es) creado(s), %d actualizado(s) y %d fila(s) omitida(s).',
+                    (int)($result['importados'] ?? 0),
+                    (int)($result['actualizados'] ?? 0),
+                    (int)($result['omitidos'] ?? 0)
                 ));
                 return;
             }
@@ -237,9 +294,43 @@ final class AdminController
     }
 
     private const CSV_HEADERS = [
-        'distrito', 'ruta', 'tipo_servicio', 'cantidad_requerida',
-        'nombre_lugar_servicio', 'consignas', 'observacion', 'lugar_formacion',
+        'Ruta', 'Lugar de servicio', 'Horario', 'Lugar de formación',
+        'Consignas / Base legal', 'Observación',
     ];
+
+    private const CSV_DB_KEYS = [
+        'ruta', 'lugar_servicio', 'horario', 'lugar_formacion',
+        'consignas', 'observacion',
+    ];
+
+    private const ROUTE_CSV_HEADERS = [
+        'Nombre', 'Distrito', 'Turno', 'Hora inicio', 'Hora fin', 'Asignar encargado', 'Activa',
+    ];
+
+    private function readRouteCsv(array $file): array
+    {
+        if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) throw new \RuntimeException('Seleccione un archivo CSV válido.');
+        if ((int)($file['size'] ?? 0) > 2 * 1024 * 1024) throw new \RuntimeException('El archivo CSV no puede superar 2 MB.');
+        if (strtolower(pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION)) !== 'csv') throw new \RuntimeException('El archivo seleccionado debe tener extensión .csv.');
+        $content = file_get_contents((string)$file['tmp_name']);
+        if ($content === false || trim($content) === '') throw new \RuntimeException('El archivo CSV está vacío.');
+        if (substr($content, 0, 3) === "\xEF\xBB\xBF") $content = substr($content, 3);
+        if (!preg_match('//u', $content)) { $converted=iconv('Windows-1252','UTF-8//IGNORE',$content); if ($converted !== false) $content=$converted; }
+        $stream=fopen('php://temp','w+b');fwrite($stream,$content);rewind($stream);
+        $headers=fgetcsv($stream);$headers=is_array($headers)?array_map(static fn($value)=>trim((string)$value),$headers):[];
+        if ($headers !== self::ROUTE_CSV_HEADERS) throw new \RuntimeException('Las columnas del CSV no coinciden con la plantilla oficial o no están en el orden requerido.');
+        $rows=[];$line=1;
+        while (($values=fgetcsv($stream)) !== false) {
+            $line++;if(count(array_filter($values,static fn($value)=>trim((string)$value)!==''))===0)continue;
+            $parseError=count($values)===count(self::ROUTE_CSV_HEADERS)?null:'La fila no contiene exactamente 7 columnas';
+            $values=array_slice(array_pad($values,count(self::ROUTE_CSV_HEADERS),''),0,count(self::ROUTE_CSV_HEADERS));
+            $raw=array_combine(self::ROUTE_CSV_HEADERS,array_map(static fn($value)=>trim((string)$value),$values));
+            $row=['nombre'=>$raw['Nombre'],'distrito'=>$raw['Distrito'],'turno'=>$raw['Turno'],'hora_inicio'=>$raw['Hora inicio'],
+                  'hora_fin'=>$raw['Hora fin'],'asignar_encargado'=>$raw['Asignar encargado'],'activa'=>$raw['Activa'],'fila'=>$line];
+            if($parseError!==null)$row['_parse_error']=$parseError;$rows[]=$row;
+        }
+        fclose($stream);if(!$rows)throw new \RuntimeException('El archivo CSV no contiene filas para importar.');return $rows;
+    }
 
     private function readServicePlaceCsv(array $file): array
     {
@@ -264,20 +355,29 @@ final class AdminController
         rewind($stream);
         $headers = fgetcsv($stream);
         $headers = is_array($headers) ? array_map(static fn($value) => trim((string)$value), $headers) : [];
-        if ($headers !== self::CSV_HEADERS) {
-            throw new \RuntimeException('Las columnas del CSV no coinciden con la plantilla oficial o no están en el orden requerido.');
+
+        $normalized = array_map(static fn($h) => preg_replace('/\s+/u', ' ', trim($h)), $headers);
+        $expectedNorm = array_map(static fn($h) => preg_replace('/\s+/u', ' ', trim($h)), self::CSV_HEADERS);
+        if ($normalized !== $expectedNorm) {
+            throw new \RuntimeException(
+                'Las columnas del CSV no coinciden con la plantilla oficial. '
+                . 'Se esperan: ' . implode(', ', self::CSV_HEADERS)
+            );
         }
+
+        $colCount = count(self::CSV_HEADERS);
         $rows = [];
         $line = 1;
         while (($values = fgetcsv($stream)) !== false) {
             $line++;
             if (count(array_filter($values, static fn($value) => trim((string)$value) !== '')) === 0) continue;
-            $parseError = count($values) === count(self::CSV_HEADERS) ? null : 'La fila no contiene exactamente 8 columnas';
-            $values = array_slice(array_pad($values, count(self::CSV_HEADERS), ''), 0, count(self::CSV_HEADERS));
-            $row = array_combine(self::CSV_HEADERS, array_map(static fn($value) => trim((string)$value), $values));
-            $row['fila'] = $line;
-            if ($parseError !== null) $row['_parse_error'] = $parseError;
-            $rows[] = $row;
+            $parseError = count($values) === $colCount ? null : 'La fila no contiene exactamente ' . $colCount . ' columnas';
+            $values = array_slice(array_pad($values, $colCount, ''), 0, $colCount);
+            $displayRow = array_combine(self::CSV_HEADERS, array_map(static fn($value) => trim((string)$value), $values));
+            $dbRow = array_combine(self::CSV_DB_KEYS, array_map(static fn($value) => trim((string)$value), $values));
+            $dbRow['fila'] = $line;
+            if ($parseError !== null) $dbRow['_parse_error'] = $parseError;
+            $rows[] = $dbRow;
         }
         fclose($stream);
         if (!$rows) throw new \RuntimeException('El archivo CSV no contiene filas para importar.');

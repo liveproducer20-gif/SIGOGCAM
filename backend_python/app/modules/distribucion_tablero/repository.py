@@ -519,6 +519,186 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
                 "encargados": managers}
 
 
+def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
+    """Return saved, cross-shift progress without using browser draft assignments."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT d.id,d.nombre
+            FROM dbo.catalogo_detalles d
+            INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id AND c.codigo='DISTRITOS' AND c.estado=1
+            WHERE d.estado=1 ORDER BY d.orden,d.nombre
+        """)
+        districts = _rows(cursor)
+        cursor.execute("SELECT id,nombre FROM dbo.turnos WHERE activo=1 ORDER BY id")
+        shifts = _rows(cursor)
+        cursor.execute("""
+            SELECT c.id,c.distrito_id,c.nombre
+            FROM dbo.circuitos c
+            WHERE c.activo=1 AND c.deleted_at IS NULL ORDER BY c.distrito_id,c.nombre
+        """)
+        circuits = _rows(cursor)
+        cursor.execute("""
+            SELECT r.id,r.distrito_id,r.nombre,r.turno_id,r.asignar_encargado,
+                   cr.circuito_id,
+                   CAST(CASE WHEN EXISTS(
+                       SELECT 1 FROM dbo.lugares_servicio er
+                       WHERE er.ruta_id=r.id AND er.activo=1
+                         AND UPPER(LTRIM(RTRIM(ISNULL(er.nombre,''))))=N'ENCARGADO DE RUTA'
+                   ) THEN 1 ELSE 0 END AS bit) AS tiene_encargado_tecnico
+            FROM dbo.rutas r
+            LEFT JOIN dbo.circuito_rutas cr ON cr.ruta_id=r.id AND cr.deleted_at IS NULL
+            WHERE r.activo=1 ORDER BY r.distrito_id,r.nombre
+        """)
+        routes = _rows(cursor)
+        cursor.execute("""
+            SELECT ls.id,ls.ruta_id,ls.nombre,ls.turno_id,
+                   CASE WHEN ls.cantidad_requerida<0 THEN 0 ELSE ls.cantidad_requerida END AS cantidad_requerida
+            FROM dbo.lugares_servicio ls
+            WHERE ls.activo=1
+              AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre,''))))<>N'ENCARGADO DE RUTA'
+            ORDER BY ls.ruta_id,ls.nombre
+        """)
+        places = _rows(cursor)
+        cursor.execute("""
+            SELECT id,distrito_id,turno_id,total_requerido,total_asignado
+            FROM dbo.distribuciones_personal
+            WHERE fecha_distribucion=? AND deleted_at IS NULL
+        """, distribution_date)
+        saved = _rows(cursor)
+        distribution_ids = [int(item["id"]) for item in saved]
+        details: list[dict] = []
+        responsibilities: list[dict] = []
+        if distribution_ids:
+            placeholders = ",".join("?" * len(distribution_ids))
+            cursor.execute(f"""
+                SELECT dd.distribucion_id,dd.ruta_id,dd.lugar_id,
+                       SUM(CASE WHEN dd.agente_id IS NOT NULL AND dd.deleted_at IS NULL THEN 1 ELSE 0 END) AS asignados
+                FROM dbo.distribucion_personal_detalle dd
+                WHERE dd.distribucion_id IN ({placeholders}) AND dd.deleted_at IS NULL
+                GROUP BY dd.distribucion_id,dd.ruta_id,dd.lugar_id
+            """, *distribution_ids)
+            details = _rows(cursor)
+            cursor.execute(f"""
+                SELECT distribucion_id,tipo_responsabilidad,circuito_id,ruta_id,requiere_encargado,
+                       agente_id,conductor_id,auxiliar_1_id,movil_id
+                FROM dbo.distribucion_encargados
+                WHERE distribucion_id IN ({placeholders}) AND deleted_at IS NULL
+            """, *distribution_ids)
+            responsibilities = _rows(cursor)
+
+    circuits_by_district: dict[int, list[dict]] = {}
+    routes_by_district: dict[int, list[dict]] = {}
+    places_by_route: dict[int, list[dict]] = {}
+    saved_by_key = {(int(item["distrito_id"]), int(item["turno_id"])): item for item in saved}
+    details_by_distribution: dict[int, dict[int, int]] = {}
+    responsibilities_by_distribution: dict[int, list[dict]] = {}
+    for item in circuits:
+        circuits_by_district.setdefault(int(item["distrito_id"]), []).append(item)
+    for item in routes:
+        routes_by_district.setdefault(int(item["distrito_id"]), []).append(item)
+    for item in places:
+        places_by_route.setdefault(int(item["ruta_id"]), []).append(item)
+    for item in details:
+        details_by_distribution.setdefault(int(item["distribucion_id"]), {})[int(item["lugar_id"])] = int(item["asignados"] or 0)
+    for item in responsibilities:
+        responsibilities_by_distribution.setdefault(int(item["distribucion_id"]), []).append(item)
+
+    result: list[dict] = []
+    for district in districts:
+        district_id = int(district["id"])
+        district_circuits = circuits_by_district.get(district_id, [])
+        district_routes = routes_by_district.get(district_id, [])
+        shift_results: list[dict] = []
+        total_required = 0
+        total_assigned = 0
+        for shift in shifts:
+            shift_id = int(shift["id"])
+            distribution = saved_by_key.get((district_id, shift_id))
+            distribution_id = int(distribution["id"]) if distribution else 0
+            saved_places = details_by_distribution.get(distribution_id, {})
+            saved_responsibilities = responsibilities_by_distribution.get(distribution_id, [])
+            applicable_routes = [item for item in district_routes if item["turno_id"] is None or int(item["turno_id"]) == shift_id]
+            applicable_route_ids = {int(item["id"]) for item in applicable_routes}
+            applicable_places = [place for route_id in applicable_route_ids for place in places_by_route.get(route_id, [])
+                                 if place["turno_id"] is None or int(place["turno_id"]) == shift_id]
+            required = sum(int(item["cantidad_requerida"] or 0) for item in applicable_places)
+            assigned = sum(min(int(item["cantidad_requerida"] or 0), saved_places.get(int(item["id"]), 0)) for item in applicable_places)
+            total_required += required
+            total_assigned += assigned
+
+            district_resp = next((item for item in saved_responsibilities if item["tipo_responsabilidad"] == "ENCARGADO_DISTRITO"), None)
+            district_resources_complete = bool(district_resp and district_resp["agente_id"] and district_resp["movil_id"]
+                                               and district_resp["conductor_id"] and district_resp["auxiliar_1_id"])
+            circuit_pending: list[dict] = []
+            for circuit in district_circuits:
+                circuit_id = int(circuit["id"])
+                circuit_resp = next((item for item in saved_responsibilities
+                                     if item["tipo_responsabilidad"] == "ENCARGADO_CIRCUITO"
+                                     and int(item["circuito_id"] or 0) == circuit_id), None)
+                resource_complete = bool(circuit_resp and circuit_resp["agente_id"] and circuit_resp["movil_id"]
+                                         and circuit_resp["conductor_id"] and circuit_resp["auxiliar_1_id"])
+                route_pending: list[dict] = []
+                for route in [item for item in applicable_routes if int(item["circuito_id"] or 0) == circuit_id]:
+                    route_id = int(route["id"])
+                    pending_places = []
+                    for place in [item for item in applicable_places if int(item["ruta_id"]) == route_id]:
+                        place_required = int(place["cantidad_requerida"] or 0)
+                        place_assigned = min(place_required, saved_places.get(int(place["id"]), 0))
+                        if place_assigned < place_required:
+                            pending_places.append({"id": int(place["id"]), "nombre": place["nombre"],
+                                                   "requerido": place_required, "asignado": place_assigned,
+                                                   "faltan": place_required - place_assigned})
+                    requires_manager = bool(route["asignar_encargado"] or route["tiene_encargado_tecnico"])
+                    route_resp = next((item for item in saved_responsibilities
+                                      if item["tipo_responsabilidad"] == "ENCARGADO_RUTA"
+                                      and int(item["ruta_id"] or 0) == route_id), None)
+                    manager_pending = requires_manager and not route_resp
+                    if route_resp and route_resp["requiere_encargado"] and not route_resp["agente_id"]:
+                        manager_pending = True
+                    if pending_places or manager_pending:
+                        route_pending.append({"id": route_id, "nombre": route["nombre"],
+                                              "encargado_pendiente": manager_pending, "lugares": pending_places})
+                if not resource_complete or route_pending:
+                    circuit_pending.append({"id": circuit_id, "nombre": circuit["nombre"],
+                                            "recursos_pendientes": not resource_complete, "rutas": route_pending})
+            ungrouped_pending: list[dict] = []
+            for route in [item for item in applicable_routes if not item["circuito_id"]]:
+                route_id = int(route["id"])
+                pending_places = []
+                for place in [item for item in applicable_places if int(item["ruta_id"]) == route_id]:
+                    place_required = int(place["cantidad_requerida"] or 0)
+                    place_assigned = min(place_required, saved_places.get(int(place["id"]), 0))
+                    if place_assigned < place_required:
+                        pending_places.append({"id": int(place["id"]), "nombre": place["nombre"],
+                                               "requerido": place_required, "asignado": place_assigned,
+                                               "faltan": place_required - place_assigned})
+                requires_manager = bool(route["asignar_encargado"] or route["tiene_encargado_tecnico"])
+                route_resp = next((item for item in saved_responsibilities
+                                  if item["tipo_responsabilidad"] == "ENCARGADO_RUTA"
+                                  and int(item["ruta_id"] or 0) == route_id), None)
+                manager_pending = requires_manager and (not route_resp or (route_resp["requiere_encargado"] and not route_resp["agente_id"]))
+                if pending_places or manager_pending:
+                    ungrouped_pending.append({"id": route_id, "nombre": route["nombre"],
+                                              "encargado_pendiente": manager_pending, "lugares": pending_places})
+            if ungrouped_pending:
+                circuit_pending.append({"id": 0, "nombre": "Rutas sin circuito",
+                                        "recursos_pendientes": False, "rutas": ungrouped_pending})
+            shift_complete = bool(distribution and district_resources_complete and not circuit_pending and assigned >= required)
+            shift_results.append({"id": shift_id, "nombre": shift["nombre"], "completo": shift_complete,
+                                  "guardado": bool(distribution), "requerido": required, "asignado": assigned,
+                                  "encargado_distrito_pendiente": not district_resources_complete,
+                                  "circuitos": circuit_pending})
+        complete = bool(shift_results) and all(item["completo"] for item in shift_results)
+        percentage = round((total_assigned / total_required * 100), 1) if total_required else 0
+        result.append({"distrito_id": district_id, "nombre": district["nombre"],
+                       "numero_circuitos": len(district_circuits), "puestos_requeridos": total_required,
+                       "puestos_asignados": total_assigned, "porcentaje": percentage,
+                       "estado_turnos": "COMPLETO" if complete else "TURNO_FALTANTE",
+                       "turnos": shift_results})
+    return result
+
+
 def get_route_places(route_id: int, shift_id: int) -> list[dict]:
     with get_connection() as connection:
         cursor = connection.cursor()

@@ -78,6 +78,16 @@ def crear_ruta(payload: dict = Body(...), user: dict = Depends(require_permissio
     return result_created(repo.create_route(payload), "Ruta creada correctamente")
 
 
+@router.post("/rutas/importar")
+def importar_rutas(payload: dict = Body(...), user: dict = Depends(require_permission("catalogos.crear"))):
+    try:
+        result = repo.import_routes(payload.get("filas", []), bool(payload.get("confirmar", False)), payload.get("accionesExistentes"))
+    except ValueError as exception:
+        raise HTTPException(status_code=422, detail=str(exception)) from exception
+    message = "Importación completada" if payload.get("confirmar") else "Archivo validado correctamente"
+    return ok(result, message)
+
+
 @router.put("/rutas/{item_id}")
 def actualizar_ruta(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("catalogos.editar"))):
     repo.update_route(item_id, payload)
@@ -146,7 +156,11 @@ def crear_lugar(payload: dict = Body(...), user: dict = Depends(require_permissi
 @router.post("/lugares-servicio/importar")
 def importar_lugares(payload: dict = Body(...), user: dict = Depends(require_permission("lugares_servicio.crear"))):
     try:
-        result = repo.import_service_places(payload.get("filas", []), bool(payload.get("confirmar", False)))
+        result = repo.import_service_places(
+            payload.get("filas", []),
+            bool(payload.get("confirmar", False)),
+            payload.get("accionesExistentes"),
+        )
     except ValueError as exception:
         raise HTTPException(status_code=422, detail=str(exception)) from exception
     message = "Importación completada" if payload.get("confirmar") else "Archivo validado correctamente"

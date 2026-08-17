@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.core.responses import ok
-from app.middleware.auth import current_user, require_permission
+from app.middleware.auth import current_user, require_any_permission, require_permission
 from app.modules.distribucion_geografica.repository_geo import (
     list_rutas_geograficas, get_ruta_geografica, get_ruta_geografica_by_ruta,
     create_ruta_geografica, update_ruta_geografica, delete_ruta_geografica,
@@ -59,19 +59,19 @@ def obtener_geografia_por_ruta(ruta_id: int, user: dict = Depends(current_user))
 
 
 @router.post("/rutas-geograficas", status_code=201)
-def crear_ruta_geografica(payload: dict, user: dict = Depends(current_user)):
+def crear_ruta_geografica(payload: dict, user: dict = Depends(require_any_permission("rutas_geograficas.gestionar", "distribucion.catalogos"))):
     item_id = create_ruta_geografica(payload, int(user["id"]))
     return {**ok(None, "Ruta geográfica creada correctamente"), "id": item_id}
 
 
 @router.put("/rutas-geograficas/{ruta_geo_id}")
-def actualizar_ruta_geografica(ruta_geo_id: int, payload: dict, user: dict = Depends(current_user)):
+def actualizar_ruta_geografica(ruta_geo_id: int, payload: dict, user: dict = Depends(require_any_permission("rutas_geograficas.gestionar", "distribucion.catalogos"))):
     update_ruta_geografica(ruta_geo_id, payload, int(user["id"]))
     return ok(None, "Ruta geográfica actualizada correctamente")
 
 
 @router.delete("/rutas-geograficas/{ruta_geo_id}")
-def eliminar_ruta_geografica(ruta_geo_id: int, user: dict = Depends(current_user)):
+def eliminar_ruta_geografica(ruta_geo_id: int, user: dict = Depends(require_any_permission("rutas_geograficas.gestionar", "distribucion.catalogos"))):
     delete_ruta_geografica(ruta_geo_id, int(user["id"]))
     return ok(None, "Ruta geográfica eliminada correctamente")
 
@@ -94,19 +94,19 @@ def obtener_lugar_servicio(lugar_id: int, user: dict = Depends(current_user)):
 
 
 @router.post("/lugares-servicio", status_code=201)
-def crear_lugar_servicio(payload: dict, user: dict = Depends(current_user)):
+def crear_lugar_servicio(payload: dict, user: dict = Depends(require_any_permission("distribucion.catalogos", "distribucion.crear"))):
     item_id = create_lugar_servicio(payload, int(user["id"]))
     return {**ok(None, "Lugar de servicio creado correctamente"), "id": item_id}
 
 
 @router.put("/lugares-servicio/{lugar_id}")
-def actualizar_lugar_servicio(lugar_id: int, payload: dict, user: dict = Depends(current_user)):
+def actualizar_lugar_servicio(lugar_id: int, payload: dict, user: dict = Depends(require_any_permission("distribucion.editar", "distribucion.catalogos"))):
     update_lugar_servicio(lugar_id, payload, int(user["id"]))
     return ok(None, "Lugar de servicio actualizado correctamente")
 
 
 @router.delete("/lugares-servicio/{lugar_id}")
-def eliminar_lugar_servicio(lugar_id: int, user: dict = Depends(current_user)):
+def eliminar_lugar_servicio(lugar_id: int, user: dict = Depends(require_permission("distribucion.desactivar"))):
     delete_lugar_servicio(lugar_id, int(user["id"]))
     return ok(None, "Lugar de servicio eliminado correctamente")
 
@@ -121,12 +121,12 @@ def asignaciones_punto(punto_id: int, user: dict = Depends(current_user)):
 
 
 @router.post("/lugares-servicio/{punto_id}/asignaciones", status_code=201)
-def crear_asignacion_punto(punto_id: int, payload: dict, user: dict = Depends(current_user)):
+def crear_asignacion_punto(punto_id: int, payload: dict, user: dict = Depends(require_permission("distribucion.asignar"))):
     item_id = create_asignacion_punto(punto_id, payload, int(user["id"]))
     return {**ok(None, "Asignación creada correctamente"), "id": item_id}
 
 
 @router.delete("/asignaciones-punto/{asignacion_id}")
-def eliminar_asignacion_punto(asignacion_id: int, user: dict = Depends(current_user)):
+def eliminar_asignacion_punto(asignacion_id: int, user: dict = Depends(require_permission("distribucion.asignar"))):
     delete_asignacion_punto(asignacion_id, int(user["id"]))
     return ok(None, "Asignación eliminada correctamente")

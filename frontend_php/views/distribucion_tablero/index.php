@@ -15,21 +15,26 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             <div><h1>Tablero de Distribuci&oacute;n</h1><p>Asignaci&oacute;n de personal por ruta y lugares de servicio</p></div>
         </div>
         <section class="td-filter-card" aria-label="Filtros del tablero">
-            <label>Distrito
-                <select id="tdDistrict"><option value="">Seleccione distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
-            </label>
-            <label>Circuito
-                <select id="tdCircuit" disabled><option value="">Seleccione distrito</option></select>
-            </label>
             <label>Turno
                 <select id="tdShift"><option value="">Seleccione turno</option><?php foreach (($catalogos['turnos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
             </label>
             <label>Fecha
                 <input id="tdBoardDate" type="date" value="<?= date('Y-m-d') ?>">
             </label>
-            <?php if ($canAssign): ?><div class="td-save-field"><span aria-hidden="true">&nbsp;</span><button class="td-btn td-btn-primary td-save-button" id="tdSaveDraft" type="button"><span aria-hidden="true">&#9745;</span> Guardar distribuci&oacute;n</button></div><?php endif; ?>
         </section>
     </header>
+
+    <select id="tdDistrict" hidden aria-hidden="true"><option value="">Seleccione distrito</option><?php foreach (($catalogos['distritos'] ?? []) as $item): ?><option value="<?= (int)$item['id'] ?>"><?= $esc($item['nombre']) ?></option><?php endforeach; ?></select>
+    <select id="tdCircuit" hidden aria-hidden="true" disabled><option value="">Seleccione distrito</option></select>
+    <section class="td-district-overview" aria-label="Estado guardado de los distritos">
+        <div class="td-district-cards" id="tdDistrictCards"><div class="td-empty-small">Consultando distribuciones guardadas...</div></div>
+        <p class="td-overview-help"><i>i</i> Seleccione un distrito para consultar y distribuir sus circuitos.</p>
+    </section>
+
+    <section class="td-selected-panel" id="tdSelectedDistrictPanel" hidden>
+        <header><span>Mostrando circuitos disponibles de:</span><strong id="tdSelectedDistrictName"></strong></header>
+        <div class="td-circuit-accordion" id="tdCircuitAccordion"></div>
+    </section>
 
     <div class="td-board">
         <section class="td-workspace">
@@ -83,6 +88,7 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
                 </div>
 
                 <section class="td-info-bar"><i>i</i><div><b>Guardar distribuci&oacute;n</b><p>Al guardar se registrar&aacute; autom&aacute;ticamente como:</p><strong>DISTRIBUCI&Oacute;N DE PERSONAL FECHA XX/XX/XXXX</strong></div></section>
+                <?php if ($canAssign): ?><div class="td-district-savebar"><span class="td-save-state" id="tdUnsavedState">&#10003; Guardado</span><button class="td-btn td-btn-primary td-save-button" id="tdSaveDraft" type="button" disabled><span aria-hidden="true">&#128190;</span> Guardar distribuci&oacute;n</button></div><?php endif; ?>
             </div>
         </section>
     </div>
@@ -201,6 +207,10 @@ $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions,
             </footer>
         </div>
     </div>
+
+    <div class="td-modal td-modal-md" id="tdDistrictDetailModal" hidden><div class="td-modal-dialog"><header><div><small>Detalle de distribuci&oacute;n pendiente</small><h3 id="tdDistrictDetailTitle">Distrito</h3></div><button type="button" data-close="tdDistrictDetailModal">&times;</button></header><div class="td-modal-body td-pending-detail" id="tdDistrictPendingDetail"></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdDistrictDetailModal">Cerrar</button></footer></div></div>
+
+    <div class="td-modal" id="tdUnsavedModal" hidden><div class="td-modal-dialog td-modal-small"><header><div><small>Cambios sin guardar</small><h3>¿Desea cambiar de distrito?</h3></div><button type="button" data-close="tdUnsavedModal">&times;</button></header><div class="td-modal-body"><p id="tdUnsavedMessage"></p></div><footer><button class="td-btn td-btn-ghost" type="button" data-close="tdUnsavedModal">Cancelar</button><button class="td-btn td-btn-danger" id="tdDiscardDistrict" type="button">Descartar cambios</button><button class="td-btn td-btn-primary" id="tdSaveAndSwitchDistrict" type="button">Guardar y continuar</button></footer></div></div>
 
     <div class="td-toast" id="tdToast" role="status" aria-live="polite"></div>
     <script id="tdCatalogs" type="application/json"><?= json_encode($catalogos, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?></script>

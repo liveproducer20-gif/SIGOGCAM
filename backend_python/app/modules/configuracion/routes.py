@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.core.responses import ok
-from app.middleware.auth import current_user, require_permission
+from app.middleware.auth import current_user, require_any_permission, require_permission
 from app.modules.configuracion.repository import (
     all_permissions,
     all_modules,
@@ -50,7 +50,7 @@ def permisos(user: dict = Depends(current_user)):
 
 
 @router.put("/roles/{role_id}/permisos")
-def guardar_permisos(role_id: int, payload: dict, user: dict = Depends(current_user)):
+def guardar_permisos(role_id: int, payload: dict, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     update_role_permissions(role_id, payload.get("permisoIds") or [])
     return ok(None, "Permisos del rol actualizados correctamente")
 
@@ -66,7 +66,7 @@ def menu_rol(role_id: int, user: dict = Depends(current_user)):
 
 
 @router.put("/roles/{role_id}/menu")
-def guardar_menu_rol(role_id: int, payload: dict, user: dict = Depends(current_user)):
+def guardar_menu_rol(role_id: int, payload: dict, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     save_menu_configuration(role_id, payload.get("items") or [])
     return ok(None, "Menú del rol actualizado correctamente")
 
@@ -77,7 +77,7 @@ def alcance_rol(role_id: int, user: dict = Depends(current_user)):
 
 
 @router.post("/roles/{role_id}/alcance", status_code=201)
-def guardar_alcance_rol(role_id: int, payload: dict, user: dict = Depends(current_user)):
+def guardar_alcance_rol(role_id: int, payload: dict, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     item_id = save_data_scope(role_id, payload)
     return {**ok(None, "Alcance de datos guardado correctamente"), "id": item_id}
 
@@ -88,13 +88,13 @@ def condiciones_rol(role_id: int, user: dict = Depends(current_user)):
 
 
 @router.post("/roles/{role_id}/condiciones", status_code=201)
-def guardar_condicion_rol(role_id: int, payload: dict, user: dict = Depends(current_user)):
+def guardar_condicion_rol(role_id: int, payload: dict, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     item_id = save_role_condition(role_id, payload)
     return {**ok(None, "Condición guardada correctamente"), "id": item_id}
 
 
 @router.delete("/roles/{role_id}/condiciones/{condition_id}")
-def eliminar_condicion_rol(role_id: int, condition_id: int, user: dict = Depends(current_user)):
+def eliminar_condicion_rol(role_id: int, condition_id: int, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     delete_role_condition(role_id, condition_id)
     return ok(None, "Condición desactivada correctamente")
 
@@ -103,13 +103,13 @@ def eliminar_condicion_rol(role_id: int, condition_id: int, user: dict = Depends
 def campos_rol(role_id:int,user:dict=Depends(current_user)): return ok(role_fields(role_id))
 
 @router.put("/roles/{role_id}/campos")
-def guardar_campos(role_id:int,payload:dict,user:dict=Depends(current_user)): save_role_fields(role_id,payload.get("items") or []); return ok(None,"Campos actualizados correctamente")
+def guardar_campos(role_id:int,payload:dict,user:dict=Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))): save_role_fields(role_id,payload.get("items") or []); return ok(None,"Campos actualizados correctamente")
 
 @router.get("/roles/{role_id}/versiones")
 def versiones(role_id:int,user:dict=Depends(current_user)): return ok(role_versions(role_id))
 
 @router.post("/roles/{role_id}/versiones",status_code=201)
-def crear_version(role_id:int,payload:dict,user:dict=Depends(current_user)): return {**ok(None,"Versión creada correctamente"),"id":create_role_version(role_id,int(user["id"]),payload.get("comentario"))}
+def crear_version(role_id:int,payload:dict,user:dict=Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))): return {**ok(None,"Versión creada correctamente"),"id":create_role_version(role_id,int(user["id"]),payload.get("comentario"))}
 
 @router.get("/auditoria")
 def auditoria(rolId:int|None=None,limite:int=100,user:dict=Depends(current_user)): return ok(configuration_audit(rolId,min(limite,500)))
@@ -124,12 +124,12 @@ def cambios(user: dict = Depends(current_user)):
 
 
 @router.post("/cambios", status_code=201)
-def crear_cambio(payload: dict, user: dict = Depends(current_user)):
+def crear_cambio(payload: dict, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     item_id = create_cambio(payload)
     return {**ok(None, "Cambio registrado correctamente"), "id": item_id}
 
 
 @router.delete("/cambios/{cambio_id}")
-def eliminar_cambio(cambio_id: int, user: dict = Depends(current_user)):
+def eliminar_cambio(cambio_id: int, user: dict = Depends(require_any_permission("configuracion.editar", "configuracion.roles.gestionar"))):
     delete_cambio(cambio_id)
     return ok(None, "Cambio eliminado correctamente")

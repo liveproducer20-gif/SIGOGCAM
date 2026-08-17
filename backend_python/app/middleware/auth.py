@@ -33,3 +33,16 @@ def require_permission(permission: str):
         return user
 
     return checker
+
+
+def require_any_permission(*permissions: str):
+    """Permite el acceso si el usuario tiene al menos uno de los permisos indicados."""
+
+    def checker(user: dict = Depends(current_user)) -> dict:
+        user_permissions = set(user.get("permisos") or [])
+        role = str(user.get("rolCodigo") or user.get("rol") or "").upper()
+        if "ADMINISTRADOR" not in role and not user_permissions.intersection(permissions):
+            raise HTTPException(status_code=403, detail="No tiene permiso para esta accion")
+        return user
+
+    return checker

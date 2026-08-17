@@ -14,6 +14,7 @@
         places: new Map(), assignments: [], districtManager: null, circuitManagers: new Map(), routeManagers: new Map(), agentTarget: null, availability: null,
         saved: null, editingId: 0,
         circuitDraft: null, promptedDistrictKey: '',
+        districtSummaries: [], dirty: false, pendingDistrictId: 0,
         agentModal: { page: 1, filters: {}, search: '', data: null },
     };
 
@@ -42,17 +43,25 @@
     function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = true; if(!document.querySelector('.td-modal:not([hidden])'))document.body.classList.remove('td-modal-open'); }
     function selectedDate() { return $('#tdBoardDate')?.value || ''; }
     function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}:${selectedDate()}`; }
+    function renderSaveState() {
+        const status=$('#tdUnsavedState'),button=$('#tdSaveDraft');
+        if(status){status.classList.toggle('is-dirty',state.dirty);status.innerHTML=state.dirty?'&#9679; Cambios sin guardar':'&#10003; Guardado';}
+        if(button)button.disabled=!state.dirty;
+    }
     function saveDraft() {
         if (!state.districtId || !state.shiftId) return;
         sessionStorage.setItem(draftKey(), JSON.stringify({assignments: state.assignments, districtManager: state.districtManager, circuitManagers:Array.from(state.circuitManagers.entries()), routeManagers: Array.from(state.routeManagers.entries()), updatedAt: new Date().toISOString()}));
+        state.dirty=true;renderSaveState();
     }
     function restoreDraft() {
         try {
-            const draft = JSON.parse(sessionStorage.getItem(draftKey()) || '{}');
+            const stored=sessionStorage.getItem(draftKey());const draft = JSON.parse(stored || '{}');
             state.assignments = draft.assignments || []; state.districtManager = draft.districtManager || null;
             state.circuitManagers = new Map(draft.circuitManagers || []);
             state.routeManagers = new Map(draft.routeManagers || []);
-        } catch (_) { state.assignments = []; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); }
+            state.dirty=Boolean(stored);
+        } catch (_) { state.assignments = []; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.dirty=false; }
+        renderSaveState();
     }
     function usedAgentIds(exceptAgentId = 0) {
         const ids = state.assignments.map(item => Number(item.agente_id));
@@ -72,6 +81,39 @@
     function assignmentsFor(placeId) { return state.assignments.filter(item => Number(item.lugar_id) === Number(placeId)); }
     function initials(name) { return String(name || 'A').split(/\s+/).filter(Boolean).slice(-2).map(part => part[0]).join('').toUpperCase(); }
     function personDisplayName(name){return String(name||'').replace(/^Agente\s+[1-4]\s+/i,'').trim();}
+
+    function districtSummary(districtId){return state.districtSummaries.find(item=>Number(item.distrito_id)===Number(districtId));}
+    async function loadDistrictSummaries(){
+        const container=$('#tdDistrictCards');if(!container)return;
+        try{state.districtSummaries=await api(`distribucion-tablero/resumen-distritos?fecha=${selectedDate()}`)||[];renderDistrictCards();}
+        catch(error){container.innerHTML=`<div class="td-empty-small">${esc(error.message)}</div>`;}
+    }
+    function renderDistrictCards(){
+        const container=$('#tdDistrictCards');if(!container)return;
+        const palette=[['#0ea5a8','#e6f8f8'],['#16a34a','#eaf8ee'],['#0891b2','#e8f7fb'],['#f59e0b','#fff7e6'],['#7c3aed','#f2ecff'],['#ea580c','#fff0e8'],['#22c55e','#ebfaef'],['#2563eb','#eaf1ff'],['#9333ea','#f5ebff']];
+        const icons=['&#128205;','&#129309;','&#127970;','&#11088;','&#128737;','&#128110;','&#9851;','&#128101;','&#9670;'];
+        container.innerHTML=state.districtSummaries.length?state.districtSummaries.map((item,index)=>{
+            const selected=Number(item.distrito_id)===state.districtId;const complete=item.estado_turnos==='COMPLETO';
+            const circuits=Number(item.numero_circuitos||0),required=Number(item.puestos_requeridos||0),assigned=Number(item.puestos_asignados||0),unconfigured=circuits===0&&required===0;
+            const [accent,soft]=palette[index%palette.length];
+            return `<button class="td-district-card ${selected?'is-selected':''}" style="--card-accent:${accent};--card-soft:${soft}" type="button" data-district-card="${item.distrito_id}">
+                <header><span class="td-district-icon" aria-hidden="true">${icons[index%icons.length]}</span><h3>${esc(item.nombre)}</h3>${selected?'<span class="td-selected-tag">Seleccionado</span>':''}</header>
+                <div class="td-district-numbers"><div><b>${circuits}</b> <span>circuitos</span></div><small>${unconfigured?'Sin puestos configurados':`${assigned}/${required} puestos`}</small></div>
+                <div class="td-district-progress"><i style="width:${Math.min(100,Number(item.porcentaje||0))}%"></i></div>
+                <footer><span class="td-turn-status ${unconfigured?'is-unconfigured':complete?'is-complete':'is-missing'}">${unconfigured?'● Sin configurar':complete?'● Completo':'● Turno faltante'}</span>${complete?'':`<span class="td-detail-button" data-district-detail="${item.distrito_id}">${unconfigured?'Ver configuración':'Ver detalle'} →</span>`}</footer>
+            </button>`;
+        }).join(''):'<div class="td-empty-small">No existen distritos activos.</div>';
+    }
+    function renderPendingDetail(summary){
+        $('#tdDistrictDetailTitle').textContent=summary.nombre;
+        $('#tdDistrictPendingDetail').innerHTML=(summary.turnos||[]).map(turn=>{
+            if(turn.completo)return `<section class="td-pending-shift is-complete"><header><h4>${esc(turn.nombre)}</h4><span>✓ Completo</span></header></section>`;
+            const districtPending=turn.encargado_distrito_pendiente?'<div class="td-pending-circuit"><b>Responsabilidad del distrito</b><span>⚠ Encargado o recursos obligatorios pendientes</span></div>':'';
+            const circuits=(turn.circuitos||[]).map(circuit=>`<div class="td-pending-circuit"><b>⚠ ${esc(circuit.nombre)}</b>${circuit.recursos_pendientes?'<span>Recursos obligatorios incompletos</span>':''}${(circuit.rutas||[]).map(route=>`<div class="td-pending-route"><strong>${esc(route.nombre)}</strong>${route.encargado_pendiente?'<div>⚠ Encargado de ruta sin definir</div>':''}${(route.lugares||[]).map(place=>`<div class="td-pending-place"><span>⚠ ${esc(place.nombre)}</span><span>Requerido: ${place.requerido} · Asignado: ${place.asignado} · Faltan: ${place.faltan}</span></div>`).join('')}</div>`).join('')}</div>`).join('');
+            return `<section class="td-pending-shift is-pending"><header><h4>${esc(turn.nombre)}</h4><span>⚠ Pendiente</span></header>${turn.guardado?'':'<div class="td-pending-circuit"><b>Turno sin distribución guardada</b></div>'}${districtPending}${circuits}</section>`;
+        }).join('')||'<div class="td-pending-empty">No existen turnos pendientes.</div>';
+        openModal('tdDistrictDetailModal');
+    }
 
     const estadoChipColors = {
         'ACTIVO': 'td-chip-green', 'FRANCO': 'td-chip-blue', 'VACACIONES': 'td-chip-orange',
@@ -94,8 +136,17 @@
 
     async function applyCircuitFilter(){
         state.circuitId=Number($('#tdCircuit').value||0);state.routeId=0;renderRoutes();renderCircuitManagers();
+        renderCircuitAccordion();
         const first=visibleRoutes().find(route=>Number(route.lugares||0)>0)||visibleRoutes()[0];
         if(first)await selectRoute(Number(first.id));else showEmpty('No existen rutas para el circuito y turno seleccionados.');
+    }
+
+    function renderCircuitAccordion(){
+        const panel=$('#tdSelectedDistrictPanel'),container=$('#tdCircuitAccordion');if(!panel||!container)return;
+        panel.hidden=!state.districtId;
+        $('#tdSelectedDistrictName').textContent=state.board?.distrito?.nombre||districtSummary(state.districtId)?.nombre||'';
+        const circuits=state.board?.circuitos||[];
+        container.innerHTML=circuits.length?circuits.map(item=>`<button class="td-circuit-toggle ${Number(item.id)===state.circuitId?'is-open':''}" type="button" data-circuit-toggle="${item.id}"><span>${esc(item.nombre)}</span><span>${Number(item.id)===state.circuitId?'⌃':'⌄'}</span></button>`).join(''):'<div class="td-empty-small">Este distrito no tiene circuitos activos.</div>';
     }
 
     async function loadBoard() {
@@ -110,6 +161,7 @@
         try {
             state.board = await api(`distribucion-tablero/tablero?distrito_id=${state.districtId}&turno_id=${state.shiftId}&fecha=${selectedDate()}`);
             state.places.clear(); state.assignments = []; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.saved = null; state.editingId = 0;
+            state.dirty=false;
             if (state.board.distribucion_id) {
                 state.saved = await api(`distribucion-tablero/distribuciones/${state.board.distribucion_id}`);
                 state.editingId = Number(state.saved.id);
@@ -134,8 +186,10 @@
                     state.routeManagers.set(routeId, {requiere_encargado:true,agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}});
                 }
             } else restoreDraft();
+            if(!state.circuitId&&(state.board.circuitos||[]).length){state.circuitId=Number(state.board.circuitos[0].id);$('#tdCircuit').value=String(state.circuitId);}
             for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado:false});
             renderRoutes();
+            renderCircuitAccordion();renderDistrictCards();renderSaveState();
             populateOperationalCatalogs();
             const first = visibleRoutes().find(route => Number(route.lugares || 0) > 0) || visibleRoutes()[0];
             if (first) await selectRoute(Number(first.id)); else showEmpty('No existen rutas para la seleccion actual.');
@@ -629,6 +683,18 @@
         saveDraft();renderManagers();
     }
 
+    async function performDistrictSelection(districtId){
+        state.pendingDistrictId=0;state.districtId=Number(districtId);$('#tdDistrict').value=String(state.districtId);
+        await loadCircuitsForDistrict();
+        renderDistrictCards();
+        if(state.shiftId||$('#tdShift').value)await loadBoard();
+        else{renderCircuitAccordion();showEmpty('Seleccione un turno para cargar los circuitos del distrito.');}
+    }
+    async function requestDistrictSelection(districtId){
+        districtId=Number(districtId);if(!districtId||districtId===state.districtId)return;
+        if(state.dirty&&state.districtId){state.pendingDistrictId=districtId;$('#tdUnsavedMessage').textContent=`Tiene cambios sin guardar en ${state.board?.distrito?.nombre||districtSummary(state.districtId)?.nombre||'el distrito seleccionado'}.`;openModal('tdUnsavedModal');return;}
+        await performDistrictSelection(districtId);
+    }
     function formatDate(value) { if (!value) return 'DD/MM/AAAA'; const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; }
     async function draftTotals() {
         await ensureAllPlaces(); let required = 0;
@@ -674,10 +740,13 @@
                 asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion}))
             }});
             state.saved = await api(`distribucion-tablero/distribuciones/${saved.id}`);
-            state.editingId = 0;
+            state.editingId = Number(saved.id);state.dirty=false;renderSaveState();
             sessionStorage.removeItem(draftKey()); closeModal('tdSaveModal'); closeModal('tdPendingModal'); renderSaved(); openModal('tdResultModal');
             notify(saved.pendientes ? `Distribucion guardada. Quedaron ${saved.pendientes} puestos pendientes.` : 'Distribucion guardada correctamente.');
-        } catch (error) { notify(error.message, true); }
+            await loadDistrictSummaries();
+            if(state.pendingDistrictId){const next=state.pendingDistrictId;state.pendingDistrictId=0;closeModal('tdResultModal');await performDistrictSelection(next);}
+            return true;
+        } catch (error) { notify(error.message, true); return false; }
         finally { loading(button, false); }
     }
     function renderSaved() {
@@ -690,7 +759,9 @@
 
     $('#tdDistrict').addEventListener('change',async()=>{await loadCircuitsForDistrict();if($('#tdShift').value)await loadBoard();else showEmpty('Seleccione un turno para cargar las rutas disponibles.');});
     $('#tdCircuit').addEventListener('change',applyCircuitFilter);
-    $('#tdShift').addEventListener('change', loadBoard); $('#tdBoardDate').addEventListener('change', loadBoard);
+    $('#tdShift').addEventListener('change', loadBoard); $('#tdBoardDate').addEventListener('change',async()=>{await loadDistrictSummaries();if(state.districtId)await loadBoard();});
+    $('#tdDistrictCards')?.addEventListener('click',event=>{const detail=event.target.closest('[data-district-detail]');if(detail){event.stopPropagation();const summary=districtSummary(detail.dataset.districtDetail);if(summary)renderPendingDetail(summary);return;}const card=event.target.closest('[data-district-card]');if(card)requestDistrictSelection(card.dataset.districtCard);});
+    $('#tdCircuitAccordion')?.addEventListener('click',event=>{const button=event.target.closest('[data-circuit-toggle]');if(!button)return;$('#tdCircuit').value=button.dataset.circuitToggle;applyCircuitFilter();});
     $('#tdRouteSearch').addEventListener('input', renderRoutes); $('#tdRouteList').addEventListener('click', event => { const item = event.target.closest('[data-route-id]'); if (item) selectRoute(Number(item.dataset.routeId)); });
     $('#tdPlacesBody').addEventListener('click', event => {
         const assign = event.target.closest('[data-assign-place]'); const change = event.target.closest('[data-change-agent]'); const remove = event.target.closest('[data-remove-agent]'); const manage = event.target.closest('[data-manage-place]');
@@ -741,10 +812,12 @@
     $('#tdAssignRouteManager')?.addEventListener('click',()=>openManagerSelector('route',state.routeId));
 
     $('#tdRandomAssign')?.addEventListener('click', randomAssign); $('#tdSaveDraft')?.addEventListener('click', openSave);
+    $('#tdDiscardDistrict')?.addEventListener('click',async()=>{const next=state.pendingDistrictId;sessionStorage.removeItem(draftKey());state.dirty=false;closeModal('tdUnsavedModal');if(next)await performDistrictSelection(next);});
+    $('#tdSaveAndSwitchDistrict')?.addEventListener('click',()=>{closeModal('tdUnsavedModal');openSave();});
     $('#tdDistributionDate').addEventListener('change', event => { $('#tdGeneratedName').textContent = `DISTRIBUCION DE PERSONAL FECHA ${formatDate(event.target.value)}`; });
     $('#tdConfirmSave').addEventListener('click', requestSave); $('#tdForceSave')?.addEventListener('click', requestSave);
-    $$('[data-close]').forEach(button => button.addEventListener('click', () => closeModal(button.dataset.close)));
-    $$('.td-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) modal.hidden = true; }));
+    $$('[data-close]').forEach(button => button.addEventListener('click', () => {if(button.dataset.close==='tdUnsavedModal')state.pendingDistrictId=0;closeModal(button.dataset.close);}));
+    $$('.td-modal').forEach(modal => modal.addEventListener('click', event => { if (event.target === modal) {if(modal.id==='tdUnsavedModal')state.pendingDistrictId=0;closeModal(modal.id);} }));
     $('#tdViewSaved').addEventListener('click', () => { renderSaved(); notify('Detalle de la distribucion cargado.'); });
     $('#tdEditSaved').addEventListener('click', () => {
         if (!state.saved) return;
@@ -763,7 +836,7 @@
         catch (error) { notify(error.message, true); }
     });
     if (catalogs.distritos?.length === 1) $('#tdDistrict').value = String(catalogs.distritos[0].id);
-    if (catalogs.turnos?.length === 1) $('#tdShift').value = String(catalogs.turnos[0].id);
+    if (catalogs.turnos?.length && !$('#tdShift').value) $('#tdShift').value = String(catalogs.turnos[0].id);
 
     const urlParams = new URLSearchParams(window.location.search);
     const preDistrict = urlParams.get('distrito_id');
@@ -778,5 +851,6 @@
         if (shiftSel) shiftSel.value = preShift;
     }
     if (preDate && /^\d{4}-\d{2}-\d{2}$/.test(preDate)) $('#tdBoardDate').value = preDate;
-    if (($('#tdDistrict').value && $('#tdShift').value) || (preDistrict && preShift)) loadBoard();
+    state.shiftId=Number($('#tdShift').value||0);loadDistrictSummaries();
+    if (($('#tdDistrict').value && $('#tdShift').value) || (preDistrict && preShift)) {loadCircuitsForDistrict().then(loadBoard);}
 })();
