@@ -5,6 +5,7 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 from app.core.db import get_connection
+from app.core.sanitize import escape_like
 
 
 GYE_BOUNDS = (Decimal("-2.45"), Decimal("-1.85"), Decimal("-80.15"), Decimal("-79.70"))
@@ -105,9 +106,9 @@ def list_points(filters: dict) -> list[dict]:
         where.append("""EXISTS (
             SELECT 1 FROM dbo.asignaciones_punto ap INNER JOIN dbo.vw_personal_detalle vp ON vp.id = ap.personal_id
             WHERE ap.punto_id = p.id AND ap.activo = 1 AND
-            (LOWER(vp.nombre_completo) LIKE ? OR LOWER(vp.cedula) LIKE ?)
+            (LOWER(vp.nombre_completo) LIKE ? ESCAPE '\\' OR LOWER(vp.cedula) LIKE ? ESCAPE '\\')
         )""")
-        term = f"%{str(filters['agente']).lower()}%"
+        term = f"%{escape_like(str(filters['agente']).lower())}%"
         params.extend([term, term])
     sql = f"""
         SELECT p.id, p.nombre, p.ubicacion_especifica, p.direccion,

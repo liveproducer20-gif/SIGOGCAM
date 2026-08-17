@@ -2,6 +2,7 @@
     [
         ['routeImportDialog', '/admin?tab=rutas'],
         ['servicePlaceImportDialog', '/admin?tab=lugares'],
+        ['circuitRouteImportPreviewDialog', '/admin?tab=circuitos'],
     ].forEach(([dialogId, returnUrl]) => {
         const dialog = document.getElementById(dialogId);
         if (!dialog) return;
@@ -10,6 +11,12 @@
             dialog.close();
             window.location.assign(returnUrl);
         });
+    });
+
+    const circuitImportStart = document.getElementById('circuitRouteImportStartDialog');
+    document.querySelector('[data-circuit-import-open]')?.addEventListener('click', () => circuitImportStart?.showModal());
+    circuitImportStart?.querySelectorAll('[data-circuit-import-close]').forEach((button) => {
+        button.addEventListener('click', () => circuitImportStart.close());
     });
 
     document.querySelectorAll('.csv-toggle-detail').forEach((button) => {
@@ -24,6 +31,63 @@
             button.setAttribute('aria-expanded', String(!isVisible));
         });
     });
+
+    const placeForm = document.getElementById('form-lugar');
+    if (placeForm) {
+        const placesList = document.getElementById('lugares-list');
+        const addPlaceButton = document.getElementById('add-lugar');
+        const formTitle = placeForm.querySelector('.admin-form-title h3');
+        const submitButton = placeForm.querySelector('[data-place-submit]');
+        const primaryNameInput = placesList.querySelector('input[name="nombre[]"]');
+        const setValue = (name, value) => {
+            const field = placeForm.elements.namedItem(name);
+            if (field) field.value = value ?? '';
+        };
+        primaryNameInput?.addEventListener('input', () => {
+            if (primaryNameInput.dataset.syncDirection === '1') setValue('direccion', primaryNameInput.value);
+        });
+
+        document.querySelectorAll('[data-edit-service-place]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const payload = JSON.parse(button.dataset.payload || '{}');
+                Array.from(placesList.querySelectorAll('.lugar-row')).slice(1).forEach((row) => row.remove());
+                const nameInput = placesList.querySelector('input[name="nombre[]"]');
+                if (nameInput) nameInput.value = payload.nombre || payload.direccion || '';
+                if (nameInput) nameInput.dataset.syncDirection = (!payload.direccion || payload.direccion === payload.nombre) ? '1' : '0';
+
+                setValue('id', payload.id);
+                setValue('direccion', payload.direccion || payload.nombre || '');
+                setValue('distrito_id', payload.distrito_id);
+                placeForm.elements.namedItem('distrito_id')?.dispatchEvent(new Event('change'));
+                setValue('ruta_id', payload.ruta_id);
+                setValue('tipo_servicio_id', payload.tipo_servicio_id);
+                setValue('turno_id', payload.turno_id);
+                setValue('cantidad_requerida', payload.cantidad_requerida || 1);
+                setValue('ubicacion_especifica', payload.ubicacion_especifica);
+                setValue('estado_operativo', payload.estado_operativo || 'ACTIVO');
+                setValue('consignas', payload.consignas);
+                setValue('observacion', payload.observacion);
+                setValue('lugar_formacion', payload.lugar_formacion);
+                setValue('latitud', payload.latitud);
+                setValue('longitud', payload.longitud);
+                setValue('activo', payload.activo ? '1' : '0');
+
+                if (formTitle) formTitle.textContent = 'Editar lugar de servicio';
+                if (submitButton) submitButton.textContent = 'Guardar cambios';
+                if (addPlaceButton) addPlaceButton.hidden = true;
+                placeForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                nameInput?.focus({ preventScroll: true });
+            });
+        });
+
+        placeForm.addEventListener('reset', () => setTimeout(() => {
+            Array.from(placesList.querySelectorAll('.lugar-row')).slice(1).forEach((row) => row.remove());
+            if (formTitle) formTitle.textContent = 'Nuevo lugar';
+            if (submitButton) submitButton.textContent = 'Guardar lugares';
+            if (addPlaceButton) addPlaceButton.hidden = false;
+            if (primaryNameInput) primaryNameInput.dataset.syncDirection = '1';
+        }));
+    }
 
     const bulkDeleteButton = document.querySelector('[data-bulk-delete-places]');
     const bulkDeleteDialog = document.getElementById('bulkDeletePlacesDialog');

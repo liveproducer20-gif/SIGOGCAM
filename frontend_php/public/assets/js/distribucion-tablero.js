@@ -39,8 +39,37 @@
         if (active) { button.dataset.label = button.innerHTML; button.innerHTML = '<span class="td-loading"></span> Procesando...'; }
         else if (button.dataset.label) button.innerHTML = button.dataset.label;
     }
-    function openModal(id) { const modal = document.getElementById(id); if (modal) { if(modal.parentElement!==document.body)document.body.appendChild(modal);modal.hidden=false;document.body.classList.add('td-modal-open'); } }
-    function closeModal(id) { const modal = document.getElementById(id); if (modal) modal.hidden = true; if(!document.querySelector('.td-modal:not([hidden])'))document.body.classList.remove('td-modal-open'); }
+    const modalStack = [];
+    function syncModalStack() {
+        for (let index = modalStack.length - 1; index >= 0; index -= 1) {
+            if (!modalStack[index]?.isConnected || modalStack[index].hidden) modalStack.splice(index, 1);
+        }
+        modalStack.forEach((modal, index) => {
+            modal.style.zIndex = String(10000 + (index * 20));
+            modal.classList.toggle('is-modal-underlay', index < modalStack.length - 1);
+        });
+        document.body.classList.toggle('td-modal-open', modalStack.length > 0);
+    }
+    function openModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        if (modal.parentElement !== document.body) document.body.appendChild(modal);
+        const previousIndex = modalStack.indexOf(modal);
+        if (previousIndex >= 0) modalStack.splice(previousIndex, 1);
+        modal.hidden = false;
+        modalStack.push(modal);
+        syncModalStack();
+    }
+    function closeModal(id) {
+        const modal = document.getElementById(id);
+        if (!modal) return;
+        modal.hidden = true;
+        modal.style.removeProperty('z-index');
+        modal.classList.remove('is-modal-underlay');
+        const stackIndex = modalStack.indexOf(modal);
+        if (stackIndex >= 0) modalStack.splice(stackIndex, 1);
+        syncModalStack();
+    }
     function selectedDate() { return $('#tdBoardDate')?.value || ''; }
     function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}:${selectedDate()}`; }
     function renderSaveState() {
@@ -146,7 +175,26 @@
         panel.hidden=!state.districtId;
         $('#tdSelectedDistrictName').textContent=state.board?.distrito?.nombre||districtSummary(state.districtId)?.nombre||'';
         const circuits=state.board?.circuitos||[];
-        container.innerHTML=circuits.length?circuits.map(item=>`<button class="td-circuit-toggle ${Number(item.id)===state.circuitId?'is-open':''}" type="button" data-circuit-toggle="${item.id}"><span>${esc(item.nombre)}</span><span>${Number(item.id)===state.circuitId?'⌃':'⌄'}</span></button>`).join(''):'<div class="td-empty-small">Este distrito no tiene circuitos activos.</div>';
+        const palette=[
+            {accent:'#1267d5',soft:'#eef5ff',rgb:'18,103,213'},
+            {accent:'#07988f',soft:'#edf9f7',rgb:'7,152,143'},
+            {accent:'#7c3aed',soft:'#f5f0ff',rgb:'124,58,237'},
+            {accent:'#d97706',soft:'#fff7e8',rgb:'217,119,6'},
+            {accent:'#db2777',soft:'#fff0f6',rgb:'219,39,119'},
+        ];
+        container.innerHTML=circuits.length?circuits.map((item,index)=>{
+            const color=palette[index%palette.length];const selected=Number(item.id)===state.circuitId;
+            return `<button class="td-circuit-toggle ${selected?'is-open':''}" type="button" data-circuit-toggle="${item.id}" aria-pressed="${selected}" style="--circuit-accent:${color.accent};--circuit-soft:${color.soft};--circuit-rgb:${color.rgb}"><i aria-hidden="true">${index+1}</i><span>${esc(item.nombre)}</span><small>${selected?'Seleccionado':'Seleccionar'}</small></button>`;
+        }).join(''):'<div class="td-empty-small">Este distrito no tiene circuitos activos.</div>';
+        const selectedIndex=circuits.findIndex(item=>Number(item.id)===state.circuitId);
+        const workspace=$('.td-workspace');
+        if(selectedIndex>=0){
+            const color=palette[selectedIndex%palette.length];
+            [panel,workspace].forEach(element=>{element.style.setProperty('--selected-circuit-accent',color.accent);element.style.setProperty('--selected-circuit-soft',color.soft);element.style.setProperty('--selected-circuit-rgb',color.rgb);});
+            workspace?.classList.add('has-circuit-accent');panel.classList.add('has-circuit-accent');
+        }else{
+            [panel,workspace].forEach(element=>{element?.style.removeProperty('--selected-circuit-accent');element?.style.removeProperty('--selected-circuit-soft');element?.style.removeProperty('--selected-circuit-rgb');element?.classList.remove('has-circuit-accent');});
+        }
     }
 
     async function loadBoard() {

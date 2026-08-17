@@ -192,6 +192,11 @@ if ($path === '/admin/rutas/importar' && $method === 'POST') {
     return;
 }
 
+if ($path === '/admin/circuitos/rutas/importar' && $method === 'POST') {
+    (new AdminController())->importCircuitRoutes();
+    return;
+}
+
 if ($path === '/insignias' && $method === 'GET') {
     (new InsigniasController())->index();
     return;

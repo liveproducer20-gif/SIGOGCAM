@@ -119,6 +119,18 @@ def crear_circuito(payload: dict = Body(...), user: dict = Depends(require_permi
     return circuit_action(lambda: result_created(repo.create_circuit(payload), "Circuito creado correctamente"))
 
 
+@router.post("/circuitos/{item_id}/rutas/importar")
+def importar_rutas_circuito(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("circuitos.rutas"))):
+    def action():
+        result = repo.import_routes(
+            payload.get("filas", []), bool(payload.get("confirmar", False)),
+            payload.get("accionesExistentes"), item_id,
+        )
+        message = "Importación completada" if payload.get("confirmar") else "Archivo validado correctamente"
+        return ok(result, message)
+    return circuit_action(action)
+
+
 @router.put("/circuitos/{item_id}")
 def actualizar_circuito(item_id: int, payload: dict = Body(...), user: dict = Depends(require_permission("circuitos.editar"))):
     def action():

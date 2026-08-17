@@ -160,6 +160,9 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 - **Archivos:** `seed_agente1_100.py`, `seed_fix.py`, `seed_personal.py`, `seed_remaining.py`, `cleanup_personal.py`, `check_ids.py`, `verify_personal.py`, `check_col.py` (raíz y `backend_python/`)
 - **Detalle:** Scripts puntuales de carga/limpieza en la raíz del producto; `seed-users.sql` crea usuarios con `password_hash = NULL` (origen de C3).
 - **Corrección:** Mover a `scripts/` o `tools/`, documentar su uso, y corregir la semilla para crear hashes reales.
+- **Auditoría de datos dejados por los seeds (2026-08-17):** los seeds crearon **180 cuentas** con datos aleatorios (nombres de listas, correos en dominios inventados `@seguraep.gob.ec`/`@gcam.gob.ec`/`@seguridad.gob.ec` — el dominio real es `@bitsac.local` —, teléfonos y fechas aleatorias, `password_hash = NULL`).
+  - **Corregido:** cédulas de las 180 cuentas — todas con dígito verificador inválido (generadas sin el algoritmo ecuatoriano) y 55 con tercer dígito > 5 — normalizadas a cédulas válidas (migración `database/20260817_normalizar_cedulas_seed.sql`, idempotente; verificado: 0 inválidas, 0 duplicados). También se corrigió la única `fecha_ingreso` con 17 años (id 2648).
+  - **Pendiente (datos de la organización, NO de seeds):** 120 cédulas placeholder de 11 dígitos (`09900000001-120`) y 27 cédulas secuenciales del bloque admin (p. ej. `0923456790-9`, `0910000010-3`) con colisiones de primeros 9 dígitos — requieren las cédulas reales de la organización; recalcular el dígito verificador crearía duplicados. Teléfonos placeholder duplicados (`0990000011-13`). Correos inventados de las 180 cuentas seed: reemplazarlos por datos reales o aceptarlos como cuentas de prueba.
 
 #### B2. Migraciones SQL manuales sin sistema de versionado
 - **Archivo:** `database/` (19 scripts con prefijo de fecha)
@@ -172,19 +175,32 @@ El frontend PHP actúa como **proxy autenticado** hacia la API Python: valida la
 - **Corrección:** Trasladar a un repositorio/documentación privada fuera del código.
 
 #### B4. Sin pruebas automatizadas
-- **Detalle:** No hay suite de tests (pytest/PHPUnit) en el repositorio; la validación es manual (scripts `verify_*.py`, sintaxis).
-- **Corrección:** Añadir al menos tests de autenticación y control de acceso (los hallazgos C1-C2 se habrían detectado con un test por endpoint).
+- **Detalle:** No había suite de tests (pytest/PHPUnit) en el repositorio; la validación era manual (scripts `verify_*.py`, sintaxis).
+- **Avance (2026-08-17):** suite de pytest en `backend_python/tests/` (215 pruebas) con tres bloques:
+  1. Saneamiento de entrada (39): `escape_like`, `strip_control_chars`, `clean_text` y middleware de cuerpos JSON (flujo completo + registro en la app).
+  2. Autenticación (16): login OK/401/422, normalización de correo, fallback por cédula (C3 documentado), hash sha256 rechazado, tokens inválidos/manipulados/expirados/secretos distintos.
+  3. Control de acceso por endpoint (160): un test por mutación de `configuracion` (9×3) y `distribucion` (21×3) — 403 sin permiso fino, 200/201 con él —, más lecturas con/sin `configuracion.ver`/`distribucion.ver` y el bypass de rol ADMINISTRADOR (A7 documentado). Los hallazgos C1-C2 se habrían detectado con estas pruebas.
+  - Requiere `pytest` y `httpx` en el venv (dependencias de desarrollo, no en `requirements.txt`). Ejecutar con `cd backend_python && .venv/Scripts/python.exe -m pytest tests/ -q`.
+- **Corrección pendiente:** extender el patrón de tests por endpoint al resto de módulos (personal, asistencia, admin) y añadir cobertura de integración con BD de prueba.
 
 #### B5. CORS con lista fija
 - **Archivo:** `backend_python/app/core/config.py` (`cors_origins` = solo localhost)
 - **Detalle:** Correcto por defecto, pero en producción el origen real del frontend debe agregarse explícitamente o el navegador bloqueará llamadas.
 - **Corrección:** Configurar `cors_origins` vía entorno con la lista exacta de dominios autorizados.
 
+#### B6. Columnas 100% NULL en `dbo.personal` (horario/rotación/foto)
+- **Decisión (2026-08-17):** tras verificar las 8 columnas 100% NULL (329/329 filas) contra catálogos, código de la app (0 referencias en Python/PHP/JS) y objetos de BD (0 SPs/vistas/triggers), se decidió **no rellenar** y **eliminar solo `foto_perfil_url`**.
+  - **Eliminada:** `foto_perfil_url` (`NVARCHAR(MAX)`) — sin FK, sin catálogo, sin código ni objetos que la usen y sin feature de fotos; es la columna muerta más costosa. Migración `database/20260817_eliminar_foto_perfil_url.sql` (idempotente, aplicada; 329 filas intactas).
+  - **Conservadas:** `horario_id`, `intervalo_rotacion_id`, `tipo_franco_id`, `plantilla_rotacion_id`, `fecha_inicio_rotacion`, `orden_inicio_rotacion` — son el esquema de la funcionalidad de turnos/rotación del personal: tienen FKs a catálogos con datos (`Horarios` 3 turnos, `Intervalos de Rotación` 4, `Tipos de Franco` 5, `Tipos de Rotación` 2, `plantillas_rotacion` 1 fila). Rellenarlas sin conocer los turnos reales de cada agente fabricaría datos; NULL es el estado correcto hasta implementar la funcionalidad.
+  - **Conservada:** `observacion` — NULL significa "sin nota" (semánticamente válido); el SP `sp_agregar_puesto_servicio` y `vw_historial_movimientos` que la mencionan usan la columna de otras tablas (`servicio_puestos`, `historial_movimientos_personal`), no la de `personal`.
+  - **Limpiado (2026-08-17):** `tipo_rotacion_id` tenía 29 valores (20 Fija / 9 Rotación, ids 122/123 del catálogo) pero eran **residuo de seed**: los 29 forman el bloque contiguo de ids 1388-1416 (primer lote importado el 2026-08-04; el resto del personal, lote 2026-08-11, no tiene el campo), ninguno tiene los parámetros de rotación (plantilla/intervalo/fecha de inicio/orden/franco) y la mezcla uniforme en todos los roles no sigue lógica de dominio. Se pusieron en NULL (migración `database/20260817_limpiar_tipo_rotacion_id.sql`, idempotente; recuperable porque solo eran 2 ids de catálogo).
+
 ---
 
 ## 4. Aspectos positivos (mantener)
 
 - **SQL parametrizado en toda la API** (pyodbc `?` placeholders); los pocos `f-strings` interpolan solo identificadores fijos (listas de columnas, cláusulas armadas con condiciones controladas). No se encontró inyección SQL directa.
+- **Saneamiento de entrada endurecido (2026-08-17):** nuevo `app/core/sanitize.py` (`strip_control_chars`, `clean_text`, `escape_like`) + middleware global `app/middleware/inputs.py` que elimina caracteres de control (incluidos bytes nulos) de todos los cuerpos JSON entrantes, y escape de comodines `LIKE` (`% _ [ \`) con `ESCAPE '\'` en las 6 búsquedas de la API (personal, soporte, admin/circuitos, distribución) — cierra la ampliación de filtros tipo `%` (fuga de datos por filtro). El login ya normalizaba correo vía Pydantic (`strip`+`lower`).
 - **Salida HTML escapada** en vistas (`htmlspecialchars`, helpers `esc()`/`$e()` en JS).
 - **Secretos fuera del repositorio**: `.env` en `.gitignore`; solo hay `.env.example` en Git. `Backup/` excluido.
 - **Contraseñas con bcrypt** (passlib) cuando existe hash.

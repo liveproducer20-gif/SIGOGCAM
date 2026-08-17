@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.middleware.errors import register_error_handlers
+from app.middleware.inputs import InputSanitizationMiddleware
 from app.modules.admin.routes import router as admin_router
 from app.modules.anuncios.routes import router as anuncios_router
 from app.modules.auth.routes import router as auth_router
@@ -35,6 +36,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(InputSanitizationMiddleware)
 
 register_error_handlers(app)
 

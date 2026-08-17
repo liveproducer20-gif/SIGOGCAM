@@ -28,7 +28,6 @@ $open = static fn(array $routes): string => in_array($path, $routes, true) ? ' i
             <div class="sigo-submenu">
                 <?php if ($sidebarCan(['personal.ver'])): ?><a class="<?= $active(['/personal']) ?>" href="/personal">Personal</a><?php endif; ?>
                 <?php if ($sidebarCan(['catalogos.ver'])): ?><a href="/admin?tab=catalogos">Catálogos</a><?php endif; ?>
-                <?php if ($sidebarCan(['roles.ver', 'permisos.ver'])): ?><a href="/configuracion">Roles y permisos</a><?php endif; ?>
                 <?php if ($sidebarCan(['lugares_servicio.ver'])): ?><a href="/admin?tab=lugares">Lugares de servicio</a><?php endif; ?>
                 <?php if ($sidebarCan(['rutas.ver'])): ?><a href="/admin?tab=rutas">Rutas</a><?php endif; ?>
                 <?php if ($sidebarCan(['circuitos.ver'])): ?><a href="/admin?tab=circuitos">Circuitos</a><?php endif; ?>

@@ -4,6 +4,7 @@ import unicodedata
 import pyodbc
 
 from app.core.db import get_connection
+from app.core.sanitize import escape_like
 
 
 def _rows(cursor) -> list[dict]:
@@ -147,7 +148,7 @@ def admin_references() -> dict:
 
 
 def list_circuits(district_id: int | None = None, search: str | None = None) -> list[dict]:
-    term = (search or "").strip()
+    term = escape_like((search or "").strip())
     rows = _query(
         """
         SELECT c.id,c.distrito_id,d.nombre AS distrito,c.nombre,
@@ -170,7 +171,7 @@ def list_circuits(district_id: int | None = None, search: str | None = None) -> 
         ) ra
         WHERE c.deleted_at IS NULL
           AND (? IS NULL OR c.distrito_id=?)
-          AND (?='' OR c.nombre LIKE '%'+?+'%' OR d.nombre LIKE '%'+?+'%')
+          AND (?='' OR c.nombre LIKE '%'+?+'%' ESCAPE '\\' OR d.nombre LIKE '%'+?+'%' ESCAPE '\\')
         ORDER BY d.nombre,c.nombre
         """,
         district_id,district_id,term,term,term,
@@ -509,7 +510,29 @@ def _route_import_bool(value, default: bool) -> tuple[bool, bool]:
     return default, False
 
 
-def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dict | None = None) -> dict:
+def _attach_route_to_circuit(cursor, circuit_id: int, route_id: int) -> bool:
+    cursor.execute(
+        """SELECT cr.circuito_id,c.nombre FROM dbo.circuito_rutas cr
+           INNER JOIN dbo.circuitos c ON c.id=cr.circuito_id
+           WHERE cr.ruta_id=? AND cr.deleted_at IS NULL AND c.deleted_at IS NULL""",
+        route_id,
+    )
+    current = cursor.fetchone()
+    if current and int(current[0]) != circuit_id:
+        raise ValueError(f"La ruta ya pertenece al circuito {current[1]}")
+    if current:
+        return False
+    cursor.execute(
+        """UPDATE dbo.circuito_rutas SET deleted_at=NULL,fecha_creacion=SYSDATETIME()
+           WHERE id=(SELECT TOP 1 id FROM dbo.circuito_rutas WHERE circuito_id=? AND ruta_id=? ORDER BY id DESC)""",
+        circuit_id, route_id,
+    )
+    if cursor.rowcount == 0:
+        cursor.execute("INSERT INTO dbo.circuito_rutas(circuito_id,ruta_id) VALUES(?,?)", circuit_id, route_id)
+    return True
+
+
+def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dict | None = None, circuit_id: int | None = None) -> dict:
     if not isinstance(rows, list) or not rows:
         raise ValueError("El archivo CSV no contiene registros")
     if len(rows) > 2000:
@@ -518,6 +541,14 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
 
     with get_connection() as connection:
         cursor = connection.cursor()
+        circuit = None
+        circuit_id = int(circuit_id or 0)
+        if circuit_id:
+            cursor.execute("SELECT id,nombre,distrito_id FROM dbo.circuitos WHERE id=? AND activo=1 AND deleted_at IS NULL", circuit_id)
+            circuit_row = cursor.fetchone()
+            if circuit_row is None:
+                raise ValueError("Circuito no encontrado")
+            circuit = {"id":int(circuit_row[0]),"nombre":str(circuit_row[1]),"distrito_id":int(circuit_row[2])}
         cursor.execute("""SELECT d.id,d.nombre FROM dbo.catalogo_detalles d
                           INNER JOIN dbo.catalogos c ON c.id=d.catalogo_id
                           WHERE c.codigo='DISTRITOS' AND c.estado=1 AND d.estado=1""")
@@ -533,6 +564,12 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
         existing: dict[tuple[str, int, int], tuple[int, str]] = {}
         for item_id, name, district_id, shift_id in cursor.fetchall():
             existing[(_route_import_key(name), int(district_id or 0), int(shift_id or 0))] = (int(item_id), str(name))
+        cursor.execute(
+            """SELECT cr.ruta_id,cr.circuito_id,c.nombre FROM dbo.circuito_rutas cr
+               INNER JOIN dbo.circuitos c ON c.id=cr.circuito_id
+               WHERE cr.deleted_at IS NULL AND c.deleted_at IS NULL"""
+        )
+        route_circuits = {int(route_id):(int(owner_id),str(owner_name)) for route_id,owner_id,owner_name in cursor.fetchall()}
 
         reviewed: list[dict] = []
         payloads: list[dict] = []
@@ -577,12 +614,17 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                 errors.append("Asignar encargado debe ser SI o NO")
             if not active_valid:
                 errors.append("Activa debe ser SI o NO")
+            if circuit and district and int(district[0]) != circuit["distrito_id"]:
+                errors.append("El distrito de la ruta no coincide con el distrito del circuito")
 
             duplicate_key = None
             existing_route = None
             if name and district and shift:
                 duplicate_key = (_route_import_key(name), district[0], shift[0])
                 existing_route = existing.get(duplicate_key)
+                owner = route_circuits.get(int(existing_route[0])) if existing_route else None
+                if circuit and owner and owner[0] != circuit_id:
+                    errors.append(f"La ruta ya pertenece al circuito {owner[1]}")
                 if duplicate_key in file_keys:
                     errors.append("Ruta duplicada dentro del archivo CSV")
                 else:
@@ -605,33 +647,40 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                 "errores": errors or (["Ruta existente"] if existing_route else []),
             })
 
-        created = updated = omitted = 0
+        created = updated = omitted = linked = 0
         if confirm:
             for data in payloads:
                 existing_id = data.pop("existenteId")
                 if existing_id:
-                    action = existing_actions.get(str(data["fila"]), "OMITIR")
-                    if action != "ACTUALIZAR":
+                    action = existing_actions.get(str(data["fila"]), "VINCULAR" if circuit else "OMITIR")
+                    if action == "OMITIR":
                         omitted += 1
                         continue
-                    cursor.execute("""UPDATE dbo.rutas SET nombre=?,distrito_id=?,turno_id=?,hora_inicio=?,hora_fin=?,
-                                      asignar_encargado=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
-                                   data["nombre"],data["distritoId"],data["turnoId"],data["horaInicio"],data["horaFin"],
-                                   1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0,existing_id)
-                    updated += 1
+                    if action == "ACTUALIZAR":
+                        cursor.execute("""UPDATE dbo.rutas SET nombre=?,distrito_id=?,turno_id=?,hora_inicio=?,hora_fin=?,
+                                          asignar_encargado=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
+                                       data["nombre"],data["distritoId"],data["turnoId"],data["horaInicio"],data["horaFin"],
+                                       1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0,existing_id)
+                        updated += 1
+                    if circuit and _attach_route_to_circuit(cursor,circuit_id,int(existing_id)):
+                        linked += 1
                 else:
                     cursor.execute("""INSERT INTO dbo.rutas
                                       (nombre,distrito_id,turno_id,hora_inicio,hora_fin,asignar_encargado,activo,fecha_creacion)
-                                      VALUES (?,?,?,?,?,?,?,SYSDATETIME())""",
+                                      OUTPUT INSERTED.id VALUES (?,?,?,?,?,?,?,SYSDATETIME())""",
                                    data["nombre"],data["distritoId"],data["turnoId"],data["horaInicio"],data["horaFin"],
                                    1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0)
+                    new_route_id = int(cursor.fetchone()[0])
                     created += 1
+                    if circuit and _attach_route_to_circuit(cursor,circuit_id,new_route_id):
+                        linked += 1
         valid_count = sum(1 for item in reviewed if item["estado"] == "VALIDA")
         existing_count = sum(1 for item in reviewed if item["estado"] == "EXISTENTE")
         error_count = sum(1 for item in reviewed if item["estado"] == "ERROR")
         return {"filas": reviewed, "total": len(reviewed), "validos": valid_count,
                 "existentes": existing_count, "rechazados": error_count,
-                "creados": created, "actualizados": updated, "omitidos": omitted + error_count}
+                "creados": created, "actualizados": updated, "omitidos": omitted + error_count,
+                "vinculados": linked, "circuito": circuit}
 
 
 def delete_route(item_id: int) -> None:

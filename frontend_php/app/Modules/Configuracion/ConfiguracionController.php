@@ -21,6 +21,11 @@ final class ConfiguracionController
         $permissions = [];
         $modules = [];
         $selectedRoleId = (int)($_GET['rol_id'] ?? 0);
+        $tab = (string)($_GET['tab'] ?? 'resumen');
+        $validTabs = ['resumen', 'permisos', 'menu', 'alcance', 'condiciones', 'campos', 'versiones', 'auditoria', 'cambios'];
+        if (!in_array($tab, $validTabs, true)) {
+            $tab = 'resumen';
+        }
         $menu = [];
         $scopes = [];
         $conditions = [];
@@ -60,6 +65,7 @@ final class ConfiguracionController
             'permissions' => $permissions,
             'modules' => $modules,
             'selectedRoleId' => $selectedRoleId,
+            'tab' => $tab,
             'menu' => $menu,
             'scopes' => $scopes,
             'conditions' => $conditions,
@@ -69,6 +75,7 @@ final class ConfiguracionController
             'cambios' => $cambios,
             'message' => $message,
             'error' => $error,
+            'pageScripts' => ['/assets/js/configuracion.js'],
         ]);
     }
 

@@ -173,3 +173,13 @@ Aunque todos los módulos principales ya están migrados y funcionales, quedan m
 
 - Auditoría detallada de cada cambio de configuración.
 - Historial visual de versiones con comparación entre versiones.
+
+## Menú dinámico (mi-menu / build_tree)
+
+El menú dinámico que consume el dashboard se deriva de los **permisos del rol** (migración `database/20260817_estructura_menu.sql`):
+
+- **`dbo.modulos_sistema`**: catálogo de módulos con ruta real, icono (glifos del sidebar, `NCHAR(0xNNNN)`) y `estado` (los módulos sin página están desactivados).
+- **`dbo.rol_menu_configuracion`**: configuración por rol (visible, orden, grupo, `modulo_padre_id`, renombres). Se reconstruye desde permisos: cada rol ve exactamente lo que su permiso habilita, agrupado igual que el sidebar:
+  - Grupos: **Administración** (Personal, Catálogos, Lugares, Rutas, Circuitos, Grados, EAS, Móviles, Asignaciones, Mantenimiento), **Distribución** (Geográfica, Tablero, Dashboard), **Eventos y anuncios** (Eventos, Anuncios).
+  - Hojas: Dashboard (página de inicio), Panel de Asistencia, Cartillas, Insignias, Soporte, Configuración, Mi perfil.
+- El dashboard renderiza el árbol (`hijos` como enlaces del grupo, hojas como tarjetas) y el Constructor visual de menú (Configuración → Menú) permite renombrar/ocultar/reordenar por rol sobre esta base.

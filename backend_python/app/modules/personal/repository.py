@@ -4,6 +4,7 @@ from datetime import date
 from fastapi import HTTPException
 
 from app.core.db import get_connection
+from app.core.sanitize import escape_like
 from app.core.security import hash_password
 
 
@@ -36,11 +37,11 @@ def list_people_paginated(
     where_base = "WHERE 1 = 1"
 
     if search:
-        like = f"%{search.lower()}%"
+        like = f"%{escape_like(search.lower())}%"
         cond = (
-            "AND (LOWER(p.nombres) LIKE ? OR LOWER(p.apellidos) LIKE ? "
-            "OR LOWER(p.cedula) LIKE ? OR LOWER(p.correo_institucional) LIKE ? "
-            "OR LOWER(r.nombre) LIKE ? OR LOWER(g.nombre) LIKE ?)"
+            "AND (LOWER(p.nombres) LIKE ? ESCAPE '\\' OR LOWER(p.apellidos) LIKE ? ESCAPE '\\' "
+            "OR LOWER(p.cedula) LIKE ? ESCAPE '\\' OR LOWER(p.correo_institucional) LIKE ? ESCAPE '\\' "
+            "OR LOWER(r.nombre) LIKE ? ESCAPE '\\' OR LOWER(g.nombre) LIKE ? ESCAPE '\\')"
         )
         params_count.extend([like] * 6)
         params_data.extend([like] * 6)
@@ -155,13 +156,13 @@ def list_people(search: str | None = None, limit: int = 200) -> list[dict]:
     if search:
         where += """
           AND (
-            LOWER(p.nombres) LIKE ?
-            OR LOWER(p.apellidos) LIKE ?
-            OR LOWER(p.cedula) LIKE ?
-            OR LOWER(p.correo_institucional) LIKE ?
+            LOWER(p.nombres) LIKE ? ESCAPE '\\'
+            OR LOWER(p.apellidos) LIKE ? ESCAPE '\\'
+            OR LOWER(p.cedula) LIKE ? ESCAPE '\\'
+            OR LOWER(p.correo_institucional) LIKE ? ESCAPE '\\'
           )
         """
-        term = f"%{search.lower()}%"
+        term = f"%{escape_like(search.lower())}%"
         params.extend([term, term, term, term])
 
     sql = f"""

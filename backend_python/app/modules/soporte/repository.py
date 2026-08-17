@@ -1,4 +1,5 @@
 from app.core.db import get_connection
+from app.core.sanitize import escape_like
 
 
 def _rows(cursor) -> list[dict]:
@@ -49,8 +50,8 @@ def list_tickets(search: str | None = None, limit: int = 50, user_id: int | None
         where += " AND a.usuario_id=?"
         params.append(user_id)
     if search:
-        where += " AND (LOWER(a.titulo) LIKE ? OR LOWER(a.descripcion) LIKE ? OR LOWER(a.modulo) LIKE ?)"
-        term = f"%{search.lower()}%"
+        where += " AND (LOWER(a.titulo) LIKE ? ESCAPE '\\' OR LOWER(a.descripcion) LIKE ? ESCAPE '\\' OR LOWER(a.modulo) LIKE ? ESCAPE '\\')"
+        term = f"%{escape_like(search.lower())}%"
         params.extend([term, term, term])
 
     with get_connection() as connection:

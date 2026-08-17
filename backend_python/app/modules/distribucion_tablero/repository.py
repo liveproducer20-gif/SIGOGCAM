@@ -7,6 +7,7 @@ from decimal import Decimal
 from fastapi import HTTPException
 
 from app.core.db import get_connection
+from app.core.sanitize import escape_like
 
 
 def _rows(cursor) -> list[dict]:
@@ -1493,8 +1494,8 @@ def get_agents_for_modal(data: dict) -> dict:
             where.append("UPPER(ISNULL(ep.nombre, '')) = UPPER(?)")
             params.append(str(data["estado"]))
         if data.get("search"):
-            where.append("(p.nombres LIKE ? OR p.apellidos LIKE ? OR p.cedula LIKE ?)")
-            search = f"%{data['search']}%"
+            where.append("(p.nombres LIKE ? ESCAPE '\\' OR p.apellidos LIKE ? ESCAPE '\\' OR p.cedula LIKE ? ESCAPE '\\')")
+            search = f"%{escape_like(data['search'])}%"
             params.extend([search, search, search])
 
         where_sql = " AND ".join(where)

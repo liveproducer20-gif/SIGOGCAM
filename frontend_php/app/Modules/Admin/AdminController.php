@@ -67,8 +67,8 @@ final class AdminController
             'message' => $message,
             'error' => $error,
             'importPreview' => $importPreview,
-            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260817-service-place-csv-v2'],
-            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260817-service-place-csv-v2'],
+            'pageStyles' => ['/assets/css/admin-circuitos.css?v=20260817-circuit-route-import'],
+            'pageScripts' => ['/assets/js/admin-circuitos.js?v=20260817-circuit-route-import'],
             'pageTitle' => 'Administración',
             'pageDescription' => 'Gestión integral de recursos y catálogos operativos',
         ]);
@@ -215,6 +215,52 @@ final class AdminController
         }
     }
 
+    public function importCircuitRoutes(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        $_GET['tab'] = 'circuitos';
+        if (!$this->can('circuitos.rutas', $user)) {
+            http_response_code(403);
+            $this->index('No tiene permiso para importar rutas en circuitos.');
+            return;
+        }
+        try {
+            $action = (string)($_POST['import_action'] ?? 'preview');
+            if ($action === 'confirm') {
+                $token = (string)($_POST['import_token'] ?? '');
+                $stored = $_SESSION['circuitos_rutas_csv_import'][$token] ?? null;
+                if (!is_array($stored) || empty($stored['filas']) || empty($stored['circuito_id'])) {
+                    throw new \RuntimeException('La vista previa expiró. Seleccione nuevamente el circuito y el archivo CSV.');
+                }
+                $result = $this->api()->post('admin/circuitos/' . (int)$stored['circuito_id'] . '/rutas/importar', [
+                    'filas'=>$stored['filas'], 'confirmar'=>true,
+                    'accionesExistentes'=>(array)($_POST['existing_action'] ?? []),
+                ])['datos'] ?? [];
+                unset($_SESSION['circuitos_rutas_csv_import'][$token]);
+                $this->index(sprintf(
+                    'Importación completada: %d ruta(s) creada(s), %d actualizada(s), %d vinculada(s) y %d omitida(s).',
+                    (int)($result['creados'] ?? 0), (int)($result['actualizados'] ?? 0),
+                    (int)($result['vinculados'] ?? 0), (int)($result['omitidos'] ?? 0)
+                ));
+                return;
+            }
+            $circuitId = (int)($_POST['circuito_id'] ?? 0);
+            if ($circuitId <= 0) throw new \RuntimeException('Seleccione el circuito al que se asignarán las rutas.');
+            $rows = $this->readRouteCsv($_FILES['archivo_csv'] ?? []);
+            $preview = $this->api()->post('admin/circuitos/' . $circuitId . '/rutas/importar', [
+                'filas'=>$rows, 'confirmar'=>false,
+            ])['datos'] ?? [];
+            $token = bin2hex(random_bytes(16));
+            $_SESSION['circuitos_rutas_csv_import'] = [$token=>['filas'=>$rows,'circuito_id'=>$circuitId]];
+            $preview['token']=$token;
+            $preview['tipo']='circuito-rutas';
+            $this->index(null,$preview);
+        } catch (\Throwable $exception) {
+            $this->index($exception->getMessage());
+        }
+    }
+
     public function importServicePlaces(): void
     {
         if (!AuthSession::check()) { header('Location: /'); return; }
@@ -315,7 +361,7 @@ final class AdminController
             'movil' => ['moviles', ['numeroMovil'=>$this->text('numero_movil'),'placa'=>$this->text('placa'),'tipoMovilId'=>(int)($_POST['tipo_movil_id'] ?? 0),'estadoMovilId'=>(int)($_POST['estado_movil_id'] ?? 0),'kilometrajeActual'=>(int)($_POST['kilometraje_actual'] ?? 0),'kilometrajeUltimoMantenimiento'=>(int)($_POST['kilometraje_ultimo_mantenimiento'] ?? 0),'proximoMantenimiento'=>$this->nullableInt($_POST['proximo_mantenimiento'] ?? null),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'ruta' => ['rutas', ['nombre'=>$this->text('nombre'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'asignarEncargado'=>isset($_POST['asignar_encargado']),'activo'=>isset($_POST['activo'])]],
             'circuito' => ['circuitos', ['distritoId'=>(int)($_POST['distrito_id'] ?? 0),'nombre'=>$this->text('nombre'),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'lugarFormacion'=>$this->text('lugar_formacion'),'consignas'=>$this->text('consignas'),'observaciones'=>$this->text('observaciones'),'perimetro'=>$this->text('perimetro'),'rutaIds'=>array_values(array_map('intval',(array)($_POST['ruta_ids'] ?? [])))]],
-            'lugar' => ['lugares-servicio', ['nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>isset($_POST['activo'])]],
+            'lugar' => ['lugares-servicio', ['nombre'=>$this->firstText('nombre'),'direccion'=>$this->text('direccion') ?: $this->firstText('nombre'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnoId'=>$this->nullableInt($_POST['turno_id'] ?? null),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>$this->boolValue('activo',true)]],
             'grado' => ['grados', ['nombre'=>$this->text('nombre'),'activo'=>isset($_POST['activo'])]],
             'asignacion' => ['movil-eas-asignaciones', ['easId'=>(int)($_POST['eas_id'] ?? 0),'movilId'=>(int)($_POST['movil_id'] ?? 0),'estadoAsignacionId'=>(int)($_POST['estado_asignacion_id'] ?? 0),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'catalogo_detalle' => ['catalogos', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'descripcion'=>$this->text('descripcion'),'orden'=>(int)($_POST['orden'] ?? 0),'asignarEncargado'=>isset($_POST['asignar_encargado']),'estado'=>isset($_POST['estado'])]],
@@ -418,6 +464,8 @@ final class AdminController
 
     private function api(): ApiClient { return new ApiClient(Config::get('API_BASE_URL'), AuthSession::token()); }
     private function text(string $key): string { return trim((string)($_POST[$key] ?? '')); }
+    private function firstText(string $key): string { $value=$_POST[$key] ?? ''; return trim((string)(is_array($value) ? ($value[0] ?? '') : $value)); }
+    private function boolValue(string $key, bool $default=false): bool { if (!array_key_exists($key,$_POST)) return $default; return !in_array(strtolower(trim((string)$_POST[$key])),['0','false','no','off'],true); }
     private function nullableText(string $key): ?string { $value=$this->text($key); return $value===''?null:$value; }
     private function nullableInt(mixed $value): ?int { $value=trim((string)$value); return $value===''?null:(int)$value; }
     private function nullableFloat(mixed $value): ?float { $value=trim((string)$value); return $value===''?null:(float)$value; }

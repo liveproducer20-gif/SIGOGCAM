@@ -28,26 +28,58 @@ $kpis = [
 
     <h2 class="dashboard-section-title">Módulos disponibles</h2>
     <div class="dashboard-modules">
-        <?php if ($can(['cartillas.ver', 'cartillas.generar'])): ?>
-        <article class="dashboard-module" data-art="▤"><i class="dashboard-module-icon">▤</i><h3>Cartillas</h3><p>Generador institucional de reportes y procedimientos operativos.</p><div class="dashboard-module-actions"><a href="/cartillas">Abrir</a></div></article>
-        <?php endif; ?>
-        <?php if ($can(['eventos.ver', 'eventos.crear'])): ?>
-        <article class="dashboard-module" data-art="▦"><i class="dashboard-module-icon">◖</i><h3>Eventos y anuncios</h3><p>Gestión de convocatorias, publicaciones y notificaciones institucionales.</p><div class="dashboard-module-actions"><a href="/eventos">Eventos</a><a class="secondary" href="/anuncios">Anuncios</a></div></article>
-        <?php endif; ?>
-        <?php if ($can(['administracion.ver', 'personal.ver', 'catalogos.ver'])): ?>
-        <article class="dashboard-module" data-art="♙"><i class="dashboard-module-icon">♙</i><h3>Administración</h3><p>Catálogos, personal, EAS, móviles, rutas y recursos institucionales.</p><div class="dashboard-module-actions"><a href="/personal">Personal</a><a class="secondary" href="/admin">Catálogos</a></div></article>
-        <?php endif; ?>
-        <?php if ($can(['distribucion.ver'])): ?>
-        <article class="dashboard-module" data-art="⌖"><i class="dashboard-module-icon">⌖</i><h3>Distribución geográfica</h3><p>Gestión de distritos, rutas, lugares de servicio y asignación territorial.</p><div class="dashboard-module-actions"><a href="/distribucion-geografica">Abrir mapa</a><?php if ($can(['distribucion.crear'])): ?><a class="secondary" href="/distribucion-geografica?crear=1">Crear punto</a><?php endif; ?></div></article>
-        <?php endif; ?>
-        <?php if ($can(['insignias.ver', 'cartillas.ver'])): ?>
-        <article class="dashboard-module" data-art="♜"><i class="dashboard-module-icon">♜</i><h3>Insignias</h3><p>Seguimiento de logros, reconocimientos y progreso institucional.</p><div class="dashboard-module-actions"><a href="/insignias">Abrir</a></div></article>
-        <?php endif; ?>
-        <?php if ($can(['soporte.ver', 'soporte.crear'])): ?>
-        <article class="dashboard-module" data-art="◉"><i class="dashboard-module-icon">◉</i><h3>Soporte</h3><p>Registro, clasificación y seguimiento de alertas internas.</p><div class="dashboard-module-actions"><a href="/soporte">Abrir</a></div></article>
-        <?php endif; ?>
-        <?php if ($can(['configuracion.ver', 'roles.ver', 'permisos.ver'])): ?>
-        <article class="dashboard-module" data-art="⚙"><i class="dashboard-module-icon">⚙</i><h3>Configuración</h3><p>Revisión de roles, permisos, alcances y estructura del menú.</p><div class="dashboard-module-actions"><a href="/configuracion">Abrir</a></div></article>
-        <?php endif; ?>
+        <?php
+        $moduleDescriptions = [
+            'dashboard' => 'Indicadores operativos y acceso rápido a los módulos.',
+            'administracion' => 'Personal, catálogos, EAS, móviles, rutas y recursos institucionales.',
+            'personal' => 'Gestión del personal operativo y administrativo.',
+            'catalogos' => 'Catálogos maestros de la plataforma.',
+            'lugares_servicio' => 'Puntos de servicio y su configuración.',
+            'rutas' => 'Recorridos operativos configurados.',
+            'circuitos' => 'Circuitos y agrupaciones de rutas.',
+            'grados' => 'Jerarquías y grados del personal.',
+            'eas' => 'Estaciones de Atención y Servicio.',
+            'moviles' => 'Unidades móviles registradas.',
+            'asignaciones' => 'Relaciones móvil–EAS.',
+            'mantenimiento' => 'Historial de mantenimiento de unidades.',
+            'distribucion' => 'Distribución territorial y asignación de personal.',
+            'distribucion_geografica' => 'Mapa de distritos, rutas y lugares de servicio.',
+            'distribucion_tablero' => 'Tablero de distribución operativa.',
+            'distribucion_dashboard' => 'Resumen consolidado de la distribución.',
+            'eventos_anuncios' => 'Convocatorias, publicaciones y notificaciones institucionales.',
+            'eventos' => 'Convocatorias y eventos operativos.',
+            'anuncios' => 'Publicaciones institucionales.',
+            'panel_asistencia' => 'Registro y control de asistencia del personal.',
+            'cartillas' => 'Generador de reportes y procedimientos operativos.',
+            'insignias' => 'Logros y reconocimientos institucionales.',
+            'soporte' => 'Alertas y solicitudes de soporte interno.',
+            'configuracion' => 'Roles, permisos, alcances y estructura del menú.',
+            'perfil' => 'Datos de tu cuenta y preferencias.',
+        ];
+        $menuItems = array_values(array_filter($menu ?? [], static fn($item) => !empty($item['habilitado'])));
+        ?>
+        <?php if (empty($menuItems)): ?>
+            <div class="empty-state">No hay módulos disponibles para tu rol</div>
+        <?php else: foreach ($menuItems as $item): $icon = $item['icono'] ?? '▫'; $desc = $moduleDescriptions[$item['codigo'] ?? ''] ?? ''; ?>
+            <?php if (!empty($item['hijos'])): ?>
+            <article class="dashboard-module" data-art="<?= $esc($icon) ?>">
+                <i class="dashboard-module-icon"><?= $esc($icon) ?></i>
+                <h3><?= $esc($item['nombre']) ?></h3>
+                <p><?= $esc($desc) ?></p>
+                <div class="dashboard-module-actions">
+                    <?php foreach (array_values(array_filter($item['hijos'], static fn($h) => !empty($h['habilitado']))) as $child): ?>
+                        <a href="<?= $esc($child['ruta'] ?? '#') ?>"><?= $esc($child['nombre']) ?></a>
+                    <?php endforeach; ?>
+                </div>
+            </article>
+            <?php else: ?>
+            <article class="dashboard-module" data-art="<?= $esc($icon) ?>">
+                <i class="dashboard-module-icon"><?= $esc($icon) ?></i>
+                <h3><?= $esc($item['nombre']) ?></h3>
+                <p><?= $esc($desc) ?></p>
+                <div class="dashboard-module-actions"><a href="<?= $esc($item['ruta'] ?? '#') ?>">Abrir</a></div>
+            </article>
+            <?php endif; ?>
+        <?php endforeach; endif; ?>
     </div>
 </section>
