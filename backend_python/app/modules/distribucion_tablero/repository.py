@@ -47,16 +47,27 @@ def get_route_info(route_id: int) -> dict:
     with get_connection() as connection:
         cursor = connection.cursor()
         cursor.execute("""
-            SELECT r.id, r.nombre, r.distrito_id, r.turno_id, r.hora_inicio, r.hora_fin,
-                   d.nombre AS distrito, t.nombre AS turno
+            SELECT r.id, r.nombre, r.distrito_id, r.hora_inicio, r.hora_fin,
+                   d.nombre AS distrito
             FROM dbo.rutas r
             INNER JOIN dbo.catalogo_detalles d ON d.id = r.distrito_id
-            LEFT JOIN dbo.turnos t ON t.id = r.turno_id
             WHERE r.id = ? AND r.activo = 1
         """, route_id)
         route = _row(cursor)
         if not route:
             raise HTTPException(404, "La ruta no existe o no esta activa")
+        # Attach turns from junction table
+        cursor.execute("""
+            SELECT t.id, t.nombre
+            FROM dbo.ruta_turnos rt
+            INNER JOIN dbo.turnos t ON t.id = rt.turno_id
+            WHERE rt.ruta_id = ?
+            ORDER BY t.id
+        """, route_id)
+        turns = [{"turno_id": int(r[0]), "turno": str(r[1])} for r in cursor.fetchall()]
+        route["turnos"] = turns
+        route["turno_id"] = turns[0]["turno_id"] if turns else None
+        route["turno"] = ", ".join(t["turno"] for t in turns) if turns else None
         return route
 
 
@@ -368,7 +379,7 @@ def get_assignments_by_route(route_id: int, fecha: date, turno: str) -> list[dic
 def get_assignment_history(route_id: int | None = None, fecha_desde: date | None = None, fecha_hasta: date | None = None) -> list[dict]:
     with get_connection() as connection:
         cursor = connection.cursor()
-        where = ["sh.deleted_at IS NULL"]
+        where: list[str] = []
         params: list = []
         if route_id:
             where.append("sh.ruta_id = ?")
@@ -389,7 +400,7 @@ def get_assignment_history(route_id: int | None = None, fecha_desde: date | None
             INNER JOIN dbo.vw_personal_detalle vp ON vp.id = sh.usuario_id
             INNER JOIN dbo.catalogo_detalles d ON d.id = sh.distrito_id
             INNER JOIN dbo.rutas r ON r.id = sh.ruta_id
-            WHERE {' AND '.join(where)}
+            {'WHERE ' + ' AND '.join(where) if where else ''}
             ORDER BY sh.fecha_ejecucion DESC
         """
         cursor.execute(sql, *params)
@@ -439,8 +450,46 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
         if not district:
             raise HTTPException(404, "El distrito seleccionado no existe o no esta activo")
 
+        if _is_eas_district(cursor, district_id):
+            slots = _eas_slots(cursor, district_id, shift_id)
+            cursor.execute("""
+                SELECT DISTINCT e.id,e.codigo,e.nombre
+                FROM dbo.circuito_eas ce
+                INNER JOIN dbo.circuitos c ON c.id=ce.circuito_id AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
+                INNER JOIN dbo.eas_estaciones e ON e.id=ce.eas_id AND e.activo=1
+                ORDER BY e.codigo,e.nombre
+            """, district_id)
+            eas_list = _rows(cursor)
+            routes_by_key: dict[tuple[int, int], dict] = {}
+            circuits_by_id: dict[int, dict] = {}
+            for slot in slots:
+                circuits_by_id.setdefault(int(slot["circuito_id"]), {
+                    "id": slot["circuito_id"], "nombre": slot["circuito"],
+                    "hora_inicio": None, "hora_fin": None, "lugar_formacion": None,
+                })
+                key = (int(slot["eas_id"]), int(slot["ruta_id"]))
+                route = routes_by_key.setdefault(key, {
+                    "id": slot["ruta_id"], "nombre": slot["ruta"], "distrito_id": district_id,
+                    "circuito_id": slot["circuito_id"], "circuito": slot["circuito"],
+                    "eas_id": slot["eas_id"], "eas_nombre": slot["eas_nombre"],
+                    "asignar_encargado": False, "lugares": 0,
+                    "hora_inicio": slot["hora_inicio"], "hora_fin": slot["hora_fin"], "configuraciones": [],
+                })
+                route["configuraciones"].append({
+                    "id": slot["configuracion_id"], "movil_id": slot["configuracion_movil_id"],
+                    "movil_informativo_id": slot["movil_id"],
+                    "numero_movil": slot["numero_movil"], "placa": slot["placa"],
+                    "orden": slot["orden"], "virtual": slot["configuracion_id"] is None,
+                    "sin_movil_configurado": slot["configuracion_movil_id"] is None,
+                })
+            return {"distrito": district, "turno": shift, "modo_eas": True,
+                    "eas": eas_list, "circuitos": list(circuits_by_id.values()), "moviles": [],
+                    "rutas": list(routes_by_key.values()), "fecha_distribucion": distribution_date,
+                    "distribucion_id": _distribution_id(cursor, district_id, shift_id, distribution_date),
+                    "encargados": []}
+
         cursor.execute("""
-            SELECT r.id, r.nombre, r.distrito_id, r.turno_id,
+            SELECT r.id, r.nombre, r.distrito_id,
                    CAST(CASE
                        WHEN r.asignar_encargado = 1 OR MAX(CASE
                            WHEN UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) = N'ENCARGADO DE RUTA' THEN 1
@@ -456,17 +505,20 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
                        THEN 1 ELSE 0
                    END) AS lugares
             FROM dbo.rutas r
+            INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id = r.id AND rt.turno_id = ?
             LEFT JOIN dbo.circuito_rutas cr ON cr.ruta_id=r.id AND cr.deleted_at IS NULL
             LEFT JOIN dbo.circuitos c ON c.id=cr.circuito_id AND c.activo=1 AND c.deleted_at IS NULL
             LEFT JOIN dbo.turnos t ON t.id = ?
             LEFT JOIN dbo.lugares_servicio ls ON ls.ruta_id = r.id AND ls.activo = 1
-                AND (ls.turno_id IS NULL OR ls.turno_id = ?)
+                AND EXISTS (
+                    SELECT 1 FROM dbo.lugar_turnos lt
+                    WHERE lt.lugar_servicio_id = ls.id AND lt.turno_id = ?
+                )
             WHERE r.activo = 1 AND r.distrito_id = ?
-              AND (r.turno_id IS NULL OR r.turno_id = ?)
-            GROUP BY r.id, r.nombre, r.distrito_id, r.turno_id, r.asignar_encargado, cr.circuito_id, c.nombre,
+            GROUP BY r.id, r.nombre, r.distrito_id, r.asignar_encargado, cr.circuito_id, c.nombre,
                      COALESCE(r.hora_inicio, t.hora_inicio), COALESCE(r.hora_fin, t.hora_fin)
             ORDER BY r.nombre
-        """, shift_id, shift_id, district_id, shift_id)
+        """, shift_id, shift_id, shift_id, district_id)
         routes = _rows(cursor)
         cursor.execute("""
             SELECT c.id,c.nombre,c.hora_inicio,c.hora_fin,c.lugar_formacion
@@ -520,6 +572,51 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
                 "encargados": managers}
 
 
+def _is_eas_district(cursor, district_id: int) -> bool:
+    cursor.execute("""
+        SELECT 1 FROM dbo.catalogo_detalles
+        WHERE id=? AND UPPER(LTRIM(RTRIM(nombre))) COLLATE Latin1_General_100_CI_AI=N'ESTACION DE ACCION SEGURA'
+    """, district_id)
+    return bool(cursor.fetchone())
+
+
+def _distribution_id(cursor, district_id: int, shift_id: int, distribution_date: date | None) -> int | None:
+    if distribution_date is None:
+        return None
+    cursor.execute("""SELECT TOP 1 id FROM dbo.distribuciones_personal
+                      WHERE distrito_id=? AND turno_id=? AND fecha_distribucion=? AND deleted_at IS NULL""",
+                   district_id, shift_id, distribution_date)
+    row = cursor.fetchone()
+    return int(row[0]) if row else None
+
+
+def _eas_slots(cursor, district_id: int, shift_id: int) -> list[dict]:
+    """One row per active configuration; a route without one gets a virtual slot."""
+    cursor.execute("""
+        SELECT ce.eas_id,e.nombre AS eas_nombre,cr.circuito_id,c.nombre AS circuito,
+               r.id AS ruta_id,r.nombre AS ruta,COALESCE(r.hora_inicio,t.hora_inicio) AS hora_inicio,
+               COALESCE(r.hora_fin,t.hora_fin) AS hora_fin,
+               ec.id AS configuracion_id,ec.movil_id AS configuracion_movil_id,
+               COALESCE(ec.movil_id,CASE WHEN ec.id IS NULL THEN mea.movil_id END) AS movil_id,
+               ec.orden,CASE WHEN ec.id IS NULL THEN fm.numero_movil ELSE m.numero_movil END AS numero_movil,
+               CASE WHEN ec.id IS NULL THEN fm.placa ELSE m.placa END AS placa
+        FROM dbo.circuito_eas ce
+        INNER JOIN dbo.eas_estaciones e ON e.id=ce.eas_id AND e.activo=1
+        INNER JOIN dbo.circuitos c ON c.id=ce.circuito_id AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
+        INNER JOIN dbo.circuito_rutas cr ON cr.circuito_id=c.id AND cr.deleted_at IS NULL
+        INNER JOIN dbo.rutas r ON r.id=cr.ruta_id AND r.activo=1 AND r.distrito_id=?
+        INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id=r.id AND rt.turno_id=?
+        LEFT JOIN dbo.turnos t ON t.id=?
+        LEFT JOIN dbo.eas_ruta_configuraciones ec ON ec.eas_id=e.id AND ec.ruta_id=r.id AND ec.activo=1
+        LEFT JOIN dbo.moviles m ON m.id=ec.movil_id AND m.activo=1
+        OUTER APPLY (SELECT TOP 1 a.movil_id FROM dbo.movil_eas_asignaciones a
+                     WHERE a.eas_id=e.id AND a.activo=1 ORDER BY a.fecha_asignacion DESC,a.id DESC) mea
+        LEFT JOIN dbo.moviles fm ON fm.id=mea.movil_id AND fm.activo=1
+        ORDER BY e.nombre,c.nombre,r.nombre,ISNULL(ec.orden,0),ec.id
+    """, district_id, district_id, shift_id, shift_id)
+    return _rows(cursor)
+
+
 def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
     """Return saved, cross-shift progress without using browser draft assignments."""
     with get_connection() as connection:
@@ -540,7 +637,7 @@ def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
         """)
         circuits = _rows(cursor)
         cursor.execute("""
-            SELECT r.id,r.distrito_id,r.nombre,r.turno_id,r.asignar_encargado,
+            SELECT r.id,r.distrito_id,r.nombre,r.asignar_encargado,
                    cr.circuito_id,
                    CAST(CASE WHEN EXISTS(
                        SELECT 1 FROM dbo.lugares_servicio er
@@ -552,8 +649,20 @@ def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
             WHERE r.activo=1 ORDER BY r.distrito_id,r.nombre
         """)
         routes = _rows(cursor)
+        # Attach turn data from junction table for each route
+        route_ids = [int(r["id"]) for r in routes]
+        route_turns: dict[int, set[int]] = {}
+        if route_ids:
+            placeholders = ",".join("?" for _ in route_ids)
+            for rt in cursor.execute(
+                f"SELECT ruta_id,turno_id FROM dbo.ruta_turnos WHERE ruta_id IN ({placeholders})",
+                *route_ids,
+            ).fetchall():
+                route_turns.setdefault(int(rt[0]), set()).add(int(rt[1]))
+        for r in routes:
+            r["turno_ids"] = list(route_turns.get(int(r["id"]), set()))
         cursor.execute("""
-            SELECT ls.id,ls.ruta_id,ls.nombre,ls.turno_id,
+            SELECT ls.id,ls.ruta_id,ls.nombre,
                    CASE WHEN ls.cantidad_requerida<0 THEN 0 ELSE ls.cantidad_requerida END AS cantidad_requerida
             FROM dbo.lugares_servicio ls
             WHERE ls.activo=1
@@ -561,6 +670,18 @@ def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
             ORDER BY ls.ruta_id,ls.nombre
         """)
         places = _rows(cursor)
+        # Attach turn data from junction table for each place
+        place_ids = [int(p["id"]) for p in places]
+        place_turns: dict[int, set[int]] = {}
+        if place_ids:
+            placeholders = ",".join("?" for _ in place_ids)
+            for lt in cursor.execute(
+                f"SELECT lugar_servicio_id,turno_id FROM dbo.lugar_turnos WHERE lugar_servicio_id IN ({placeholders})",
+                *place_ids,
+            ).fetchall():
+                place_turns.setdefault(int(lt[0]), set()).add(int(lt[1]))
+        for p in places:
+            p["turno_ids"] = list(place_turns.get(int(p["id"]), set()))
         cursor.execute("""
             SELECT id,distrito_id,turno_id,total_requerido,total_asignado
             FROM dbo.distribuciones_personal
@@ -619,10 +740,10 @@ def get_district_distribution_summaries(distribution_date: date) -> list[dict]:
             distribution_id = int(distribution["id"]) if distribution else 0
             saved_places = details_by_distribution.get(distribution_id, {})
             saved_responsibilities = responsibilities_by_distribution.get(distribution_id, [])
-            applicable_routes = [item for item in district_routes if item["turno_id"] is None or int(item["turno_id"]) == shift_id]
+            applicable_routes = [item for item in district_routes if not item.get("turno_ids") or shift_id in item["turno_ids"]]
             applicable_route_ids = {int(item["id"]) for item in applicable_routes}
             applicable_places = [place for route_id in applicable_route_ids for place in places_by_route.get(route_id, [])
-                                 if place["turno_id"] is None or int(place["turno_id"]) == shift_id]
+                                 if not place.get("turno_ids") or shift_id in place["turno_ids"]]
             required = sum(int(item["cantidad_requerida"] or 0) for item in applicable_places)
             assigned = sum(min(int(item["cantidad_requerida"] or 0), saved_places.get(int(item["id"]), 0)) for item in applicable_places)
             total_required += required
@@ -712,10 +833,12 @@ def get_route_places(route_id: int, shift_id: int) -> list[dict]:
             INNER JOIN dbo.rutas r ON r.id = ls.ruta_id AND r.activo = 1
             WHERE ls.ruta_id = ? AND ls.activo = 1
               AND UPPER(LTRIM(RTRIM(ISNULL(ls.nombre, '')))) <> N'ENCARGADO DE RUTA'
-              AND (ls.turno_id IS NULL OR ls.turno_id = ?)
-              AND (r.turno_id IS NULL OR r.turno_id = ?)
+              AND EXISTS (
+                  SELECT 1 FROM dbo.lugar_turnos lt
+                  WHERE lt.lugar_servicio_id = ls.id AND lt.turno_id = ?
+              )
             ORDER BY ls.nombre
-        """, route_id, shift_id, shift_id)
+        """, route_id, shift_id)
         return _rows(cursor)
 
 
@@ -794,10 +917,10 @@ def generate_draft_assignments(data: dict) -> dict:
             FROM dbo.circuitos c
             INNER JOIN dbo.circuito_rutas cr ON cr.circuito_id=c.id AND cr.deleted_at IS NULL
             INNER JOIN dbo.rutas r ON r.id=cr.ruta_id AND r.activo=1
+            INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id=r.id AND rt.turno_id=?
             WHERE c.id=? AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
-              AND (r.turno_id IS NULL OR r.turno_id=?)
             ORDER BY r.nombre
-        """, circuit_id, district_id, shift_id)
+        """, shift_id, circuit_id, district_id)
         route_ids = [int(row[0]) for row in cursor.fetchall()]
         if not route_ids:
             raise HTTPException(422, "El circuito no tiene rutas disponibles para el distrito y turno seleccionados")
@@ -844,11 +967,14 @@ def _validate_distribution_relations(cursor, district_id: int, shift_id: int, as
                ls.nombre AS lugar, r.nombre AS ruta
         FROM dbo.lugares_servicio ls
         INNER JOIN dbo.rutas r ON r.id = ls.ruta_id AND r.activo = 1
+        INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id = r.id AND rt.turno_id = ?
         WHERE ls.activo = 1 AND r.distrito_id = ?
-          AND (r.turno_id IS NULL OR r.turno_id = ?)
-          AND (ls.turno_id IS NULL OR ls.turno_id = ?)
+          AND EXISTS (
+              SELECT 1 FROM dbo.lugar_turnos lt
+              WHERE lt.lugar_servicio_id = ls.id AND lt.turno_id = ?
+          )
             ORDER BY r.nombre, ls.nombre
-    """, district_id, shift_id, shift_id)
+    """, shift_id, district_id, shift_id)
     places = _rows(cursor)
     if not places:
         raise HTTPException(422, "No existen lugares de servicio para el distrito y turno seleccionados")
@@ -1000,14 +1126,22 @@ def _prepare_responsibilities(cursor, district_id: int, shift_id: int, data: dic
     if any(not bool(item.get("requiere_encargado")) for item in route_map.values()) and not district_manager_id:
         raise HTTPException(422, "Una ruta solo puede quedar sin encargado cuando existe un encargado de distrito responsable")
     for route_id, item in route_map.items():
-        responsibilities.append({
-            "tipo_responsabilidad": "ENCARGADO_RUTA", "ruta_id": route_id, "circuito_id": None,
-            "requiere_encargado": bool(item.get("requiere_encargado")),
-            "agente_id": int(item["agente_id"]) if item.get("agente_id") else None,
-            "conductor_id": None, "auxiliar_1_id": None, "auxiliar_2_id": None, "movil_id": None,
-            "usar_encargado_distrito": False,
-            "tipo_asignacion": str(item.get("tipo_asignacion") or "MANUAL").upper(),
-        })
+        agent_ids = []
+        if item.get("agente_id"):
+            agent_ids.append(int(item["agente_id"]))
+        if item.get("agente_2_id"):
+            agent_ids.append(int(item["agente_2_id"]))
+        if not agent_ids:
+            agent_ids.append(None)
+        for idx, agente_id in enumerate(agent_ids):
+            responsibilities.append({
+                "tipo_responsabilidad": "ENCARGADO_RUTA", "ruta_id": route_id, "circuito_id": None,
+                "requiere_encargado": bool(item.get("requiere_encargado")),
+                "agente_id": agente_id,
+                "conductor_id": None, "auxiliar_1_id": None, "auxiliar_2_id": None, "movil_id": None,
+                "usar_encargado_distrito": False,
+                "tipo_asignacion": str(item.get("tipo_asignacion") or "MANUAL").upper(),
+            })
 
     for item in responsibilities:
         if item["tipo_responsabilidad"] != "ENCARGADO_RUTA" or not item.get("agente_id"):
@@ -1060,7 +1194,155 @@ def _insert_responsibilities(cursor, distribution_id: int, district_id: int, res
         """, distribution_id, district_id, item["ruta_id"], item["circuito_id"], item["tipo_responsabilidad"],
              1 if item["requiere_encargado"] else 0, item["agente_id"],item["conductor_id"],item["auxiliar_1_id"],
              item["auxiliar_2_id"],item["movil_id"],1 if item["usar_encargado_distrito"] else 0,item["tipo_asignacion"],
-             "ASIGNADO" if item["agente_id"] else "NO_REQUERIDO", user_id)
+              "ASIGNADO" if item["agente_id"] else "NO_REQUERIDO", user_id)
+
+
+def _validate_eas_agent(cursor, agent_id: int, distribution_date: date, shift_id: int, shift_name: str,
+                        distribution_id: int | None = None) -> None:
+    cursor.execute("""
+        SELECT UPPER(ISNULL(g.nombre,''))
+        FROM dbo.personal p WITH (UPDLOCK,HOLDLOCK)
+        LEFT JOIN dbo.catalogo_detalles ep ON ep.id=p.estado_personal_id
+        LEFT JOIN dbo.grados g ON g.id=p.grado_id
+        INNER JOIN dbo.roles r ON r.id=p.rol_id AND r.activo=1
+        WHERE p.id=? AND p.activo=1 AND UPPER(ISNULL(ep.nombre,''))='ACTIVO'
+          AND UPPER(ISNULL(r.codigo,'')) IN ('AGENTE','ENCARGADO','INSPECTOR','OPERACIONES','SUPERVISOR')
+    """, agent_id)
+    row = cursor.fetchone()
+    if not row or str(row[0]) not in {"AGENTE 1", "AGENTE 2", "AGENTE 3"}:
+        raise HTTPException(422, f"El agente {agent_id} no esta habilitado para una asignacion EAS")
+    checks = [
+        ("SELECT TOP 1 id FROM dbo.asignaciones_ruta WITH (UPDLOCK,HOLDLOCK) WHERE agente_id=? AND fecha_asignacion=? AND turno=? AND estado IN ('PENDIENTE','ACTIVA') AND deleted_at IS NULL", (agent_id, distribution_date, shift_name)),
+        ("SELECT TOP 1 id FROM dbo.asignaciones_punto WITH (UPDLOCK,HOLDLOCK) WHERE personal_id=? AND turno_id=? AND activo=1 AND estado IN ('ACTIVA','PENDIENTE') AND fecha_inicio<=? AND (fecha_fin IS NULL OR fecha_fin>=?)", (agent_id, shift_id, distribution_date, distribution_date)),
+        ("SELECT TOP 1 de.id FROM dbo.distribucion_encargados de WITH (UPDLOCK,HOLDLOCK) INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id WHERE (de.agente_id=? OR de.conductor_id=? OR de.auxiliar_1_id=? OR de.auxiliar_2_id=?) AND dp.fecha_distribucion=? AND dp.turno_id=? AND de.deleted_at IS NULL AND dp.deleted_at IS NULL" + (" AND de.distribucion_id<>?" if distribution_id else ""), (agent_id, agent_id, agent_id, agent_id, distribution_date, shift_id, *([distribution_id] if distribution_id else []))),
+        ("SELECT TOP 1 ed.id FROM dbo.distribucion_eas_detalle ed WITH (UPDLOCK,HOLDLOCK) INNER JOIN dbo.distribuciones_personal dp ON dp.id=ed.distribucion_id WHERE ed.agente_id=? AND ed.deleted_at IS NULL AND dp.deleted_at IS NULL AND dp.fecha_distribucion=? AND dp.turno_id=?" + (" AND ed.distribucion_id<>?" if distribution_id else ""), (agent_id, distribution_date, shift_id, *([distribution_id] if distribution_id else []))),
+    ]
+    for sql, params in checks:
+        cursor.execute(sql, *params)
+        if cursor.fetchone():
+            raise HTTPException(409, f"El agente {agent_id} ya tiene una asignacion en la misma fecha y turno")
+
+
+def _save_eas_distribution(cursor, data: dict, user_id: int, ip: str | None, distribution_id: int | None = None) -> dict:
+    district_id, shift_id = int(data["distrito_id"]), int(data["turno_id"])
+    distribution_date: date = data["fecha_distribucion"]
+    if data.get("asignaciones") or data.get("encargados_circuito") or data.get("encargados_ruta") or data.get("encargado_distrito_id"):
+        raise HTTPException(422, "El distrito EAS solo admite asignaciones EAS")
+    cursor.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+    cursor.execute("SELECT id,nombre FROM dbo.turnos WITH (UPDLOCK,HOLDLOCK) WHERE id=? AND activo=1", shift_id)
+    shift = _row(cursor)
+    if not shift:
+        raise HTTPException(422, "El turno seleccionado no es valido")
+    slots = _eas_slots(cursor, district_id, shift_id)
+    if not slots:
+        raise HTTPException(422, "No existen EAS, circuitos y rutas activos para el distrito y turno seleccionados")
+    slot_map = {(int(s["eas_id"]), int(s["ruta_id"]), int(s["configuracion_id"]) if s["configuracion_id"] is not None else None): s for s in slots}
+    provided: dict[tuple[int, int, int | None, str], dict] = {}
+    for item in data.get("asignaciones_eas") or []:
+        key = (int(item["eas_id"]), int(item["ruta_id"]), int(item["configuracion_id"]) if item.get("configuracion_id") else None)
+        role = str(item["rol"]).upper()
+        if key not in slot_map:
+            raise HTTPException(422, "La configuracion EAS no pertenece al distrito, circuito, ruta o turno seleccionado")
+        full_key = (*key, role)
+        if full_key in provided:
+            raise HTTPException(409, "Existe una asignacion EAS duplicada para la misma configuracion y rol")
+        provided[full_key] = item
+    people = [int(item["agente_id"]) for item in provided.values() if item.get("agente_id")]
+    if len(people) != len(set(people)):
+        raise HTTPException(409, "Un agente no puede repetirse entre roles EAS")
+    is_update = distribution_id is not None
+    if distribution_id is None:
+        cursor.execute("""SELECT TOP 1 id FROM dbo.distribuciones_personal WITH (UPDLOCK,HOLDLOCK)
+                          WHERE distrito_id=? AND turno_id=? AND fecha_distribucion=? AND deleted_at IS NULL""",
+                       district_id, shift_id, distribution_date)
+        if cursor.fetchone():
+            raise HTTPException(409, "Ya existe una distribucion guardada para ese distrito, turno y fecha")
+    else:
+        cursor.execute("SELECT id FROM dbo.distribuciones_personal WITH (UPDLOCK,HOLDLOCK) WHERE id=? AND deleted_at IS NULL", distribution_id)
+        if not cursor.fetchone():
+            raise HTTPException(404, "La distribucion no existe")
+        cursor.execute("""SELECT TOP 1 id FROM dbo.distribuciones_personal WITH (UPDLOCK,HOLDLOCK)
+                          WHERE distrito_id=? AND turno_id=? AND fecha_distribucion=? AND id<>? AND deleted_at IS NULL""",
+                       district_id, shift_id, distribution_date, distribution_id)
+        if cursor.fetchone():
+            raise HTTPException(409, "Ya existe otra distribucion para ese distrito, turno y fecha")
+        cursor.execute("UPDATE dbo.distribucion_eas_detalle SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME() WHERE distribucion_id=? AND deleted_at IS NULL", distribution_id)
+    for agent_id in people:
+        _validate_eas_agent(cursor, agent_id, distribution_date, shift_id, shift["nombre"], distribution_id)
+    required = len(slot_map) * 2
+    assigned = sum(1 for key, item in provided.items() if key[3] in {"CP", "JP"} and item.get("agente_id"))
+    pending = required - assigned
+    coverage = round(assigned / required * 100, 2) if required else 0
+    status = "COMPLETA" if pending == 0 else "PARCIAL"
+    name = f"DISTRIBUCIÓN EAS FECHA {distribution_date.strftime('%d/%m/%Y')}"
+    if distribution_id is None:
+        cursor.execute("""INSERT INTO dbo.distribuciones_personal(nombre,fecha_distribucion,creado_por,distrito_id,turno_id,estado,porcentaje_cobertura,total_requerido,total_asignado,fecha_creacion)
+                          OUTPUT INSERTED.id VALUES(?,?,?,?,?,?,?,?,?,SYSDATETIME())""",
+                       name, distribution_date, user_id, district_id, shift_id, status, coverage, required, assigned)
+        distribution_id = int(cursor.fetchone()[0])
+    else:
+        cursor.execute("""UPDATE dbo.distribuciones_personal SET nombre=?,fecha_distribucion=?,distrito_id=?,turno_id=?,estado=?,porcentaje_cobertura=?,total_requerido=?,total_asignado=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
+                       name, distribution_date, district_id, shift_id, status, coverage, required, assigned, distribution_id)
+    for key in slot_map:
+        for role in ("CP", "JP", "AUX"):
+            item = provided.get((*key, role))
+            agent_id = int(item["agente_id"]) if item and item.get("agente_id") else None
+            cursor.execute("""INSERT INTO dbo.distribucion_eas_detalle(distribucion_id,eas_id,ruta_id,configuracion_id,rol,agente_id,tipo_asignacion,estado,fecha_creacion)
+                              VALUES(?,?,?,?,?,?,?,?,SYSDATETIME())""",
+                           distribution_id, key[0], key[1], key[2], role, agent_id,
+                           str(item.get("tipo_asignacion") or "MANUAL").upper() if item else None,
+                           "ASIGNADO" if agent_id else "PENDIENTE")
+    _audit(cursor, user_id, "EDITAR_DISTRIBUCION_EAS" if is_update else "GUARDAR_DISTRIBUCION_EAS", str(distribution_id), {"fecha": str(distribution_date), "ip": ip})
+    return {"id": distribution_id, "nombre": name, "fecha_distribucion": distribution_date, "estado": status,
+            "porcentaje_cobertura": coverage, "total_requerido": required, "total_asignado": assigned, "pendientes": pending}
+
+
+def generate_eas_draft_assignments(data: dict) -> list[dict]:
+    district_id, shift_id = int(data["distrito_id"]), int(data["turno_id"])
+    distribution_date: date = data["fecha_distribucion"]
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        if not _is_eas_district(cursor, district_id):
+            raise HTTPException(422, "La asignacion aleatoria EAS solo esta disponible para el distrito EAS")
+        cursor.execute("SELECT nombre FROM dbo.turnos WHERE id=? AND activo=1", shift_id)
+        shift = cursor.fetchone()
+        if not shift:
+            raise HTTPException(422, "El turno seleccionado no es valido")
+        slots = _eas_slots(cursor, district_id, shift_id)
+        existing = data.get("asignaciones_eas") or []
+        occupied_roles = {(int(x["eas_id"]), int(x["ruta_id"]), int(x["configuracion_id"]) if x.get("configuracion_id") else None, str(x["rol"]).upper())
+                          for x in existing if x.get("agente_id")}
+        used = {int(x["agente_id"]) for x in existing if x.get("agente_id")}
+        used.update(int(x) for x in data.get("excluidos", []) if x)
+        candidates = [a for a in _active_agents(cursor, used) if str(a.get("grado") or "").upper() in {"AGENTE 1", "AGENTE 2", "AGENTE 3"}]
+        available: list[dict] = []
+        for candidate in candidates:
+            agent_id = int(candidate["id"])
+            cursor.execute("""
+                SELECT TOP 1 1 FROM (
+                    SELECT ar.agente_id AS agente FROM dbo.asignaciones_ruta ar WHERE ar.agente_id=? AND ar.fecha_asignacion=? AND ar.turno=? AND ar.estado IN ('PENDIENTE','ACTIVA') AND ar.deleted_at IS NULL
+                    UNION ALL SELECT ap.personal_id FROM dbo.asignaciones_punto ap WHERE ap.personal_id=? AND ap.turno_id=? AND ap.fecha_inicio<=? AND (ap.fecha_fin IS NULL OR ap.fecha_fin>=?) AND ap.activo=1 AND ap.estado IN ('ACTIVA','PENDIENTE')
+                    UNION ALL SELECT de.agente_id FROM dbo.distribucion_encargados de INNER JOIN dbo.distribuciones_personal dp ON dp.id=de.distribucion_id WHERE (de.agente_id=? OR de.conductor_id=? OR de.auxiliar_1_id=? OR de.auxiliar_2_id=?) AND dp.fecha_distribucion=? AND dp.turno_id=? AND de.deleted_at IS NULL AND dp.deleted_at IS NULL
+                    UNION ALL SELECT ed.agente_id FROM dbo.distribucion_eas_detalle ed INNER JOIN dbo.distribuciones_personal dp ON dp.id=ed.distribucion_id WHERE ed.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=? AND ed.deleted_at IS NULL AND dp.deleted_at IS NULL
+                ) x
+            """, agent_id, distribution_date, shift[0], agent_id, shift_id, distribution_date, distribution_date,
+                 agent_id, agent_id, agent_id, agent_id, distribution_date, shift_id, agent_id, distribution_date, shift_id)
+            if not cursor.fetchone():
+                available.append(candidate)
+        random.SystemRandom().shuffle(available)
+        generated: list[dict] = []
+        position = 0
+        roles = ("CP", "JP", "AUX") if data.get("include_aux") else ("CP", "JP")
+        for role in roles:
+            for slot in slots:
+                key = (int(slot["eas_id"]), int(slot["ruta_id"]), int(slot["configuracion_id"]) if slot["configuracion_id"] is not None else None, role)
+                if key in occupied_roles or position >= len(available):
+                    continue
+                agent = available[position]
+                position += 1
+                generated.append({"eas_id": key[0], "ruta_id": key[1], "configuracion_id": key[2], "rol": role,
+                                  "agente_id": int(agent["id"]), "tipo_asignacion": "ALEATORIA", "agente": agent})
+        return generated
 
 
 def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
@@ -1068,6 +1350,10 @@ def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
     shift_id = int(data["turno_id"])
     distribution_date: date = data["fecha_distribucion"]
     assignments = data.get("asignaciones") or []
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        if _is_eas_district(cursor, district_id):
+            return _save_eas_distribution(cursor, data, user_id, ip)
     place_agent_ids = [int(item["agente_id"]) for item in assignments]
     if len(place_agent_ids) != len(set(place_agent_ids)):
         raise HTTPException(409, "Un agente no puede estar asignado a dos lugares en la misma distribucion")
@@ -1141,6 +1427,14 @@ def save_distribution(data: dict, user_id: int, ip: str | None = None) -> dict:
             """, agent_id,agent_id,agent_id,agent_id, distribution_date, shift_id)
             if cursor.fetchone():
                 raise HTTPException(409, f"El agente {agent_id} ya es encargado en la misma fecha y turno")
+            cursor.execute("""
+                SELECT TOP 1 ed.id FROM dbo.distribucion_eas_detalle ed WITH (UPDLOCK,HOLDLOCK)
+                INNER JOIN dbo.distribuciones_personal dp ON dp.id=ed.distribucion_id
+                WHERE ed.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                  AND ed.deleted_at IS NULL AND dp.deleted_at IS NULL
+            """, agent_id, distribution_date, shift_id)
+            if cursor.fetchone():
+                raise HTTPException(409, f"El agente {agent_id} ya tiene una asignacion EAS en la misma fecha y turno")
 
         name = f"DISTRIBUCIÓN DE PERSONAL FECHA {distribution_date.strftime('%d/%m/%Y')}"
         coverage = round((assigned / required * 100), 2) if required else 0
@@ -1254,6 +1548,27 @@ def get_distribution(distribution_id: int) -> dict:
                      de.circuito_id,de.ruta_id
         """, distribution_id)
         header["encargados"] = _rows(cursor)
+        cursor.execute("""
+            SELECT ed.id,ed.eas_id,e.nombre AS eas_nombre,ed.ruta_id,r.nombre AS ruta,
+                   ed.configuracion_id,ec.orden,ec.movil_id,
+                   CASE WHEN ec.id IS NULL THEN fm.numero_movil ELSE m.numero_movil END AS numero_movil,
+                   CASE WHEN ec.id IS NULL THEN fm.placa ELSE m.placa END AS placa,
+                   CASE WHEN ec.id IS NULL THEN mea.movil_id END AS movil_informativo_id,
+                   ed.rol,ed.agente_id,vp.nombre_completo AS agente,vp.cedula,
+                   ed.tipo_asignacion,ed.estado
+            FROM dbo.distribucion_eas_detalle ed
+            INNER JOIN dbo.eas_estaciones e ON e.id=ed.eas_id
+            INNER JOIN dbo.rutas r ON r.id=ed.ruta_id
+            LEFT JOIN dbo.eas_ruta_configuraciones ec ON ec.id=ed.configuracion_id
+            LEFT JOIN dbo.moviles m ON m.id=ec.movil_id
+            OUTER APPLY (SELECT TOP 1 a.movil_id FROM dbo.movil_eas_asignaciones a
+                         WHERE a.eas_id=ed.eas_id AND a.activo=1 ORDER BY a.fecha_asignacion DESC,a.id DESC) mea
+            LEFT JOIN dbo.moviles fm ON fm.id=mea.movil_id AND fm.activo=1
+            LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=ed.agente_id
+            WHERE ed.distribucion_id=? AND ed.deleted_at IS NULL
+            ORDER BY e.nombre,r.nombre,ISNULL(ec.orden,0),ed.rol
+        """, distribution_id)
+        header["eas_detalles"] = _rows(cursor)
         return header
 
 
@@ -1262,6 +1577,10 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
     shift_id = int(data["turno_id"])
     distribution_date: date = data["fecha_distribucion"]
     assignments = data.get("asignaciones") or []
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        if _is_eas_district(cursor, district_id):
+            return _save_eas_distribution(cursor, data, user_id, ip, distribution_id)
     place_agent_ids = [int(item["agente_id"]) for item in assignments]
     if len(place_agent_ids) != len(set(place_agent_ids)):
         raise HTTPException(409, "Un agente no puede estar asignado a dos lugares en la misma distribucion")
@@ -1288,6 +1607,10 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
         """, distribution_id)
         cursor.execute("""
             UPDATE dbo.distribucion_encargados SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME()
+            WHERE distribucion_id=? AND deleted_at IS NULL
+        """, distribution_id)
+        cursor.execute("""
+            UPDATE dbo.distribucion_eas_detalle SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME()
             WHERE distribucion_id=? AND deleted_at IS NULL
         """, distribution_id)
 
@@ -1353,6 +1676,14 @@ def update_distribution(distribution_id: int, data: dict, user_id: int, ip: str 
             """, agent_id,agent_id,agent_id,agent_id, distribution_date, shift_id, distribution_id)
             if cursor.fetchone():
                 raise HTTPException(409, f"El agente {agent_id} ya es encargado en la misma fecha y turno")
+            cursor.execute("""
+                SELECT TOP 1 ed.id FROM dbo.distribucion_eas_detalle ed WITH (UPDLOCK,HOLDLOCK)
+                INNER JOIN dbo.distribuciones_personal dp ON dp.id=ed.distribucion_id
+                WHERE ed.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                  AND ed.distribucion_id<>? AND ed.deleted_at IS NULL AND dp.deleted_at IS NULL
+            """, agent_id, distribution_date, shift_id, distribution_id)
+            if cursor.fetchone():
+                raise HTTPException(409, f"El agente {agent_id} ya tiene una asignacion EAS en la misma fecha y turno")
 
         name = f"DISTRIBUCIÓN DE PERSONAL FECHA {distribution_date.strftime('%d/%m/%Y')}"
         coverage = round((assigned / required * 100), 2) if required else 0
@@ -1473,7 +1804,7 @@ def get_agents_for_modal(data: dict) -> dict:
             where.append("UPPER(ISNULL(g.nombre,'')) IN ('AGENTE 2','AGENTE 3','AGENTE 4')")
         elif responsibility in {"CONDUCTOR", "AUXILIAR"}:
             where.append("UPPER(ISNULL(g.nombre,'')) IN ('AGENTE 1','AGENTE 2','AGENTE 3','AGENTE 4')")
-        elif responsibility == "AGENTE_LUGAR":
+        elif responsibility in {"AGENTE_LUGAR", "EAS_CP", "EAS_JP", "EAS_AUX"}:
             where.append("UPPER(ISNULL(g.nombre,'')) IN ('AGENTE 1','AGENTE 2','AGENTE 3')")
 
         if excluded_ids:
@@ -1579,6 +1910,16 @@ def get_agents_for_modal(data: dict) -> dict:
             if manager:
                 disponible = False
                 motivo_no_disponible = "Ya tiene una responsabilidad para esta fecha y turno"
+
+            cursor.execute("""
+                SELECT TOP 1 ed.id FROM dbo.distribucion_eas_detalle ed
+                INNER JOIN dbo.distribuciones_personal dp ON dp.id=ed.distribucion_id
+                WHERE ed.agente_id=? AND dp.fecha_distribucion=? AND dp.turno_id=?
+                  AND ed.deleted_at IS NULL AND dp.deleted_at IS NULL
+            """, agent_id, today, turno_id)
+            if cursor.fetchone():
+                disponible = False
+                motivo_no_disponible = "Ya tiene una asignacion EAS para esta fecha y turno"
 
             if disponible and estado_laboral == "ACTIVO":
                 cursor.execute("""
@@ -1766,6 +2107,7 @@ def delete_distribution(distribution_id: int, user_id: int, ip: str | None = Non
         """, distribution_id)
         cursor.execute("UPDATE dbo.distribucion_personal_detalle SET deleted_at=SYSDATETIME() WHERE distribucion_id=? AND deleted_at IS NULL", distribution_id)
         cursor.execute("UPDATE dbo.distribucion_encargados SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME() WHERE distribucion_id=? AND deleted_at IS NULL", distribution_id)
+        cursor.execute("UPDATE dbo.distribucion_eas_detalle SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME() WHERE distribucion_id=? AND deleted_at IS NULL", distribution_id)
         cursor.execute("""
             UPDATE dbo.distribuciones_personal
             SET estado='ELIMINADA', eliminado_por=?, deleted_at=SYSDATETIME(), fecha_actualizacion=SYSDATETIME()
@@ -1797,6 +2139,9 @@ def delete_distribution_group(turno_id: int, distribution_date: date, user_id: i
                             SET deleted_at=SYSDATETIME(), fecha_actualizacion=SYSDATETIME()
                             WHERE distribucion_id IN ({placeholders}) AND deleted_at IS NULL""", *distribution_ids)
         cursor.execute(f"""UPDATE dbo.distribucion_encargados
+                            SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME()
+                            WHERE distribucion_id IN ({placeholders}) AND deleted_at IS NULL""", *distribution_ids)
+        cursor.execute(f"""UPDATE dbo.distribucion_eas_detalle
                             SET deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME()
                             WHERE distribucion_id IN ({placeholders}) AND deleted_at IS NULL""", *distribution_ids)
         cursor.execute(f"""UPDATE dbo.distribuciones_personal
@@ -1910,6 +2255,51 @@ def get_distributions_dashboard() -> dict:
                     "lugar": row["lugar"], "agente": row["agente"] or "Sin asignar",
                     "hora_ingreso": row["hora_ingreso"], "hora_salida": row["hora_salida"],
                     "consignas": row["consignas"] or "—", "observaciones": row["observaciones"] or "—",
+                })
+
+            # EAS uses CP/JP/AUX roles rather than lugares_servicio. Include those
+            # details in the same dashboard grouping without treating AUX as required.
+            cursor.execute("""
+                SELECT dp.id AS distribucion_id,d.id AS distrito_id,d.nombre AS distrito,
+                       ed.id AS detalle_id,ed.eas_id,e.nombre AS eas_nombre,
+                       ed.ruta_id,r.nombre AS ruta,ed.configuracion_id,ed.rol,ed.agente_id,
+                       vp.nombre_completo AS agente
+                FROM dbo.distribuciones_personal dp
+                INNER JOIN dbo.catalogo_detalles d ON d.id=dp.distrito_id
+                INNER JOIN dbo.distribucion_eas_detalle ed ON ed.distribucion_id=dp.id AND ed.deleted_at IS NULL
+                INNER JOIN dbo.eas_estaciones e ON e.id=ed.eas_id
+                INNER JOIN dbo.rutas r ON r.id=ed.ruta_id
+                LEFT JOIN dbo.vw_personal_detalle vp ON vp.id=ed.agente_id
+                WHERE dp.turno_id=? AND dp.fecha_distribucion=? AND dp.deleted_at IS NULL
+                ORDER BY d.nombre,e.nombre,r.nombre,ed.configuracion_id,ed.rol
+            """, group["turno_id"], group["fecha_distribucion"])
+            for row in _rows(cursor):
+                district_id = int(row["distrito_id"])
+                if district_id not in by_district:
+                    by_district[district_id] = {
+                        "id": int(row["distribucion_id"]), "distrito_id": district_id,
+                        "distrito": row["distrito"], "total_asignado": 0,
+                        "rutas": [], "faltantes_detalle": [],
+                    }
+                    place_requirements[district_id] = {}
+                    route_lookup[district_id] = {}
+                district = by_district[district_id]
+                if row["rol"] == "AUX":
+                    continue
+                detail_id = int(row["detalle_id"])
+                place_requirements[district_id][detail_id] = 1
+                if row["agente_id"] is not None:
+                    district["total_asignado"] += 1
+                else:
+                    district["faltantes_detalle"].append({"ruta": row["ruta"], "lugar": f"{row['eas_nombre']} · {row['rol']}"})
+                route_key = (int(row["ruta_id"]), int(row["eas_id"]), int(row["configuracion_id"] or 0))
+                if route_key not in route_lookup[district_id]:
+                    route = {"id": f"eas-{route_key[0]}-{route_key[1]}-{route_key[2]}", "ruta": f"{row['eas_nombre']} · {row['ruta']}", "filas": []}
+                    route_lookup[district_id][route_key] = route
+                    district["rutas"].append(route)
+                route_lookup[district_id][route_key]["filas"].append({
+                    "lugar": row["rol"], "agente": row["agente"] or "Sin asignar",
+                    "hora_ingreso": None, "hora_salida": None, "consignas": "—", "observaciones": "—",
                 })
 
             dists = []

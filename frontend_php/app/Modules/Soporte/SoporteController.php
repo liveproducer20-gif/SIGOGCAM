@@ -23,15 +23,27 @@ final class SoporteController
         $isManager = in_array('soporte.listar', $user['permisos'] ?? [], true) || str_contains(strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? '')), 'ADMINISTRADOR');
         $error = null;
 
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $stats = $api->get('soporte/stats')['datos'] ?? $stats;
-            $tickets = $api->get('soporte/tickets')['datos'] ?? [];
-            $ticketId = (int)($_GET['id'] ?? 0);
-            if ($ticketId > 0) $selected = $api->get("soporte/tickets/{$ticketId}")['datos'] ?? null;
-        } catch (\Throwable $exception) {
-            $error = $exception->getMessage();
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Independent catalog calls run in parallel (curl_multi); a failure in
+        // one call doesn't prevent the rest of the screen from loading.
+        $responses = $api->getMany([
+            'stats' => 'soporte/stats',
+            'tickets' => 'soporte/tickets',
+        ]);
+        foreach ($responses as $key => $response) {
+            if (isset($response['error'])) {
+                $errors[] = $key . ': ' . $response['error']->getMessage();
+                continue;
+            }
+            $datos = $response['data']['datos'] ?? [];
+            ${$key} = $key === 'stats' ? ($datos + $stats) : $datos;
         }
+        $ticketId = (int)($_GET['id'] ?? 0);
+        if ($ticketId > 0) {
+            try { $selected = $api->get("soporte/tickets/{$ticketId}")['datos'] ?? null; } catch (\Throwable $e) { $errors[] = 'ticket: ' . $e->getMessage(); }
+        }
+        $error = $errors ? implode(' | ', $errors) : null;
 
         View::render('soporte/index', [
             'title' => 'Soporte',

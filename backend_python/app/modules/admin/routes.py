@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 
 from app.core.responses import ok
 from app.middleware.auth import require_permission
@@ -22,6 +22,12 @@ def circuit_action(action):
 @router.get("/referencias")
 def referencias(user: dict = Depends(require_permission("administracion.ver"))):
     return ok(repo.admin_references())
+
+
+@router.get("/eas-estacion")
+def eas_estacion(user: dict = Depends(require_permission("administracion.ver"))):
+    """Return active EAS for Estacion de Accion Segura district."""
+    return ok(repo.list_eas_for_estacion())
 
 
 @router.get("/eas")
@@ -73,6 +79,32 @@ def rutas(user: dict = Depends(require_permission("rutas.ver"))):
     return ok(repo.list_routes())
 
 
+@router.get("/rutas/{item_id}/turnos")
+def ruta_turnos(item_id: int, user: dict = Depends(require_permission("rutas.ver"))):
+    """Return the enabled turn IDs for a specific route."""
+    from app.core.db import get_connection as _gc
+    with _gc() as connection:
+        cursor = connection.cursor()
+        turnos = repo.get_route_turnos(cursor, item_id)
+    return ok({"turnosIds": turnos})
+
+
+@router.get("/rutas/{item_id}/turnos/{turno_id}/lugares")
+def count_places_by_turn(item_id: int, turno_id: int, user: dict = Depends(require_permission("rutas.ver"))):
+    """Count how many active places are linked to a specific turn in a route."""
+    from app.core.db import get_connection as _gc
+    with _gc() as connection:
+        cursor = connection.cursor()
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM dbo.lugares_servicio ls
+            INNER JOIN dbo.lugar_turnos lt ON lt.lugar_servicio_id = ls.id AND lt.turno_id = ?
+            WHERE ls.ruta_id = ? AND ls.activo = 1
+        """, turno_id, item_id)
+        count = int(cursor.fetchone()[0])
+    return ok({"lugaresVinculados": count})
+
+
 @router.post("/rutas", status_code=201)
 def crear_ruta(payload: dict = Body(...), user: dict = Depends(require_permission("catalogos.crear"))):
     return result_created(repo.create_route(payload), "Ruta creada correctamente")
@@ -107,6 +139,16 @@ def circuitos(
     user: dict = Depends(require_permission("circuitos.ver")),
 ):
     return ok(repo.list_circuits(distrito_id, buscar))
+
+
+@router.get("/circuitos/rutas-disponibles")
+def rutas_disponibles(
+    distrito_id: int = Query(..., gt=0),
+    circuito_id: int | None = Query(default=None),
+    user: dict = Depends(require_permission("circuitos.ver")),
+):
+    """Return routes available for a circuit: unassigned + routes of the given circuit."""
+    return ok(repo.get_available_routes_for_circuit(distrito_id, circuito_id))
 
 
 @router.get("/circuitos/{item_id}")

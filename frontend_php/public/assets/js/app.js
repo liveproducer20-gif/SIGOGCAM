@@ -23,7 +23,122 @@
         });
     }
 
+    // Route dialog (create/edit)
+    const routeDialog = document.getElementById('routeDialog');
+    if (routeDialog) {
+        const routeForm = routeDialog.querySelector('form');
+        const routeFormId = document.getElementById('routeFormId');
+        const routeFormTitle = document.getElementById('routeFormTitle');
+        const routeFormEyebrow = document.getElementById('routeFormEyebrow');
+        const routeFormSubtitle = document.getElementById('routeFormSubtitle');
+        let originalTurnosIds = [];
+        let turnPendingResolve = null;
+
+        const turnNames = {1: 'Primer Turno', 2: 'Segundo Turno', 3: 'Tercer Turno'};
+
+        function getCheckedTurnos() {
+            return Array.from(routeForm.querySelectorAll('[name="turnos_ids[]"]:checked')).map(cb => Number(cb.value));
+        }
+
+        function checkTurnDisable(turnoId) {
+            const routeId = routeFormId?.value;
+            if (!routeId) return Promise.resolve(false);
+            return fetch(`/admin/api/rutas/${routeId}/turnos/${turnoId}/lugares`)
+                .then(r => r.json())
+                .then(data => {
+                    const count = data?.datos?.lugaresVinculados ?? 0;
+                    if (count === 0) return false;
+                    return new Promise(resolve => {
+                        turnPendingResolve = resolve;
+                        const modal = document.getElementById('turnDisableWarningModal');
+                        const title = document.getElementById('turnWarningTitle');
+                        const countEl = document.getElementById('turnWarningCount');
+                        const detail = document.getElementById('turnWarningDetail');
+                        if (title) title.textContent = `Deshabilitar ${turnNames[turnoId] || 'turno'}`;
+                        if (countEl) countEl.textContent = count;
+                        if (detail) detail.textContent = `Si deshabilita este turno, ${count} lugar(es) no estaran disponibles para distribucion en este turno.`;
+                        modal?.showModal();
+                    });
+                })
+                .catch(() => false);
+        }
+
+        const openRouteDialog = (payload) => {
+            routeForm.reset();
+            if (routeFormId) routeFormId.value = '';
+            originalTurnosIds = [];
+            if (payload && payload.id) {
+                Object.keys(payload).forEach((key) => {
+                    if (key === 'turnos_ids') {
+                        const ids = Array.isArray(payload.turnos_ids) ? payload.turnos_ids.map(Number) : [];
+                        originalTurnosIds = [...ids];
+                        routeForm.querySelectorAll('[name="turnos_ids[]"]').forEach((cb) => {
+                            cb.checked = ids.includes(Number(cb.value));
+                        });
+                        return;
+                    }
+                    const field = routeForm.querySelector(`[name="${key}"]`);
+                    if (!field) return;
+                    if (field.type === 'checkbox') field.checked = Boolean(payload[key]);
+                    else field.value = payload[key] ?? '';
+                });
+                if (routeFormId) routeFormId.value = payload.id;
+                if (routeFormTitle) routeFormTitle.textContent = 'Editar ruta';
+                if (routeFormEyebrow) routeFormEyebrow.textContent = 'Editar';
+                if (routeFormSubtitle) routeFormSubtitle.textContent = 'Actualice la informacion de la ruta.';
+            } else {
+                if (routeFormTitle) routeFormTitle.textContent = 'Crear ruta operativa';
+                if (routeFormEyebrow) routeFormEyebrow.textContent = 'Nueva ruta';
+                if (routeFormSubtitle) routeFormSubtitle.textContent = 'Complete los datos de la ruta para registrarla en el sistema.';
+            }
+            routeDialog.showModal();
+        };
+
+        // Warn when unchecking a turno that has linked places
+        routeForm.querySelectorAll('[name="turnos_ids[]"]').forEach((cb) => {
+            cb.addEventListener('change', async () => {
+                if (cb.checked) return;
+                const turnoId = Number(cb.value);
+                if (!originalTurnosIds.includes(turnoId)) return;
+                const confirmed = await checkTurnDisable(turnoId);
+                if (!confirmed) cb.checked = true;
+            });
+        });
+
+        // Turn-disable warning modal buttons
+        document.getElementById('closeTurnWarning')?.addEventListener('click', () => {
+            document.getElementById('turnDisableWarningModal')?.close();
+            if (turnPendingResolve) { turnPendingResolve(true); turnPendingResolve = null; }
+        });
+        document.getElementById('confirmTurnDisable')?.addEventListener('click', () => {
+            document.getElementById('turnDisableWarningModal')?.close();
+            if (turnPendingResolve) { turnPendingResolve(true); turnPendingResolve = null; }
+        });
+        document.getElementById('cancelTurnWarning')?.addEventListener('click', () => {
+            document.getElementById('turnDisableWarningModal')?.close();
+            if (turnPendingResolve) { turnPendingResolve(false); turnPendingResolve = null; }
+        });
+        document.getElementById('turnDisableWarningModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'turnDisableWarningModal') {
+                e.target.close();
+                if (turnPendingResolve) { turnPendingResolve(false); turnPendingResolve = null; }
+            }
+        });
+
+        document.getElementById('btnCreateRoute')?.addEventListener('click', () => openRouteDialog(null));
+        document.getElementById('closeRouteDialog')?.addEventListener('click', () => routeDialog.close());
+        document.getElementById('cancelRouteDialog')?.addEventListener('click', () => routeDialog.close());
+        routeDialog.addEventListener('click', (e) => { if (e.target === routeDialog) routeDialog.close(); });
+        document.querySelectorAll('[data-edit-target="#form-ruta"]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const payload = JSON.parse(button.dataset.payload || '{}');
+                openRouteDialog(payload);
+            });
+        });
+    }
+
     document.querySelectorAll('[data-edit-target]').forEach((button) => {
+        if (button.dataset.editTarget === '#form-ruta' || button.dataset.editTarget === '#form-circuito') return;
         button.addEventListener('click', () => {
             const target = document.querySelector(button.dataset.editTarget);
             if (!target) return;
@@ -308,5 +423,17 @@
         const text = Array.from(document.querySelectorAll('.badge-stats .stat')).map((card) => `${card.querySelector('span')?.textContent}: ${card.querySelector('strong')?.textContent}`).join(' · ');
         if (navigator.share) await navigator.share({ title: 'Mis insignias SIGO', text });
         else await navigator.clipboard.writeText(text);
+    });
+
+    // Wire external data-table-search inputs to the table's built-in search
+    document.querySelectorAll('[data-table-search]').forEach((externalInput) => {
+        const tableId = externalInput.dataset.tableSearch;
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const container = table.closest('.table-card, .table-wrap');
+        const internalInput = container?.querySelector('.table-controls input[type=search]');
+        if (!internalInput) return;
+        const sync = () => { internalInput.value = externalInput.value; internalInput.dispatchEvent(new Event('input')); };
+        externalInput.addEventListener('input', sync);
     });
 })();

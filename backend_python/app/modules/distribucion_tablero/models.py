@@ -1,5 +1,7 @@
 from datetime import date, time
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -46,10 +48,29 @@ class DraftAssignmentInput(BaseModel):
     tipo_asignacion: str = Field(default="MANUAL", max_length=40)
 
 
+class EASAssignmentInput(BaseModel):
+    eas_id: int = Field(gt=0)
+    ruta_id: int = Field(gt=0)
+    configuracion_id: int | None = Field(default=None, gt=0)
+    rol: Literal["CP", "JP", "AUX"]
+    agente_id: int | None = Field(default=None, gt=0)
+    tipo_asignacion: str = Field(default="MANUAL", max_length=40)
+
+
+class EASRandomAssignmentInput(BaseModel):
+    distrito_id: int = Field(gt=0)
+    turno_id: int = Field(gt=0)
+    fecha_distribucion: date
+    asignaciones_eas: list[EASAssignmentInput] = Field(default_factory=list)
+    excluidos: list[int] = Field(default_factory=list)
+    include_aux: bool = False
+
+
 class RouteManagerInput(BaseModel):
     ruta_id: int = Field(gt=0)
     requiere_encargado: bool
     agente_id: int | None = Field(default=None, gt=0)
+    agente_2_id: int | None = Field(default=None, gt=0)
     tipo_asignacion: str = Field(default="MANUAL", max_length=40)
 
 
@@ -77,6 +98,7 @@ class SaveDistributionInput(BaseModel):
     turno_id: int = Field(gt=0)
     fecha_distribucion: date
     asignaciones: list[DraftAssignmentInput] = Field(default_factory=list)
+    asignaciones_eas: list[EASAssignmentInput] = Field(default_factory=list)
     encargado_distrito_id: int | None = Field(default=None, gt=0)
     distrito_movil_id: int | None = Field(default=None, gt=0)
     distrito_conductor_id: int | None = Field(default=None, gt=0)

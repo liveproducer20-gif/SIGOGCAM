@@ -61,7 +61,7 @@
                 placeForm.elements.namedItem('distrito_id')?.dispatchEvent(new Event('change'));
                 setValue('ruta_id', payload.ruta_id);
                 setValue('tipo_servicio_id', payload.tipo_servicio_id);
-                setValue('turno_id', payload.turno_id);
+                // turnos_ids handled by place dialog checkboxes
                 setValue('cantidad_requerida', payload.cantidad_requerida || 1);
                 setValue('ubicacion_especifica', payload.ubicacion_especifica);
                 setValue('estado_operativo', payload.estado_operativo || 'ACTIVO');
@@ -134,33 +134,83 @@
     const form = document.getElementById('form-circuito');
     if (!form) return;
 
-    const district = form.elements.namedItem('distrito_id');
+    const circuitDialog = document.getElementById('circuitDialog');
+    const circuitFormId = document.getElementById('circuitFormId');
+    const circuitFormTitle = document.getElementById('circuitFormTitle');
+    const circuitFormEyebrow = document.getElementById('circuitFormEyebrow');
+    const circuitFormSubtitle = document.getElementById('circuitFormSubtitle');
+
+    const district = form.querySelector('select[name="distrito_id"]');
+    let currentCircuitId = null;
     const routeLabels = Array.from(form.querySelectorAll('[data-circuit-route-options] [data-district-id]'));
     const updateRoutes = (keepSelection) => {
         const selectedDistrict = String(district.value || '');
         routeLabels.forEach((label) => {
-            const visible = selectedDistrict !== '' && label.dataset.districtId === selectedDistrict;
+            const matchDistrict = selectedDistrict !== '' && String(label.dataset.districtId) === selectedDistrict;
+            const circuitId = Number(label.dataset.circuitId || 0);
+            // Hide if: no district selected, wrong district, OR belongs to another circuit
+            const isCurrentOrFree = circuitId === 0 || (currentCircuitId !== null && circuitId === currentCircuitId);
+            const visible = matchDistrict && isCurrentOrFree;
             label.hidden = !visible;
             if (!visible && !keepSelection) label.querySelector('input').checked = false;
         });
     };
-    district.addEventListener('change', () => updateRoutes(false));
 
-    document.querySelector('[data-circuit-create]')?.addEventListener('click', () => {
+    // EAS handling for Estacion de Accion Segura district
+    const ESTACION_DISTRICT_ID = Number(form.dataset.estacionDistrictId || 0);
+    const circuitFormNombre = document.getElementById('circuitFormNombre');
+    const circuitRouteHint = document.getElementById('circuitRouteHint');
+    const easOptions = Array.from(form.querySelectorAll('.circuit-eas-option'));
+
+    function isEstacionDistrict() {
+        return Number(district.value) === ESTACION_DISTRICT_ID;
+    }
+
+    function toggleEasOptions() {
+        const isEstacion = isEstacionDistrict();
+        easOptions.forEach((label) => {
+            label.hidden = !isEstacion;
+        });
+        if (circuitRouteHint) {
+            circuitRouteHint.textContent = isEstacion
+                ? 'Seleccione las Estaciones de Acción que pertenecen a este circuito.'
+                : 'Solo se habilitan rutas del distrito seleccionado.';
+        }
+        if (circuitFormNombre) {
+            circuitFormNombre.readOnly = false;
+            circuitFormNombre.placeholder = '';
+        }
+    }
+
+
+
+    district.addEventListener('change', () => { toggleEasOptions(); updateRoutes(false); });
+
+    const openCircuitDialog = (payload) => {
         form.reset();
-        form.elements.namedItem('id').value = '';
-        form.querySelector('[data-circuit-form-title]').textContent = 'Nuevo circuito';
-        form.hidden = false;
-        updateRoutes(false);
-        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-    form.querySelector('[data-circuit-cancel]')?.addEventListener('click', () => { form.hidden = true; });
+        if (circuitFormId) circuitFormId.value = '';
+        currentCircuitId = null;
+        // Hide ALL route and EAS labels first
+        routeLabels.forEach((label) => { label.hidden = true; label.querySelector('input').checked = false; });
+        easOptions.forEach((label) => { label.hidden = true; const cb = label.querySelector('input'); if (cb) cb.checked = false; });
 
-    document.querySelectorAll('[data-circuit-edit]').forEach((button) => {
-        button.addEventListener('click', () => {
-            const payload = JSON.parse(button.dataset.payload || '{}');
-            form.hidden = false;
-            form.querySelector('[data-circuit-form-title]').textContent = 'Editar circuito';
+        toggleEasOptions();
+        if (payload && payload.id) {
+            currentCircuitId = Number(payload.id);
+            Object.keys(payload).forEach((key) => {
+                const field = form.querySelector(`[name="${key}"]`);
+                if (!field) return;
+                if (field.type === 'checkbox') field.checked = Boolean(payload[key]);
+                else if (field instanceof HTMLSelectElement && field.multiple) {
+                    const sel = (payload[key] || []).map(String);
+                    Array.from(field.options).forEach((o) => { o.selected = sel.includes(o.value); });
+                } else field.value = payload[key] ?? '';
+            });
+            if (circuitFormId) circuitFormId.value = payload.id;
+            if (circuitFormTitle) circuitFormTitle.textContent = 'Editar circuito';
+            if (circuitFormEyebrow) circuitFormEyebrow.textContent = 'Editar';
+            if (circuitFormSubtitle) circuitFormSubtitle.textContent = 'Actualice la informacion del circuito.';
+            toggleEasOptions();
             updateRoutes(true);
             const selected = (payload.ruta_ids || []).map(String);
             routeLabels.forEach((label) => {
@@ -168,6 +218,31 @@
                 checkbox.checked = selected.includes(checkbox.value);
                 label.hidden = label.dataset.districtId !== String(payload.distrito_id);
             });
+            // Check EAS checkboxes if editing an Estacion circuit
+            const selectedEasIds = (payload.eas_ids || []).map(Number);
+            easOptions.forEach((label) => {
+                const cb = label.querySelector('input');
+                if (cb) cb.checked = selectedEasIds.includes(Number(cb.value));
+            });
+        } else {
+            currentCircuitId = null;
+            if (circuitFormTitle) circuitFormTitle.textContent = 'Crear circuito';
+            if (circuitFormEyebrow) circuitFormEyebrow.textContent = 'Nuevo circuito';
+            if (circuitFormSubtitle) circuitFormSubtitle.textContent = 'Organice las rutas y recursos de un circuito operativo.';
+        }
+        updateRoutes(false);
+        if (circuitDialog) circuitDialog.showModal();
+    };
+
+    document.querySelector('[data-circuit-create]')?.addEventListener('click', () => openCircuitDialog(null));
+    document.getElementById('closeCircuitDialog')?.addEventListener('click', () => circuitDialog?.close());
+    document.getElementById('cancelCircuitDialog')?.addEventListener('click', () => circuitDialog?.close());
+    circuitDialog?.addEventListener('click', (e) => { if (e.target === circuitDialog) circuitDialog.close(); });
+
+    document.querySelectorAll('[data-circuit-edit]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const payload = JSON.parse(button.dataset.payload || '{}');
+            openCircuitDialog(payload);
         });
     });
 
@@ -199,15 +274,20 @@
     document.querySelectorAll('[data-circuit-routes]').forEach((button) => {
         button.addEventListener('click', () => {
             const selected = (button.dataset.routes || '').split(',').filter(Boolean);
-            routesForm.elements.namedItem('id').value = button.dataset.id;
+            const circuitId = Number(button.dataset.id || 0);
+            routesForm.elements.namedItem('id').value = circuitId;
             routesForm.querySelector('[data-routes-name]').textContent = button.dataset.name;
             routesForm.querySelectorAll('[data-district-id]').forEach((label) => {
-                label.hidden = label.dataset.districtId !== button.dataset.district;
+                const matchDistrict = label.dataset.districtId === button.dataset.district;
+                const ownerCircuit = Number(label.dataset.circuitId || 0);
+                // Show if: matches district AND (unassigned OR belongs to this circuit)
+                const visible = matchDistrict && (ownerCircuit === 0 || ownerCircuit === circuitId);
+                label.hidden = !visible;
                 const checkbox = label.querySelector('input');
                 checkbox.checked = selected.includes(checkbox.value);
             });
             routesDialog.showModal();
         });
     });
-    routesDialog.querySelector('[data-dialog-close]')?.addEventListener('click', () => routesDialog.close());
+    routesDialog?.querySelector('[data-dialog-close]')?.addEventListener('click', () => routesDialog.close());
 })();

@@ -19,15 +19,23 @@ final class EventosController
         $items = [];
         $tipos = [];
         $personal = [];
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $response = $api->get('eventos');
-            $items = $response['datos'] ?? [];
-            $tipos = $api->get('catalogos/TIPOS_EVENTO')['datos'] ?? [];
-            $personal = $api->get('personal/operativos')['datos'] ?? [];
-        } catch (\Throwable $exception) {
-            $error = $error ?? $exception->getMessage();
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Independent catalog calls run in parallel (curl_multi); a failure in
+        // one call doesn't prevent the rest of the screen from loading.
+        $responses = $api->getMany([
+            'items' => 'eventos',
+            'tipos' => 'catalogos/TIPOS_EVENTO',
+            'personal' => 'personal/operativos',
+        ]);
+        foreach ($responses as $key => $response) {
+            if (isset($response['error'])) {
+                $errors[] = $key . ': ' . $response['error']->getMessage();
+                continue;
+            }
+            ${$key} = $response['data']['datos'] ?? [];
         }
+        $error = $error ?? ($errors ? implode(' | ', $errors) : null);
 
         View::render('eventos/index', [
             'title' => 'Eventos',

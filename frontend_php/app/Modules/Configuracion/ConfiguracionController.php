@@ -36,27 +36,46 @@ final class ConfiguracionController
         $message = $_GET['mensaje'] ?? null;
         $error = null;
 
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $roles = $api->get('configuracion/roles')['datos'] ?? [];
-            $version = $api->get('configuracion/version')['datos'] ?? [];
-            $permissions = $api->get('configuracion/permisos')['datos'] ?? [];
-            $modules = $api->get('configuracion/modulos')['datos'] ?? [];
-            if ($selectedRoleId <= 0 && isset($roles[0]['id'])) {
-                $selectedRoleId = (int)$roles[0]['id'];
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Round 1: independent catalog calls in parallel (curl_multi). Each
+        // resolves on its own so a failure doesn't break the rest of the screen.
+        $round1 = $api->getMany([
+            'roles' => 'configuracion/roles',
+            'version' => 'configuracion/version',
+            'permisos' => 'configuracion/permisos',
+            'modulos' => 'configuracion/modulos',
+            'cambios' => 'configuracion/cambios',
+        ]);
+        foreach ($round1 as $key => $response) {
+            if (isset($response['error'])) {
+                $errors[] = $key . ': ' . $response['error']->getMessage();
+                continue;
             }
-            if ($selectedRoleId > 0) {
-                $menu = $api->get("configuracion/roles/{$selectedRoleId}/menu")['datos'] ?? [];
-                $scopes = $api->get("configuracion/roles/{$selectedRoleId}/alcance")['datos'] ?? [];
-                $conditions = $api->get("configuracion/roles/{$selectedRoleId}/condiciones")['datos'] ?? [];
-                $fields = $api->get("configuracion/roles/{$selectedRoleId}/campos")['datos'] ?? [];
-                $versions = $api->get("configuracion/roles/{$selectedRoleId}/versiones")['datos'] ?? [];
-                $audit = $api->get("configuracion/auditoria?rolId={$selectedRoleId}&limite=100")['datos'] ?? [];
-            }
-            $cambios = $api->get('configuracion/cambios')['datos'] ?? [];
-        } catch (\Throwable $exception) {
-            $error = $exception->getMessage();
+            ${$key} = $response['data']['datos'] ?? [];
         }
+        if ($selectedRoleId <= 0 && isset($roles[0]['id'])) {
+            $selectedRoleId = (int)$roles[0]['id'];
+        }
+        // Round 2: role-scoped calls in parallel, depend on the selected role.
+        if ($selectedRoleId > 0) {
+            $round2 = $api->getMany([
+                'menu' => "configuracion/roles/{$selectedRoleId}/menu",
+                'scopes' => "configuracion/roles/{$selectedRoleId}/alcance",
+                'conditions' => "configuracion/roles/{$selectedRoleId}/condiciones",
+                'fields' => "configuracion/roles/{$selectedRoleId}/campos",
+                'versions' => "configuracion/roles/{$selectedRoleId}/versiones",
+                'audit' => "configuracion/auditoria?rolId={$selectedRoleId}&limite=100",
+            ]);
+            foreach ($round2 as $key => $response) {
+                if (isset($response['error'])) {
+                    $errors[] = $key . ': ' . $response['error']->getMessage();
+                    continue;
+                }
+                ${$key} = $response['data']['datos'] ?? [];
+            }
+        }
+        $error = $errors ? implode(' | ', $errors) : null;
 
         View::render('configuracion/index', [
             'title' => 'Configuracion',

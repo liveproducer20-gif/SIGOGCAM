@@ -20,13 +20,12 @@ final class InsigniasController
         $ranking = [];
         $error = null;
 
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $progress = $api->get('insignias/progreso/me')['datos'] ?? $progress;
-            $ranking = $api->get('insignias/ranking')['datos'] ?? [];
-        } catch (\Throwable $exception) {
-            $error = $exception->getMessage();
-        }
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Cada llamada es independiente: una falla no debe romper el resto de la pantalla.
+        try { $progress = $api->get('insignias/progreso/me')['datos'] ?? $progress; } catch (\Throwable $e) { $errors[] = 'progreso: ' . $e->getMessage(); }
+        try { $ranking = $api->get('insignias/ranking')['datos'] ?? []; } catch (\Throwable $e) { $errors[] = 'ranking: ' . $e->getMessage(); }
+        $error = $errors ? implode(' | ', $errors) : null;
 
         View::render('insignias/index', [
             'title' => 'Insignias',

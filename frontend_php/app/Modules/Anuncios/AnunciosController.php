@@ -18,14 +18,12 @@ final class AnunciosController
 
         $items = [];
         $personal = [];
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $response = $api->get('anuncios');
-            $items = $response['datos'] ?? [];
-            $personal = $api->get('personal/operativos')['datos'] ?? [];
-        } catch (\Throwable $exception) {
-            $error = $error ?? $exception->getMessage();
-        }
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Cada llamada es independiente: una falla no debe romper el resto de la pantalla.
+        try { $items = $api->get('anuncios')['datos'] ?? []; } catch (\Throwable $e) { $errors[] = 'anuncios: ' . $e->getMessage(); }
+        try { $personal = $api->get('personal/operativos')['datos'] ?? []; } catch (\Throwable $e) { $errors[] = 'personal: ' . $e->getMessage(); }
+        $error = $error ?? ($errors ? implode(' | ', $errors) : null);
 
         View::render('anuncios/index', [
             'title' => 'Anuncios',

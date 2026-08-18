@@ -28,7 +28,7 @@ html{background:var(--sigo-navy)}body{background:var(--sigo-bg);color:var(--sigo
 .sigo-content .card-action,
 .sigo-content .table-action,
 .sigo-content .dashboard-module-actions a,
-.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.td-district-card):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]) {
+.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.td-district-card):not(.td-btn):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]) {
     color:#fff!important;
     border-color:var(--sigo-action-blue)!important;
     background:var(--sigo-action-blue)!important;
@@ -39,7 +39,7 @@ html{background:var(--sigo-navy)}body{background:var(--sigo-bg);color:var(--sigo
 .sigo-content .card-action:hover,
 .sigo-content .table-action:hover,
 .sigo-content .dashboard-module-actions a:hover,
-.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.td-district-card):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]):hover {
+.sigo-content button:not(.sigo-menu-button):not(.p-search-clear):not(.p-modal-close):not(.p-actions-trigger):not(.p-btn-danger):not(.td-route-item):not(.td-agent-option):not(.td-district-card):not(.td-btn):not(.geo-menu-toggle):not([aria-label="Cerrar"]):not([aria-label="Cerrar modal"]):hover {
     color:#fff!important;
     border-color:var(--sigo-action-blue-dark)!important;
     background:var(--sigo-action-blue-dark)!important;
@@ -126,3 +126,57 @@ html{background:var(--sigo-navy)}body{background:var(--sigo-bg);color:var(--sigo
 .menu-icon-picker-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
 .menu-icon-option{height:44px;padding:0;display:grid;place-items:center;border:1px solid var(--sigo-line);border-radius:8px;background:#fbfdff;color:var(--sigo-navy);font-size:18px;cursor:pointer;transition:.15s}
 .menu-icon-option:hover{border-color:var(--sigo-teal);background:#eefbf9;color:var(--sigo-teal);transform:translateY(-1px)}
+
+/* ─── Admin: Rutas redesign ─── */
+.admin-badge-count{padding:7px 14px;border-radius:20px;color:#08746c;background:linear-gradient(135deg,#e6f7f3,#d4f0ea);font-size:10px;font-weight:800;letter-spacing:.02em}.admin-action-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid #d6e1ed;border-radius:7px;color:#315474;background:#fff;font-size:10px;font-weight:700;text-decoration:none;cursor:pointer;transition:all .18s ease}.admin-action-btn:hover{border-color:var(--sigo-teal);color:var(--sigo-teal);background:#f0faf8;box-shadow:0 2px 8px rgba(7,140,131,.1)}.admin-action-btn--primary{border-color:var(--sigo-teal);color:#fff;background:var(--sigo-teal)}.admin-action-btn--primary:hover{background:#087d74;box-shadow:0 3px 12px rgba(7,140,131,.25)}.admin-action-btn--ghost{border-color:transparent;background:transparent}.admin-action-btn--ghost:hover{border-color:#d6e1ed;background:#f6fafc}
+
+/* Filter bar */
+.admin-filter-bar{padding:14px 18px;border:1px solid var(--sigo-line);border-radius:10px;background:#fff;box-shadow:var(--sigo-shadow)}.admin-filter-bar-inner{display:flex;align-items:end;justify-content:space-between;gap:12px}.admin-filter-group{display:flex;gap:14px;flex-wrap:wrap;flex:1}.admin-filter-field{display:flex;flex-direction:column;gap:5px;min-width:0}.admin-filter-field--search{flex:1;min-width:180px}.admin-filter-label{display:flex;align-items:center;gap:5px;color:#526b89;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}.admin-filter-label svg{opacity:.55}.admin-filter-field select,.admin-filter-field input{height:36px;padding:0 12px;border:1px solid #dce4ef;border-radius:8px;background:#fbfdff;color:#344e70;font-size:11px;transition:border-color .2s,box-shadow .2s}.admin-filter-field select:focus,.admin-filter-field input:focus{outline:none;border-color:var(--sigo-teal);box-shadow:0 0 0 3px rgba(7,140,131,.1)}.admin-filter-clear{width:36px;height:36px;display:grid;place-items:center;border:1px solid #dce4ef;border-radius:8px;background:#fff;color:#8493a8;cursor:pointer;transition:all .18s ease;flex-shrink:0}.admin-filter-clear:hover{border-color:var(--sigo-red);color:var(--sigo-red);background:#fff5f5}
+
+/* Modern table */
+.admin-table-modern table{border-collapse:separate;border-spacing:0}.admin-table-modern thead th{position:sticky;top:0;z-index:2;padding:12px 16px;color:#274d78;background:linear-gradient(180deg,#f0f5fa,#e8f0f8);border-bottom:2px solid #d8e5f0;text-transform:uppercase;letter-spacing:.04em;font-size:10px;font-weight:800}.admin-table-modern thead th:first-child{border-radius:10px 0 0 0}.admin-table-modern thead th:last-child{border-radius:0 10px 0 0}.admin-table-modern tbody td{padding:13px 16px;border-bottom:1px solid #eef3f8;color:#405875;font-size:11px;transition:background .15s}.admin-table-modern tbody tr:hover td{background:#f6fafd}.admin-table-modern tbody tr:last-child td{border-bottom:none}.td-route-name strong{color:var(--sigo-navy)}.td-schedule{white-space:nowrap;color:#58708f}.th-actions{text-align:center;width:90px}.admin-chip{display:inline-block;padding:4px 10px;border-radius:14px;background:#eef3f8;color:#3a5978;font-size:10px;font-weight:700;white-space:nowrap}
+
+/* Icon action buttons */
+.admin-icon-actions{display:flex;align-items:center;justify-content:center;gap:6px}.admin-icon-btn{width:32px;height:32px;display:inline-grid;place-items:center;border:1px solid transparent;border-radius:8px;background:transparent;color:#8493a8;cursor:pointer;transition:all .18s ease;padding:0}.admin-icon-btn:hover{transform:scale(1.1)}.admin-icon-btn--edit:hover{border-color:#2168d5;color:#2168d5;background:#eef4ff;box-shadow:0 2px 8px rgba(33,104,213,.15)}.admin-icon-btn--delete{border:none}.admin-icon-btn--delete:hover{border-color:var(--sigo-red);color:var(--sigo-red);background:#fff5f5;box-shadow:0 2px 8px rgba(220,60,60,.12)}.admin-icon-btn:active{transform:scale(.95)}
+
+@media(max-width:1100px){.admin-filter-group{flex-direction:column}.admin-filter-bar-inner{flex-direction:column;align-items:stretch}.admin-filter-clear{align-self:end}}
+
+/* ─── Admin: Route dialog ─── */
+.admin-route-dialog{width:min(640px,calc(100vw - 32px));padding:0;border:0;border-radius:14px;color:var(--sigo-text);background:#fff;box-shadow:0 25px 70px rgba(4,28,54,.3)}.admin-route-dialog::backdrop{background:rgba(4,28,54,.55)}.admin-route-dialog[open]{animation:dialogIn .22s ease}.admin-route-dialog-header{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 56px 16px 24px;border-bottom:1px solid #e8eff6}.admin-route-dialog-header .eyebrow{color:var(--sigo-teal);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.admin-route-dialog-header h3{margin:4px 0 3px;color:var(--sigo-navy);font-size:19px}.admin-route-dialog-header p{margin:0;color:var(--sigo-muted);font-size:11px}.admin-route-dialog-close{position:absolute;top:16px;right:16px;width:32px;height:32px;display:grid;place-items:center;border:1px solid #cad7e5;border-radius:8px;background:#fff;color:#315474;font-size:18px;cursor:pointer;transition:all .15s;padding:0;line-height:1}.admin-route-dialog-close:hover{border-color:var(--sigo-red);color:var(--sigo-red);background:#fff5f5}.admin-route-dialog-header{position:relative}.admin-route-dialog-body{padding:22px 24px}.admin-route-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.admin-route-field{display:flex;flex-direction:column;gap:5px}.admin-route-field--full{grid-column:1/-1}.admin-route-field label,.admin-route-field>span{color:#344e70;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em}.admin-route-field input,.admin-route-field select{height:38px;padding:0 12px;border:1px solid #dce4ef;border-radius:8px;background:#fbfdff;color:#344e70;font-size:12px;transition:border-color .2s,box-shadow .2s}.admin-route-field input:focus,.admin-route-field select:focus{outline:none;border-color:var(--sigo-teal);box-shadow:0 0 0 3px rgba(7,140,131,.1)}.admin-route-check{display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid #e8eff6;border-radius:8px;background:#f8fbfd;cursor:pointer;transition:background .15s}.admin-route-check:hover{background:#f0f7f5}.admin-route-check input{width:auto;margin:0}.admin-route-check span{color:#344e70;font-size:12px;font-weight:600}.admin-route-dialog-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid #e8eff6;background:#fafcfd;border-radius:0 0 14px 14px}.admin-route-dialog-footer .admin-action-btn{min-height:38px;padding:0 18px}.admin-route-dialog-footer .admin-action-btn--primary{display:inline-flex;align-items:center;gap:6px}
+@keyframes dialogIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
+@media(max-width:640px){.admin-route-form-grid{grid-template-columns:1fr}.admin-route-dialog-body{padding:16px}.admin-route-dialog-header{padding:16px}}
+
+/* ─── Admin: Filter + Carousel unified card ─── */
+.admin-filter-carousel-card{display:grid;grid-template-columns:1fr 280px;gap:0;border:1px solid var(--sigo-line);border-radius:12px;background:#fff;box-shadow:var(--sigo-shadow);overflow:hidden}
+.admin-filter-carousel-card .admin-filter-bar{border:0;border-radius:0;box-shadow:none;padding:16px 20px;display:flex;align-items:end;flex:1}
+.admin-filter-carousel-card .admin-filter-bar-inner{width:100%}
+.rc-slider{display:flex;flex-direction:column;padding:16px 20px;border-left:1px solid #eef3f8;min-height:100px}
+.rc-header{margin-bottom:12px}
+.rc-title{display:block;color:var(--sigo-navy);font-size:12px;font-weight:800}
+.rc-subtitle{display:block;color:var(--sigo-muted);font-size:9px;margin-top:2px}
+.rc-body{display:flex;align-items:center;gap:10px;flex:1}
+.rc-arrow{width:30px;height:30px;display:grid;place-items:center;border:1px solid #dce4ef;border-radius:50%;background:#fff;color:#526b89;cursor:pointer;transition:all .15s;flex-shrink:0;padding:0}
+.rc-arrow:hover{border-color:var(--sigo-teal);color:var(--sigo-teal);background:#f0faf8}
+.rc-slide{display:flex;align-items:center;gap:10px;flex:1;min-width:0;transition:opacity .25s ease}
+.rc-icon{width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:linear-gradient(135deg,#e8f4fd,#d4ecfa);color:#2168d5;flex-shrink:0}
+.rc-info{min-width:0}
+.rc-route-name{display:block;color:var(--sigo-navy);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rc-route-count{display:block;color:var(--sigo-muted);font-size:10px;margin-top:2px}
+.rc-dots{display:flex;justify-content:center;gap:5px;margin-top:10px}
+.rc-dot{width:6px;height:6px;border-radius:50%;border:0;background:#d6e1ed;padding:0;cursor:pointer;transition:all .2s}
+.rc-dot--active{background:var(--sigo-teal);width:16px;border-radius:3px}
+@media(max-width:900px){.admin-filter-carousel-card{grid-template-columns:1fr}.rc-slider{border-left:0;border-top:1px solid #eef3f8;flex-direction:row;align-items:center;padding:14px 16px;gap:12px;min-height:auto}.rc-body{flex:1}.rc-dots{justify-content:flex-start;margin-top:0;margin-left:auto}}
+
+/* Turn-disable warning modal */
+.turn-disable-warning-modal{width:min(480px,calc(100vw - 32px))}
+.turn-warning-content{display:flex;flex-direction:column;align-items:center;text-align:center;padding:12px 0}
+.turn-warning-icon{width:56px;height:56px;display:grid;place-items:center;border-radius:50%;background:#fef3cd;color:#856404;font-size:28px;margin-bottom:12px}
+.turn-warning-content p{color:var(--sigo-text);font-size:13px;line-height:1.5;margin:0}
+.turn-warning-detail{color:var(--sigo-muted);font-size:11px;margin-top:8px!important}
+
+/* Circuit route/EAS option checkboxes */
+.circuit-route-option{display:flex;align-items:center;gap:6px;padding:8px 10px;border:1px solid #e8eff6;border-radius:6px;background:#fff;font-size:11px}
+.circuit-route-option input{width:auto}
+
+/* Override class display for hidden circuit options */
+.circuit-route-option[hidden]{display:none!important}

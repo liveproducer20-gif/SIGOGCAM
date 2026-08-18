@@ -12,6 +12,7 @@ from app.modules.distribucion_tablero.models import (
     ConfirmAssignmentInput,
     RandomAssignmentInput,
     RandomDraftInput,
+    EASRandomAssignmentInput,
     RouteRequirementInput,
     SaveDistributionInput,
     SubstituteAgentInput,
@@ -65,6 +66,14 @@ def random_draft(
     user: dict = Depends(require_permission("tablero_distribucion.asignar")),
 ):
     return ok(repository.generate_draft_assignments(payload.model_dump()))
+
+
+@router.post("/distribucion-tablero/asignacion-aleatoria-eas")
+def random_eas_draft(
+    payload: EASRandomAssignmentInput,
+    user: dict = Depends(require_permission("tablero_distribucion.asignar")),
+):
+    return ok(repository.generate_eas_draft_assignments(payload.model_dump()))
 
 
 @router.post("/distribucion-tablero/distribuciones", status_code=201)

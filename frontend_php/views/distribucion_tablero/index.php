@@ -36,6 +36,10 @@ $canConfigure = $isAdmin || in_array('tablero_distribucion.configurar', $permiss
         <header><span>Mostrando circuitos disponibles de:</span><strong id="tdSelectedDistrictName"></strong></header>
         <div class="td-circuit-accordion" id="tdCircuitAccordion"></div>
     </section>
+    <section class="td-eas-panel" id="tdEasPanel" hidden>
+        <header><span>Estaciones de Acci&oacute;n Segura</span><strong>Seleccione un EAS para ver sus rutas operativas</strong></header>
+        <div class="td-eas-list" id="tdEasList"></div>
+    </section>
 
     <div class="td-board">
         <section class="td-workspace">
@@ -52,39 +56,43 @@ $canConfigure = $isAdmin || in_array('tablero_distribucion.configurar', $permiss
 
                 <section class="td-managers-row">
                     <section class="td-manager-card" id="tdDistrictManagerCard" hidden>
-                        <div class="td-manager-copy"><small>RESPONSABILIDAD DEL DISTRITO</small><h3>Encargado de distrito</h3><p id="tdDistrictManagerValue">Sin asignar</p>
+                        <div class="td-manager-copy"><small>RESPONSABILIDAD DEL DISTRITO</small><h3>Encargado de distrito</h3><div id="tdDistrictManagerValue"><div class="td-empty-role"><span class="td-avatar--ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><div><b>Cargando</b><small>Espere un momento</small></div></div></div>
                             <div class="td-resource-summary" id="tdDistrictResources"></div>
                             <div class="td-district-circuit-option" id="tdDistrictCircuitOption">
                                 <label><input id="tdDistrictAsCircuitManager" type="checkbox"> Asignar tambi&eacute;n como encargado de circuito</label>
                                 <select id="tdDistrictManagerCircuit"><option value="">Seleccione circuito</option></select>
                             </div>
                         </div>
-                        <?php if ($canAssign): ?><div class="td-manager-actions"><button class="td-btn td-btn-ghost td-btn-sm" id="tdEditDistrictResources" type="button">Gestionar recursos</button><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignDistrictManager" type="button">Cambiar encargado</button><button class="td-btn td-btn-ghost td-btn-sm" id="tdRemoveDistrictManager" type="button" hidden>Quitar</button></div><?php endif; ?>
+                        <?php if ($canAssign): ?><div class="td-manager-actions"><button class="td-btn td-btn-ghost td-btn-sm" id="tdEditDistrictResources" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg><span class="td-btn-label">Gestionar recursos</span></button><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignDistrictManager" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="td-btn-label">Asignar encargado de distrito</span></button><button class="td-btn td-btn-danger td-btn-sm" id="tdRemoveDistrictManager" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg><span class="td-btn-label">Quitar</span></button></div><?php endif; ?>
                     </section>
                     <section class="td-circuit-managers" id="tdCircuitManagersCard">
-                        <header><div><small>RESPONSABILIDAD OPERATIVA</small><h3>Encargados de circuito</h3></div><?php if ($canAssign): ?><button class="td-btn td-btn-primary td-btn-sm" id="tdAddCircuitManager" type="button">+ Agregar</button><?php endif; ?></header>
-                        <div id="tdCircuitManagersList"><p class="td-empty-small">No existen encargados de circuito asignados.</p></div>
+                        <header><div><small>RESPONSABILIDAD OPERATIVA</small><h3>Encargados de circuito</h3></div><?php if ($canAssign): ?><button class="td-btn td-btn-primary td-btn-sm" id="tdAddCircuitManager" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="td-btn-label">Agregar</span></button><?php endif; ?></header>
+                        <div id="tdCircuitManagersList"><div class="td-empty-role"><span class="td-avatar--ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><div><b>Cargando</b><small>Espere un momento</small></div></div></div>
                     </section>
                     <section class="td-manager-card td-route-manager" id="tdRouteManagerCard" hidden>
-                        <div><small>RESPONSABILIDAD DE LA RUTA</small><h3>Encargado de ruta</h3><p id="tdRouteManagerValue">Sin encargado de ruta<br><em>Responsable: Encargado del circuito</em></p></div>
-                        <?php if ($canAssign): ?><div class="td-manager-actions"><label class="td-manager-switch"><input id="tdRouteManagerRequired" type="checkbox"><span></span> Asignar encargado</label><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignRouteManager" type="button" hidden>Seleccionar</button></div><?php endif; ?>
+                        <div><small>RESPONSABILIDAD DE LA RUTA</small><h3>Encargados de ruta</h3><div id="tdRouteManagerValue"><div class="td-empty-role"><span class="td-avatar--ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><div><b>Cargando</b><small>Espere un momento</small></div></div></div>
+                        <?php if ($canAssign): ?><div class="td-manager-actions"><label class="td-manager-switch"><input id="tdRouteManagerRequired" type="checkbox"><span></span> Asignar encargado</label><button class="td-btn td-btn-primary td-btn-sm" id="tdAssignRouteManager" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span class="td-btn-label">Seleccionar agente</span></button><button class="td-btn td-btn-ghost td-btn-sm" id="tdAssignRouteManager2" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="td-btn-label">Agregar 2do</span></button><button class="td-btn td-btn-danger td-btn-sm" id="tdRemoveRouteManager2" type="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg><span class="td-btn-label">Quitar 2do</span></button></div><?php endif; ?>
                     </section>
                 </section>
 
                 <div class="td-assignment-zone">
                     <aside class="td-routes-card">
-                        <div class="td-card-heading"><h2>Lugares de servicio</h2></div>
+                        <div class="td-card-heading"><h2 id="tdRoutesSidebarTitle">Lugares de servicio</h2></div>
                         <label class="td-search"><span aria-hidden="true">&#128269;</span><input id="tdRouteSearch" type="search" placeholder="Buscar lugar..."></label>
                         <div class="td-route-list" id="tdRouteList"><div class="td-empty-small">Seleccione distrito y turno.</div></div>
                     </aside>
-                    <div class="td-table-card">
+                    <div class="td-table-card" id="tdStandardTableCard">
                         <div class="td-table-header"><h3>Lugares y asignaci&oacute;n de personal</h3><span id="tdRouteName"></span><span id="tdRoutePlacesBadge" class="td-badge-count"></span></div>
                         <div class="td-table-scroll"><table><thead><tr><th>Lugar de servicio</th><th>Requerido</th><th>Asignaci&oacute;n actual</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="tdPlacesBody"></tbody></table></div>
+                    </div>
+                    <div class="td-eas-table-card" id="tdEasTableCard" hidden>
+                        <header><h3 id="tdEasRouteName">Ruta EAS</h3><span id="tdEasRouteMeta"></span></header>
+                        <div id="tdEasConfigurations"></div>
                     </div>
                 </div>
 
                 <div class="td-bottom-bar">
-                    <section class="td-random-card"><div class="td-tool-title"><i>&#9671;</i><h3>Asignaci&oacute;n aleatoria</h3></div><p>Asigna personal disponible a todos los lugares del circuito.</p><?php if ($canAssign): ?><button class="td-btn td-btn-primary" id="tdRandomAssign" type="button">Asignar circuito</button><?php endif; ?><div class="td-no-repeat"><b>&#9670; <span>Prioridad operativa</span></b><p>Primero deben definirse encargados. Los agentes no se repiten.</p></div></section>
+                    <section class="td-random-card"><div class="td-tool-title"><i>&#9671;</i><h3>Asignaci&oacute;n aleatoria</h3></div><p id="tdRandomDescription">Asigna personal disponible a todos los lugares del circuito.</p><?php if ($canAssign): ?><button class="td-btn td-btn-primary" id="tdRandomAssign" type="button">Asignar circuito</button><?php endif; ?><div class="td-no-repeat"><b>&#9670; <span>Prioridad operativa</span></b><p id="tdRandomPriority">Primero deben definirse encargados. Los agentes no se repiten.</p></div></section>
                     <section class="td-availability-card"><h3>Disponibilidad actual</h3><dl><div><dt><i class="is-available"></i>Disponibles</dt><dd id="tdAvailable">0</dd></div><div><dt><i class="is-service"></i>En servicio</dt><dd id="tdInService">0</dd></div><div><dt><i class="is-unavailable"></i>No disponibles</dt><dd id="tdUnavailable">0</dd></div><div class="td-total"><dt>Total agentes</dt><dd id="tdTotalAgents">0</dd></div></dl></section>
                 </div>
 

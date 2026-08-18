@@ -22,16 +22,28 @@ final class CartillasController
         $tempCp = '';
         $chief = '';
         $preview = $_POST['contenido'] ?? '';
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $eas = $api->get('cartillas/eas')['datos'] ?? [];
-            $catalogs = $api->get('cartillas/catalogos-operativos')['datos'] ?? [];
-            $assignments = $api->get('cartillas/asignaciones-eas-moviles')['datos'] ?? [];
-            $tempCp = $api->get('cartillas/temp/cp')['datos']['nombreCp'] ?? '';
-            $chief = $api->get('cartillas/jefe-control-municipal')['datos']['nombre'] ?? '';
-        } catch (\Throwable $exception) {
-            $error = $error ?? $exception->getMessage();
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Independent catalog calls run in parallel (curl_multi); a failure in
+        // one call doesn't prevent the rest of the screen from loading.
+        $responses = $api->getMany([
+            'eas' => 'cartillas/eas',
+            'catalogs' => 'cartillas/catalogos-operativos',
+            'assignments' => 'cartillas/asignaciones-eas-moviles',
+            'tempCp' => 'cartillas/temp/cp',
+            'chief' => 'cartillas/jefe-control-municipal',
+        ]);
+        foreach ($responses as $key => $response) {
+            if (isset($response['error'])) {
+                $errors[] = $key . ': ' . $response['error']->getMessage();
+                continue;
+            }
+            $datos = $response['data']['datos'] ?? [];
+            if ($key === 'tempCp') $tempCp = $datos['nombreCp'] ?? '';
+            elseif ($key === 'chief') $chief = $datos['nombre'] ?? '';
+            else ${$key} = $datos;
         }
+        $error = $error ?? ($errors ? implode(' | ', $errors) : null);
 
         View::render('cartillas/index', [
             'title' => 'Cartillas',

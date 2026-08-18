@@ -39,10 +39,10 @@ final class DistribucionTableroController
             'catalogos' => $catalogs,
             'error' => $error,
             'pageStyles' => [
-                '/assets/css/distribucion-tablero.css?v=20260817-circuit-card-tones',
+                '/assets/css/distribucion-tablero.css?v=20260818-eas-mode',
             ],
             'pageScripts' => [
-                '/assets/js/distribucion-tablero.js?v=20260817-circuit-cards',
+                '/assets/js/distribucion-tablero.js?v=20260818-eas-mode',
             ],
         ]);
     }

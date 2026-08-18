@@ -11,8 +11,8 @@
     const canConfigure = app.dataset.canConfigure === '1';
 
     const state = {
-        districtId: 0, circuitId: 0, shiftId: 0, board: null, routeId: 0,
-        places: new Map(), assignments: [], districtManager: null, circuitManagers: new Map(), routeManagers: new Map(), agentTarget: null, availability: null,
+        districtId: 0, circuitId: 0, shiftId: 0, board: null, routeId: 0, easId: 0,
+        places: new Map(), assignments: [], easAssignments: [], districtManager: null, circuitManagers: new Map(), routeManagers: new Map(), agentTarget: null, availability: null,
         saved: null, editingId: 0,
         circuitDraft: null, promptedDistrictKey: '',
         districtSummaries: [], dirty: false, pendingDistrictId: 0,
@@ -73,6 +73,7 @@
     }
     function selectedDate() { return $('#tdBoardDate')?.value || ''; }
     function draftKey() { return `sigo-distribucion-draft:${state.districtId}:${state.shiftId}:${selectedDate()}`; }
+    function isEasMode() { return Boolean(state.board?.modo_eas); }
     function renderSaveState() {
         const status=$('#tdUnsavedState'),button=$('#tdSaveDraft');
         if(status){status.classList.toggle('is-dirty',state.dirty);status.innerHTML=state.dirty?'&#9679; Cambios sin guardar':'&#10003; Guardado';}
@@ -80,21 +81,22 @@
     }
     function saveDraft() {
         if (!state.districtId || !state.shiftId) return;
-        sessionStorage.setItem(draftKey(), JSON.stringify({assignments: state.assignments, districtManager: state.districtManager, circuitManagers:Array.from(state.circuitManagers.entries()), routeManagers: Array.from(state.routeManagers.entries()), updatedAt: new Date().toISOString()}));
+        sessionStorage.setItem(draftKey(), JSON.stringify({assignments: state.assignments, easAssignments: state.easAssignments, easId: state.easId, districtManager: state.districtManager, circuitManagers:Array.from(state.circuitManagers.entries()), routeManagers: Array.from(state.routeManagers.entries()), updatedAt: new Date().toISOString()}));
         state.dirty=true;renderSaveState();
     }
     function restoreDraft() {
         try {
             const stored=sessionStorage.getItem(draftKey());const draft = JSON.parse(stored || '{}');
-            state.assignments = draft.assignments || []; state.districtManager = draft.districtManager || null;
+            state.assignments = draft.assignments || []; state.easAssignments = draft.easAssignments || []; state.easId = Number(draft.easId || 0); state.districtManager = draft.districtManager || null;
             state.circuitManagers = new Map(draft.circuitManagers || []);
             state.routeManagers = new Map(draft.routeManagers || []);
             state.dirty=Boolean(stored);
-        } catch (_) { state.assignments = []; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.dirty=false; }
+        } catch (_) { state.assignments = []; state.easAssignments = []; state.easId = 0; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.dirty=false; }
         renderSaveState();
     }
     function usedAgentIds(exceptAgentId = 0) {
         const ids = state.assignments.map(item => Number(item.agente_id));
+        state.easAssignments.forEach(item => { if (item.agente_id) ids.push(Number(item.agente_id)); });
         if (state.districtManager?.agente_id) ids.push(Number(state.districtManager.agente_id));
         if (state.districtManager?.conductor_id) ids.push(Number(state.districtManager.conductor_id));
         if (state.districtManager?.auxiliar_1_id) ids.push(Number(state.districtManager.auxiliar_1_id));
@@ -105,7 +107,7 @@
             if (item?.auxiliar_1_id && !item.usar_encargado_distrito) ids.push(Number(item.auxiliar_1_id));
             if (item?.auxiliar_2_id && !item.usar_encargado_distrito) ids.push(Number(item.auxiliar_2_id));
         }
-        for (const item of state.routeManagers.values()) if (item?.agente_id) ids.push(Number(item.agente_id));
+        for (const item of state.routeManagers.values()) { if (item?.agente_id) ids.push(Number(item.agente_id)); if (item?.agente_2_id) ids.push(Number(item.agente_2_id)); }
         return ids.filter(id => id !== Number(exceptAgentId));
     }
     function assignmentsFor(placeId) { return state.assignments.filter(item => Number(item.lugar_id) === Number(placeId)); }
@@ -173,7 +175,8 @@
 
     function renderCircuitAccordion(){
         const panel=$('#tdSelectedDistrictPanel'),container=$('#tdCircuitAccordion');if(!panel||!container)return;
-        panel.hidden=!state.districtId;
+        panel.hidden=!state.districtId || isEasMode();
+        if (isEasMode()) return;
         $('#tdSelectedDistrictName').textContent=state.board?.distrito?.nombre||districtSummary(state.districtId)?.nombre||'';
         const circuits=state.board?.circuitos||[];
         const palette=[
@@ -209,11 +212,16 @@
         }
         try {
             state.board = await api(`distribucion-tablero/tablero?distrito_id=${state.districtId}&turno_id=${state.shiftId}&fecha=${selectedDate()}`);
-            state.places.clear(); state.assignments = []; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.saved = null; state.editingId = 0;
+            state.places.clear(); state.assignments = []; state.easAssignments = []; state.easId = 0; state.districtManager = null; state.circuitManagers = new Map(); state.routeManagers = new Map(); state.saved = null; state.editingId = 0;
             state.dirty=false;
             if (state.board.distribucion_id) {
                 state.saved = await api(`distribucion-tablero/distribuciones/${state.board.distribucion_id}`);
                 state.editingId = Number(state.saved.id);
+                state.easAssignments = (state.saved.eas_detalles || []).map(item => ({
+                    eas_id: Number(item.eas_id), ruta_id: Number(item.ruta_id), configuracion_id: item.configuracion_id ? Number(item.configuracion_id) : null,
+                    rol: item.rol, agente_id: item.agente_id ? Number(item.agente_id) : null, tipo_asignacion: item.tipo_asignacion || 'MANUAL',
+                    agente: item.agente_id ? {id: Number(item.agente_id), nombre_completo: item.agente, grado: item.grado} : null,
+                }));
                 const routeManagerDetails = (state.saved.detalles || []).filter(item => String(item.lugar || '').trim().toUpperCase() === 'ENCARGADO DE RUTA');
                 state.assignments = (state.saved.detalles || []).filter(item => item.agente_id && String(item.lugar || '').trim().toUpperCase() !== 'ENCARGADO DE RUTA').map(item => ({lugar_id:Number(item.lugar_id),agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}}));
                 for (const item of state.saved.encargados || []) {
@@ -226,7 +234,13 @@
                     else if (item.tipo_responsabilidad === 'ENCARGADO_CIRCUITO') state.circuitManagers.set(Number(item.circuito_id), {
                         usar_encargado_distrito:Boolean(item.usar_encargado_distrito),...(manager || {}),...resources
                     });
-                    else state.routeManagers.set(Number(item.ruta_id), {requiere_encargado:Boolean(item.requiere_encargado),...(manager || {})});
+                    else {
+                        const existing = state.routeManagers.get(Number(item.ruta_id)) || {requiere_encargado:Boolean(item.requiere_encargado)};
+                        if (manager && !existing.agente_id) { existing.agente_id = manager.agente_id; existing.agente = manager.agente; }
+                        else if (manager && !existing.agente_2_id && manager.agente_id !== existing.agente_id) { existing.agente_2_id = manager.agente_id; existing.agente_2 = manager.agente; }
+                        existing.requiere_encargado = Boolean(item.requiere_encargado);
+                        state.routeManagers.set(Number(item.ruta_id), existing);
+                    }
                 }
                 // Convierte asignaciones antiguas del registro tecnico en la responsabilidad superior.
                 for (const item of routeManagerDetails) {
@@ -235,9 +249,12 @@
                     state.routeManagers.set(routeId, {requiere_encargado:true,agente_id:Number(item.agente_id),tipo_asignacion:item.tipo_asignacion || 'MANUAL',agente:{id:Number(item.agente_id),nombre_completo:item.agente,cedula:item.cedula}});
                 }
             } else restoreDraft();
-            if(!state.circuitId&&(state.board.circuitos||[]).length){state.circuitId=Number(state.board.circuitos[0].id);$('#tdCircuit').value=String(state.circuitId);}
+            if (isEasMode()) {
+                state.easId = state.easId || Number(state.board.eas?.[0]?.id || 0);
+                state.circuitId = 0;
+            } else if(!state.circuitId&&(state.board.circuitos||[]).length){state.circuitId=Number(state.board.circuitos[0].id);$('#tdCircuit').value=String(state.circuitId);}
             for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado:false});
-            renderRoutes();
+            renderEasSelector(); renderRoutes();
             renderCircuitAccordion();renderDistrictCards();renderSaveState();
             populateOperationalCatalogs();
             const first = visibleRoutes().find(route => Number(route.lugares || 0) > 0) || visibleRoutes()[0];
@@ -257,14 +274,28 @@
     function renderRoutes() {
         const query = $('#tdRouteSearch').value.trim().toLowerCase();
         const routes = visibleRoutes().filter(route => String(route.nombre).toLowerCase().includes(query));
+        $('#tdRoutesSidebarTitle').textContent = isEasMode() ? 'Rutas EAS' : 'Lugares de servicio';
+        $('#tdRouteSearch').placeholder = isEasMode() ? 'Buscar ruta...' : 'Buscar lugar...';
         $('#tdRouteList').innerHTML = routes.length ? routes.map(route => `
             <button class="td-route-item ${Number(route.id) === state.routeId ? 'is-active' : ''}" type="button" data-route-id="${route.id}">
-                <span><b>${esc(route.nombre)}</b><small>${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}</small></span>
+                <span><b>${esc(route.nombre)}</b><small>${isEasMode() ? `${(route.configuraciones || []).length} ${(route.configuraciones || []).length === 1 ? 'configuración' : 'configuraciones'}` : `${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}`}</small></span>
             </button>`).join('') : '<div class="td-empty-small">No se encontraron rutas.</div>';
     }
     function visibleRoutes() {
         const routes=state.board?.rutas || [];
+        if (isEasMode()) return routes.filter(route => Number(route.eas_id) === Number(state.easId));
         return state.circuitId ? routes.filter(route=>Number(route.circuito_id||0)===state.circuitId) : routes;
+    }
+    function renderEasSelector() {
+        const panel = $('#tdEasPanel'), list = $('#tdEasList');
+        if (!panel || !list) return;
+        panel.hidden = !isEasMode();
+        if (!isEasMode()) return;
+        const easList = state.board?.eas || [];
+        list.innerHTML = easList.length ? easList.map(eas => {
+            const routes = (state.board?.rutas || []).filter(route => Number(route.eas_id) === Number(eas.id));
+            return `<button type="button" class="td-eas-item ${Number(eas.id) === Number(state.easId) ? 'is-active' : ''}" data-eas-id="${eas.id}"><i>${esc(eas.codigo || 'EAS')}</i><span><b>${esc(eas.nombre)}</b><small>${routes.length} ${routes.length === 1 ? 'ruta' : 'rutas'} operativas</small></span></button>`;
+        }).join('') : '<div class="td-empty-small">No existen EAS asociados a circuitos activos.</div>';
     }
     function shiftIcon() {
         const name=String(state.board?.turno?.nombre || $('#tdShift').selectedOptions[0]?.textContent || '').toUpperCase();
@@ -281,32 +312,84 @@
     }
     async function selectRoute(routeId) {
         state.routeId = routeId; renderRoutes();
+        if (isEasMode()) return renderWorkspace();
         try { await ensurePlaces(routeId); renderWorkspace(); }
         catch (error) { notify(error.message, true); }
     }
 
-    function routeData() { return (state.board?.rutas || []).find(route => Number(route.id) === state.routeId); }
+    function routeData() {
+        return (state.board?.rutas || []).find(route => Number(route.id) === state.routeId
+            && (!isEasMode() || Number(route.eas_id) === Number(state.easId)));
+    }
     function routeStats() {
         const places = state.places.get(state.routeId) || [];
         const required = places.reduce((sum, place) => sum + Number(place.cantidad_requerida || 0), 0);
         const assigned = places.reduce((sum, place) => sum + assignmentsFor(place.id).length, 0);
         return {places: places.length, required, assigned, pending: Math.max(0, required - assigned), coverage: required ? Math.round(assigned / required * 100) : 0};
     }
+    function easAssignmentFor(configurationId, role) {
+        const route = routeData();
+        return state.easAssignments.find(item => Number(item.eas_id) === Number(state.easId)
+            && Number(item.ruta_id) === Number(route?.id)
+            && Number(item.configuracion_id || 0) === Number(configurationId || 0)
+            && item.rol === role) || null;
+    }
+    function easRouteStats() {
+        const route = routeData(); const configurations = route?.configuraciones || [];
+        const required = configurations.length * 2;
+        const assigned = configurations.reduce((total, config) => total + ['CP', 'JP'].filter(role => easAssignmentFor(config.id, role)?.agente_id).length, 0);
+        return {places: configurations.length, required, assigned, pending: Math.max(0, required - assigned), coverage: required ? Math.round(assigned / required * 100) : 0};
+    }
+    function easPersonName(assignment) { return personDisplayName(assignment?.agente?.nombre_completo) || 'Sin asignar'; }
+    function renderEasRole(config, role, optional = false) {
+        const assignment = easAssignmentFor(config.id, role);
+        const assigned = Boolean(assignment?.agente_id);
+        const label = role === 'AUX' ? 'AUX' : role;
+        const status = assigned ? '<span class="td-status td-status-assigned">Asignado</span>'
+            : optional ? '<span class="td-status td-eas-status-neutral">Opcional</span>' : '<span class="td-status td-status-pending">Pendiente</span>';
+        const action = canAssign ? `<button type="button" class="td-btn td-btn-primary td-btn-sm td-eas-action" data-eas-assign="${role}" data-config-id="${config.id || ''}">${assigned ? 'Cambiar' : 'Asignar'}</button>` : '&mdash;';
+        return `<tr><td><span class="td-eas-role"><i>&#128100;</i>${label}${optional ? '<em class="td-eas-optional">Opcional</em>' : ''}</span></td><td><span class="td-eas-assignee ${assigned ? '' : 'is-empty'}">${esc(easPersonName(assignment))}</span></td><td>${status}</td><td>${action}</td></tr>`;
+    }
+    function renderEasWorkspace(route) {
+        const configs = route.configuraciones || [];
+        $('#tdStandardTableCard').hidden = true; $('#tdEasTableCard').hidden = false;
+        $('#tdEasRouteName').textContent = route.nombre;
+        $('#tdEasRouteMeta').textContent = `${configs.length} ${configs.length === 1 ? 'configuración' : 'configuraciones'}`;
+        $('#tdEasConfigurations').innerHTML = configs.map((config, index) => {
+            const mobile = config.numero_movil ? `Camioneta disco: ${config.numero_movil}${config.placa ? ` · ${config.placa}` : ''}` : 'Sin móvil configurado';
+            return `<section class="td-eas-config"><div class="td-eas-config-head"><b>${configs.length > 1 ? `Configuración ${index + 1}` : 'Configuración operativa'}</b><span>${esc(mobile)}</span></div><table class="td-eas-role-table"><thead><tr><th>Rol</th><th>Asignado a</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td><span class="td-eas-role is-mobile"><i>&#128666;</i>Camioneta</span></td><td><span class="td-eas-assignee ${config.numero_movil ? '' : 'is-empty'}">${esc(mobile)}</span></td><td><span class="td-eas-status-neutral">${config.numero_movil ? 'Configurada' : '—'}</span></td><td>—</td></tr>${renderEasRole(config, 'CP')}${renderEasRole(config, 'JP')}${renderEasRole(config, 'AUX', true)}</tbody></table></section>`;
+        }).join('') || '<div class="td-empty-small">Esta ruta no tiene configuraciones operativas.</div>';
+    }
     function renderWorkspace() {
         const route = routeData(); if (!route) return showEmpty();
-        const places = state.places.get(state.routeId) || []; const stats = routeStats();
+        const places = state.places.get(state.routeId) || []; const stats = isEasMode() ? easRouteStats() : routeStats();
         $('#tdEmptyBoard').hidden = true; $('#tdRouteWorkspace').hidden = false;
         $('#tdRouteName').textContent = route.nombre;
-        $('#tdRoutePlacesBadge').textContent = `${stats.places} ${stats.places === 1 ? 'lugar' : 'lugares'}`;
+        $('#tdRoutePlacesBadge').textContent = `${stats.places} ${stats.places === 1 ? (isEasMode() ? 'configuración' : 'lugar') : (isEasMode() ? 'configuraciones' : 'lugares')}`;
         $('#tdKpiPlaces').textContent = stats.places; $('#tdKpiRequired').textContent = stats.required;
         $('#tdKpiAssigned').textContent = stats.assigned; $('#tdKpiPending').textContent = stats.pending;
         $('#tdKpiCoverage').textContent = `${stats.coverage}%`; $('#tdCoverageBar').style.width = `${Math.min(100, stats.coverage)}%`;
         $('#tdCoverageLabel').textContent = stats.coverage >= 100 ? 'Ruta completa' : 'Ruta incompleta';
+        if ($('#tdRandomAssign')) $('#tdRandomAssign').textContent = isEasMode() ? 'Asignar CP y JP' : 'Asignar circuito';
+        if ($('#tdRandomDescription')) $('#tdRandomDescription').textContent = isEasMode() ? 'Asigna personal disponible a CP y JP pendientes de las rutas EAS.' : 'Asigna personal disponible a todos los lugares del circuito.';
+        if ($('#tdRandomPriority')) $('#tdRandomPriority').textContent = isEasMode() ? 'Prioridad: CP, JP y luego AUX opcional. Las camionetas no se modifican.' : 'Primero deben definirse encargados. Los agentes no se repiten.';
+        $('.td-managers-row').hidden = isEasMode();
+        if (isEasMode()) { renderEasWorkspace(route); return; }
+        $('#tdEasTableCard').hidden = true; $('#tdStandardTableCard').hidden = false;
         renderManagers();
         $('#tdPlacesBody').innerHTML = places.length ? places.map((place, index) => renderPlaceRow(place, index)).join('') : '<tr><td colspan="5"><div class="td-empty-small">Esta ruta no tiene lugares de servicio activos.</div></td></tr>';
     }
     function managerLabel(item, fallback) {
         return personDisplayName(item?.agente?.nombre_completo) || fallback;
+    }
+    function personRow(agent) {
+        if (!agent) return '';
+        const name = personDisplayName(agent.nombre_completo);
+        const grade = agent.grado ? `<small>${esc(agent.grado)}</small>` : '';
+        return `<span class="td-manager-person"><span class="td-avatar">${esc(initials(name))}</span><b>${esc(name)}${grade}</b></span>`;
+    }
+    function emptyRole(title, hint) {
+        return `<div class="td-empty-role"><span class="td-avatar--ghost"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span><div><b>${esc(title)}</b><small>${esc(hint)}</small></div></div>`;
     }
     function resourcesComplete(item){return Boolean(item?.movil_id&&item?.conductor_id&&item?.auxiliar_1_id);}
     function resourcePerson(label,person,required=true){return `<div><span>${label}${required?' <em>Requerido</em>':' <em>Opcional</em>'}</span><strong>${esc(personDisplayName(person?.nombre_completo)||'Sin asignar')}</strong>${person?.grado?`<small>${esc(person.grado)}</small>`:''}</div>`;}
@@ -325,9 +408,9 @@
         const districtEnabled = Boolean(state.board?.distrito?.asignar_encargado);
         $('#tdDistrictManagerCard').hidden = !districtEnabled;
         if (districtEnabled) {
-            $('#tdDistrictManagerValue').textContent = managerLabel(state.districtManager, 'Sin asignar');
+            $('#tdDistrictManagerValue').innerHTML = state.districtManager?.agente ? personRow(state.districtManager.agente) : emptyRole('Sin encargado asignado', 'Asigne un encargado para coordinar el distrito');
             if($('#tdDistrictResources')) $('#tdDistrictResources').innerHTML=resourceSummary(state.districtManager);
-            if ($('#tdAssignDistrictManager')) $('#tdAssignDistrictManager').textContent = state.districtManager ? 'Cambiar encargado' : 'Asignar encargado de distrito';
+            if ($('#tdAssignDistrictManager')) { const lbl = $('#tdAssignDistrictManager .td-btn-label'); if (lbl) lbl.textContent = state.districtManager ? 'Cambiar encargado' : 'Asignar encargado de distrito'; }
             if ($('#tdRemoveDistrictManager')) $('#tdRemoveDistrictManager').hidden = !state.districtManager;
             const shared=Array.from(state.circuitManagers.entries()).find(([,item])=>item.usar_encargado_distrito);
             if($('#tdDistrictAsCircuitManager')) $('#tdDistrictAsCircuitManager').checked=Boolean(shared);
@@ -335,29 +418,53 @@
         }
         renderCircuitManagers();
         const route = routeData(); const routeEnabled = Boolean(route?.asignar_encargado);
+        const isEstacion = Number(state.board?.distrito_id) === 1143;
         $('#tdRouteManagerCard').hidden = !routeEnabled;
         if (routeEnabled) {
             const item = state.routeManagers.get(Number(route.id)) || {requiere_encargado:false};
+            const titleLabel = isEstacion ? 'Radioperadores' : 'Encargados de ruta';
+            const cardTitle = $('#tdRouteManagerCard h3');
+            if (cardTitle) cardTitle.textContent = titleLabel;
             if ($('#tdRouteManagerRequired')) $('#tdRouteManagerRequired').checked = Boolean(item.requiere_encargado);
-            if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; $('#tdAssignRouteManager').textContent = item.agente_id ? 'Cambiar encargado' : 'Seleccionar agente'; }
-            if (item.requiere_encargado) $('#tdRouteManagerValue').textContent = managerLabel(item, 'Debe seleccionar un encargado de ruta');
-            else $('#tdRouteManagerValue').innerHTML = 'Sin encargado de ruta<br><em>Responsable: Encargado del circuito</em>';
+            if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; const lbl = $('#tdAssignRouteManager .td-btn-label'); if (lbl) lbl.textContent = item.agente_id ? 'Cambiar encargado' : 'Seleccionar agente'; }
+            if ($('#tdAssignRouteManager2')) {
+                if (item.requiere_encargado && item.agente_id) {
+                    $('#tdAssignRouteManager2').hidden = false;
+                    const lbl2 = $('#tdAssignRouteManager2 .td-btn-label'); if (lbl2) lbl2.textContent = item.agente_2_id ? 'Cambiar 2do' : 'Agregar 2do';
+                } else {
+                    $('#tdAssignRouteManager2').hidden = true;
+                }
+            }
+            if ($('#tdRemoveRouteManager2')) $('#tdRemoveRouteManager2').hidden = !item.agente_2_id;
+            if (item.requiere_encargado) {
+                const lines = [];
+                if (item.agente_id) lines.push(personRow(item.agente));
+                else lines.push(emptyRole(`Sin ${isEstacion ? 'radioperador' : 'encargado de ruta'} asignado`, 'Seleccione un agente para esta ruta'));
+                if (item.agente_2_id) lines.push(personRow(item.agente_2));
+                $('#tdRouteManagerValue').innerHTML = lines.join('<br>');
+            } else {
+                const defaultLabel = isEstacion ? 'Responsable: Encargado del circuito' : 'Responsable: Encargado del circuito';
+                $('#tdRouteManagerValue').innerHTML = emptyRole(
+                    `Sin ${isEstacion ? 'radioperador' : 'encargado de ruta'} asignado`,
+                    defaultLabel
+                );
+            }
         }
     }
     function circuitName(circuitId){return (state.board?.circuitos||[]).find(item=>Number(item.id)===Number(circuitId))?.nombre || `Circuito ${circuitId}`;}
     function renderCircuitManagers(){
         const list=$('#tdCircuitManagersList'); if(!list)return;
         const items=Array.from(state.circuitManagers.entries()).filter(([id])=>!state.circuitId||Number(id)===state.circuitId);
-        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b><strong>${esc(personDisplayName(item.agente?.nombre_completo)||'Sin encargado')}</strong>${resourceSummary(item)}</div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}">Editar</button><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}">Quitar</button></div>`:''}</article>`).join(''):'<p class="td-empty-small">No existen encargados de circuito asignados.</p>';
+        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b>${item.agente?personRow(item.agente):'<strong>Sin encargado</strong>'}<div class="td-resource-summary">${resourceSummary(item)}</div></div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>Editar</button><button class="td-btn td-btn-danger td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Quitar</button></div>`:''}</article>`).join(''):emptyRole('Sin encargados asignados', 'Agregue un encargado para los circuitos del distrito');
     }
     function renderPlaceRow(place, index) {
         const assigned = assignmentsFor(place.id); const required = Number(place.cantidad_requerida || 0); const covered = assigned.length >= required && required > 0;
-        const agents = assigned.length ? assigned.map(item => {
+        const agents = assigned.length ? `<div class="td-agent-list">${assigned.map(item => {
             const isForced = item.tipo_asignacion === 'FORZADA';
             const forcedBadge = isForced ? '<span class="td-forced-badge" title="Este agente fue asignado manualmente a pesar de encontrarse en estado no disponible.">&#9888; Forzada</span>' : '';
             const displayName=personDisplayName(item.agente?.nombre_completo);
             return `<div class="td-agent"><span class="td-avatar">${esc(initials(displayName))}</span><div><b>${esc(displayName||'Sin nombre')}</b>${item.agente?.grado ? `<small>Grado: ${esc(item.agente.grado)}</small>` : ''}${forcedBadge}${isForced ? `<small class="td-forced-original">Estado original: ${esc(item.estado_original || '')}</small>` : ''}</div></div>`;
-        }).join('') : '<div class="td-empty-agent"><span class="td-avatar">&#9823;</span><div><b>Sin asignar</b><small>Seleccione un agente</small></div></div>';
+        }).join('')}</div>` : '<div class="td-empty-agent"><span class="td-avatar">&#9823;</span><div><b>Sin asignar</b><small>Seleccione un agente</small></div></div>';
         let actions = '&mdash;';
         if (canAssign) {
             const missing = required - assigned.length;
@@ -373,7 +480,7 @@
             }
         }
         const requiredCell = canConfigure
-            ? `<div class="td-required-stepper" title="Agentes requeridos para este lugar de servicio"><button type="button" class="td-req-btn" data-req-minus="${place.id}" ${required <= assigned.length ? 'disabled' : ''} aria-label="Disminuir requeridos" aria-disabled="${required <= assigned.length}">−</button><b>${required}</b><button type="button" class="td-req-btn" data-req-plus="${place.id}" ${required >= 100 ? 'disabled' : ''} aria-label="Aumentar requeridos" aria-disabled="${required >= 100}">+</button><small>${required === 1 ? 'Agente' : 'Agentes'}</small></div>`
+            ? `<div class="td-required-stepper" title="Agentes requeridos para este lugar de servicio"><span class="td-req-controls"><button type="button" class="td-req-btn td-req-minus" data-req-minus="${place.id}" ${required <= assigned.length ? 'disabled' : ''} aria-label="Disminuir requeridos" aria-disabled="${required <= assigned.length}">−</button><b>${required}</b><button type="button" class="td-req-btn td-req-plus" data-req-plus="${place.id}" ${required >= 100 ? 'disabled' : ''} aria-label="Aumentar requeridos" aria-disabled="${required >= 100}">+</button></span><small>${required === 1 ? 'Agente' : 'Agentes'}</small></div>`
             : `<b>${required}</b>${required === 1 ? 'Agente' : 'Agentes'}`;
         return `<tr><td><div class="td-place-cell"><div><b>${esc(place.nombre)}</b></div></div></td><td class="td-required">${requiredCell}</td><td>${agents}</td><td><span class="td-status ${covered ? 'td-status-assigned' : 'td-status-pending'}">${covered ? 'Asignado' : 'Pendiente'}</span></td><td><div class="td-actions">${actions}</div></td></tr>`;
     }
@@ -441,17 +548,39 @@
         openModal('tdAgentModal');
         await fetchAgentList();
     }
+    async function openEasAgentSelector(role, configurationId) {
+        const route = routeData(); const config = (route?.configuraciones || []).find(item => Number(item.id || 0) === Number(configurationId || 0));
+        const current = easAssignmentFor(configurationId || null, role);
+        state.agentTarget = {
+            kind: 'eas', role, configurationId: configurationId ? Number(configurationId) : null,
+            routeId: Number(route?.id || 0), easId: Number(state.easId), replaceAgentId: Number(current?.agente_id || 0),
+            placeNombre: `${role}${role === 'AUX' ? ' (opcional)' : ''}`, rutaNombre: route?.nombre || '',
+            turnoNombre: $('#tdShift').selectedOptions[0]?.textContent || '',
+        };
+        state.agentModal = { page: 1, filters: {}, search: '', data: null };
+        $('#tdAgentModalEyebrow').textContent = current?.agente_id ? `Cambiar ${role}` : `Asignación ${role}`;
+        $('#tdAgentModalTitle').textContent = current?.agente_id ? `Cambiar personal de ${role}` : `Asignar personal a ${role}`;
+        $('#tdAgentModalSubtitle').textContent = `${route?.nombre || ''}${config ? ` · Configuración ${config.orden || 1}` : ''}`;
+        const reqChip = $('#tdAgentRequiredChip'); if (reqChip) { reqChip.hidden = false; reqChip.textContent = role === 'AUX' ? 'Opcional' : 'Requerido'; }
+        $('#tdAgentInfoBar').innerHTML = `<div class="td-agent-summary-item"><i>&#128205;</i><span><small>EAS</small><b>${esc((state.board?.eas || []).find(item => Number(item.id) === Number(state.easId))?.nombre || '—')}</b></span></div><div class="td-agent-summary-item"><i>&#128100;</i><span><small>Rol</small><b>${esc(role === 'AUX' ? 'AUX (opcional)' : role)}</b><em>${esc(route?.nombre || '')}</em></span></div><div class="td-agent-summary-item"><i>&#128337;</i><span><small>Turno</small><b>${esc(state.agentTarget.turnoNombre || '—')}</b></span></div>`;
+        $('#tdAgentSearch').value = ''; $$('#tdFilterGrupo, #tdFilterTipoServicio, #tdFilterGrado, #tdFilterEstado').forEach(sel => sel.value = '');
+        $('#tdAgentTableBody').innerHTML = '<tr><td colspan="7"><div class="td-empty-small">Consultando personal...</div></td></tr>';
+        $('#tdAgentPagination').innerHTML = ''; $('#tdAgentFooterInfo').textContent = 'Consultando personal...';
+        openModal('tdAgentModal'); await fetchAgentList();
+    }
 
-    async function openManagerSelector(kind, routeId = 0) {
+    async function openManagerSelector(kind, routeId = 0, slot = 1) {
         const current = kind === 'district' ? state.districtManager : state.routeManagers.get(Number(routeId));
         const route = (state.board?.rutas || []).find(item => Number(item.id) === Number(routeId));
+        const isEstacion = Number(state.board?.distrito_id) === 1143;
         state.agentTarget = {
-            kind, routeId:Number(routeId) || null, placeId:null,
-            replaceAgentId:Number(current?.agente_id || 0), placeNombre:kind === 'district' ? state.board?.distrito?.nombre : route?.nombre,
+            kind, routeId:Number(routeId) || null, placeId:null, slot,
+            replaceAgentId: slot === 2 ? Number(current?.agente_2_id || 0) : Number(current?.agente_id || 0),
+            placeNombre:kind === 'district' ? state.board?.distrito?.nombre : route?.nombre,
             rutaNombre:route?.nombre || '', turnoNombre:$('#tdShift').selectedOptions[0]?.textContent || ''
         };
         state.agentModal = {page:1,filters:{},search:'',data:null};
-        const title = kind === 'district' ? 'Encargado de distrito' : 'Encargado de ruta';
+        const title = kind === 'district' ? 'Encargado de distrito' : (isEstacion ? 'Radioperador' : 'Encargado de ruta');
         const scopeName = kind === 'district' ? (state.board?.distrito?.nombre || '') : (route?.nombre || '');
         $('#tdAgentModalEyebrow').textContent = current?.agente_id ? `Cambiar ${title.toLowerCase()}` : `Asignacion de ${title.toLowerCase()}`;
         $('#tdAgentModalTitle').textContent = current?.agente_id ? `Cambiar ${title.toLowerCase()}` : `Asignar ${title.toLowerCase()}`;
@@ -533,7 +662,7 @@
         const excluded = Array.from(new Set([...usedAgentIds(state.agentTarget.replaceAgentId),...draftPeople])).filter(id=>id!==Number(state.agentTarget.replaceAgentId||0));
         const body = {
             distrito_id: state.districtId, turno_id: state.shiftId,
-            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind === 'circuitManager' ? 'ENCARGADO_CIRCUITO' : state.agentTarget.kind === 'circuitDriver' ? 'CONDUCTOR' : state.agentTarget.kind.startsWith('circuitAux') ? 'AUXILIAR' : 'AGENTE_LUGAR',
+            tipo_responsabilidad: state.agentTarget.kind === 'district' ? 'ENCARGADO_DISTRITO' : state.agentTarget.kind === 'route' ? 'ENCARGADO_RUTA' : state.agentTarget.kind === 'circuitManager' ? 'ENCARGADO_CIRCUITO' : state.agentTarget.kind === 'circuitDriver' ? 'CONDUCTOR' : state.agentTarget.kind.startsWith('circuitAux') ? 'AUXILIAR' : state.agentTarget.kind === 'eas' ? `EAS_${state.agentTarget.role}` : 'AGENTE_LUGAR',
             fecha_distribucion: selectedDate(),
             excluidos: excluded,
             page: state.agentModal.page, limit: 20,
@@ -653,10 +782,27 @@
             state.districtManager = {...state.districtManager,...value};
             for(const [circuitId,item] of state.circuitManagers.entries())if(item.usar_encargado_distrito)state.circuitManagers.set(circuitId,{...item,agente_id:value.agente_id,agente:value.agente});
         }
-        else if (target.kind === 'route') state.routeManagers.set(Number(target.routeId), {requiere_encargado:true,...value});
+        else if (target.kind === 'route') {
+            const existing = state.routeManagers.get(Number(target.routeId)) || {requiere_encargado:true};
+            if (target.slot === 2) {
+                existing.agente_2_id = value.agente_id;
+                existing.agente_2 = value.agente;
+            } else {
+                existing.agente_id = value.agente_id;
+                existing.agente = value.agente;
+            }
+            state.routeManagers.set(Number(target.routeId), existing);
+        }
         else if (target.kind.startsWith('circuit')) {
             const mapping={circuitManager:['agente_id','agente'],circuitDriver:['conductor_id','conductor'],circuitAux1:['auxiliar_1_id','auxiliar_1'],circuitAux2:['auxiliar_2_id','auxiliar_2']}[target.kind];
             if(mapping&&state.circuitDraft){state.circuitDraft[mapping[0]]=Number(agent.id);state.circuitDraft[mapping[1]]=value.agente;}
+        }
+        else if (target.kind === 'eas') {
+            state.easAssignments = state.easAssignments.filter(item => !(Number(item.eas_id) === Number(target.easId)
+                && Number(item.ruta_id) === Number(target.routeId)
+                && Number(item.configuracion_id || 0) === Number(target.configurationId || 0)
+                && item.rol === target.role));
+            state.easAssignments.push({eas_id:Number(target.easId),ruta_id:Number(target.routeId),configuracion_id:target.configurationId || null,rol:target.role,...value});
         }
         else {
             if (target.replaceAgentId) state.assignments = state.assignments.filter(item => !(Number(item.lugar_id) === Number(target.placeId) && Number(item.agente_id) === Number(target.replaceAgentId)));
@@ -736,6 +882,21 @@
     }
 
     async function randomAssign() {
+        if (isEasMode()) {
+            const button = $('#tdRandomAssign'); loading(button, true);
+            try {
+                const generated = await api('distribucion-tablero/asignacion-aleatoria-eas', {method: 'POST', body: {
+                    distrito_id: state.districtId, turno_id: state.shiftId, fecha_distribucion: selectedDate(),
+                    asignaciones_eas: state.easAssignments.map(({eas_id,ruta_id,configuracion_id,rol,agente_id,tipo_asignacion}) => ({eas_id,ruta_id,configuracion_id,rol,agente_id,tipo_asignacion})),
+                    excluidos: usedAgentIds(), include_aux: false,
+                }});
+                for (const assignment of generated || []) state.easAssignments.push(assignment);
+                saveDraft(); renderWorkspace(); await refreshAvailability();
+                notify((generated || []).length ? 'Se asignaron CP y JP pendientes sin modificar camionetas.' : 'No existen puestos EAS pendientes para asignar.');
+            } catch (error) { notify(error.message, true); }
+            finally { loading(button, false); }
+            return;
+        }
         if (!state.circuitId) return notify('Seleccione un circuito para realizar la asignación aleatoria.', true);
         if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Primero seleccione el encargado del distrito.', true);
         const circuitManager = state.circuitManagers.get(Number(state.circuitId));
@@ -786,6 +947,18 @@
         state.pendingDistrictId=0;state.districtId=Number(districtId);$('#tdDistrict').value=String(state.districtId);
         await loadCircuitsForDistrict();
         renderDistrictCards();
+        // Si el turno seleccionado no tiene puestos en este distrito, saltar al primer turno con trabajo.
+        const summary=districtSummary(state.districtId);
+        const currentShift=state.shiftId||Number($('#tdShift').value||0);
+        const currentHasWork=Boolean((summary?.turnos||[]).find(t=>Number(t.id)===currentShift&&Number(t.requerido||0)>0));
+        if(!currentHasWork){
+            const firstWithWork=(summary?.turnos||[]).find(t=>Number(t.requerido||0)>0);
+            if(firstWithWork){
+                state.shiftId=Number(firstWithWork.id);
+                $('#tdShift').value=String(state.shiftId);
+                notify(`Este distrito no tiene puestos en el turno actual; se cargó ${firstWithWork.nombre||'el turno con puestos'}.`);
+            }
+        }
         if(state.shiftId||$('#tdShift').value)await loadBoard();
         else{renderCircuitAccordion();showEmpty('Seleccione un turno para cargar los circuitos del distrito.');}
     }
@@ -796,6 +969,12 @@
     }
     function formatDate(value) { if (!value) return 'DD/MM/AAAA'; const [year, month, day] = value.split('-'); return `${day}/${month}/${year}`; }
     async function draftTotals() {
+        if (isEasMode()) {
+            const routes = state.board?.rutas || []; const configs = routes.reduce((sum, route) => sum + (route.configuraciones || []).length, 0);
+            const required = configs * 2;
+            const assigned = state.easAssignments.filter(item => item.agente_id && item.rol !== 'AUX').length;
+            return {required, assigned, pending: Math.max(0, required - assigned)};
+        }
         await ensureAllPlaces(); let required = 0;
         for (const places of state.places.values()) for (const place of places) required += Number(place.cantidad_requerida || 0);
         return {required, assigned: state.assignments.length, pending: Math.max(0, required - state.assignments.length)};
@@ -804,6 +983,11 @@
         if (!state.districtId || !state.shiftId) return notify('Seleccione distrito y turno.', true);
         try { const totals = await draftTotals(); if (!totals.required) return notify('No existen lugares para guardar.', true); }
         catch (error) { return notify(error.message, true); }
+        if (isEasMode()) {
+            $('#tdDistributionDate').value = selectedDate();
+            $('#tdGeneratedName').textContent = `DISTRIBUCION EAS FECHA ${formatDate(selectedDate())}`;
+            return openModal('tdSaveModal');
+        }
         if (state.board?.distrito?.asignar_encargado && !state.districtManager?.agente_id) return notify('Debe asignar el encargado de distrito.', true);
         if(!resourcesComplete(state.districtManager))return notify('Complete móvil, conductor y auxiliar 1 del encargado de distrito.',true);
         for(const [circuitId,item] of state.circuitManagers.entries()){
@@ -835,8 +1019,9 @@
                 distrito_movil_id:state.districtManager?.movil_id||null,distrito_conductor_id:state.districtManager?.conductor_id||null,
                 distrito_auxiliar_1_id:state.districtManager?.auxiliar_1_id||null,distrito_auxiliar_2_id:state.districtManager?.auxiliar_2_id||null,
                 encargados_circuito:Array.from(state.circuitManagers.entries()).map(([circuito_id,item])=>({circuito_id:Number(circuito_id),usar_encargado_distrito:Boolean(item.usar_encargado_distrito),agente_id:Number(item.agente_id),conductor_id:item.conductor_id||null,auxiliar_1_id:item.auxiliar_1_id||null,auxiliar_2_id:item.auxiliar_2_id||null,movil_id:item.movil_id||null,tipo_asignacion:item.tipo_asignacion||'MANUAL'})),
-                encargados_ruta:Array.from(state.routeManagers.entries()).map(([ruta_id,item])=>({ruta_id:Number(ruta_id),requiere_encargado:Boolean(item.requiere_encargado),agente_id:item.agente_id || null,tipo_asignacion:item.tipo_asignacion || 'MANUAL'})),
-                asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion}))
+                encargados_ruta:Array.from(state.routeManagers.entries()).map(([ruta_id,item])=>({ruta_id:Number(ruta_id),requiere_encargado:Boolean(item.requiere_encargado),agente_id:item.agente_id || null,agente_2_id:item.agente_2_id || null,tipo_asignacion:item.tipo_asignacion || 'MANUAL'})),
+                asignaciones:state.assignments.map(({lugar_id,agente_id,tipo_asignacion})=>({lugar_id,agente_id,tipo_asignacion})),
+                asignaciones_eas:state.easAssignments.map(({eas_id,ruta_id,configuracion_id,rol,agente_id,tipo_asignacion})=>({eas_id,ruta_id,configuracion_id,rol,agente_id:agente_id||null,tipo_asignacion}))
             }});
             state.saved = await api(`distribucion-tablero/distribuciones/${saved.id}`);
             state.editingId = Number(saved.id);state.dirty=false;renderSaveState();
@@ -852,6 +1037,12 @@
         const saved = state.saved; if (!saved) return;
         $('#tdSavedName').textContent = saved.nombre;
         $('#tdSavedSummary').textContent = `${saved.distrito} · ${saved.turno} · ${Number(saved.porcentaje_cobertura || 0)}% de cobertura`;
+        if (isEasMode()) {
+            const groups = new Map();
+            for (const detail of saved.eas_detalles || []) { const key = `${detail.eas_nombre} · ${detail.ruta}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(detail); }
+            $('#tdSavedDetail').innerHTML = Array.from(groups.entries()).map(([key, details]) => `<div class="td-saved-route"><b>${esc(key)}</b><div>${details.filter(item => item.agente_id && item.rol !== 'AUX').length}/2 puestos obligatorios asignados · ${details.filter(item => item.rol === 'AUX' && item.agente_id).length} AUX</div></div>`).join('');
+            return;
+        }
         const groups = new Map(); for (const detail of saved.detalles || []) { if (!groups.has(detail.ruta)) groups.set(detail.ruta, []); groups.get(detail.ruta).push(detail); }
         $('#tdSavedDetail').innerHTML = Array.from(groups.entries()).map(([route, details]) => `<div class="td-saved-route"><b>${esc(route)}</b><div>${details.filter(item => item.agente_id).length} asignados · ${details.filter(item => !item.agente_id).length} pendientes</div></div>`).join('');
     }
@@ -860,6 +1051,7 @@
     $('#tdCircuit').addEventListener('change',applyCircuitFilter);
     $('#tdShift').addEventListener('change', loadBoard); $('#tdBoardDate').addEventListener('change',async()=>{await loadDistrictSummaries();if(state.districtId)await loadBoard();});
     $('#tdDistrictCards')?.addEventListener('click',event=>{const detail=event.target.closest('[data-district-detail]');if(detail){event.stopPropagation();const summary=districtSummary(detail.dataset.districtDetail);if(summary)renderPendingDetail(summary);return;}const card=event.target.closest('[data-district-card]');if(card)requestDistrictSelection(card.dataset.districtCard);});
+    $('#tdEasList')?.addEventListener('click', async event => { const item = event.target.closest('[data-eas-id]'); if (!item) return; state.easId = Number(item.dataset.easId); state.routeId = 0; renderEasSelector(); renderRoutes(); const first = visibleRoutes()[0]; if (first) await selectRoute(Number(first.id)); else showEmpty('El EAS seleccionado no tiene rutas activas para este turno.'); });
     $('#tdCircuitAccordion')?.addEventListener('click',event=>{const button=event.target.closest('[data-circuit-toggle]');if(!button)return;$('#tdCircuit').value=button.dataset.circuitToggle;applyCircuitFilter();});
     $('#tdRouteSearch').addEventListener('input', renderRoutes); $('#tdRouteList').addEventListener('click', event => { const item = event.target.closest('[data-route-id]'); if (item) selectRoute(Number(item.dataset.routeId)); });
     $('#tdPlacesBody').addEventListener('click', event => {
@@ -872,6 +1064,7 @@
         if (reqMinus) updatePlaceRequirement(reqMinus.dataset.reqMinus, -1);
         if (reqPlus) updatePlaceRequirement(reqPlus.dataset.reqPlus, 1);
     });
+    $('#tdEasConfigurations')?.addEventListener('click', event => { const button = event.target.closest('[data-eas-assign]'); if (button) openEasAgentSelector(button.dataset.easAssign, button.dataset.configId || null); });
 
     let agentSearchDebounce = null;
     $('#tdAgentSearch').addEventListener('input', () => {
@@ -912,6 +1105,13 @@
         if(enabled) openManagerSelector('route',routeId);
     });
     $('#tdAssignRouteManager')?.addEventListener('click',()=>openManagerSelector('route',state.routeId));
+    $('#tdAssignRouteManager2')?.addEventListener('click',()=>openManagerSelector('route',state.routeId,2));
+    $('#tdRemoveRouteManager2')?.addEventListener('click',()=>{
+        const routeId=Number(state.routeId);
+        const item=state.routeManagers.get(routeId);
+        if(item){item.agente_2_id=null;item.agente_2=null;state.routeManagers.set(routeId,item);}
+        saveDraft();renderWorkspace();refreshAvailability();
+    });
 
     $('#tdRandomAssign')?.addEventListener('click', randomAssign); $('#tdSaveDraft')?.addEventListener('click', openSave);
     $('#tdDiscardDistrict')?.addEventListener('click',async()=>{const next=state.pendingDistrictId;sessionStorage.removeItem(draftKey());state.dirty=false;closeModal('tdUnsavedModal');if(next)await performDistrictSelection(next);});
@@ -924,7 +1124,12 @@
     $('#tdEditSaved').addEventListener('click', () => {
         if (!state.saved) return;
         state.editingId = Number(state.saved.id);
-        state.assignments = (state.saved.detalles || []).filter(item => item.agente_id).map(item => ({
+        if (isEasMode()) state.easAssignments = (state.saved.eas_detalles || []).map(item => ({
+            eas_id: Number(item.eas_id), ruta_id: Number(item.ruta_id), configuracion_id: item.configuracion_id ? Number(item.configuracion_id) : null,
+            rol: item.rol, agente_id: item.agente_id ? Number(item.agente_id) : null, tipo_asignacion: item.tipo_asignacion || 'MANUAL',
+            agente: item.agente_id ? {id:Number(item.agente_id),nombre_completo:item.agente} : null,
+        }));
+        else state.assignments = (state.saved.detalles || []).filter(item => item.agente_id).map(item => ({
             lugar_id: Number(item.lugar_id), agente_id: Number(item.agente_id), tipo_asignacion: item.tipo_asignacion || 'MANUAL',
             agente: {id: Number(item.agente_id), nombre_completo: item.agente, cedula: item.cedula},
         }));

@@ -6,6 +6,9 @@ import pyodbc
 from app.core.db import get_connection
 from app.core.sanitize import escape_like
 
+# District ID for "Estacion de Accion Segura" — circuits in this district use EAS as circuit options
+ESTACION_DISTRICT_ID = 1143
+
 
 def _rows(cursor) -> list[dict]:
     columns = [column[0] for column in cursor.description]
@@ -75,15 +78,14 @@ def list_mobile_units() -> list[dict]:
 
 
 def list_routes() -> list[dict]:
-    return _query(
+    rows = _query(
         """
-        SELECT r.id, r.nombre, r.distrito_id, d.nombre AS distrito, r.turno_id,
-               t.nombre AS turno, CONVERT(VARCHAR(5),r.hora_inicio,108) AS hora_inicio,
+        SELECT r.id, r.nombre, r.distrito_id, d.nombre AS distrito,
+               CONVERT(VARCHAR(5),r.hora_inicio,108) AS hora_inicio,
                CONVERT(VARCHAR(5),r.hora_fin,108) AS hora_fin, r.asignar_encargado, r.activo,
                circuit.id AS circuito_id, circuit.nombre AS circuito
         FROM dbo.rutas r
         LEFT JOIN dbo.catalogo_detalles d ON d.id=r.distrito_id
-        LEFT JOIN dbo.turnos t ON t.id=r.turno_id
         OUTER APPLY (
             SELECT TOP 1 c.id,c.nombre
             FROM dbo.circuito_rutas cr
@@ -94,25 +96,73 @@ def list_routes() -> list[dict]:
         ORDER BY r.nombre
         """
     )
+    # Attach multi-turn data from junction table
+    route_ids = [int(row["id"]) for row in rows]
+    turn_map: dict[int, list[dict]] = {}
+    if route_ids:
+        placeholders = ",".join("?" for _ in route_ids)
+        turn_rows = _query(
+            f"""SELECT rt.ruta_id, t.id AS turno_id, t.nombre AS turno
+               FROM dbo.ruta_turnos rt
+               INNER JOIN dbo.turnos t ON t.id = rt.turno_id
+               WHERE rt.ruta_id IN ({placeholders})
+               ORDER BY rt.ruta_id, t.id""",
+            *route_ids,
+        )
+        for tr in turn_rows:
+            turn_map.setdefault(int(tr["ruta_id"]), []).append({
+                "turno_id": int(tr["turno_id"]),
+                "turno": str(tr["turno"]),
+            })
+    for row in rows:
+        rid = int(row["id"])
+        turns = turn_map.get(rid, [])
+        row["turnos"] = turns
+        row["turno_id"] = turns[0]["turno_id"] if turns else None
+        row["turno"] = ", ".join(t["turno"] for t in turns) if turns else None
+    return rows
 
 
 def list_service_places() -> list[dict]:
-    return _query(
+    rows = _query(
         """
         SELECT l.id, l.nombre, l.direccion, l.ubicacion_especifica, l.distrito_id,
                d.nombre AS distrito, l.ruta_id, r.nombre AS ruta,
                l.tipo_servicio_id, ts.nombre AS tipo_servicio,
-               l.turno_id, t.nombre AS turno,
                l.cantidad_requerida, l.estado_operativo, l.consignas, l.observacion, l.lugar_formacion,
                l.latitud, l.longitud, ISNULL(r.asignar_encargado,0) AS ruta_asignar_encargado, l.activo
         FROM dbo.lugares_servicio l
         LEFT JOIN dbo.catalogo_detalles d ON d.id=l.distrito_id
         LEFT JOIN dbo.rutas r ON r.id=l.ruta_id
         LEFT JOIN dbo.catalogo_detalles ts ON ts.id=l.tipo_servicio_id
-        LEFT JOIN dbo.turnos t ON t.id=l.turno_id
         ORDER BY COALESCE(l.nombre,l.direccion)
         """
     )
+    # Attach multi-turn data from junction table
+    place_ids = [int(row["id"]) for row in rows]
+    turn_map: dict[int, list[dict]] = {}
+    if place_ids:
+        placeholders = ",".join("?" for _ in place_ids)
+        turn_rows = _query(
+            f"""SELECT lt.lugar_servicio_id, t.id AS turno_id, t.nombre AS turno
+               FROM dbo.lugar_turnos lt
+               INNER JOIN dbo.turnos t ON t.id = lt.turno_id
+               WHERE lt.lugar_servicio_id IN ({placeholders})
+               ORDER BY lt.lugar_servicio_id, t.id""",
+            *place_ids,
+        )
+        for tr in turn_rows:
+            turn_map.setdefault(int(tr["lugar_servicio_id"]), []).append({
+                "turno_id": int(tr["turno_id"]),
+                "turno": str(tr["turno"]),
+            })
+    for row in rows:
+        pid = int(row["id"])
+        turns = turn_map.get(pid, [])
+        row["turnos"] = turns
+        row["turno_id"] = turns[0]["turno_id"] if turns else None
+        row["turno"] = ", ".join(t["turno"] for t in turns) if turns else None
+    return rows
 
 
 def list_grades() -> list[dict]:
@@ -178,7 +228,39 @@ def list_circuits(district_id: int | None = None, search: str | None = None) -> 
     )
     for row in rows:
         row["ruta_ids"] = [int(value) for value in (row.get("ruta_ids") or "").split(",") if value]
+    # Load EAS from junction table
+    circuit_ids = [int(r["id"]) for r in rows]
+    if circuit_ids:
+        placeholders = ','.join('?' for _ in circuit_ids)
+        eas_rows = _query(
+            f"""SELECT ce.circuito_id, ce.eas_id, e.nombre AS eas_nombre, e.codigo AS eas_codigo
+                FROM dbo.circuito_eas ce
+                INNER JOIN dbo.eas_estaciones e ON e.id=ce.eas_id
+                WHERE ce.circuito_id IN ({placeholders})""",
+            *circuit_ids,
+        )
+        eas_map: dict[int, list] = {}
+        for er in eas_rows:
+            cid = int(er["circuito_id"])
+            eas_map.setdefault(cid, []).append({
+                "eas_id": int(er["eas_id"]),
+                "eas_nombre": er["eas_nombre"],
+                "eas_codigo": er["eas_codigo"],
+            })
+        for row in rows:
+            cid = int(row["id"])
+            row["eas_list"] = eas_map.get(cid, [])
     return rows
+
+
+def list_eas_for_estacion() -> list[dict]:
+    """Return active EAS records for the Estacion de Accion Segura district."""
+    return _query(
+        """SELECT id, codigo, nombre, activo
+           FROM dbo.eas_estaciones
+           WHERE activo = 1
+           ORDER BY codigo, nombre"""
+    )
 
 
 def get_circuit(item_id: int) -> dict:
@@ -241,10 +323,49 @@ def _replace_circuit_routes(cursor, circuit_id: int, district_id: int, route_ids
             cursor.execute("INSERT INTO dbo.circuito_rutas(circuito_id,ruta_id) VALUES(?,?)", circuit_id,route_id)
 
 
+def get_available_routes_for_circuit(district_id: int, circuito_id: int | None = None) -> list[dict]:
+    """Return routes available for a circuit: unassigned routes + routes of the current circuit."""
+    with get_connection() as connection:
+        cursor = connection.cursor()
+        # Get routes that are either unassigned OR belong to this circuit
+        cursor.execute(
+            """
+            SELECT r.id, r.nombre, r.distrito_id, d.nombre AS distrito,
+                   CASE WHEN cr.ruta_id IS NOT NULL THEN 1 ELSE 0 END AS asignada_a_este_circuito
+            FROM dbo.rutas r
+            LEFT JOIN dbo.catalogo_detalles d ON d.id = r.distrito_id
+            LEFT JOIN dbo.circuito_rutas cr ON cr.ruta_id = r.id AND cr.deleted_at IS NULL
+                AND cr.circuito_id = ?
+            WHERE r.activo = 1 AND r.distrito_id = ?
+              AND (
+                  NOT EXISTS (
+                      SELECT 1 FROM dbo.circuito_rutas cr2
+                      WHERE cr2.ruta_id = r.id AND cr2.deleted_at IS NULL
+                  )
+                  OR cr.ruta_id IS NOT NULL
+              )
+            ORDER BY r.nombre
+            """,
+            circuito_id or 0, district_id,
+        )
+        return _rows(cursor)
+
+
+def _sync_circuito_eas(cursor, circuit_id: int, eas_ids: list) -> None:
+    """Sync junction table for circuit EAS. Replaces all existing rows."""
+    cursor.execute("DELETE FROM dbo.circuito_eas WHERE circuito_id = ?", circuit_id)
+    for eas_id in eas_ids:
+        cursor.execute(
+            "INSERT INTO dbo.circuito_eas (circuito_id, eas_id) VALUES (?, ?)",
+            circuit_id, int(eas_id),
+        )
+
+
 def create_circuit(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
         district_id,name = _validate_circuit(cursor,data)
+        eas_ids = [int(x) for x in (data.get("easIds") or []) if int(x) > 0] if district_id == ESTACION_DISTRICT_ID else []
         cursor.execute(
             """INSERT INTO dbo.circuitos(
                    distrito_id,nombre,hora_inicio,hora_fin,lugar_formacion,consignas,observaciones,perimetro,activo)
@@ -253,6 +374,7 @@ def create_circuit(data: dict) -> int:
             data.get("consignas") or None,data.get("observaciones") or None,data.get("perimetro") or None,
         )
         circuit_id = int(cursor.fetchone()[0])
+        _sync_circuito_eas(cursor, circuit_id, eas_ids)
         _replace_circuit_routes(cursor,circuit_id,district_id,data.get("rutaIds") or [])
         return circuit_id
 
@@ -264,12 +386,14 @@ def update_circuit(item_id: int, data: dict) -> None:
         if int(cursor.fetchone()[0]) != 1:
             raise ValueError("Circuito no encontrado")
         district_id,name = _validate_circuit(cursor,data,item_id)
+        eas_ids = [int(x) for x in (data.get("easIds") or []) if int(x) > 0] if district_id == ESTACION_DISTRICT_ID else []
         cursor.execute(
             """UPDATE dbo.circuitos SET distrito_id=?,nombre=?,hora_inicio=?,hora_fin=?,lugar_formacion=?,
                    consignas=?,observaciones=?,perimetro=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
             district_id,name,data.get("horaInicio") or None,data.get("horaFin") or None,data.get("lugarFormacion") or None,
             data.get("consignas") or None,data.get("observaciones") or None,data.get("perimetro") or None,item_id,
         )
+        _sync_circuito_eas(cursor, item_id, eas_ids)
         _replace_circuit_routes(cursor,item_id,district_id,data.get("rutaIds") or [])
 
 
@@ -286,6 +410,7 @@ def replace_circuit_routes(item_id: int, route_ids: list) -> None:
 def delete_circuit(item_id: int) -> None:
     with get_connection() as connection:
         cursor=connection.cursor()
+        cursor.execute("DELETE FROM dbo.circuito_eas WHERE circuito_id=?",item_id)
         cursor.execute("UPDATE dbo.circuito_rutas SET deleted_at=SYSDATETIME() WHERE circuito_id=? AND deleted_at IS NULL",item_id)
         cursor.execute("UPDATE dbo.circuitos SET activo=0,deleted_at=SYSDATETIME(),fecha_actualizacion=SYSDATETIME() WHERE id=? AND deleted_at IS NULL",item_id)
         if cursor.rowcount != 1:
@@ -458,35 +583,47 @@ def delete_grade(item_id: int) -> None:
 def create_route(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
+        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
+        if not turnos_ids and data.get("turnoId"):
+            turnos_ids = [int(data["turnoId"])]
+        if not turnos_ids:
+            turnos_ids = [1]  # Default to Primer Turno
         cursor.execute(
             """
-            INSERT INTO dbo.rutas (nombre, distrito_id, turno_id, hora_inicio, hora_fin, asignar_encargado, activo, fecha_creacion)
+            INSERT INTO dbo.rutas (nombre, distrito_id, hora_inicio, hora_fin, asignar_encargado, activo, fecha_creacion)
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
+            VALUES (?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data["nombre"],
-            data.get("distritoId"), data.get("turnoId"), data.get("horaInicio"), data.get("horaFin"),
+            data.get("distritoId"), data.get("horaInicio"), data.get("horaFin"),
             1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
         )
-        return int(cursor.fetchone()[0])
+        route_id = int(cursor.fetchone()[0])
+        _sync_route_turnos(cursor, route_id, turnos_ids)
+        return route_id
 
 
 def update_route(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
+        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
+        if not turnos_ids and data.get("turnoId"):
+            turnos_ids = [int(data["turnoId"])]
         cursor.execute(
             """
             UPDATE dbo.rutas
-            SET nombre = ?, distrito_id=?, turno_id=?, hora_inicio=?, hora_fin=?, asignar_encargado=?, activo = ?, fecha_actualizacion = SYSDATETIME()
+            SET nombre = ?, distrito_id=?, hora_inicio=?, hora_fin=?, asignar_encargado=?, activo = ?, fecha_actualizacion = SYSDATETIME()
             WHERE id = ?
             """,
             data["nombre"],
-            data.get("distritoId"), data.get("turnoId"), data.get("horaInicio"), data.get("horaFin"),
+            data.get("distritoId"), data.get("horaInicio"), data.get("horaFin"),
             1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
             item_id,
         )
+        if turnos_ids:
+            _sync_route_turnos(cursor, item_id, turnos_ids)
 
 
 def _route_import_key(value) -> str:
@@ -560,10 +697,10 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
         for item_id, name in cursor.fetchall():
             shifts.setdefault(_route_import_key(name), []).append((int(item_id), str(name)))
         lock_hint = " WITH (UPDLOCK, HOLDLOCK)" if confirm else ""
-        cursor.execute(f"SELECT id,nombre,distrito_id,turno_id FROM dbo.rutas{lock_hint}")
-        existing: dict[tuple[str, int, int], tuple[int, str]] = {}
-        for item_id, name, district_id, shift_id in cursor.fetchall():
-            existing[(_route_import_key(name), int(district_id or 0), int(shift_id or 0))] = (int(item_id), str(name))
+        cursor.execute(f"SELECT id,nombre,distrito_id FROM dbo.rutas{lock_hint}")
+        existing: dict[tuple[str, int], tuple[int, str]] = {}
+        for item_id, name, district_id in cursor.fetchall():
+            existing[(_route_import_key(name), int(district_id or 0))] = (int(item_id), str(name))
         cursor.execute(
             """SELECT cr.ruta_id,cr.circuito_id,c.nombre FROM dbo.circuito_rutas cr
                INNER JOIN dbo.circuitos c ON c.id=cr.circuito_id
@@ -579,7 +716,8 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
             row_number = int(row.get("fila") or index + 2)
             name = _route_import_empty(row.get("nombre"))
             district_name = _route_import_empty(row.get("distrito"))
-            shift_name = _route_import_empty(row.get("turno"))
+            # Support both single 'turno' and multi 'turnos_habilitados' columns
+            turnos_raw = _route_import_empty(row.get("turnos_habilitados")) or _route_import_empty(row.get("turno"))
             start_time = _route_import_empty(row.get("hora_inicio"))
             end_time = _route_import_empty(row.get("hora_fin"))
             manager, manager_valid = _route_import_bool(row.get("asignar_encargado"), False)
@@ -589,8 +727,20 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                 errors.append(str(row["_parse_error"]))
             district_matches = districts.get(_route_import_key(district_name), [])
             district = district_matches[0] if len(district_matches) == 1 else None
-            shift_matches = shifts.get(_route_import_key(shift_name), [])
-            shift = shift_matches[0] if len(shift_matches) == 1 else None
+            # Parse multiple turns from pipe-separated string
+            turnos_resolved: list[tuple[int, str]] = []
+            if turnos_raw:
+                for part in turnos_raw.split("|"):
+                    part = part.strip()
+                    if not part:
+                        continue
+                    matches = shifts.get(_route_import_key(part), [])
+                    if len(matches) == 1:
+                        turnos_resolved.append(matches[0])
+                    elif len(matches) > 1:
+                        errors.append(f"Turno ambiguo: {part}")
+                    else:
+                        errors.append(f"Turno no válido: {part}")
             if not name:
                 errors.append("Nombre obligatorio")
             if not district_name:
@@ -599,12 +749,10 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                 errors.append("Distrito no encontrado")
             elif len(district_matches) > 1:
                 errors.append("Distrito ambiguo")
-            if not shift_name:
-                errors.append("Turno obligatorio")
-            elif not shift_matches:
-                errors.append("Turno no válido")
-            elif len(shift_matches) > 1:
-                errors.append("Turno ambiguo")
+            if not turnos_raw:
+                errors.append("Turno(s) obligatorio(s)")
+            elif not turnos_resolved and not errors:
+                errors.append("Ningún turno válido encontrado")
             time_pattern = re.compile(r"^(?:[01]\d|2[0-3]):[0-5]\d$")
             if start_time and not time_pattern.fullmatch(start_time):
                 errors.append("Hora de inicio inválida")
@@ -619,8 +767,8 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
 
             duplicate_key = None
             existing_route = None
-            if name and district and shift:
-                duplicate_key = (_route_import_key(name), district[0], shift[0])
+            if name and district and turnos_resolved:
+                duplicate_key = (_route_import_key(name), district[0])
                 existing_route = existing.get(duplicate_key)
                 owner = route_circuits.get(int(existing_route[0])) if existing_route else None
                 if circuit and owner and owner[0] != circuit_id:
@@ -631,17 +779,19 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                     file_keys.add(duplicate_key)
             status = "ERROR" if errors else ("EXISTENTE" if existing_route else "VALIDA")
             normalized = None
-            if not errors and district and shift:
+            if not errors and district and turnos_resolved:
                 normalized = {
-                    "fila": row_number, "nombre": name, "distritoId": district[0], "turnoId": shift[0],
+                    "fila": row_number, "nombre": name, "distritoId": district[0],
+                    "turnosIds": [t[0] for t in turnos_resolved],
                     "horaInicio": start_time or None, "horaFin": end_time or None,
                     "asignarEncargado": manager, "activo": active,
                     "existenteId": existing_route[0] if existing_route else None,
                 }
                 payloads.append(normalized)
+            turnos_str = " | ".join(t[1] for t in turnos_resolved) if turnos_resolved else "..."
             reviewed.append({
                 "fila": row_number, "nombre": name or "...", "distrito": district_name or "...",
-                "turno": shift_name or "...", "hora_inicio": start_time or "...", "hora_fin": end_time or "...",
+                "turno": turnos_str, "hora_inicio": start_time or "...", "hora_fin": end_time or "...",
                 "asignar_encargado": manager, "activa": active, "estado": status,
                 "valida": not errors, "existente_id": existing_route[0] if existing_route else None,
                 "errores": errors or (["Ruta existente"] if existing_route else []),
@@ -657,20 +807,22 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                         omitted += 1
                         continue
                     if action == "ACTUALIZAR":
-                        cursor.execute("""UPDATE dbo.rutas SET nombre=?,distrito_id=?,turno_id=?,hora_inicio=?,hora_fin=?,
+                        cursor.execute("""UPDATE dbo.rutas SET nombre=?,distrito_id=?,hora_inicio=?,hora_fin=?,
                                           asignar_encargado=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
-                                       data["nombre"],data["distritoId"],data["turnoId"],data["horaInicio"],data["horaFin"],
+                                       data["nombre"],data["distritoId"],data["horaInicio"],data["horaFin"],
                                        1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0,existing_id)
+                        _sync_route_turnos(cursor, existing_id, data["turnosIds"])
                         updated += 1
                     if circuit and _attach_route_to_circuit(cursor,circuit_id,int(existing_id)):
                         linked += 1
                 else:
                     cursor.execute("""INSERT INTO dbo.rutas
-                                      (nombre,distrito_id,turno_id,hora_inicio,hora_fin,asignar_encargado,activo,fecha_creacion)
-                                      OUTPUT INSERTED.id VALUES (?,?,?,?,?,?,?,SYSDATETIME())""",
-                                   data["nombre"],data["distritoId"],data["turnoId"],data["horaInicio"],data["horaFin"],
+                                      (nombre,distrito_id,hora_inicio,hora_fin,asignar_encargado,activo,fecha_creacion)
+                                      OUTPUT INSERTED.id VALUES (?,?,?,?,?,?,SYSDATETIME())""",
+                                   data["nombre"],data["distritoId"],data["horaInicio"],data["horaFin"],
                                    1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0)
                     new_route_id = int(cursor.fetchone()[0])
+                    _sync_route_turnos(cursor, new_route_id, data["turnosIds"])
                     created += 1
                     if circuit and _attach_route_to_circuit(cursor,circuit_id,new_route_id):
                         linked += 1
@@ -813,54 +965,87 @@ def delete_mobile_unit(item_id: int) -> None:
     _soft_delete("moviles", item_id)
 
 
-def _route_turno(cursor, ruta_id: int) -> int | None:
-    cursor.execute("SELECT turno_id FROM dbo.rutas WHERE id = ?", ruta_id)
-    row = cursor.fetchone()
-    return int(row[0]) if row and row[0] is not None else None
+def _sync_route_turnos(cursor, route_id: int, turnos_ids: list[int]) -> None:
+    """Sync junction table for route turns. turnos_ids must have at least 1 entry."""
+    cursor.execute("DELETE FROM dbo.ruta_turnos WHERE ruta_id = ?", route_id)
+    for turno_id in turnos_ids:
+        cursor.execute(
+            "INSERT INTO dbo.ruta_turnos (ruta_id, turno_id) VALUES (?, ?)",
+            route_id, turno_id,
+        )
+
+
+def _sync_lugar_turnos(cursor, lugar_id: int, turnos_ids: list[int]) -> None:
+    """Sync junction table for place turns. turnos_ids must have at least 1 entry."""
+    cursor.execute("DELETE FROM dbo.lugar_turnos WHERE lugar_servicio_id = ?", lugar_id)
+    for turno_id in turnos_ids:
+        cursor.execute(
+            "INSERT INTO dbo.lugar_turnos (lugar_servicio_id, turno_id) VALUES (?, ?)",
+            lugar_id, turno_id,
+        )
+
+
+def get_route_turnos(cursor, ruta_id: int) -> list[int]:
+    """Get enabled turn IDs for a route."""
+    cursor.execute(
+        "SELECT turno_id FROM dbo.ruta_turnos WHERE ruta_id = ? ORDER BY turno_id",
+        ruta_id,
+    )
+    return [int(row[0]) for row in cursor.fetchall()]
 
 
 def create_service_place(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
-        turno_id = data.get("turnoId") or _route_turno(cursor, int(data["rutaId"]))
+        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
+        if not turnos_ids:
+            # Fallback: inherit from route
+            rt = get_route_turnos(cursor, int(data["rutaId"]))
+            turnos_ids = rt if rt else [1]
         cursor.execute(
             """
             INSERT INTO dbo.lugares_servicio (
-                nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,tipo_servicio_id,turno_id,
+                nombre,direccion,ubicacion_especifica,distrito_id,ruta_id,tipo_servicio_id,
                 cantidad_requerida,estado_operativo,
                 consignas,observacion,lugar_formacion,latitud,longitud,activo,fecha_creacion
             )
             OUTPUT INSERTED.id
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("tipoServicioId"),turno_id,
+            data.get("tipoServicioId"),
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
         )
-        return int(cursor.fetchone()[0])
+        lugar_id = int(cursor.fetchone()[0])
+        _sync_lugar_turnos(cursor, lugar_id, turnos_ids)
+        return lugar_id
 
 
 def update_service_place(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
-        turno_id = data.get("turnoId") or _route_turno(cursor, int(data["rutaId"]))
+        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
+        if not turnos_ids:
+            rt = get_route_turnos(cursor, int(data["rutaId"]))
+            turnos_ids = rt if rt else [1]
         cursor.execute(
             """
             UPDATE dbo.lugares_servicio
-            SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,tipo_servicio_id=?,turno_id=?,
+            SET nombre=?,direccion=?,ubicacion_especifica=?,distrito_id=?,ruta_id=?,tipo_servicio_id=?,
                 cantidad_requerida=?,estado_operativo=?,
                 consignas=?,observacion=?,lugar_formacion=?,latitud=?,longitud=?,activo=?,fecha_actualizacion=SYSDATETIME()
             WHERE id = ?
             """,
             data.get("nombre"),data["direccion"],data.get("ubicacionEspecifica"),data["distritoId"],data["rutaId"],
-            data.get("tipoServicioId"),turno_id,
+            data.get("tipoServicioId"),
             int(data.get("cantidadRequerida",1)),data.get("estadoOperativo","ACTIVO"),
             data.get("consignas"),data.get("observacion"),data.get("lugarFormacion"),data.get("latitud"),data.get("longitud"),
             1 if data.get("activo", True) else 0,
             item_id,
         )
+        _sync_lugar_turnos(cursor, item_id, turnos_ids)
 
 
 def delete_service_place(item_id: int) -> None:
@@ -925,12 +1110,12 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
     with get_connection() as connection:
         cursor = connection.cursor()
 
-        cursor.execute("SELECT id,nombre,distrito_id,turno_id FROM dbo.rutas")
-        routes: dict[str, list[tuple[int, str, int, int | None]]] = {}
-        for item_id, name, district_id, shift_id in cursor.fetchall():
+        cursor.execute("SELECT id,nombre,distrito_id FROM dbo.rutas")
+        routes: dict[str, list[tuple[int, str, int, list[int]]]] = {}
+        for item_id, name, district_id in cursor.fetchall():
+            route_turns = get_route_turnos(cursor, int(item_id))
             routes.setdefault(_import_key(name), []).append(
-                (int(item_id), str(name), int(district_id or 0),
-                 int(shift_id) if shift_id is not None else None)
+                (int(item_id), str(name), int(district_id or 0), route_turns)
             )
 
         cursor.execute(
@@ -1010,6 +1195,26 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                 else:
                     file_keys.add(dup_key)
 
+            # Parse turnos_habilitados column (pipe-separated), fallback to route's turns
+            turnos_raw = str(row.get("turnos_habilitados") or "").strip()
+            turnos_ids_for_place: list[int] = []
+            if turnos_raw and route_match:
+                # Resolve turns against available shifts
+                cursor.execute("SELECT id,nombre FROM dbo.turnos WHERE activo=1")
+                all_shifts = {_import_key(name): int(sid) for sid, name in cursor.fetchall()}
+                for part in turnos_raw.split("|"):
+                    part = part.strip()
+                    if not part:
+                        continue
+                    tid = all_shifts.get(_import_key(part))
+                    if tid and tid in route_match[3]:
+                        turnos_ids_for_place.append(tid)
+                    elif not tid:
+                        errors.append(f"Turno no válido: {part}")
+            # If no explicit turns, inherit all from route
+            if not turnos_ids_for_place and route_match:
+                turnos_ids_for_place = list(route_match[3])
+
             normalized = None
             if not errors and route_match and duplicate_type != "ARCHIVO":
                 normalized = {
@@ -1019,7 +1224,7 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                     "ubicacion_especifica": _csv_clean(horario),
                     "ruta_id": route_match[0],
                     "distrito_id": route_match[2],
-                    "turno_id": route_match[3],
+                    "turnosIds": turnos_ids_for_place,
                     "consignas": _csv_clean(consignas),
                     "observacion": _csv_clean(observacion),
                     "lugar_formacion": _csv_clean(lugar_formacion),
@@ -1065,14 +1270,18 @@ def import_service_places(rows: list[dict], confirm: bool = False, existing_acti
                 else:
                     cursor.execute(
                         """INSERT INTO dbo.lugares_servicio (
-                               ruta_id,nombre,direccion,ubicacion_especifica,distrito_id,turno_id,
+                               ruta_id,nombre,direccion,ubicacion_especifica,distrito_id,
                                consignas,observacion,lugar_formacion,estado_operativo,cantidad_requerida,
                                activo,fecha_creacion,tipo_servicio_id,latitud,longitud
-                           ) VALUES (?,?,?,?,?,?,?,?,?,'ACTIVO',1,1,SYSDATETIME(),?,NULL,NULL)""",
+                           )
+                        OUTPUT INSERTED.id
+                        VALUES (?,?,?,?,?,?,?,?,'ACTIVO',1,1,SYSDATETIME(),?,NULL,NULL)""",
                         data["ruta_id"], data["nombre"], data["direccion"], data["ubicacion_especifica"],
-                        data["distrito_id"], data["turno_id"], data["consignas"], data["observacion"],
+                        data["distrito_id"], data["consignas"], data["observacion"],
                         data["lugar_formacion"], data["tipo_servicio_id"],
                     )
+                    new_place_id = int(cursor.fetchone()[0])
+                    _sync_lugar_turnos(cursor, new_place_id, data["turnosIds"])
                     imported += 1
 
         valid_count = sum(1 for row in reviewed if row["valida"] and not row["duplicado"])

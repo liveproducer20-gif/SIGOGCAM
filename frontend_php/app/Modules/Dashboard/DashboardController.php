@@ -21,15 +21,23 @@ final class DashboardController
         $version = [];
         $error = null;
 
-        try {
-            $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
-            $response = $api->get('auth/mi-menu');
-            $menu = $response['datos'] ?? [];
-            $stats = $api->get('dashboard/resumen')['datos'] ?? [];
-            $version = $api->get('configuracion/version')['datos'] ?? [];
-        } catch (\Throwable $exception) {
-            $error = $exception->getMessage();
+        $api = new ApiClient(Config::get('API_BASE_URL'), AuthSession::token());
+        $errors = [];
+        // Independent catalog calls run in parallel (curl_multi); a failure in
+        // one call doesn't prevent the rest of the screen from loading.
+        $responses = $api->getMany([
+            'menu' => 'auth/mi-menu',
+            'stats' => 'dashboard/resumen',
+            'version' => 'configuracion/version',
+        ]);
+        foreach ($responses as $key => $response) {
+            if (isset($response['error'])) {
+                $errors[] = $key . ': ' . $response['error']->getMessage();
+                continue;
+            }
+            ${$key} = $response['data']['datos'] ?? [];
         }
+        $error = $errors ? implode(' | ', $errors) : null;
 
         View::render('dashboard/index', [
             'title' => 'Panel principal',

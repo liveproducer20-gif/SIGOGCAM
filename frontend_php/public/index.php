@@ -197,6 +197,11 @@ if ($path === '/admin/circuitos/rutas/importar' && $method === 'POST') {
     return;
 }
 
+if (preg_match('#^/admin/api/rutas/(\d+)/turnos/(\d+)/lugares$#', $path, $m) && $method === 'GET') {
+    (new AdminController())->getRouteTurnCount((int)$m[1], (int)$m[2]);
+    return;
+}
+
 if ($path === '/insignias' && $method === 'GET') {
     (new InsigniasController())->index();
     return;
