@@ -454,9 +454,12 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
             slots = _eas_slots(cursor, district_id, shift_id)
             cursor.execute("""
                 SELECT DISTINCT e.id,e.codigo,e.nombre
-                FROM dbo.circuito_eas ce
-                INNER JOIN dbo.circuitos c ON c.id=ce.circuito_id AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
-                INNER JOIN dbo.eas_estaciones e ON e.id=ce.eas_id AND e.activo=1
+                FROM dbo.eas_estaciones e
+                WHERE e.activo=1 AND EXISTS (
+                    SELECT 1 FROM dbo.movil_eas_asignaciones a
+                    INNER JOIN dbo.rutas r ON r.id=a.ruta_id AND r.distrito_id=?
+                    WHERE a.eas_id=e.id AND a.activo=1
+                )
                 ORDER BY e.codigo,e.nombre
             """, district_id)
             eas_list = _rows(cursor)
@@ -475,13 +478,18 @@ def get_board_data(district_id: int, shift_id: int, distribution_date: date | No
                     "asignar_encargado": False, "lugares": 0,
                     "hora_inicio": slot["hora_inicio"], "hora_fin": slot["hora_fin"], "configuraciones": [],
                 })
-                route["configuraciones"].append({
+                config = {
                     "id": slot["configuracion_id"], "movil_id": slot["configuracion_movil_id"],
                     "movil_informativo_id": slot["movil_id"],
                     "numero_movil": slot["numero_movil"], "placa": slot["placa"],
                     "orden": slot["orden"], "virtual": slot["configuracion_id"] is None,
                     "sin_movil_configurado": slot["configuracion_movil_id"] is None,
-                })
+                    "movil_activo": slot["movil_activo"],
+                }
+                if slot.get("lugar_id"):
+                    config["lugar_id"] = slot["lugar_id"]
+                    config["lugar_nombre"] = slot["lugar_nombre"]
+                route["configuraciones"].append(config)
             return {"distrito": district, "turno": shift, "modo_eas": True,
                     "eas": eas_list, "circuitos": list(circuits_by_id.values()), "moviles": [],
                     "rutas": list(routes_by_key.values()), "fecha_distribucion": distribution_date,
@@ -591,29 +599,28 @@ def _distribution_id(cursor, district_id: int, shift_id: int, distribution_date:
 
 
 def _eas_slots(cursor, district_id: int, shift_id: int) -> list[dict]:
-    """One row per active configuration; a route without one gets a virtual slot."""
+    """One row per active assignment; uses movil_eas_asignaciones as primary source."""
     cursor.execute("""
-        SELECT ce.eas_id,e.nombre AS eas_nombre,cr.circuito_id,c.nombre AS circuito,
-               r.id AS ruta_id,r.nombre AS ruta,COALESCE(r.hora_inicio,t.hora_inicio) AS hora_inicio,
-               COALESCE(r.hora_fin,t.hora_fin) AS hora_fin,
-               ec.id AS configuracion_id,ec.movil_id AS configuracion_movil_id,
-               COALESCE(ec.movil_id,CASE WHEN ec.id IS NULL THEN mea.movil_id END) AS movil_id,
-               ec.orden,CASE WHEN ec.id IS NULL THEN fm.numero_movil ELSE m.numero_movil END AS numero_movil,
-               CASE WHEN ec.id IS NULL THEN fm.placa ELSE m.placa END AS placa
-        FROM dbo.circuito_eas ce
-        INNER JOIN dbo.eas_estaciones e ON e.id=ce.eas_id AND e.activo=1
-        INNER JOIN dbo.circuitos c ON c.id=ce.circuito_id AND c.distrito_id=? AND c.activo=1 AND c.deleted_at IS NULL
-        INNER JOIN dbo.circuito_rutas cr ON cr.circuito_id=c.id AND cr.deleted_at IS NULL
-        INNER JOIN dbo.rutas r ON r.id=cr.ruta_id AND r.activo=1 AND r.distrito_id=?
-        INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id=r.id AND rt.turno_id=?
-        LEFT JOIN dbo.turnos t ON t.id=?
-        LEFT JOIN dbo.eas_ruta_configuraciones ec ON ec.eas_id=e.id AND ec.ruta_id=r.id AND ec.activo=1
-        LEFT JOIN dbo.moviles m ON m.id=ec.movil_id AND m.activo=1
-        OUTER APPLY (SELECT TOP 1 a.movil_id FROM dbo.movil_eas_asignaciones a
-                     WHERE a.eas_id=e.id AND a.activo=1 ORDER BY a.fecha_asignacion DESC,a.id DESC) mea
-        LEFT JOIN dbo.moviles fm ON fm.id=mea.movil_id AND fm.activo=1
-        ORDER BY e.nombre,c.nombre,r.nombre,ISNULL(ec.orden,0),ec.id
-    """, district_id, district_id, shift_id, shift_id)
+        SELECT a.eas_id, e.nombre AS eas_nombre,
+               0 AS circuito_id, 'EAS' AS circuito,
+               a.ruta_id, r.nombre AS ruta,
+               COALESCE(r.hora_inicio, t.hora_inicio) AS hora_inicio,
+               COALESCE(r.hora_fin, t.hora_fin) AS hora_fin,
+               NULL AS configuracion_id, a.movil_id AS configuracion_movil_id,
+               a.movil_id, NULL AS orden,
+               m.numero_movil, m.placa,
+               CASE WHEN m.id IS NOT NULL THEN 1 ELSE 0 END AS movil_activo,
+               a.lugar_id, ls.nombre AS lugar_nombre
+        FROM dbo.movil_eas_asignaciones a
+        INNER JOIN dbo.eas_estaciones e ON e.id = a.eas_id AND e.activo = 1
+        INNER JOIN dbo.rutas r ON r.id = a.ruta_id AND r.activo = 1 AND r.distrito_id = ?
+        INNER JOIN dbo.ruta_turnos rt ON rt.ruta_id = r.id AND rt.turno_id = ?
+        LEFT JOIN dbo.turnos t ON t.id = ?
+        LEFT JOIN dbo.moviles m ON m.id = a.movil_id AND m.activo = 1
+        LEFT JOIN dbo.lugares_servicio ls ON ls.id = a.lugar_id AND ls.activo = 1
+        WHERE a.activo = 1
+        ORDER BY e.codigo, r.nombre, ls.nombre
+    """, district_id, shift_id, shift_id)
     return _rows(cursor)
 
 

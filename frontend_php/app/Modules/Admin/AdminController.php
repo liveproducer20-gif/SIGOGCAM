@@ -53,7 +53,11 @@ final class AdminController
         if ($this->can('lugares_servicio.ver', $user)) $paths['lugares'] = 'admin/lugares-servicio';
         if ($this->can('personal.ver', $user)) $paths['grados'] = 'admin/grados';
         if ($this->can('catalogos.ver', $user)) $paths['catalogos'] = 'admin/catalogos';
-        if ($this->can('moviles.asignar', $user)) $paths['asignaciones'] = 'admin/movil-eas-asignaciones';
+        if ($this->can('moviles.asignar', $user)) {
+            $paths['asignaciones'] = 'admin/movil-eas-asignaciones';
+            if (empty($paths['lugares'])) $paths['lugares'] = 'admin/lugares-servicio';
+            if (empty($paths['rutas'])) $paths['rutas'] = 'admin/rutas';
+        }
         $responses = $api->getMany($paths);
         foreach ($responses as $key => $response) {
             if (isset($response['error'])) {
@@ -192,6 +196,26 @@ final class AdminController
         fwrite($output, "\xEF\xBB\xBF");
         fputcsv($output, self::ROUTE_CSV_HEADERS);
         fputcsv($output, ['Ruta Plaza Bicentenario','9 de Octubre','Segundo Turno|Primer Turno','10:30','18:00','06:00','14:00','22:00','06:00','SI','SI']);
+        fclose($output);
+    }
+
+    public function downloadAssignmentTemplate(): void
+    {
+        if (!AuthSession::check()) { header('Location: /'); return; }
+        $user = AuthSession::user() ?? [];
+        if (!$this->can('moviles.asignar', $user)) { http_response_code(403); echo 'No tiene permiso para descargar la plantilla.'; return; }
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="plantilla_asignaciones_movil_eas.csv"');
+        header('Cache-Control: no-store');
+        $output = fopen('php://output', 'wb');
+        fwrite($output, "\xEF\xBB\xBF");
+        fputcsv($output, ['Ruta', 'Lugar de servicio', 'Móvil', 'Placa', 'Estado']);
+        fputcsv($output, ['Ruta Urdesa', 'Urdesa Central 1', '113', 'GMA-2745', 'Activo']);
+        fputcsv($output, ['Ruta Urdesa', 'Urdesa Central 2', '114', 'GMA-2742', 'Activo']);
+        fputcsv($output, ['Ruta Lomas de Urdesa', 'Bosque Protector Palo Santo', '118', 'GMA-2747', 'Activo']);
+        fputcsv($output, ['Ruta Kennedy Norte', 'Kennedy Perímetro Norte', '127', 'GMA-2839', 'Activo']);
+        fputcsv($output, ['Ruta Samanes', 'Samanes 1 y 2', '137', 'GMA-2823', 'Activo']);
+        fputcsv($output, ['Ruta Samanes', 'Samanes 1 y 2', '138', 'GMA-2824', 'Activo']);
         fclose($output);
     }
 
@@ -378,7 +402,7 @@ final class AdminController
             'circuito' => ['circuitos', ['distritoId'=>(int)($_POST['distrito_id'] ?? 0),'nombre'=>$this->text('nombre'),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'lugarFormacion'=>$this->text('lugar_formacion'),'consignas'=>$this->text('consignas'),'observaciones'=>$this->text('observaciones'),'perimetro'=>$this->text('perimetro'),'easIds'=>array_values(array_map('intval',(array)($_POST['eas_ids'] ?? []))),'rutaIds'=>array_values(array_map('intval',(array)($_POST['ruta_ids'] ?? [])))]],
             'lugar' => ['lugares-servicio', ['nombre'=>$this->firstText('nombre'),'direccion'=>$this->text('direccion') ?: $this->firstText('nombre'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnosIds'=>array_values(array_map('intval',(array)($_POST['turnos_ids'] ?? []))),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>$this->boolValue('activo',true)]],
             'grado' => ['grados', ['nombre'=>$this->text('nombre'),'activo'=>isset($_POST['activo'])]],
-            'asignacion' => ['movil-eas-asignaciones', ['easId'=>(int)($_POST['eas_id'] ?? 0),'movilId'=>(int)($_POST['movil_id'] ?? 0),'estadoAsignacionId'=>(int)($_POST['estado_asignacion_id'] ?? 0),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
+            'asignacion' => ['movil-eas-asignaciones', ['easId'=>$this->resolveEasIdForRoute((int)($_POST['ruta_id'] ?? 0)),'movilId'=>(int)($_POST['movil_id'] ?? 0),'estadoAsignacionId'=>(int)($_POST['estado_asignacion_id'] ?? 0),'lugarId'=>$this->nullableInt($_POST['lugar_id'] ?? null),'rutaId'=>$this->nullableInt($_POST['ruta_id'] ?? null),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
             'catalogo_detalle' => ['catalogos', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'descripcion'=>$this->text('descripcion'),'orden'=>(int)($_POST['orden'] ?? 0),'asignarEncargado'=>isset($_POST['asignar_encargado']),'estado'=>isset($_POST['estado'])]],
             'mantenimiento' => ['mantenimiento', ['fechaMantenimiento'=>$this->text('fecha_mantenimiento'),'kilometraje'=>(int)($_POST['kilometraje'] ?? 0),'descripcion'=>$this->text('descripcion'),'tipoMantenimientoId'=>$this->nullableInt($_POST['tipo_mantenimiento_id'] ?? null)]],
             default => throw new \InvalidArgumentException('Entidad administrativa no válida.'),
@@ -501,6 +525,18 @@ final class AdminController
     private function nullableText(string $key): ?string { $value=$this->text($key); return $value===''?null:$value; }
     private function nullableInt(mixed $value): ?int { $value=trim((string)$value); return $value===''?null:(int)$value; }
     private function nullableFloat(mixed $value): ?float { $value=trim((string)$value); return $value===''?null:(float)$value; }
+
+    private function resolveEasIdForRoute(int $routeId): int
+    {
+        if ($routeId <= 0) return (int)($_POST['eas_id'] ?? 0);
+        try {
+            $api = $this->api();
+            $response = $api->get('admin/movil-eas-asignaciones/lugar-eas-id?ruta_id=' . $routeId);
+            return (int)($response['datos']['eas_id'] ?? 0);
+        } catch (\Throwable $e) {
+            return (int)($_POST['eas_id'] ?? 0);
+        }
+    }
     private function can(string $permission, array $user): bool
     {
         $role = strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? ''));

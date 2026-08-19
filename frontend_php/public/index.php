@@ -187,6 +187,11 @@ if ($path === '/admin/rutas/plantilla.csv' && $method === 'GET') {
     return;
 }
 
+if ($path === '/admin/asignaciones/plantilla.csv' && $method === 'GET') {
+    (new AdminController())->downloadAssignmentTemplate();
+    return;
+}
+
 if ($path === '/admin/rutas/importar' && $method === 'POST') {
     (new AdminController())->importRoutes();
     return;

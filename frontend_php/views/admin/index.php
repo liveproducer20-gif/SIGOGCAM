@@ -65,8 +65,134 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
 
     <?php if ($tab === 'asignaciones' && $can('moviles.asignar')): ?>
     <header class="admin-section-heading"><div><h2>Asignaciones móvil–EAS</h2><p>Vinculación vigente e historial de unidades por estación.</p></div><span><?= count($adminData['asignaciones']) ?> asignaciones</span></header>
-    <form class="form-panel admin-form" method="post" action="/admin" id="form-asignacion"><input type="hidden" name="entity" value="asignacion"><input type="hidden" name="tab" value="asignaciones"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nueva asignación</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>EAS<select name="eas_id" required><?php $optionList($adminData['eas']); ?></select></label><label>Móvil<select name="movil_id" required><?php foreach ($adminData['moviles'] as $m): ?><option value="<?= (int)$m['id'] ?>"><?= $e($m['numero_movil'] . ($m['placa'] ? ' · '.$m['placa'] : '')) ?></option><?php endforeach; ?></select></label><label>Estado<select name="estado_asignacion_id" required><?php $optionList($refs['estadosAsignacion'] ?? []); ?></select></label><label class="span-2">Observación<textarea name="observacion" rows="2"></textarea></label><label class="check-row"><input type="checkbox" name="activo" checked> Vigente</label></div><button type="submit">Guardar asignación</button></form>
-    <section class="table-wrap"><table><thead><tr><th>Fecha</th><th>EAS</th><th>Móvil</th><th>Placa</th><th>Estado</th><th>Observación</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['asignaciones'] as $item): $payload=['id'=>$item['id'],'eas_id'=>$item['eas_id'],'movil_id'=>$item['movil_id'],'estado_asignacion_id'=>$item['estado_asignacion_id'],'observacion'=>$item['observacion'],'activo'=>(bool)$item['activo']]; ?><tr><td><?= $e(substr((string)$item['fecha_asignacion'],0,16)) ?></td><td><?= $e($item['eas_codigo'].' · '.$item['eas_nombre']) ?></td><td><strong><?= $e($item['numero_movil']) ?></strong></td><td><?= $e($item['placa'] ?: '—') ?></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $e($item['estado_asignacion']) ?></span></td><td><?= $e($item['observacion'] ?: '—') ?></td><td class="actions"><button type="button" class="secondary" data-edit-target="#form-asignacion" data-payload="<?= $json($payload) ?>">Editar</button><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="asignacion"><input type="hidden" name="tab" value="asignaciones"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Cerrar</button></form></td></tr><?php endforeach; ?></tbody></table></section>
+    <form class="form-panel admin-form" method="post" action="/admin" id="form-asignacion"><input type="hidden" name="entity" value="asignacion"><input type="hidden" name="tab" value="asignaciones"><input type="hidden" name="id"><div class="admin-form-title"><h3>Nueva asignación</h3><button type="reset" class="secondary" data-admin-reset>Limpiar</button></div><div class="form-grid"><label>Ruta (EAS)<select name="ruta_id" id="asign-ruta" required><option value="">Seleccione ruta</option><?php foreach (($adminData['rutas'] ?? []) as $r): if ((int)($r['distrito_id'] ?? 0) !== 1143) continue; ?><option value="<?= (int)$r['id'] ?>"><?= $e($r['nombre']) ?></option><?php endforeach; ?></select></label><label>Lugar de servicio<select name="lugar_id" id="asign-lugar" required><option value="">Seleccione ruta primero</option></select></label><label>Móvil<select name="movil_id" required><?php foreach ($adminData['moviles'] as $m): ?><option value="<?= (int)$m['id'] ?>"><?= $e($m['numero_movil'] . ($m['placa'] ? ' · '.$m['placa'] : '')) ?></option><?php endforeach; ?></select></label><label>Estado<select name="estado_asignacion_id" required><?php $optionList($refs['estadosAsignacion'] ?? []); ?></select></label><label class="span-2">Observación<textarea name="observacion" rows="2"></textarea></label><label class="check-row"><input type="checkbox" name="activo" checked> Vigente</label></div><button type="submit">Guardar asignación</button></form>
+
+    <script>
+    (function(){
+        var rutaSel = document.getElementById('asign-ruta');
+        var lugarSel = document.getElementById('asign-lugar');
+        if (!rutaSel || !lugarSel) return;
+        function loadLugares(rutaId) {
+            lugarSel.innerHTML = '<option value="">Cargando...</option>';
+            if (!rutaId) { lugarSel.innerHTML = '<option value="">Seleccione ruta primero</option>'; return; }
+            fetch('/api/admin/movil-eas-asignaciones/lugares-por-ruta?ruta_id=' + rutaId, {headers: {'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''}})
+                .then(function(r){ return r.json(); })
+                .then(function(d){
+                    var lugares = d.datos || [];
+                    lugarSel.innerHTML = '<option value="">Seleccione lugar</option>' + lugares.map(function(l){
+                        return '<option value="' + l.id + '">' + l.nombre + '</option>';
+                    }).join('');
+                })
+                .catch(function(){ lugarSel.innerHTML = '<option value="">Error al cargar</option>'; });
+        }
+        rutaSel.addEventListener('change', function(){ loadLugares(this.value); });
+        // On edit, preload lugares for the current ruta
+        var editBtns = document.querySelectorAll('[data-edit-target="#form-asignacion"]');
+        editBtns.forEach(function(btn){
+            btn.addEventListener('click', function(){
+                var payload = JSON.parse(this.dataset.payload || '{}');
+                if (payload.ruta_id) {
+                    rutaSel.value = payload.ruta_id;
+                    loadLugares(payload.ruta_id);
+                    setTimeout(function(){ lugarSel.value = payload.lugar_id || ''; }, 300);
+                }
+            });
+        });
+
+        // CSV Import for Asignaciones
+        var asignCsvInput = document.getElementById('asign-csv-input');
+        var asignCsvReplace = document.getElementById('asign-csv-replace');
+        var asignDialog = document.getElementById('asignImportDialog');
+        var asignBody = document.getElementById('asignImportBody');
+        var asignSummary = document.getElementById('asignImportSummary');
+        var asignConfirm = document.getElementById('asignImportConfirm');
+        var asignTotal = document.getElementById('asignTotal');
+        var asignValid = document.getElementById('asignValid');
+        var asignErrors = document.getElementById('asignErrors');
+        var asignPreviewData = [];
+
+        function parseAsignCsv(text) {
+            var lines = text.replace(//g, '').split('
+').filter(function(l){ return l.trim(); });
+            if (lines.length < 2) return [];
+            var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g, ''); });
+            var rows = [];
+            for (var i = 1; i < lines.length; i++) {
+                var vals = lines[i].split(',').map(function(v){ return v.trim().replace(/^"|"$/g, ''); });
+                var obj = {};
+                headers.forEach(function(h, idx){ obj[h] = vals[idx] || ''; });
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        function loadAsignCsv(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseAsignCsv(e.target.result);
+                if (!rows.length) { alert('Archivo CSV vacio o formato incorrecto.'); return; }
+                fetch('/api/admin/movil-eas-asignaciones/importar-preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                    body: JSON.stringify({rows: rows})
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                    if (d.ok !== true) { alert(d.mensaje || 'Error al validar'); return; }
+                    var datos = d.datos;
+                    asignPreviewData = datos.filas;
+                    asignTotal.textContent = datos.total;
+                    asignValid.textContent = datos.validos;
+                    asignErrors.textContent = datos.rechazados;
+                    asignSummary.hidden = false;
+                    asignConfirm.disabled = false;
+                    asignConfirm.textContent = datos.rechazados > 0
+                        ? 'Importar validos (' + datos.validos + '/' + datos.total + ')'
+                        : 'Confirmar importacion (' + datos.validos + ')';
+                    asignBody.innerHTML = datos.filas.map(function(f) {
+                        var cls = f.valido ? 'is-valid' : 'is-invalid';
+                        var icon = f.valido ? '✓' : '✗';
+                        return '<tr class="' + cls + '"><td>' + f.fila + '</td><td>' + esc(f.ruta) + '</td><td>' + esc(f.lugar) + '</td><td>' + esc(f.movil) + '</td><td>' + esc(f.placa) + '</td><td>' + esc(f.estado) + '</td><td><span class="route-import-status">' + icon + ' ' + esc(f.resultado) + '</span></td></tr>';
+                    }).join('');
+                    asignDialog.showModal();
+                })
+                .catch(function(err){ alert('Error: ' + err.message); });
+            };
+            reader.readAsText(file);
+        }
+
+        if (asignCsvInput) asignCsvInput.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+        if (asignCsvReplace) asignCsvReplace.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+
+        if (asignConfirm) asignConfirm.addEventListener('click', function() {
+            var validRows = asignPreviewData.filter(function(f){ return f.valido; });
+            if (!validRows.length) { alert('No hay registros validos para importar.'); return; }
+            this.disabled = true;
+            this.textContent = 'Importando...';
+            var self = this;
+            fetch('/api/admin/movil-eas-asignaciones/importar-confirm', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                body: JSON.stringify({rows: validRows})
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.ok !== true) { alert(d.mensaje || 'Error al importar'); self.disabled = false; self.textContent = 'Confirmar importacion'; return; }
+                asignDialog.close();
+                alert('Importacion completada.
+' + d.datos.creados + ' asignaciones creadas.');
+                location.reload();
+            })
+            .catch(function(err){ alert('Error: ' + err.message); self.disabled = false; self.textContent = 'Confirmar importacion'; });
+        });
+
+        document.querySelectorAll('[data-asign-close]').forEach(function(btn) {
+            btn.addEventListener('click', function() { asignDialog.close(); });
+        });
+
+    })();
+    </script>
+    <section class="table-wrap"><table><thead><tr><th>EAS / Ruta</th><th>Lugar de servicio</th><th>Móvil</th><th>Placa</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['asignaciones'] as $item): $payload=['id'=>$item['id'],'eas_id'=>$item['eas_id'],'movil_id'=>$item['movil_id'],'estado_asignacion_id'=>$item['estado_asignacion_id'],'lugar_id'=>$item['lugar_id'] ?? null,'ruta_id'=>$item['ruta_id'] ?? null,'observacion'=>$item['observacion'],'activo'=>(bool)$item['activo']]; ?><tr><td><strong><?= $e($item['eas_nombre'] ?? $item['eas_codigo']) ?></strong><br><small><?= $e($item['ruta_nombre'] ?? '—') ?></small></td><td><?= $e($item['lugar_nombre'] ?? '—') ?></td><td><strong><?= $e($item['numero_movil']) ?></strong></td><td><?= $e($item['placa'] ?: '—') ?></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>\"><?= $e($item['estado_asignacion']) ?></span></td><td class="actions"><button type="button" class="secondary" data-edit-target="#form-asignacion" data-payload="<?= $json($payload) ?>">Editar</button><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="asignacion"><input type="hidden" name="tab" value="asignaciones"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="danger">Cerrar</button></form></td></tr><?php endforeach; ?></tbody></table></section>
     <?php endif; ?>
 
     <?php if ($tab === 'rutas' && $can('rutas.ver')): ?>
@@ -117,6 +243,98 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
         <?= json_encode(array_map(function($l) { return $l['ruta_id']; }, $adminData['lugares'] ?? [])) ?>.forEach(function(rid){ routeCounts[rid] = (routeCounts[rid] || 0) + 1; });
         var routes = <?= json_encode(array_map(function($r){ return ['id'=>$r['id'],'nombre'=>$r['nombre']]; }, $adminData['rutas']), JSON_UNESCAPED_UNICODE) ?>.map(function(r){ return { nombre: r.nombre, lugares: routeCounts[r.id] || 0 }; });
         if (routes.length) new RandomRouteInfoSlider(document.getElementById('routesCarousel'), { routes: routes, title: 'Lugares de servicio por ruta', subtitle: 'Orden aleatorio' });
+
+        // CSV Import for Asignaciones
+        var asignCsvInput = document.getElementById('asign-csv-input');
+        var asignCsvReplace = document.getElementById('asign-csv-replace');
+        var asignDialog = document.getElementById('asignImportDialog');
+        var asignBody = document.getElementById('asignImportBody');
+        var asignSummary = document.getElementById('asignImportSummary');
+        var asignConfirm = document.getElementById('asignImportConfirm');
+        var asignTotal = document.getElementById('asignTotal');
+        var asignValid = document.getElementById('asignValid');
+        var asignErrors = document.getElementById('asignErrors');
+        var asignPreviewData = [];
+
+        function parseAsignCsv(text) {
+            var lines = text.replace(//g, '').split('
+').filter(function(l){ return l.trim(); });
+            if (lines.length < 2) return [];
+            var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g, ''); });
+            var rows = [];
+            for (var i = 1; i < lines.length; i++) {
+                var vals = lines[i].split(',').map(function(v){ return v.trim().replace(/^"|"$/g, ''); });
+                var obj = {};
+                headers.forEach(function(h, idx){ obj[h] = vals[idx] || ''; });
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        function loadAsignCsv(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseAsignCsv(e.target.result);
+                if (!rows.length) { alert('Archivo CSV vacio o formato incorrecto.'); return; }
+                fetch('/api/admin/movil-eas-asignaciones/importar-preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                    body: JSON.stringify({rows: rows})
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                    if (d.ok !== true) { alert(d.mensaje || 'Error al validar'); return; }
+                    var datos = d.datos;
+                    asignPreviewData = datos.filas;
+                    asignTotal.textContent = datos.total;
+                    asignValid.textContent = datos.validos;
+                    asignErrors.textContent = datos.rechazados;
+                    asignSummary.hidden = false;
+                    asignConfirm.disabled = false;
+                    asignConfirm.textContent = datos.rechazados > 0
+                        ? 'Importar validos (' + datos.validos + '/' + datos.total + ')'
+                        : 'Confirmar importacion (' + datos.validos + ')';
+                    asignBody.innerHTML = datos.filas.map(function(f) {
+                        var cls = f.valido ? 'is-valid' : 'is-invalid';
+                        var icon = f.valido ? '✓' : '✗';
+                        return '<tr class="' + cls + '"><td>' + f.fila + '</td><td>' + esc(f.ruta) + '</td><td>' + esc(f.lugar) + '</td><td>' + esc(f.movil) + '</td><td>' + esc(f.placa) + '</td><td>' + esc(f.estado) + '</td><td><span class="route-import-status">' + icon + ' ' + esc(f.resultado) + '</span></td></tr>';
+                    }).join('');
+                    asignDialog.showModal();
+                })
+                .catch(function(err){ alert('Error: ' + err.message); });
+            };
+            reader.readAsText(file);
+        }
+
+        if (asignCsvInput) asignCsvInput.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+        if (asignCsvReplace) asignCsvReplace.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+
+        if (asignConfirm) asignConfirm.addEventListener('click', function() {
+            var validRows = asignPreviewData.filter(function(f){ return f.valido; });
+            if (!validRows.length) { alert('No hay registros validos para importar.'); return; }
+            this.disabled = true;
+            this.textContent = 'Importando...';
+            var self = this;
+            fetch('/api/admin/movil-eas-asignaciones/importar-confirm', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                body: JSON.stringify({rows: validRows})
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.ok !== true) { alert(d.mensaje || 'Error al importar'); self.disabled = false; self.textContent = 'Confirmar importacion'; return; }
+                asignDialog.close();
+                alert('Importacion completada.
+' + d.datos.creados + ' asignaciones creadas.');
+                location.reload();
+            })
+            .catch(function(err){ alert('Error: ' + err.message); self.disabled = false; self.textContent = 'Confirmar importacion'; });
+        });
+
+        document.querySelectorAll('[data-asign-close]').forEach(function(btn) {
+            btn.addEventListener('click', function() { asignDialog.close(); });
+        });
+
     })();
     </script>
     <section class="table-wrap admin-table-modern"><table id="admin-routes-table"><thead><tr><th>Ruta</th><th>Distrito</th><th>Circuito</th><th>Turno</th><th>Horario</th><th>Encargado</th><th>Estado</th><th class="th-actions">Acciones</th></tr></thead><tbody><?php foreach ($adminData['rutas'] as $item): $payload=['id'=>$item['id'],'nombre'=>$item['nombre'],'distrito_id'=>$item['distrito_id'],'turnos_ids'=>array_map('intval',array_column($item['turnos'] ?? [],'turno_id')),'hora_inicio'=>$item['hora_inicio'],'hora_fin'=>$item['hora_fin'],'asignar_encargado'=>(bool)$item['asignar_encargado'],'activo'=>(bool)$item['activo']]; ?><tr data-district="<?= (int)($item['distrito_id'] ?? 0) ?>" data-circuit="<?= !empty($item['circuito_id']) ? (int)$item['circuito_id'] : '' ?>" data-turno="<?= $e(implode(',', array_column($item['turnos'] ?? [], 'turno_id'))) ?>"><td class="td-route-name"><strong><?= $e($item['nombre']) ?></strong></td><td><?= $e($item['distrito'] ?? '—') ?></td><td><?= $e($item['circuito'] ?? 'Sin circuito') ?></td><td><?php $turnos=$item['turnos'] ?? []; if($turnos): foreach($turnos as $t): ?><span class="admin-chip admin-chip--turno"><?= $e($t['turno']) ?></span> <?php endforeach; else: ?><span class="admin-chip">—</span><?php endif; ?></td><td class="td-schedule"><?= $e(($item['hora_inicio'] ?? '—').' – '.($item['hora_fin'] ?? '—')) ?></td><td><span class="status-pill <?= $item['asignar_encargado'] ? 'is-active' : '' ?>"><?= $item['asignar_encargado'] ? 'Permitido' : 'No requerido' ?></span></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $item['activo'] ? 'Activa' : 'Inactiva' ?></span></td><td class="actions admin-icon-actions"><?php if ($can('catalogos.editar')): ?><button type="button" class="admin-icon-btn admin-icon-btn--edit" data-edit-target="#form-ruta" data-payload="<?= $json($payload) ?>" title="Editar ruta"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button><?php endif; ?><?php if ($can('catalogos.estado')): ?><form method="post" action="/admin/eliminar" class="inline-form" style="display:inline"><input type="hidden" name="entity" value="ruta"><input type="hidden" name="tab" value="rutas"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button type="submit" class="admin-icon-btn admin-icon-btn--delete" title="Eliminar ruta" onclick="return confirm('¿Eliminar esta ruta?')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
@@ -443,6 +661,98 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
         } else {
             attachPlaceEditHandlers();
         }
+
+        // CSV Import for Asignaciones
+        var asignCsvInput = document.getElementById('asign-csv-input');
+        var asignCsvReplace = document.getElementById('asign-csv-replace');
+        var asignDialog = document.getElementById('asignImportDialog');
+        var asignBody = document.getElementById('asignImportBody');
+        var asignSummary = document.getElementById('asignImportSummary');
+        var asignConfirm = document.getElementById('asignImportConfirm');
+        var asignTotal = document.getElementById('asignTotal');
+        var asignValid = document.getElementById('asignValid');
+        var asignErrors = document.getElementById('asignErrors');
+        var asignPreviewData = [];
+
+        function parseAsignCsv(text) {
+            var lines = text.replace(//g, '').split('
+').filter(function(l){ return l.trim(); });
+            if (lines.length < 2) return [];
+            var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g, ''); });
+            var rows = [];
+            for (var i = 1; i < lines.length; i++) {
+                var vals = lines[i].split(',').map(function(v){ return v.trim().replace(/^"|"$/g, ''); });
+                var obj = {};
+                headers.forEach(function(h, idx){ obj[h] = vals[idx] || ''; });
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        function loadAsignCsv(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseAsignCsv(e.target.result);
+                if (!rows.length) { alert('Archivo CSV vacio o formato incorrecto.'); return; }
+                fetch('/api/admin/movil-eas-asignaciones/importar-preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                    body: JSON.stringify({rows: rows})
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                    if (d.ok !== true) { alert(d.mensaje || 'Error al validar'); return; }
+                    var datos = d.datos;
+                    asignPreviewData = datos.filas;
+                    asignTotal.textContent = datos.total;
+                    asignValid.textContent = datos.validos;
+                    asignErrors.textContent = datos.rechazados;
+                    asignSummary.hidden = false;
+                    asignConfirm.disabled = false;
+                    asignConfirm.textContent = datos.rechazados > 0
+                        ? 'Importar validos (' + datos.validos + '/' + datos.total + ')'
+                        : 'Confirmar importacion (' + datos.validos + ')';
+                    asignBody.innerHTML = datos.filas.map(function(f) {
+                        var cls = f.valido ? 'is-valid' : 'is-invalid';
+                        var icon = f.valido ? '✓' : '✗';
+                        return '<tr class="' + cls + '"><td>' + f.fila + '</td><td>' + esc(f.ruta) + '</td><td>' + esc(f.lugar) + '</td><td>' + esc(f.movil) + '</td><td>' + esc(f.placa) + '</td><td>' + esc(f.estado) + '</td><td><span class="route-import-status">' + icon + ' ' + esc(f.resultado) + '</span></td></tr>';
+                    }).join('');
+                    asignDialog.showModal();
+                })
+                .catch(function(err){ alert('Error: ' + err.message); });
+            };
+            reader.readAsText(file);
+        }
+
+        if (asignCsvInput) asignCsvInput.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+        if (asignCsvReplace) asignCsvReplace.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+
+        if (asignConfirm) asignConfirm.addEventListener('click', function() {
+            var validRows = asignPreviewData.filter(function(f){ return f.valido; });
+            if (!validRows.length) { alert('No hay registros validos para importar.'); return; }
+            this.disabled = true;
+            this.textContent = 'Importando...';
+            var self = this;
+            fetch('/api/admin/movil-eas-asignaciones/importar-confirm', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                body: JSON.stringify({rows: validRows})
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.ok !== true) { alert(d.mensaje || 'Error al importar'); self.disabled = false; self.textContent = 'Confirmar importacion'; return; }
+                asignDialog.close();
+                alert('Importacion completada.
+' + d.datos.creados + ' asignaciones creadas.');
+                location.reload();
+            })
+            .catch(function(err){ alert('Error: ' + err.message); self.disabled = false; self.textContent = 'Confirmar importacion'; });
+        });
+
+        document.querySelectorAll('[data-asign-close]').forEach(function(btn) {
+            btn.addEventListener('click', function() { asignDialog.close(); });
+        });
+
     })();
     </script>
     <?php endif; ?>
@@ -487,9 +797,101 @@ $tabUrl = static fn(string $name): string => '/admin?tab=' . rawurlencode($name)
         <?= json_encode(array_map(function($l) { return $l['ruta_id']; }, $adminData['lugares'] ?? [])) ?>.forEach(function(rid){ routeCounts[rid] = (routeCounts[rid] || 0) + 1; });
         var routes = <?= json_encode(array_map(function($r){ return ['id'=>$r['id'],'nombre'=>$r['nombre']]; }, $adminData['rutas']), JSON_UNESCAPED_UNICODE) ?>.map(function(r){ return { nombre: r.nombre, lugares: routeCounts[r.id] || 0 }; });
         if (routes.length && typeof RandomRouteInfoSlider !== 'undefined') new RandomRouteInfoSlider(document.getElementById('placesCarousel'), { routes: routes, title: 'Lugares por ruta', subtitle: 'Resumen aleatorio' });
+
+        // CSV Import for Asignaciones
+        var asignCsvInput = document.getElementById('asign-csv-input');
+        var asignCsvReplace = document.getElementById('asign-csv-replace');
+        var asignDialog = document.getElementById('asignImportDialog');
+        var asignBody = document.getElementById('asignImportBody');
+        var asignSummary = document.getElementById('asignImportSummary');
+        var asignConfirm = document.getElementById('asignImportConfirm');
+        var asignTotal = document.getElementById('asignTotal');
+        var asignValid = document.getElementById('asignValid');
+        var asignErrors = document.getElementById('asignErrors');
+        var asignPreviewData = [];
+
+        function parseAsignCsv(text) {
+            var lines = text.replace(//g, '').split('
+').filter(function(l){ return l.trim(); });
+            if (lines.length < 2) return [];
+            var headers = lines[0].split(',').map(function(h){ return h.trim().replace(/^"|"$/g, ''); });
+            var rows = [];
+            for (var i = 1; i < lines.length; i++) {
+                var vals = lines[i].split(',').map(function(v){ return v.trim().replace(/^"|"$/g, ''); });
+                var obj = {};
+                headers.forEach(function(h, idx){ obj[h] = vals[idx] || ''; });
+                rows.push(obj);
+            }
+            return rows;
+        }
+
+        function loadAsignCsv(file) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var rows = parseAsignCsv(e.target.result);
+                if (!rows.length) { alert('Archivo CSV vacio o formato incorrecto.'); return; }
+                fetch('/api/admin/movil-eas-asignaciones/importar-preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                    body: JSON.stringify({rows: rows})
+                })
+                .then(function(r){ return r.json(); })
+                .then(function(d) {
+                    if (d.ok !== true) { alert(d.mensaje || 'Error al validar'); return; }
+                    var datos = d.datos;
+                    asignPreviewData = datos.filas;
+                    asignTotal.textContent = datos.total;
+                    asignValid.textContent = datos.validos;
+                    asignErrors.textContent = datos.rechazados;
+                    asignSummary.hidden = false;
+                    asignConfirm.disabled = false;
+                    asignConfirm.textContent = datos.rechazados > 0
+                        ? 'Importar validos (' + datos.validos + '/' + datos.total + ')'
+                        : 'Confirmar importacion (' + datos.validos + ')';
+                    asignBody.innerHTML = datos.filas.map(function(f) {
+                        var cls = f.valido ? 'is-valid' : 'is-invalid';
+                        var icon = f.valido ? '✓' : '✗';
+                        return '<tr class="' + cls + '"><td>' + f.fila + '</td><td>' + esc(f.ruta) + '</td><td>' + esc(f.lugar) + '</td><td>' + esc(f.movil) + '</td><td>' + esc(f.placa) + '</td><td>' + esc(f.estado) + '</td><td><span class="route-import-status">' + icon + ' ' + esc(f.resultado) + '</span></td></tr>';
+                    }).join('');
+                    asignDialog.showModal();
+                })
+                .catch(function(err){ alert('Error: ' + err.message); });
+            };
+            reader.readAsText(file);
+        }
+
+        if (asignCsvInput) asignCsvInput.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+        if (asignCsvReplace) asignCsvReplace.addEventListener('change', function(){ if(this.files[0]) loadAsignCsv(this.files[0]); this.value=''; });
+
+        if (asignConfirm) asignConfirm.addEventListener('click', function() {
+            var validRows = asignPreviewData.filter(function(f){ return f.valido; });
+            if (!validRows.length) { alert('No hay registros validos para importar.'); return; }
+            this.disabled = true;
+            this.textContent = 'Importando...';
+            var self = this;
+            fetch('/api/admin/movil-eas-asignaciones/importar-confirm', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (document.cookie.match(/token=([^;]+)/)||[])[1] || ''},
+                body: JSON.stringify({rows: validRows})
+            })
+            .then(function(r){ return r.json(); })
+            .then(function(d) {
+                if (d.ok !== true) { alert(d.mensaje || 'Error al importar'); self.disabled = false; self.textContent = 'Confirmar importacion'; return; }
+                asignDialog.close();
+                alert('Importacion completada.
+' + d.datos.creados + ' asignaciones creadas.');
+                location.reload();
+            })
+            .catch(function(err){ alert('Error: ' + err.message); self.disabled = false; self.textContent = 'Confirmar importacion'; });
+        });
+
+        document.querySelectorAll('[data-asign-close]').forEach(function(btn) {
+            btn.addEventListener('click', function() { asignDialog.close(); });
+        });
+
     })();
     </script>
-    <section class="table-wrap"><table id="admin-places-table" data-search-cols="0,1,2"><thead><tr><th>Lugar</th><th>Distrito / Ruta</th><th>Servicio</th><th>Requeridos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['lugares'] as $item): $payload=['id'=>$item['id'],'nombre'=>$item['nombre'],'direccion'=>$item['direccion'],'ubicacion_especifica'=>$item['ubicacion_especifica'],'distrito_id'=>$item['distrito_id'],'ruta_id'=>$item['ruta_id'],'tipo_servicio_id'=>$item['tipo_servicio_id'],'turnos_ids'=>array_map('intval',array_column($item['turnos'] ?? [],'turno_id')),'cantidad_requerida'=>$item['cantidad_requerida'],'estado_operativo'=>$item['estado_operativo'],'consignas'=>$item['consignas'],'observacion'=>$item['observacion'],'lugar_formacion'=>$item['lugar_formacion'],'latitud'=>$item['latitud'],'longitud'=>$item['longitud'],'activo'=>(bool)$item['activo']]; ?><tr data-route="<?= (int)($item['ruta_id'] ?? 0) ?>" data-circuit="<?= $e($placeRouteCircuits[(int)($item['ruta_id'] ?? 0)] ?? '') ?>" data-place="<?= $e($item['nombre'] ?: $item['direccion']) ?>" data-turno="<?= $e(implode(',', array_column($item['turnos'] ?? [], 'turno_id'))) ?>"><td><strong><?= $e($item['nombre'] ?: $item['direccion']) ?></strong><small><?= $e($item['direccion']) ?></small></td><td><?= $e(($item['distrito'] ?? '—').' / '.($item['ruta'] ?? '—')) ?><?php if ($item['ruta_asignar_encargado']): ?><small class="status-pill is-active">Esta ruta permite asignar encargado</small><?php endif; ?></td><td><?= $e($item['tipo_servicio'] ?? '—') ?></td><td><?= (int)$item['cantidad_requerida'] ?></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $e($item['estado_operativo']) ?></span></td><td class="actions admin-place-actions"><?php if ($can('lugares_servicio.editar')): ?><button type="button" class="admin-place-action admin-place-action-edit" data-edit-service-place data-payload="<?= $json($payload) ?>" title="Editar" aria-label="Editar lugar de servicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><?php endif; ?><?php if ($can('lugares_servicio.estado')): ?><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="lugar"><input type="hidden" name="tab" value="lugares"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="admin-place-action admin-place-action-delete" title="Eliminar" aria-label="Eliminar lugar de servicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg></button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
+    <section class="table-wrap"><table id="admin-places-table" data-search-cols="0,1,2"><thead><tr><th>Lugar</th><th>Distrito / Ruta</th><th>Servicio</th><th>Requeridos</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><?php foreach ($adminData['lugares'] as $item): $payload=['id'=>$item['id'],'nombre'=>$item['nombre'],'direccion'=>$item['direccion'],'ubicacion_especifica'=>$item['ubicacion_especifica'],'distrito_id'=>$item['distrito_id'],'ruta_id'=>$item['ruta_id'],'tipo_servicio_id'=>$item['tipo_servicio_id'],'turnos_ids'=>array_map('intval',array_column($item['turnos'] ?? [],'turno_id')),'cantidad_requerida'=>$item['cantidad_requerida'],'estado_operativo'=>$item['estado_operativo'],'consignas'=>$item['consignas'],'observacion'=>$item['observacion'],'lugar_formacion'=>$item['lugar_formacion'],'latitud'=>$item['latitud'],'longitud'=>$item['longitud'],'activo'=>(bool)$item['activo']]; ?><tr data-district="<?= (int)($item['distrito_id'] ?? 0) ?>" data-route="<?= (int)($item['ruta_id'] ?? 0) ?>" data-circuit="<?= $e($placeRouteCircuits[(int)($item['ruta_id'] ?? 0)] ?? '') ?>" data-place="<?= $e($item['nombre'] ?: $item['direccion']) ?>" data-turno="<?= $e(implode(',', array_column($item['turnos'] ?? [], 'turno_id'))) ?>"><td><strong><?= $e($item['nombre'] ?: $item['direccion']) ?></strong><small><?= $e($item['direccion']) ?></small></td><td><?= $e(($item['distrito'] ?? '—').' / '.($item['ruta'] ?? '—')) ?><?php if ($item['ruta_asignar_encargado']): ?><small class="status-pill is-active">Esta ruta permite asignar encargado</small><?php endif; ?></td><td><?= $e($item['tipo_servicio'] ?? '—') ?></td><td><?= (int)$item['cantidad_requerida'] ?></td><td><span class="status-pill <?= $item['activo'] ? 'is-active' : '' ?>"><?= $e($item['estado_operativo']) ?></span></td><td class="actions admin-place-actions"><?php if ($can('lugares_servicio.editar')): ?><button type="button" class="admin-place-action admin-place-action-edit" data-edit-service-place data-payload="<?= $json($payload) ?>" title="Editar" aria-label="Editar lugar de servicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg></button><?php endif; ?><?php if ($can('lugares_servicio.estado')): ?><form method="post" action="/admin/eliminar" class="inline-form"><input type="hidden" name="entity" value="lugar"><input type="hidden" name="tab" value="lugares"><input type="hidden" name="id" value="<?= (int)$item['id'] ?>"><button class="admin-place-action admin-place-action-delete" title="Eliminar" aria-label="Eliminar lugar de servicio"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg></button></form><?php endif; ?></td></tr><?php endforeach; ?></tbody></table></section>
     <?php if ($can('lugares_servicio.estado')): ?><dialog class="admin-bulk-delete-dialog" id="bulkDeletePlacesDialog" aria-labelledby="bulk-delete-places-title"><form method="post" action="/admin/lugares-servicio/eliminar-por-alcance"><input type="hidden" name="ruta_id"><input type="hidden" name="circuito_id"><header><div><span class="eyebrow">Confirmar eliminación</span><h3 id="bulk-delete-places-title">Eliminar lugares de servicio</h3></div><button type="button" aria-label="Cerrar" data-bulk-delete-close>&times;</button></header><div class="admin-bulk-delete-body"><p>Se eliminarán <strong data-bulk-delete-count>0</strong> lugar(es) de <strong data-bulk-delete-scope>la selección</strong>, junto con sus registros relacionados.</p><p class="admin-bulk-delete-warning">Esta acción no se puede deshacer.</p></div><footer><button type="button" class="secondary" data-bulk-delete-close>Cancelar</button><button type="submit" class="danger" data-bulk-delete-confirm>Eliminar lugares</button></footer></form></dialog><?php endif; ?>
     <?php endif; ?>
 

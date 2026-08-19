@@ -486,24 +486,69 @@ def list_mobile_assignments() -> list[dict]:
         """
         SELECT a.id,a.eas_id,e.codigo AS eas_codigo,e.nombre AS eas_nombre,
                a.movil_id,m.numero_movil,m.placa,a.estado_asignacion_id,
-               ed.nombre AS estado_asignacion,a.fecha_asignacion,a.observacion,a.activo
+               ed.nombre AS estado_asignacion,a.fecha_asignacion,a.observacion,a.activo,
+               a.lugar_id,ls.nombre AS lugar_nombre,
+               a.ruta_id,r.nombre AS ruta_nombre
         FROM dbo.movil_eas_asignaciones a
         INNER JOIN dbo.eas_estaciones e ON e.id=a.eas_id
         INNER JOIN dbo.moviles m ON m.id=a.movil_id
         INNER JOIN dbo.catalogo_detalles ed ON ed.id=a.estado_asignacion_id
+        LEFT JOIN dbo.lugares_servicio ls ON ls.id=a.lugar_id
+        LEFT JOIN dbo.rutas r ON r.id=a.ruta_id
         ORDER BY a.activo DESC,a.fecha_asignacion DESC
         """
     )
 
 
+def _resolve_eas_from_route(cursor, ruta_id: int) -> int | None:
+    """Resolve the EAS station ID from a route via eas_ruta_configuraciones."""
+    if not ruta_id:
+        return None
+    cursor.execute(
+        "SELECT eas_id FROM dbo.eas_ruta_configuraciones WHERE ruta_id=? AND activo=1",
+        ruta_id,
+    )
+    row = cursor.fetchone()
+    return int(row[0]) if row else None
+
+
+def _check_assignment_duplicate(cursor, movil_id: int, lugar_id: int | None, exclude_id: int | None = None) -> str | None:
+    """Check if movil or lugar is already assigned. Returns error message or None."""
+    if not lugar_id:
+        return None
+    # Check if place already has an active assignment
+    cursor.execute(
+        "SELECT a.id, m.numero_movil FROM dbo.movil_eas_asignaciones a"
+        " INNER JOIN dbo.moviles m ON m.id=a.movil_id"
+        " WHERE a.lugar_id=? AND a.activo=1" + (" AND a.id<>?" if exclude_id else ""),
+        (lugar_id, exclude_id) if exclude_id else (lugar_id,)
+    )
+    existing = cursor.fetchone()
+    if existing:
+        return f"El lugar de servicio ya tiene asignado el móvil {existing[1]} (ID {existing[0]})"
+    return None
+
+
 def create_mobile_assignment(data: dict) -> int:
     with get_connection() as connection:
         cursor=connection.cursor()
+        # Validate duplicate
+        dup = _check_assignment_duplicate(cursor, data["movilId"], data.get("lugarId"))
+        if dup:
+            from fastapi import HTTPException
+            raise HTTPException(409, dup)
+        # Auto-resolve easId from rutaId if not provided or zero
+        eas_id = data.get("easId") or 0
+        if not eas_id and data.get("rutaId"):
+            resolved = _resolve_eas_from_route(cursor, int(data["rutaId"]))
+            if resolved:
+                eas_id = resolved
+        # Deactivate previous assignment for this mobile
         cursor.execute("UPDATE dbo.movil_eas_asignaciones SET activo=0,fecha_actualizacion=SYSDATETIME() WHERE movil_id=? AND activo=1",data["movilId"])
         cursor.execute(
-            """INSERT INTO dbo.movil_eas_asignaciones(eas_id,movil_id,fecha_asignacion,estado_asignacion_id,observacion,activo,fecha_creacion)
-               OUTPUT INSERTED.id VALUES(?,?,SYSDATETIME(),?,?,1,SYSDATETIME())""",
-            data["easId"],data["movilId"],data["estadoAsignacionId"],data.get("observacion"),
+            """INSERT INTO dbo.movil_eas_asignaciones(eas_id,movil_id,fecha_asignacion,estado_asignacion_id,lugar_id,ruta_id,observacion,activo,fecha_creacion)
+               OUTPUT INSERTED.id VALUES(?,?,SYSDATETIME(),?,?,?,?,1,SYSDATETIME())""",
+            eas_id,data["movilId"],data["estadoAsignacionId"],data.get("lugarId"),data.get("rutaId"),data.get("observacion"),
         )
         return int(cursor.fetchone()[0])
 
@@ -511,16 +556,218 @@ def create_mobile_assignment(data: dict) -> int:
 def update_mobile_assignment(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor=connection.cursor()
+        # Validate duplicate (exclude self)
+        dup = _check_assignment_duplicate(cursor, data["movilId"], data.get("lugarId"), exclude_id=item_id)
+        if dup:
+            from fastapi import HTTPException
+            raise HTTPException(409, dup)
+        # Auto-resolve easId from rutaId if not provided or zero
+        eas_id = data.get("easId") or 0
+        if not eas_id and data.get("rutaId"):
+            resolved = _resolve_eas_from_route(cursor, int(data["rutaId"]))
+            if resolved:
+                eas_id = resolved
         cursor.execute(
             """UPDATE dbo.movil_eas_asignaciones SET eas_id=?,movil_id=?,estado_asignacion_id=?,
-               observacion=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
-            data["easId"],data["movilId"],data["estadoAsignacionId"],data.get("observacion"),
+               lugar_id=?,ruta_id=?,observacion=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
+            eas_id,data["movilId"],data["estadoAsignacionId"],data.get("lugarId"),data.get("rutaId"),data.get("observacion"),
             1 if data.get("activo",True) else 0,item_id,
         )
 
 
 def delete_mobile_assignment(item_id: int) -> None:
     _soft_delete("movil_eas_asignaciones",item_id)
+
+
+def validate_assignment_row(cursor, row: dict) -> str | None:
+    """Validate a single CSV row. Returns error message or None if valid."""
+    ruta_nombre = (row.get("Ruta") or "").strip()
+    lugar_nombre = (row.get("Lugar de servicio") or "").strip()
+    movil_numero = (row.get("Móvil") or row.get("Movil") or "").strip()
+    placa_csv = (row.get("Placa") or "").strip()
+    estado = (row.get("Estado") or "").strip()
+
+    if not ruta_nombre:
+        return "Ruta no puede estar vacía"
+    if not lugar_nombre:
+        return "Lugar de servicio no puede estar vacío"
+    if not movil_numero:
+        return "Móvil no puede estar vacío"
+
+    # Find route
+    cursor.execute(
+        "SELECT id FROM dbo.rutas WHERE TRIM(nombre)=? AND distrito_id=1143 AND activo=1",
+        ruta_nombre,
+    )
+    ruta_row = cursor.fetchone()
+    if not ruta_row:
+        return f"Ruta '{ruta_nombre}' no encontrada"
+    ruta_id = int(ruta_row[0])
+
+    # Find place in that route
+    cursor.execute(
+        "SELECT id FROM dbo.lugares_servicio WHERE TRIM(nombre)=? AND ruta_id=? AND activo=1",
+        lugar_nombre, ruta_id,
+    )
+    lugar_row = cursor.fetchone()
+    if not lugar_row:
+        return f"Lugar '{lugar_nombre}' no pertenece a la ruta '{ruta_nombre}'"
+    lugar_id = int(lugar_row[0])
+
+    # Find mobile
+    movil_label = f"Movil {movil_numero}"
+    cursor.execute(
+        "SELECT id, placa FROM dbo.moviles WHERE TRIM(numero_movil)=?",
+        movil_label,
+    )
+    movil_row = cursor.fetchone()
+    if not movil_row:
+        # Also try without 'Movil ' prefix
+        cursor.execute(
+            "SELECT id, placa FROM dbo.moviles WHERE TRIM(numero_movil)=?",
+            movil_numero,
+        )
+        movil_row = cursor.fetchone()
+    if not movil_row:
+        return f"Móvil '{movil_numero}' no existe"
+    movil_id = int(movil_row[0])
+    movil_placa_db = (movil_row[1] or "").strip()
+
+    # Check plate match if provided
+    if placa_csv and movil_placa_db and placa_csv.upper() != movil_placa_db.upper():
+        return f"Placa '{placa_csv}' no coincide con '{movil_placa_db}' del móvil {movil_numero}"
+
+    # Check state
+    if estado and estado.upper() not in ("ACTIVO", "INACTIVO"):
+        return f"Estado '{estado}' no es válido (use Activo o Inactivo)"
+
+    # Check duplicate active assignment
+    cursor.execute(
+        "SELECT a.id, ls.nombre FROM dbo.movil_eas_asignaciones a"
+        " INNER JOIN dbo.lugares_servicio ls ON ls.id=a.lugar_id"
+        " WHERE a.movil_id=? AND a.activo=1",
+        movil_id,
+    )
+    existing = cursor.fetchone()
+    if existing:
+        return f"Móvil {movil_numero} ya asignado a '{existing[1]}' (ID {existing[0]})"
+
+    return None
+
+
+def preview_assignments_csv(rows: list[dict]) -> list[dict]:
+    """Validate each row and return results with status."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        results = []
+        seen_moviles: set[int] = set()
+        seen_pairs: set[tuple] = set()
+
+        for i, row in enumerate(rows, 1):
+            error = validate_assignment_row(cursor, row)
+            ruta_nombre = (row.get("Ruta") or "").strip()
+            lugar_nombre = (row.get("Lugar de servicio") or "").strip()
+            movil_numero = (row.get("Móvil") or row.get("Movil") or "").strip()
+            placa_csv = (row.get("Placa") or "").strip()
+            estado = (row.get("Estado") or "").strip() or "Activo"
+
+            # If no validation error yet, check in-session duplicates
+            if not error:
+                movil_label = f"Movil {movil_numero}"
+                cursor.execute("SELECT id FROM dbo.moviles WHERE TRIM(numero_movil)=?", movil_label)
+                m = cursor.fetchone()
+                if not m:
+                    cursor.execute("SELECT id FROM dbo.moviles WHERE TRIM(numero_movil)=?", movil_numero)
+                    m = cursor.fetchone()
+                if m:
+                    mid = int(m[0])
+                    if mid in seen_moviles:
+                        error = f"Móvil {movil_numero} duplicado en el archivo"
+                    else:
+                        seen_moviles.add(mid)
+
+                pair = (ruta_nombre.lower(), lugar_nombre.lower(), movil_numero.lower())
+                if pair in seen_pairs:
+                    error = "Registro duplicado exacto en el archivo"
+                else:
+                    seen_pairs.add(pair)
+
+            results.append({
+                "fila": i,
+                "ruta": ruta_nombre,
+                "lugar": lugar_nombre,
+                "movil": movil_numero,
+                "placa": placa_csv,
+                "estado": estado,
+                "resultado": "Válido" if not error else error,
+                "valido": error is None,
+            })
+        return results
+
+
+def import_assignments_csv(rows: list[dict], user_id: int | None = None) -> dict:
+    """Import validated rows. All must be valid, or import fails."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        created = 0
+        skipped = 0
+
+        for row in rows:
+            ruta_nombre = (row.get("Ruta") or "").strip()
+            lugar_nombre = (row.get("Lugar de servicio") or "").strip()
+            movil_numero = (row.get("Móvil") or row.get("Movil") or "").strip()
+            estado = (row.get("Estado") or "").strip() or "Activo"
+            activo = 1 if estado.upper() == "ACTIVO" else 0
+
+            # Resolve IDs
+            cursor.execute(
+                "SELECT id FROM dbo.rutas WHERE TRIM(nombre)=? AND distrito_id=1143 AND activo=1",
+                ruta_nombre,
+            )
+            ruta_id = int(cursor.fetchone()[0])
+
+            cursor.execute(
+                "SELECT id FROM dbo.lugares_servicio WHERE TRIM(nombre)=? AND ruta_id=? AND activo=1",
+                lugar_nombre, ruta_id,
+            )
+            lugar_id = int(cursor.fetchone()[0])
+
+            movil_label = f"Movil {movil_numero}"
+            cursor.execute("SELECT id FROM dbo.moviles WHERE TRIM(numero_movil)=?", movil_label)
+            m = cursor.fetchone()
+            if not m:
+                cursor.execute("SELECT id FROM dbo.moviles WHERE TRIM(numero_movil)=?", movil_numero)
+                m = cursor.fetchone()
+            movil_id = int(m[0])
+
+            # Get state ID
+            estado_nombre = "Activa" if activo else "Inactiva"
+            cursor.execute(
+                "SELECT id FROM dbo.catalogo_detalles WHERE TRIM(nombre)=? AND estado=1",
+                estado_nombre,
+            )
+            state_row = cursor.fetchone()
+            state_id = int(state_row[0]) if state_row else 100
+
+            # Deactivate previous assignment for this mobile
+            cursor.execute(
+                "UPDATE dbo.movil_eas_asignaciones SET activo=0,fecha_actualizacion=SYSDATETIME()"
+                " WHERE movil_id=? AND activo=1",
+                movil_id,
+            )
+
+            # Insert
+            cursor.execute(
+                """INSERT INTO dbo.movil_eas_asignaciones
+                   (eas_id, movil_id, ruta_id, lugar_id, estado_asignacion_id, observacion, activo, fecha_creacion)
+                   SELECT TOP 1 e.id, ?, ?, ?, ?, NULL, ?, SYSDATETIME()
+                   FROM dbo.eas_estaciones e WHERE e.activo=1""",
+                movil_id, ruta_id, lugar_id, state_id, activo,
+            )
+            created += 1
+
+        conn.commit()
+        return {"creados": created, "rechazados": skipped}
 
 
 def list_mobile_maintenance(mobile_id: int | None = None) -> list[dict]:

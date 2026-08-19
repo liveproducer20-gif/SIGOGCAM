@@ -278,7 +278,7 @@
         $('#tdRouteSearch').placeholder = isEasMode() ? 'Buscar ruta...' : 'Buscar lugar...';
         $('#tdRouteList').innerHTML = routes.length ? routes.map(route => `
             <button class="td-route-item ${Number(route.id) === state.routeId ? 'is-active' : ''}" type="button" data-route-id="${route.id}">
-                <span><b>${esc(route.nombre)}</b><small>${isEasMode() ? `${(route.configuraciones || []).length} ${(route.configuraciones || []).length === 1 ? 'configuración' : 'configuraciones'}` : `${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}`}</small></span>
+                <span><b>${esc(route.nombre)}</b><small>${isEasMode() ? `${(route.lugares || []).length} ${(route.lugares || []).length === 1 ? 'lugar' : 'lugares'}` : `${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}`}</small></span>
             </button>`).join('') : '<div class="td-empty-small">No se encontraron rutas.</div>';
     }
     function visibleRoutes() {
@@ -291,11 +291,27 @@
         if (!panel || !list) return;
         panel.hidden = !isEasMode();
         if (!isEasMode()) return;
-        const easList = state.board?.eas || [];
-        list.innerHTML = easList.length ? easList.map(eas => {
+        const easPalette = [['#0ea5a8','#e6f8f8','#d0f0ef'],['#16a34a','#eaf8ee','#d4f0dc'],['#0891b2','#e8f7fb','#d4edf5'],['#f59e0b','#fff7e6','#fde8c0'],['#7c3aed','#f2ecff','#e4d8ff'],['#ea580c','#fff0e8','#fddcc8'],['#2563eb','#eaf1ff','#d4e2f7'],['#9333ea','#f5ebff','#e8d8ff'],['#dc2626','#fef2f2','#fdd8d8'],['#059669','#ecfdf5','#d1fae5'],['#d97706','#fffbeb','#fde68a'],['#7c3aed','#ede9fe','#ddd6fe'],['#0284c7','#e0f2fe','#bae6fd'],['#c026d3','#fdf4ff','#f0abfc']];
+        const sorted = [...(state.board?.eas || [])].sort((a, b) => {
+            const na = parseInt(String(a.codigo || '').replace(/\D/g, '')) || 0;
+            const nb = parseInt(String(b.codigo || '').replace(/\D/g, '')) || 0;
+            if (na !== nb) return na - nb;
+            return String(a.codigo || '').localeCompare(String(b.codigo || ''));
+        });
+        list.innerHTML = sorted.length ? sorted.map((eas, idx) => {
             const routes = (state.board?.rutas || []).filter(route => Number(route.eas_id) === Number(eas.id));
-            return `<button type="button" class="td-eas-item ${Number(eas.id) === Number(state.easId) ? 'is-active' : ''}" data-eas-id="${eas.id}"><i>${esc(eas.codigo || 'EAS')}</i><span><b>${esc(eas.nombre)}</b><small>${routes.length} ${routes.length === 1 ? 'ruta' : 'rutas'} operativas</small></span></button>`;
-        }).join('') : '<div class="td-empty-small">No existen EAS asociados a circuitos activos.</div>';
+            const [accent, soft, border] = easPalette[idx % easPalette.length];
+            const routesHtml = routes.map(route => {
+                const configs = route.configuraciones || [];
+                const places = [...new Set(configs.filter(c => c.lugar_nombre).map(c => esc(c.lugar_nombre)))];
+                const placesList = places.length ? places.map(p => `<span class=\"td-eas-place-tag\">${p}</span>`).join('') : '<span class=\"td-eas-no-mobile\">Sin lugares</span>';
+                const mobile = configs.find(c => c.numero_movil);
+                const mobileLabel = mobile ? `${esc(mobile.numero_movil)}${mobile.placa ? ` · ${esc(mobile.placa)}` : ''}` : '';
+                return `<div class=\"td-eas-route-block\"><div class=\"td-eas-route-head\"><span class=\"td-eas-route-name\">${esc(route.nombre)}</span>${mobileLabel ? `<span class=\"td-eas-route-mobile\">${mobileLabel}</span>` : ''}</div><div class=\"td-eas-route-places\">${placesList}</div></div>`;
+            }).join('');
+            return `<button type=\"button\" class=\"td-eas-item ${Number(eas.id) === Number(state.easId) ? 'is-active' : ''}\" style=\"--eas-accent:${accent};--eas-soft:${soft};--eas-border:${border}\" data-eas-id=\"${eas.id}\"><i>${esc(eas.codigo || 'EAS')}</i><span><b>${esc(eas.nombre)}</b><small>${routes.length} ${routes.length === 1 ? 'ruta' : 'rutas'}</small><div class=\"td-eas-item-routes\">${routesHtml || '<span class=\"td-eas-no-mobile\">Sin rutas configuradas</span>'}</div></span></button>`;
+        }).join('') : '<div class=\"td-empty-small\">No existen EAS asociados a circuitos activos.</div>';
+    }
     }
     function shiftIcon() {
         const name=String(state.board?.turno?.nombre || $('#tdShift').selectedOptions[0]?.textContent || '').toUpperCase();
@@ -345,6 +361,10 @@
         const assignment = easAssignmentFor(config.id, role);
         const assigned = Boolean(assignment?.agente_id);
         const label = role === 'AUX' ? 'AUX' : role;
+        const mobileInactive = config.movil_activo === 0;
+        if (mobileInactive) {
+            return `<tr class="td-eas-row-novedad"><td><span class="td-eas-role"><i>&#128666;</i>${label}</span></td><td colspan="3"><span class="td-eas-novedad-msg">MOVIL CON NOVEDAD</span></td></tr>`;
+        }
         const status = assigned ? '<span class="td-status td-status-assigned">Asignado</span>'
             : optional ? '<span class="td-status td-eas-status-neutral">Opcional</span>' : '<span class="td-status td-status-pending">Pendiente</span>';
         const action = canAssign ? `<button type="button" class="td-btn td-btn-primary td-btn-sm td-eas-action" data-eas-assign="${role}" data-config-id="${config.id || ''}">${assigned ? 'Cambiar' : 'Asignar'}</button>` : '&mdash;';
@@ -354,18 +374,22 @@
         const configs = route.configuraciones || [];
         $('#tdStandardTableCard').hidden = true; $('#tdEasTableCard').hidden = false;
         $('#tdEasRouteName').textContent = route.nombre;
-        $('#tdEasRouteMeta').textContent = `${configs.length} ${configs.length === 1 ? 'configuración' : 'configuraciones'}`;
+        const activeConfigs = configs.filter(c => c.movil_activo !== 0);
+        $('#tdEasRouteMeta').textContent = `${activeConfigs.length} lugar(es) asignado(s)`;
         $('#tdEasConfigurations').innerHTML = configs.map((config, index) => {
-            const mobile = config.numero_movil ? `Camioneta disco: ${config.numero_movil}${config.placa ? ` · ${config.placa}` : ''}` : 'Sin móvil configurado';
-            return `<section class="td-eas-config"><div class="td-eas-config-head"><b>${configs.length > 1 ? `Configuración ${index + 1}` : 'Configuración operativa'}</b><span>${esc(mobile)}</span></div><table class="td-eas-role-table"><thead><tr><th>Rol</th><th>Asignado a</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td><span class="td-eas-role is-mobile"><i>&#128666;</i>Camioneta</span></td><td><span class="td-eas-assignee ${config.numero_movil ? '' : 'is-empty'}">${esc(mobile)}</span></td><td><span class="td-eas-status-neutral">${config.numero_movil ? 'Configurada' : '—'}</span></td><td>—</td></tr>${renderEasRole(config, 'CP')}${renderEasRole(config, 'JP')}${renderEasRole(config, 'AUX', true)}</tbody></table></section>`;
-        }).join('') || '<div class="td-empty-small">Esta ruta no tiene configuraciones operativas.</div>';
+            const mobileInactive = config.movil_activo === 0;
+            const mobile = config.numero_movil ? `Móvil ${config.numero_movil}${config.placa ? ` · ${config.placa}` : ''}` : 'Sin móvil';
+            const lugarName = config.lugar_nombre || 'Sin lugar';
+            const novedadBanner = mobileInactive ? '<div class="td-eas-novedad-banner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L1 21h22L12 2z"/><line x1="12" y1="9" x2="12" y2="14"/><circle cx="12" cy="17" r="1"/></svg><span>MOVIL CON NOVEDAD</span><small>No se permite asignar personal a este móvil.</small></div>' : '';
+            return `<section class="td-eas-config ${mobileInactive ? 'td-eas-config--novedad' : ''}"><div class="td-eas-config-head"><b>${esc(lugarName)}</b><span>${esc(mobile)}</span></div>${novedadBanner}<table class="td-eas-role-table"><thead><tr><th>Rol</th><th>Asignado a</th><th>Estado</th><th>Acciones</th></tr></thead><tbody><tr><td><span class="td-eas-role is-mobile"><i>&#128666;</i>Camioneta</span></td><td><span class="td-eas-assignee ${config.numero_movil ? '' : 'is-empty'}">${esc(mobile)}</span></td><td><span class="td-eas-status-neutral">${mobileInactive ? 'Inactiva' : (config.numero_movil ? 'Asignada' : '—')}</span></td><td>—</td></tr>${mobileInactive ? renderEasRole(config, 'CP') + renderEasRole(config, 'JP') + renderEasRole(config, 'AUX', true) : renderEasRole(config, 'CP') + renderEasRole(config, 'JP') + renderEasRole(config, 'AUX', true)}</tbody></table></section>`;
+        }).join('') || '<div class="td-empty-small">Esta ruta no tiene lugares asignados.</div>';
     }
     function renderWorkspace() {
         const route = routeData(); if (!route) return showEmpty();
         const places = state.places.get(state.routeId) || []; const stats = isEasMode() ? easRouteStats() : routeStats();
         $('#tdEmptyBoard').hidden = true; $('#tdRouteWorkspace').hidden = false;
         $('#tdRouteName').textContent = route.nombre;
-        $('#tdRoutePlacesBadge').textContent = `${stats.places} ${stats.places === 1 ? (isEasMode() ? 'configuración' : 'lugar') : (isEasMode() ? 'configuraciones' : 'lugares')}`;
+        $('#tdRoutePlacesBadge').textContent = `${stats.places} ${stats.places === 1 ? 'lugar' : 'lugares'}`;
         $('#tdKpiPlaces').textContent = stats.places; $('#tdKpiRequired').textContent = stats.required;
         $('#tdKpiAssigned').textContent = stats.assigned; $('#tdKpiPending').textContent = stats.pending;
         $('#tdKpiCoverage').textContent = `${stats.coverage}%`; $('#tdCoverageBar').style.width = `${Math.min(100, stats.coverage)}%`;

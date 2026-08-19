@@ -296,6 +296,58 @@ def asignaciones(user: dict = Depends(require_permission("moviles.asignar"))):
     return ok(repo.list_mobile_assignments())
 
 
+@router.get("/movil-eas-asignaciones/lugar-eas-id")
+def eas_id_from_route(ruta_id: int, user: dict = Depends(require_permission("moviles.asignar"))):
+    """Return the EAS station ID for a given route."""
+    from app.core.db import get_connection
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        eas_id = repo._resolve_eas_from_route(cursor, ruta_id)
+        return ok({"eas_id": eas_id})
+
+
+@router.get("/movil-eas-asignaciones/lugares-por-ruta")
+def lugares_por_ruta(ruta_id: int, user: dict = Depends(require_permission("moviles.asignar"))):
+    """Return active service places for a given route."""
+    from app.core.db import get_connection
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, nombre FROM dbo.lugares_servicio WHERE ruta_id=? AND activo=1 ORDER BY nombre",
+            ruta_id,
+        )
+        return ok([{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()])
+
+
+@router.get("/movil-eas-asignaciones/rutas-eas")
+def rutas_eas(user: dict = Depends(require_permission("moviles.asignar"))):
+    """Return routes in the EAS district for the assignment form."""
+    from app.core.db import get_connection
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id, nombre FROM dbo.rutas WHERE distrito_id=1143 AND activo=1 ORDER BY nombre"
+        )
+        return ok([{"id": int(r[0]), "nombre": r[1]} for r in cursor.fetchall()])
+
+
+@router.post("/movil-eas-asignaciones/importar-preview")
+def preview_import(payload: dict = Body(...), user: dict = Depends(require_permission("moviles.asignar"))):
+    """Validate CSV rows and return results without saving."""
+    rows = payload.get("rows", [])
+    results = repo.preview_assignments_csv(rows)
+    valid = sum(1 for r in results if r["valido"])
+    return ok({"filas": results, "total": len(results), "validos": valid, "rechazados": len(results) - valid})
+
+
+@router.post("/movil-eas-asignaciones/importar-confirm")
+def confirm_import(payload: dict = Body(...), user: dict = Depends(require_permission("moviles.asignar"))):
+    """Import validated rows."""
+    rows = payload.get("rows", [])
+    result = repo.import_assignments_csv(rows, user_id=user.get("id"))
+    return ok(result, f"{result['creados']} asignaciones creadas correctamente")
+
+
 @router.post("/movil-eas-asignaciones", status_code=201)
 def crear_asignacion(payload: dict = Body(...), user: dict = Depends(require_permission("moviles.asignar"))):
     return result_created(repo.create_mobile_assignment(payload), "Asignación creada correctamente")
