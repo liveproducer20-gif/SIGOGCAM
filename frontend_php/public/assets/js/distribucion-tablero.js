@@ -253,7 +253,7 @@
                 state.easId = state.easId || Number(state.board.eas?.[0]?.id || 0);
                 state.circuitId = 0;
             } else if(!state.circuitId&&(state.board.circuitos||[]).length){state.circuitId=Number(state.board.circuitos[0].id);$('#tdCircuit').value=String(state.circuitId);}
-            for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado:false});
+            for (const route of state.board.rutas || []) if (route.asignar_encargado && !state.routeManagers.has(Number(route.id))) state.routeManagers.set(Number(route.id), {requiere_encargado: isEasMode()});
             renderEasSelector(); renderRoutes();
             renderCircuitAccordion();renderDistrictCards();renderSaveState();
             populateOperationalCatalogs();
@@ -272,10 +272,13 @@
         $('#tdEmptyBoard p').textContent = message;
     }
     function renderRoutes() {
+        const routesCard = $('.td-routes-card');
+        if (isEasMode()) { if (routesCard) routesCard.hidden = true; return; }
+        if (routesCard) routesCard.hidden = false;
         const query = $('#tdRouteSearch').value.trim().toLowerCase();
         const routes = visibleRoutes().filter(route => String(route.nombre).toLowerCase().includes(query));
-        $('#tdRoutesSidebarTitle').textContent = isEasMode() ? 'Rutas EAS' : 'Lugares de servicio';
-        $('#tdRouteSearch').placeholder = isEasMode() ? 'Buscar ruta...' : 'Buscar lugar...';
+        $('#tdRoutesSidebarTitle').textContent = 'Lugares de servicio';
+        $('#tdRouteSearch').placeholder = 'Buscar lugar...';
         $('#tdRouteList').innerHTML = routes.length ? routes.map(route => `
             <button class="td-route-item ${Number(route.id) === state.routeId ? 'is-active' : ''}" type="button" data-route-id="${route.id}">
                 <span><b>${esc(route.nombre)}</b><small>${isEasMode() ? `${(route.lugares || []).length} ${(route.lugares || []).length === 1 ? 'lugar' : 'lugares'}` : `${Number(route.lugares || 0)} ${Number(route.lugares || 0) === 1 ? 'lugar' : 'lugares'}`}</small></span>
@@ -288,8 +291,10 @@
     }
     function renderEasSelector() {
         const panel = $('#tdEasPanel'), list = $('#tdEasList');
+        const routesCard = $('.td-routes-card');
         if (!panel || !list) return;
         panel.hidden = !isEasMode();
+        if (routesCard) routesCard.hidden = isEasMode();
         if (!isEasMode()) return;
         const easPalette = [['#0ea5a8','#e6f8f8','#d0f0ef'],['#16a34a','#eaf8ee','#d4f0dc'],['#0891b2','#e8f7fb','#d4edf5'],['#f59e0b','#fff7e6','#fde8c0'],['#7c3aed','#f2ecff','#e4d8ff'],['#ea580c','#fff0e8','#fddcc8'],['#2563eb','#eaf1ff','#d4e2f7'],['#9333ea','#f5ebff','#e8d8ff'],['#dc2626','#fef2f2','#fdd8d8'],['#059669','#ecfdf5','#d1fae5'],['#d97706','#fffbeb','#fde68a'],['#7c3aed','#ede9fe','#ddd6fe'],['#0284c7','#e0f2fe','#bae6fd'],['#c026d3','#fdf4ff','#f0abfc']];
         const sorted = [...(state.board?.eas || [])].sort((a, b) => {
@@ -301,17 +306,18 @@
         list.innerHTML = sorted.length ? sorted.map((eas, idx) => {
             const routes = (state.board?.rutas || []).filter(route => Number(route.eas_id) === Number(eas.id));
             const [accent, soft, border] = easPalette[idx % easPalette.length];
-            const routesHtml = routes.map(route => {
+            const totalPlaces = routes.reduce((sum, route) => {
                 const configs = route.configuraciones || [];
-                const places = [...new Set(configs.filter(c => c.lugar_nombre).map(c => esc(c.lugar_nombre)))];
-                const placesList = places.length ? places.map(p => `<span class=\"td-eas-place-tag\">${p}</span>`).join('') : '<span class=\"td-eas-no-mobile\">Sin lugares</span>';
-                const mobile = configs.find(c => c.numero_movil);
-                const mobileLabel = mobile ? `${esc(mobile.numero_movil)}${mobile.placa ? ` · ${esc(mobile.placa)}` : ''}` : '';
-                return `<div class=\"td-eas-route-block\"><div class=\"td-eas-route-head\"><span class=\"td-eas-route-name\">${esc(route.nombre)}</span>${mobileLabel ? `<span class=\"td-eas-route-mobile\">${mobileLabel}</span>` : ''}</div><div class=\"td-eas-route-places\">${placesList}</div></div>`;
-            }).join('');
-            return `<button type=\"button\" class=\"td-eas-item ${Number(eas.id) === Number(state.easId) ? 'is-active' : ''}\" style=\"--eas-accent:${accent};--eas-soft:${soft};--eas-border:${border}\" data-eas-id=\"${eas.id}\"><i>${esc(eas.codigo || 'EAS')}</i><span><b>${esc(eas.nombre)}</b><small>${routes.length} ${routes.length === 1 ? 'ruta' : 'rutas'}</small><div class=\"td-eas-item-routes\">${routesHtml || '<span class=\"td-eas-no-mobile\">Sin rutas configuradas</span>'}</div></span></button>`;
+                const uniquePlaces = new Set(configs.filter(c => c.lugar_nombre).map(c => c.lugar_nombre));
+                return sum + (uniquePlaces.size || (configs.length ? 1 : 0));
+            }, 0);
+            const totalMobiles = new Set(routes.flatMap(r => (r.configuraciones || []).filter(c => c.numero_movil).map(c => c.numero_movil))).size;
+            const summaryLines = [];
+            summaryLines.push(`<span class=\"td-eas-summary\">${routes.length} ${routes.length === 1 ? 'ruta' : 'rutas'}</span>`);
+            summaryLines.push(`<span class=\"td-eas-summary\">${totalPlaces} ${totalPlaces === 1 ? 'lugar' : 'lugares'}</span>`);
+            if (totalMobiles) summaryLines.push(`<span class=\"td-eas-summary\">${totalMobiles} móvil${totalMobiles > 1 ? 'es' : ''}</span>`);
+            return `<div role=\"button\" tabindex=\"0\" class=\"td-eas-item ${Number(eas.id) === Number(state.easId) ? 'is-active' : ''}\" style=\"--eas-accent:${accent};--eas-soft:${soft};--eas-border:${border};--card-index:${idx};background:#fff;color:#0f2d52\" data-eas-id=\"${eas.id}\"><i>${esc(eas.codigo || 'EAS')}</i><span><b>${esc(eas.nombre)}</b><div class=\"td-eas-item-summary\">${summaryLines.join('')}</div></span></div>`;
         }).join('') : '<div class=\"td-empty-small\">No existen EAS asociados a circuitos activos.</div>';
-    }
     }
     function shiftIcon() {
         const name=String(state.board?.turno?.nombre || $('#tdShift').selectedOptions[0]?.textContent || '').toUpperCase();
@@ -397,8 +403,8 @@
         if ($('#tdRandomAssign')) $('#tdRandomAssign').textContent = isEasMode() ? 'Asignar CP y JP' : 'Asignar circuito';
         if ($('#tdRandomDescription')) $('#tdRandomDescription').textContent = isEasMode() ? 'Asigna personal disponible a CP y JP pendientes de las rutas EAS.' : 'Asigna personal disponible a todos los lugares del circuito.';
         if ($('#tdRandomPriority')) $('#tdRandomPriority').textContent = isEasMode() ? 'Prioridad: CP, JP y luego AUX opcional. Las camionetas no se modifican.' : 'Primero deben definirse encargados. Los agentes no se repiten.';
-        $('.td-managers-row').hidden = isEasMode();
-        if (isEasMode()) { renderEasWorkspace(route); return; }
+        $('.td-managers-row').hidden = false;
+        if (isEasMode()) { renderManagers(); renderEasWorkspace(route); return; }
         $('#tdEasTableCard').hidden = true; $('#tdStandardTableCard').hidden = false;
         renderManagers();
         $('#tdPlacesBody').innerHTML = places.length ? places.map((place, index) => renderPlaceRow(place, index)).join('') : '<tr><td colspan="5"><div class="td-empty-small">Esta ruta no tiene lugares de servicio activos.</div></td></tr>';

@@ -5,9 +5,9 @@
     Header set Cache-Control "no-cache, must-revalidate"
 </FilesMatch>
 
-# CSS/JS with version params: immutable cache
+# CSS/JS: short cache with revalidation
 <FilesMatch "\.(css|js)$">
-    Header set Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+    Header set Cache-Control "public, max-age=0, must-revalidate"
 </FilesMatch>
 
 # Images: long cache

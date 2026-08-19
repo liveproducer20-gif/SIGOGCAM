@@ -24,6 +24,9 @@ final class DistribucionTableroController
             return;
         }
 
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+
         $catalogs = ['distritos' => [], 'turnos' => []];
         $error = null;
         try {
@@ -39,10 +42,10 @@ final class DistribucionTableroController
             'catalogos' => $catalogs,
             'error' => $error,
             'pageStyles' => [
-                '/assets/css/distribucion-tablero.css?v=20260818-eas-mode',
+                '/assets/css/distribucion-tablero.css?v=nocache-20260819f',
             ],
             'pageScripts' => [
-                '/assets/js/distribucion-tablero.js?v=20260818-eas-mode',
+                '/assets/js/distribucion-tablero.js?v=nocache-20260819e',
             ],
         ]);
     }

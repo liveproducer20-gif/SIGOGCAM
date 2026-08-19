@@ -12,8 +12,8 @@ $usuarioActual = AuthSession::user();
     <title><?= htmlspecialchars(Config::get('APP_NAME', 'SIGO-GCAM')) ?></title>
     <?php
     /* Performance: preload critical CSS, defer non-critical */
-    $vApp = '20260818';
-    $vInst = '20260818';
+    $vApp = '20260819c';
+    $vInst = '20260819c';
     ?>
     <link rel="preload" href="/assets/css/app.css?v=<?= $vApp ?>" as="style">
     <link rel="stylesheet" href="/assets/css/app.css?v=<?= $vApp ?>">

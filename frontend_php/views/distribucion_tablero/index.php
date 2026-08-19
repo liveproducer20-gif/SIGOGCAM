@@ -7,6 +7,11 @@ $canDelete = $isAdmin || in_array('tablero_distribucion.eliminar', $permissions,
 $canForce = $isAdmin || in_array('distribucion.forzar_asignacion', $permissions, true);
 $canConfigure = $isAdmin || in_array('tablero_distribucion.configurar', $permissions, true);
 ?>
+<style>
+/* FORCED: white background for EAS cards - cannot be cached */
+.td-eas-item, .td-eas-item:active, .td-eas-item.is-active, div.td-eas-item, div.td-eas-item:active, div.td-eas-item.is-active { background: #fff !important; color: #0f2d52 !important; }
+.td-eas-item:hover, div.td-eas-item:hover { background: #f8fdfd !important; }
+</style>
 <div class="td-app" data-can-assign="<?= $canAssign ? '1' : '0' ?>" data-can-delete="<?= $canDelete ? '1' : '0' ?>" data-can-force="<?= $canForce ? '1' : '0' ?>" data-can-configure="<?= $canConfigure ? '1' : '0' ?>">
     <?php if (!empty($error)): ?><div class="td-alert" role="alert"><?= $esc($error) ?></div><?php endif; ?>
 
