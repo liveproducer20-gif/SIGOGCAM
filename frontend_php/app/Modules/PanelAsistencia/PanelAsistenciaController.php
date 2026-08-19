@@ -39,7 +39,7 @@ final class PanelAsistenciaController
             'catalogos' => $catalogs,
             'error' => $error,
             'pageStyles' => [
-                '/assets/css/panel-asistencia.css',
+                '/assets/css/panel-asistencia.css?v=20260818-v2',
             ],
             'pageScripts' => [
                 '/assets/js/panel-asistencia.js',

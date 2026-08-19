@@ -125,16 +125,91 @@
             }
         });
 
-        document.getElementById('btnCreateRoute')?.addEventListener('click', () => openRouteDialog(null));
+        // Per-turn horario management
+        const turnoHorariosContainer = document.getElementById('turnoHorariosContainer');
+        const turnoHorariosList = document.getElementById('turnoHorariosList');
+
+        const staticTimeFields = routeForm.querySelectorAll('.route-static-time');
+
+        function updateTurnoHorarios() {
+            const checked = getCheckedTurnos();
+            if (!turnoHorariosContainer || !turnoHorariosList) return;
+            if (checked.length <= 1) {
+                turnoHorariosContainer.style.display = 'none';
+                staticTimeFields.forEach(el => el.style.display = '');
+                return;
+            }
+            turnoHorariosContainer.style.display = '';
+            staticTimeFields.forEach(el => el.style.display = 'none');
+            // Preserve existing values
+            const existing = {};
+            turnoHorariosList.querySelectorAll('[data-turno-id]').forEach(row => {
+                const tid = row.dataset.turnoId;
+                const hi = row.querySelector('[name*="hora_inicio"]');
+                const hf = row.querySelector('[name*="hora_fin"]');
+                if (hi && hf) existing[tid] = {hi: hi.value, hf: hf.value};
+            });
+            turnoHorariosList.innerHTML = '';
+            const defaultHi = routeForm.querySelector('[name="hora_inicio"]')?.value || '';
+            const defaultHf = routeForm.querySelector('[name="hora_fin"]')?.value || '';
+            checked.forEach(turnoId => {
+                const prev = existing[turnoId] || {};
+                const nombre = turnNames[turnoId] || `Turno ${turnoId}`;
+                const row = document.createElement('div');
+                row.dataset.turnoId = turnoId;
+                row.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+                row.innerHTML = `<span style="min-width:120px;font-size:12px;font-weight:700;color:var(--sigo-navy)">${nombre}</span>` +
+                    `<label style="font-size:11px;color:var(--sigo-muted)">Inicio<input type="time" name="turno_hora_inicio[${turnoId}]" value="${prev.hi || defaultHi}" style="width:110px;margin-left:4px"></label>` +
+                    `<label style="font-size:11px;color:var(--sigo-muted)">Fin<input type="time" name="turno_hora_fin[${turnoId}]" value="${prev.hf || defaultHf}" style="width:110px;margin-left:4px"></label>`;
+                turnoHorariosList.appendChild(row);
+            });
+        }
+
+        routeForm.querySelectorAll('[name="turnos_ids[]"]').forEach((cb) => {
+            cb.addEventListener('change', () => updateTurnoHorarios());
+        });
+
+        const origOpenRoute = openRouteDialog;
+        const patchedOpen = (payload) => {
+            origOpenRoute(payload);
+            setTimeout(() => {
+                // Set per-turn times from payload when editing
+                if (payload && payload.turnos && payload.turnos.length > 1) {
+                    turnoHorariosContainer.style.display = '';
+                    staticTimeFields.forEach(el => el.style.display = 'none');
+                    turnoHorariosList.innerHTML = '';
+                    payload.turnos.forEach(t => {
+                        const tid = t.turno_id;
+                        const row = document.createElement('div');
+                        row.dataset.turnoId = tid;
+                        row.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;';
+                        row.innerHTML = `<span style="min-width:120px;font-size:12px;font-weight:700;color:var(--sigo-navy)">${t.turno || turnNames[tid] || 'Turno ' + tid}</span>` +
+                            `<label style="font-size:11px;color:var(--sigo-muted)">Inicio<input type="time" name="turno_hora_inicio[${tid}]" value="${t.hora_inicio || ''}" style="width:110px;margin-left:4px"></label>` +
+                            `<label style="font-size:11px;color:var(--sigo-muted)">Fin<input type="time" name="turno_hora_fin[${tid}]" value="${t.hora_fin || ''}" style="width:110px;margin-left:4px"></label>`;
+                        turnoHorariosList.appendChild(row);
+                    });
+                } else {
+                    updateTurnoHorarios();
+                }
+                // Ensure correct visibility after payload load
+                const numChecked = getCheckedTurnos().length;
+                if (numChecked <= 1) {
+                    staticTimeFields.forEach(el => el.style.display = '');
+                    turnoHorariosContainer.style.display = 'none';
+                }
+            }, 50);
+        };
+        // Reassign openRouteDialog references
+        document.getElementById('btnCreateRoute')?.removeEventListener('click', openRouteDialog);
+        document.getElementById('btnCreateRoute')?.addEventListener('click', () => patchedOpen(null));
+        document.querySelectorAll('[data-edit-target="#form-ruta"]').forEach((button) => {
+            button.removeEventListener('click', button._routeEditHandler);
+            button._routeEditHandler = () => patchedOpen(JSON.parse(button.dataset.payload || '{}'));
+            button.addEventListener('click', button._routeEditHandler);
+        });
         document.getElementById('closeRouteDialog')?.addEventListener('click', () => routeDialog.close());
         document.getElementById('cancelRouteDialog')?.addEventListener('click', () => routeDialog.close());
         routeDialog.addEventListener('click', (e) => { if (e.target === routeDialog) routeDialog.close(); });
-        document.querySelectorAll('[data-edit-target="#form-ruta"]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const payload = JSON.parse(button.dataset.payload || '{}');
-                openRouteDialog(payload);
-            });
-        });
     }
 
     document.querySelectorAll('[data-edit-target]').forEach((button) => {

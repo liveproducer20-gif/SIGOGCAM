@@ -102,7 +102,8 @@ def list_routes() -> list[dict]:
     if route_ids:
         placeholders = ",".join("?" for _ in route_ids)
         turn_rows = _query(
-            f"""SELECT rt.ruta_id, t.id AS turno_id, t.nombre AS turno
+            f"""SELECT rt.ruta_id, t.id AS turno_id, t.nombre AS turno,
+                      rt.hora_inicio, rt.hora_fin
                FROM dbo.ruta_turnos rt
                INNER JOIN dbo.turnos t ON t.id = rt.turno_id
                WHERE rt.ruta_id IN ({placeholders})
@@ -113,6 +114,8 @@ def list_routes() -> list[dict]:
             turn_map.setdefault(int(tr["ruta_id"]), []).append({
                 "turno_id": int(tr["turno_id"]),
                 "turno": str(tr["turno"]),
+                "hora_inicio": tr["hora_inicio"],
+                "hora_fin": tr["hora_fin"],
             })
     for row in rows:
         rid = int(row["id"])
@@ -580,14 +583,35 @@ def delete_grade(item_id: int) -> None:
     _soft_delete("grados", item_id)
 
 
+def _build_turnos_from_data(data: dict) -> list:
+    """Build the turnos list for _sync_route_turnos.
+
+    Supports two payload shapes:
+      1. *turnosDetails*: list of {turnoId, horaInicio, horaFin} — from the form.
+      2. *turnosIds*:     list of ints — legacy / CSV import without per-turn times.
+    """
+    details = data.get("turnosDetails")
+    if isinstance(details, list) and details:
+        return [
+            {"turno_id": int(d["turnoId"]), "hora_inicio": d.get("horaInicio") or None, "hora_fin": d.get("horaFin") or None}
+            for d in details if d.get("turnoId")
+        ]
+    turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
+    if not turnos_ids and data.get("turnoId"):
+        turnos_ids = [int(data["turnoId"])]
+    if not turnos_ids:
+        turnos_ids = [1]
+    return turnos_ids
+
+
 def create_route(data: dict) -> int:
     with get_connection() as connection:
         cursor = connection.cursor()
-        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
-        if not turnos_ids and data.get("turnoId"):
-            turnos_ids = [int(data["turnoId"])]
-        if not turnos_ids:
-            turnos_ids = [1]  # Default to Primer Turno
+        turnos = _build_turnos_from_data(data)
+        # Use the first turn's hours as the route-level defaults
+        first_h = next((t for t in turnos if isinstance(t, dict)), None)
+        h_inicio = first_h["hora_inicio"] if first_h else data.get("horaInicio")
+        h_fin = first_h["hora_fin"] if first_h else data.get("horaFin")
         cursor.execute(
             """
             INSERT INTO dbo.rutas (nombre, distrito_id, hora_inicio, hora_fin, asignar_encargado, activo, fecha_creacion)
@@ -595,21 +619,22 @@ def create_route(data: dict) -> int:
             VALUES (?, ?, ?, ?, ?, ?, SYSDATETIME())
             """,
             data["nombre"],
-            data.get("distritoId"), data.get("horaInicio"), data.get("horaFin"),
+            data.get("distritoId"), h_inicio, h_fin,
             1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
         )
         route_id = int(cursor.fetchone()[0])
-        _sync_route_turnos(cursor, route_id, turnos_ids)
+        _sync_route_turnos(cursor, route_id, turnos)
         return route_id
 
 
 def update_route(item_id: int, data: dict) -> None:
     with get_connection() as connection:
         cursor = connection.cursor()
-        turnos_ids = [int(t) for t in (data.get("turnosIds") or []) if t]
-        if not turnos_ids and data.get("turnoId"):
-            turnos_ids = [int(data["turnoId"])]
+        turnos = _build_turnos_from_data(data)
+        first_h = next((t for t in turnos if isinstance(t, dict)), None)
+        h_inicio = first_h["hora_inicio"] if first_h else data.get("horaInicio")
+        h_fin = first_h["hora_fin"] if first_h else data.get("horaFin")
         cursor.execute(
             """
             UPDATE dbo.rutas
@@ -617,13 +642,13 @@ def update_route(item_id: int, data: dict) -> None:
             WHERE id = ?
             """,
             data["nombre"],
-            data.get("distritoId"), data.get("horaInicio"), data.get("horaFin"),
+            data.get("distritoId"), h_inicio, h_fin,
             1 if data.get("asignarEncargado",False) else 0,
             1 if data.get("activo", True) else 0,
             item_id,
         )
-        if turnos_ids:
-            _sync_route_turnos(cursor, item_id, turnos_ids)
+        if turnos:
+            _sync_route_turnos(cursor, item_id, turnos)
 
 
 def _route_import_key(value) -> str:
@@ -780,9 +805,27 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
             status = "ERROR" if errors else ("EXISTENTE" if existing_route else "VALIDA")
             normalized = None
             if not errors and district and turnos_resolved:
+                # Build per-turn details with optional per-turn times from CSV columns
+                extra_times = [
+                    (row.get("turno2_hora_inicio"), row.get("turno2_hora_fin")),
+                    (row.get("turno3_hora_inicio"), row.get("turno3_hora_fin")),
+                ]
+                turnos_details = []
+                for idx, (tid, tname) in enumerate(turnos_resolved):
+                    h_inicio = start_time or None
+                    h_fin = end_time or None
+                    if idx < len(extra_times):
+                        alt_hi = _route_import_empty(extra_times[idx][0])
+                        alt_hf = _route_import_empty(extra_times[idx][1])
+                        if alt_hi:
+                            h_inicio = alt_hi
+                        if alt_hf:
+                            h_fin = alt_hf
+                    turnos_details.append({"turno_id": tid, "hora_inicio": h_inicio, "hora_fin": h_fin})
                 normalized = {
                     "fila": row_number, "nombre": name, "distritoId": district[0],
                     "turnosIds": [t[0] for t in turnos_resolved],
+                    "turnosDetails": turnos_details,
                     "horaInicio": start_time or None, "horaFin": end_time or None,
                     "asignarEncargado": manager, "activo": active,
                     "existenteId": existing_route[0] if existing_route else None,
@@ -811,7 +854,7 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                                           asignar_encargado=?,activo=?,fecha_actualizacion=SYSDATETIME() WHERE id=?""",
                                        data["nombre"],data["distritoId"],data["horaInicio"],data["horaFin"],
                                        1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0,existing_id)
-                        _sync_route_turnos(cursor, existing_id, data["turnosIds"])
+                        _sync_route_turnos(cursor, existing_id, data.get("turnosDetails") or data["turnosIds"])
                         updated += 1
                     if circuit and _attach_route_to_circuit(cursor,circuit_id,int(existing_id)):
                         linked += 1
@@ -822,7 +865,7 @@ def import_routes(rows: list[dict], confirm: bool = False, existing_actions: dic
                                    data["nombre"],data["distritoId"],data["horaInicio"],data["horaFin"],
                                    1 if data["asignarEncargado"] else 0,1 if data["activo"] else 0)
                     new_route_id = int(cursor.fetchone()[0])
-                    _sync_route_turnos(cursor, new_route_id, data["turnosIds"])
+                    _sync_route_turnos(cursor, new_route_id, data.get("turnosDetails") or data["turnosIds"])
                     created += 1
                     if circuit and _attach_route_to_circuit(cursor,circuit_id,new_route_id):
                         linked += 1
@@ -965,13 +1008,26 @@ def delete_mobile_unit(item_id: int) -> None:
     _soft_delete("moviles", item_id)
 
 
-def _sync_route_turnos(cursor, route_id: int, turnos_ids: list[int]) -> None:
-    """Sync junction table for route turns. turnos_ids must have at least 1 entry."""
+def _sync_route_turnos(cursor, route_id: int, turnos: list) -> None:
+    """Sync junction table for route turns.
+
+    *turnos* can be:
+      - list[int]           → legacy, per-turn times taken from the route row.
+      - list[dict]          → each dict has keys: turno_id (int), hora_inicio (str|None), hora_fin (str|None).
+    """
     cursor.execute("DELETE FROM dbo.ruta_turnos WHERE ruta_id = ?", route_id)
-    for turno_id in turnos_ids:
+    for item in turnos:
+        if isinstance(item, dict):
+            turno_id = int(item["turno_id"])
+            h_inicio = item.get("hora_inicio")
+            h_fin = item.get("hora_fin")
+        else:
+            turno_id = int(item)
+            h_inicio = None
+            h_fin = None
         cursor.execute(
-            "INSERT INTO dbo.ruta_turnos (ruta_id, turno_id) VALUES (?, ?)",
-            route_id, turno_id,
+            "INSERT INTO dbo.ruta_turnos (ruta_id, turno_id, hora_inicio, hora_fin) VALUES (?, ?, ?, ?)",
+            route_id, turno_id, h_inicio, h_fin,
         )
 
 

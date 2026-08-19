@@ -983,3 +983,76 @@ dd {
         margin-top: 6px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   UI Animation — SIGO Motion System
+   Purpose: feedback, orientation, continuity
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Modal / Dialog entrance ── */
+dialog[open], .admin-route-dialog[open] {
+    animation: modal-in .25s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+dialog::backdrop {
+    animation: overlay-in .2s ease both;
+}
+
+@keyframes modal-in {
+    from { opacity: 0; transform: scale(0.92) translateY(8px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ── Panel / Drawer slide ── */
+@keyframes panel-slide-in {
+    from { opacity: 0; transform: translateX(-12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Toast slide-up ── */
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── Card entrance stagger ── */
+@keyframes card-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Success checkmark ── */
+@keyframes success-pop {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ── Error shake ── */
+@keyframes error-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(2px); }
+}
+
+/* ── Pulse for live indicators ── */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .5; }
+}
+
+/* ═══ Reduced motion ═══ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

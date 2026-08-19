@@ -191,7 +191,7 @@ final class AdminController
         $output = fopen('php://output', 'wb');
         fwrite($output, "\xEF\xBB\xBF");
         fputcsv($output, self::ROUTE_CSV_HEADERS);
-        fputcsv($output, ['Ruta Plaza Bicentenario','9 de Octubre','Segundo Turno|Primer Turno','10:30','18:00','SI','SI']);
+        fputcsv($output, ['Ruta Plaza Bicentenario','9 de Octubre','Segundo Turno|Primer Turno','10:30','18:00','06:00','14:00','22:00','06:00','SI','SI']);
         fclose($output);
     }
 
@@ -374,7 +374,7 @@ final class AdminController
         return match ($entity) {
             'eas' => ['eas', ['codigo'=>$this->text('codigo'),'nombre'=>$this->text('nombre'),'direccion'=>$this->text('direccion'),'ubicacion'=>$this->text('ubicacion'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'activo'=>isset($_POST['activo'])]],
             'movil' => ['moviles', ['numeroMovil'=>$this->text('numero_movil'),'placa'=>$this->text('placa'),'tipoMovilId'=>(int)($_POST['tipo_movil_id'] ?? 0),'estadoMovilId'=>(int)($_POST['estado_movil_id'] ?? 0),'kilometrajeActual'=>(int)($_POST['kilometraje_actual'] ?? 0),'kilometrajeUltimoMantenimiento'=>(int)($_POST['kilometraje_ultimo_mantenimiento'] ?? 0),'proximoMantenimiento'=>$this->nullableInt($_POST['proximo_mantenimiento'] ?? null),'observacion'=>$this->text('observacion'),'activo'=>isset($_POST['activo'])]],
-            'ruta' => ['rutas', ['nombre'=>$this->text('nombre'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'turnosIds'=>array_values(array_map('intval',(array)($_POST['turnos_ids'] ?? []))),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'asignarEncargado'=>isset($_POST['asignar_encargado']),'activo'=>isset($_POST['activo'])]],
+            'ruta' => ['rutas', ['nombre'=>$this->text('nombre'),'distritoId'=>$this->nullableInt($_POST['distrito_id'] ?? null),'turnosIds'=>array_values(array_map('intval',(array)($_POST['turnos_ids'] ?? []))),'turnosDetails'=>$this->buildTurnosDetails(),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'asignarEncargado'=>isset($_POST['asignar_encargado']),'activo'=>isset($_POST['activo'])]],
             'circuito' => ['circuitos', ['distritoId'=>(int)($_POST['distrito_id'] ?? 0),'nombre'=>$this->text('nombre'),'horaInicio'=>$this->nullableText('hora_inicio'),'horaFin'=>$this->nullableText('hora_fin'),'lugarFormacion'=>$this->text('lugar_formacion'),'consignas'=>$this->text('consignas'),'observaciones'=>$this->text('observaciones'),'perimetro'=>$this->text('perimetro'),'easIds'=>array_values(array_map('intval',(array)($_POST['eas_ids'] ?? []))),'rutaIds'=>array_values(array_map('intval',(array)($_POST['ruta_ids'] ?? [])))]],
             'lugar' => ['lugares-servicio', ['nombre'=>$this->firstText('nombre'),'direccion'=>$this->text('direccion') ?: $this->firstText('nombre'),'ubicacionEspecifica'=>$this->text('ubicacion_especifica'),'distritoId'=>(int)($_POST['distrito_id'] ?? 0),'rutaId'=>(int)($_POST['ruta_id'] ?? 0),'tipoServicioId'=>$this->nullableInt($_POST['tipo_servicio_id'] ?? null),'turnosIds'=>array_values(array_map('intval',(array)($_POST['turnos_ids'] ?? []))),'cantidadRequerida'=>(int)($_POST['cantidad_requerida'] ?? 1),'estadoOperativo'=>$this->text('estado_operativo') ?: 'ACTIVO','consignas'=>$this->text('consignas'),'observacion'=>$this->text('observacion'),'lugarFormacion'=>$this->text('lugar_formacion'),'latitud'=>$this->nullableFloat($_POST['latitud'] ?? null),'longitud'=>$this->nullableFloat($_POST['longitud'] ?? null),'activo'=>$this->boolValue('activo',true)]],
             'grado' => ['grados', ['nombre'=>$this->text('nombre'),'activo'=>isset($_POST['activo'])]],
@@ -401,7 +401,9 @@ final class AdminController
     ];
 
     private const ROUTE_CSV_HEADERS = [
-        'Nombre', 'Distrito', 'Turnos habilitados', 'Hora inicio', 'Hora fin', 'Asignar encargado', 'Activa',
+        'Nombre', 'Distrito', 'Turnos habilitados', 'Hora inicio', 'Hora fin',
+        'Hora inicio 2', 'Hora fin 2', 'Hora inicio 3', 'Hora fin 3',
+        'Asignar encargado', 'Activa',
     ];
 
     private function readRouteCsv(array $file): array
@@ -419,11 +421,14 @@ final class AdminController
         $rows=[];$line=1;
         while (($values=fgetcsv($stream)) !== false) {
             $line++;if(count(array_filter($values,static fn($value)=>trim((string)$value)!==''))===0)continue;
-            $parseError=count($values)===count(self::ROUTE_CSV_HEADERS)?null:'La fila no contiene exactamente 7 columnas';
-            $values=array_slice(array_pad($values,count(self::ROUTE_CSV_HEADERS),''),0,count(self::ROUTE_CSV_HEADERS));
+            $colCount=count(self::ROUTE_CSV_HEADERS);
+            $parseError=count($values)===$colCount?null:"La fila no contiene exactamente {$colCount} columnas";
+            $values=array_slice(array_pad($values,$colCount,''),0,$colCount);
             $raw=array_combine(self::ROUTE_CSV_HEADERS,array_map(static fn($value)=>trim((string)$value),$values));
             $row=['nombre'=>$raw['Nombre'],'distrito'=>$raw['Distrito'],'turnos_habilitados'=>$raw['Turnos habilitados'],'hora_inicio'=>$raw['Hora inicio'],
-                  'hora_fin'=>$raw['Hora fin'],'asignar_encargado'=>$raw['Asignar encargado'],'activa'=>$raw['Activa'],'fila'=>$line];
+                  'hora_fin'=>$raw['Hora fin'],'asignar_encargado'=>$raw['Asignar encargado'],'activa'=>$raw['Activa'],'fila'=>$line,
+                  'turno2_hora_inicio'=>$raw['Hora inicio 2'],'turno2_hora_fin'=>$raw['Hora fin 2'],
+                  'turno3_hora_inicio'=>$raw['Hora inicio 3'],'turno3_hora_fin'=>$raw['Hora fin 3']];
             if($parseError!==null)$row['_parse_error']=$parseError;$rows[]=$row;
         }
         fclose($stream);if(!$rows)throw new \RuntimeException('El archivo CSV no contiene filas para importar.');return $rows;
@@ -500,5 +505,25 @@ final class AdminController
     {
         $role = strtoupper((string)($user['rolNombre'] ?? $user['rol'] ?? ''));
         return str_contains($role, 'ADMINISTRADOR') || in_array($permission, $user['permisos'] ?? [], true);
+    }
+
+    /**
+     * Build per-turn details from form POST data.
+     * Expects turno_hora_inicio[turnoId] and turno_hora_fin[turnoId] arrays.
+     */
+    private function buildTurnosDetails(): array
+    {
+        $turnosIds = array_map('intval', (array)($_POST['turnos_ids'] ?? []));
+        $horasInicio = (array)($_POST['turno_hora_inicio'] ?? []);
+        $horasFin = (array)($_POST['turno_hora_fin'] ?? []);
+        $details = [];
+        foreach ($turnosIds as $turnoId) {
+            $details[] = [
+                'turnoId' => $turnoId,
+                'horaInicio' => $this->nullableText($horasInicio[$turnoId] ?? null) ?? $this->nullableText('hora_inicio'),
+                'horaFin' => $this->nullableText($horasFin[$turnoId] ?? null) ?? $this->nullableText('hora_fin'),
+            ];
+        }
+        return $details;
     }
 }
