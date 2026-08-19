@@ -45,7 +45,7 @@ final class DistribucionTableroController
                 '/assets/css/distribucion-tablero.css?v=nocache-20260819f',
             ],
             'pageScripts' => [
-                '/assets/js/distribucion-tablero.js?v=nocache-20260819e',
+                '/assets/js/distribucion-tablero.js?v=nocache-20260819i',
             ],
         ]);
     }

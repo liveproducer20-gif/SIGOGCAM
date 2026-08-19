@@ -449,14 +449,15 @@
         renderCircuitManagers();
         const route = routeData(); const routeEnabled = Boolean(route?.asignar_encargado);
         const isEstacion = Number(state.board?.distrito_id) === 1143;
+        const circuitTitle = $('#tdCircuitManagersTitle'); if (circuitTitle) circuitTitle.textContent = isEstacion ? 'Radioperadores de circuito' : 'Encargados de circuito';
         $('#tdRouteManagerCard').hidden = !routeEnabled;
         if (routeEnabled) {
             const item = state.routeManagers.get(Number(route.id)) || {requiere_encargado:false};
             const titleLabel = isEstacion ? 'Radioperadores' : 'Encargados de ruta';
-            const cardTitle = $('#tdRouteManagerCard h3');
+            const cardTitle = $('#tdRouteManagerCardTitle') || $('#tdRouteManagerCard h3');
             if (cardTitle) cardTitle.textContent = titleLabel;
-            if ($('#tdRouteManagerRequired')) $('#tdRouteManagerRequired').checked = Boolean(item.requiere_encargado);
-            if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; const lbl = $('#tdAssignRouteManager .td-btn-label'); if (lbl) lbl.textContent = item.agente_id ? 'Cambiar encargado' : 'Seleccionar agente'; }
+            if ($('#tdRouteManagerRequired')) { $('#tdRouteManagerRequired').checked = isEstacion ? true : Boolean(item.requiere_encargado); if ($('#tdRouteManagerRequired').closest('label')) $('#tdRouteManagerRequired').closest('label').hidden = isEstacion; } const reqLabel = $('#tdRouteManagerRequiredLabel'); if (reqLabel) reqLabel.textContent = isEstacion ? 'Requiere radioperador' : 'Asignar encargado';
+            if ($('#tdAssignRouteManager')) { $('#tdAssignRouteManager').hidden = !item.requiere_encargado; const lbl = $('#tdAssignRouteManager .td-btn-label'); if (lbl) lbl.textContent = item.agente_id ? (isEstacion ? 'Cambiar radioperador' : 'Cambiar encargado') : (isEstacion ? 'Seleccionar radioperador' : 'Seleccionar agente'); }
             if ($('#tdAssignRouteManager2')) {
                 if (item.requiere_encargado && item.agente_id) {
                     $('#tdAssignRouteManager2').hidden = false;
@@ -484,8 +485,10 @@
     function circuitName(circuitId){return (state.board?.circuitos||[]).find(item=>Number(item.id)===Number(circuitId))?.nombre || `Circuito ${circuitId}`;}
     function renderCircuitManagers(){
         const list=$('#tdCircuitManagersList'); if(!list)return;
+        const isEstacion = Number(state.board?.distrito_id) === 1143;
+        const roleLabel = isEstacion ? 'radioperador' : 'encargado';
         const items=Array.from(state.circuitManagers.entries()).filter(([id])=>!state.circuitId||Number(id)===state.circuitId);
-        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b>${item.agente?personRow(item.agente):'<strong>Sin encargado</strong>'}<div class="td-resource-summary">${resourceSummary(item)}</div></div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>Editar</button><button class="td-btn td-btn-danger td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Quitar</button></div>`:''}</article>`).join(''):emptyRole('Sin encargados asignados', 'Agregue un encargado para los circuitos del distrito');
+        list.innerHTML=items.length?items.map(([circuitId,item])=>`<article class="td-circuit-manager-item"><div><b>${esc(circuitName(circuitId))}</b>${item.agente?personRow(item.agente):`<strong>Sin ${roleLabel}</strong>`}<div class="td-resource-summary">${resourceSummary(item)}</div></div>${canAssign?`<div><button class="td-btn td-btn-ghost td-btn-sm" type="button" data-edit-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>Editar</button><button class="td-btn td-btn-danger td-btn-sm" type="button" data-remove-circuit-manager="${circuitId}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>Quitar</button></div>`:''}</article>`).join(''):emptyRole(isEstacion ? 'Sin radioperadores asignados' : 'Sin encargados asignados', isEstacion ? 'Agregue un radioperador para las rutas del distrito' : 'Agregue un encargado para los circuitos del distrito');
     }
     function renderPlaceRow(place, index) {
         const assigned = assignmentsFor(place.id); const required = Number(place.cantidad_requerida || 0); const covered = assigned.length >= required && required > 0;
@@ -652,7 +655,9 @@
     function renderCircuitEditor(){
         const draft=state.circuitDraft||emptyCircuitDraft();
         const districtScope=draft._scope==='district';
-        $('#tdResourceModalTitle').textContent=districtScope?'Recursos del encargado de distrito':'Recursos del encargado de circuito';
+        const resIsEstacion = Number(state.board?.distrito_id) === 1143;
+        const resRoleLabel = resIsEstacion ? 'radioperador' : 'encargado';
+        $('#tdResourceModalTitle').textContent=districtScope?`Recursos del encargado de distrito`:`Recursos del ${resRoleLabel} de circuito`;
         $('#tdResourceModalSubtitle').textContent=districtScope?(state.board?.distrito?.nombre||''):circuitName(draft.circuito_id);
         $('#tdCircuitManagerCircuitField').hidden=districtScope;
         $('#tdCircuitManagerCircuit').value=draft.circuito_id?String(draft.circuito_id):'';
@@ -935,7 +940,8 @@
         for (const route of circuitRoutes) {
             if (!route.asignar_encargado) continue;
             const manager = state.routeManagers.get(Number(route.id));
-            if (!manager || (manager.requiere_encargado && !manager.agente_id)) return notify(`Primero defina el encargado de la ruta ${route.nombre}.`, true);
+            const randIsEstacion = Number(state.board?.distrito_id) === 1143;
+            if (!manager || (manager.requiere_encargado && !manager.agente_id)) return notify(randIsEstacion ? `Primero defina el radioperador de la ruta ${route.nombre}.` : `Primero defina el encargado de la ruta ${route.nombre}.`, true);
         }
         const button = $('#tdRandomAssign'); loading(button, true);
         try {
@@ -1030,8 +1036,9 @@
             if (!route.asignar_encargado) continue;
             const manager = state.routeManagers.get(Number(route.id));
             if (!manager) return notify(`Defina la responsabilidad de la ruta ${route.nombre}.`, true);
-            if (manager.requiere_encargado && !manager.agente_id) return notify(`Seleccione el encargado de la ruta ${route.nombre}.`, true);
-            if (!manager.requiere_encargado && !state.districtManager?.agente_id) return notify(`La ruta ${route.nombre} necesita encargado porque no existe un encargado de distrito responsable.`, true);
+            const saveIsEstacion = Number(state.board?.distrito_id) === 1143;
+            if (manager.requiere_encargado && !manager.agente_id) return notify(saveIsEstacion ? `Seleccione el radioperador de la ruta ${route.nombre}.` : `Seleccione el encargado de la ruta ${route.nombre}.`, true);
+            if (!manager.requiere_encargado && !state.districtManager?.agente_id) return notify(saveIsEstacion ? `La ruta ${route.nombre} necesita radioperador porque no existe un encargado de distrito responsable.` : `La ruta ${route.nombre} necesita encargado porque no existe un encargado de distrito responsable.`, true);
         }
         const editingDate = selectedDate();
         $('#tdDistributionDate').value = editingDate;
